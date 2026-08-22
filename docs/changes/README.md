@@ -4,4 +4,4 @@
 
 进行中的变更不是现行真相。Agent 实现时以 `docs/specs/` 为准，除非任务明确说「只做这一份 change」。
 
-模板在 [_template](_template/proposal.md)。
+模板在 [_template](_template/proposal.md)。已合并的放进 [archive](archive/README.md)。

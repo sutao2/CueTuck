@@ -1,0 +1,18 @@
+---
+description: PromptArk 文档先行：先 INDEX，再最多两份现行文档，无计划不写应用代码
+alwaysApply: true
+---
+
+# 文档先行
+
+- 先读 `AGENTS.md` 和 `docs/INDEX.md`。不要通读 `docs/`。
+- 一次最多打开两份现行文档。进行中的 `docs/changes/` 不是现行真相。
+- 没进 INDEX 的 Markdown 视为不存在；新增文档必须登记 INDEX。
+- 改行为、结构或门禁时，同一提交更新规格或 ADR。
+- 没有 `docs/plans/` 里该模块计划，禁止创建应用 `src/`。
+- 启动器只移植旧仓库独立窗口，不改成覆盖层。
+
+```text
+❌ 直接写业务代码，回头补规格
+✅ 规格或变更 → 计划 → 失败测试 → 最小实现 → docs-check
+```

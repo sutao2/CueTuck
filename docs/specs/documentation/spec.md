@@ -52,3 +52,35 @@
 - WHEN 检查仓库根目录
 - THEN 存在文档与 `scripts/docs-check`
 - AND 不存在 `src/` 应用树
+
+### Requirement: CI 跑同一检查
+
+`main` 的 push 与所有 pull request MUST 运行 `python3 scripts/docs-check`。本地命令与 CI 命令 MUST 一致。
+
+#### Scenario: 工作流存在
+
+- GIVEN 仓库含 `.github/workflows/docs.yml`
+- WHEN 打开该工作流
+- THEN 其唯一检查步骤调用 `scripts/docs-check`
+
+### Requirement: Agent 常驻规则
+
+仓库 MUST 提供始终生效的 Cursor 规则，要求先读 INDEX、无计划不写应用代码。
+
+#### Scenario: 规则文件
+
+- GIVEN 打开 `.cursor/rules/docs-first.mdc`
+- WHEN 查看 frontmatter
+- THEN `alwaysApply` 为 true
+- AND 正文禁止无计划创建 `src/`
+
+## 测试映射
+
+| 场景 | 测试 |
+|---|---|
+| docs-check 捕获孤儿 | `scripts/docs-check`（人工/CI） |
+| 坏链 | `scripts/docs-check` |
+| 缺段落 | `scripts/docs-check` |
+| 当前仓库 | 目录约定，M1 前目视 |
+| 工作流存在 | `.github/workflows/docs.yml` |
+| 规则文件 | `.cursor/rules/docs-first.mdc` |

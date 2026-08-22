@@ -12,7 +12,7 @@
 
 ## 阅读顺序（新人）
 
-1. [README](../../README.md)
+1. [README](../../README.md) 与 [文档体系](../README.md)
 2. [宪法](../constitution.md)
 3. [PRD](../product/prd.md)
 4. [路线图](../product/roadmap.md)

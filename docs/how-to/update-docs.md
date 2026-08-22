@@ -7,7 +7,7 @@
 3. 把增量合并进 `docs/specs/<能力>/spec.md`。
 4. 更新 [INDEX.md](../INDEX.md)（若新增文件）。
 5. 运行 `./scripts/docs-check`。
-6. 将变更目录移到 `docs/changes/archive/` 或在 changes README 标明已合并。
+6. 将变更目录移到 `docs/changes/archive/`，并更新归档说明。
 
 ## 改原则或架构
 

@@ -8,7 +8,8 @@
 
 | 读者 | 打开 |
 |---|---|
-| 人 | [docs/INDEX.md](docs/INDEX.md) |
+| 人 | [docs/README.md](docs/README.md) 理解体系，[docs/INDEX.md](docs/INDEX.md) 查文件 |
+| 参与 | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Agent | [AGENTS.md](AGENTS.md)，再按 INDEX 打开 1～2 个文件 |
 | 产品范围 | [docs/product/prd.md](docs/product/prd.md) |
 | 非协商原则 | [docs/constitution.md](docs/constitution.md) |

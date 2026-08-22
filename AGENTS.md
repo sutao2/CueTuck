@@ -1,6 +1,6 @@
 # Agent 入口
 
-先读本文件和 [docs/INDEX.md](docs/INDEX.md)。不要通读 `docs/`。
+先读本文件和 [docs/INDEX.md](docs/INDEX.md)。不要通读 `docs/`。按问题选文件见 [如何按需读文档](docs/how-to/read-docs.md)。
 
 ## 强制顺序
 

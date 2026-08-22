@@ -11,7 +11,7 @@
 
 | 门 | 命令或动作 | 失败则 |
 |---|---|---|
-| 文档结构 | `./scripts/docs-check` | 不得合并 |
+| 文档结构 | `./scripts/docs-check`（本地与 `.github/workflows/docs.yml`） | 不得合并 |
 | 密钥 | 不把 `.env`、钥匙、证书提交进库 | 不得合并 |
 
 ## M1 起
