@@ -12,7 +12,7 @@
 | 里程碑 | 状态 | 证据 |
 |---|---|---|
 | M0 文档先行 | 完成 | [done/2026-08-22-m0-documentation.md](done/2026-08-22-m0-documentation.md) |
-| M1 桌面骨架 | 未开始 | 无 `desktop/` 或 `src/` |
+| M1 桌面骨架 | 进行中 | 分支 `m1-desktop-skeleton`；Task 1 包装与 `npm test` 已绿 |
 | M2 本地工作台 | 未开始 | — |
 | M3 启动器对齐 | 未开始 | — |
 | M4 桌面可分发 | 未开始 | — |
@@ -25,7 +25,7 @@
 
 ## 仓库事实
 
-- 应用代码：无
+- 应用代码：`desktop/` 仅有 Vue 探活，尚无 Tauri / SQLite
 - 后端：无
 - docs-check：本地可通过
 - 旧仓库：只读参考，不是本仓库状态
