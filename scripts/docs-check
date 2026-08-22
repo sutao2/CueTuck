@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Fail if docs drift: orphans, missing INDEX targets, broken relative links, thin ADRs."""
+
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+INDEX = ROOT / "docs" / "INDEX.md"
+LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+SKIP_DIR_NAMES = {".git", "node_modules", "dist", "target", "coverage"}
+
+
+def md_files() -> list[Path]:
+    files: list[Path] = []
+    for path in ROOT.rglob("*.md"):
+        if any(part in SKIP_DIR_NAMES for part in path.parts):
+            continue
+        files.append(path)
+    return sorted(files)
+
+
+def extract_links(text: str) -> list[str]:
+    links = []
+    for raw in LINK_RE.findall(text):
+        url = raw.split()[0].strip()
+        if url.startswith(("#", "http://", "https://", "mailto:")):
+            continue
+        links.append(url)
+    return links
+
+
+def resolve(base_file: Path, url: str) -> Path:
+    path_part = url.split("#", 1)[0]
+    if not path_part:
+        return base_file
+    return (base_file.parent / path_part).resolve()
+
+
+def indexed_paths() -> set[Path]:
+    text = INDEX.read_text(encoding="utf-8")
+    found: set[Path] = {INDEX.resolve()}
+    for url in extract_links(text):
+        target = resolve(INDEX, url)
+        if target.suffix == ".md":
+            found.add(target)
+    return found
+
+
+def check_index_targets() -> list[str]:
+    errors = []
+    text = INDEX.read_text(encoding="utf-8")
+    for url in extract_links(text):
+        target = resolve(INDEX, url)
+        if target.suffix == ".md" and not target.is_file():
+            errors.append(f"INDEX 指向不存在的文件: {url}")
+    return errors
+
+
+def check_orphans(indexed: set[Path]) -> list[str]:
+    errors = []
+    for path in md_files():
+        if path.resolve() not in indexed:
+            errors.append(f"未进入 INDEX: {path.relative_to(ROOT)}")
+    return errors
+
+
+def check_relative_links() -> list[str]:
+    errors = []
+    for path in md_files():
+        text = path.read_text(encoding="utf-8")
+        for url in extract_links(text):
+            if not url.endswith(".md") and ".md#" not in url:
+                continue
+            target = resolve(path, url)
+            if not target.is_file():
+                errors.append(f"断链 {path.relative_to(ROOT)} -> {url}")
+    return errors
+
+
+def check_adrs() -> list[str]:
+    errors = []
+    required = ("Status", "Context", "Decision", "Consequences")
+    adr_dir = ROOT / "docs" / "architecture" / "decisions"
+    if not adr_dir.is_dir():
+        return ["缺少 docs/architecture/decisions/"]
+    for path in sorted(adr_dir.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        for heading in required:
+            if not re.search(rf"^## {heading}\s*$", text, re.MULTILINE) and not re.search(
+                rf"^- {heading}:", text, re.MULTILINE
+            ):
+                errors.append(f"ADR 缺少 {heading}: {path.relative_to(ROOT)}")
+    return errors
+
+
+def main() -> int:
+    if not INDEX.is_file():
+        print("缺少 docs/INDEX.md", file=sys.stderr)
+        return 1
+    errors = []
+    errors.extend(check_index_targets())
+    errors.extend(check_orphans(indexed_paths()))
+    errors.extend(check_relative_links())
+    errors.extend(check_adrs())
+    if errors:
+        print("docs-check 失败：")
+        for item in errors:
+            print(f"  - {item}")
+        return 1
+    print(f"docs-check 通过（{len(md_files())} 个 Markdown 文件）。")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
