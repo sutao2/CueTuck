@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定，M3 实现 |
+| 状态 | 已指定，M3 实现唤起与搜索粘贴；M8 增加新建与粘贴最近使用快捷键 |
 | 来源 | 旧 `prompt-launcher` 独立窗口，不是原型覆盖层 |
 | 关联 | [ADR 0002](../../architecture/decisions/0002-preserve-current-launcher.md) |
 
@@ -37,6 +37,24 @@
 - THEN 它是旧产品那种无框透明调色板：空查询收成一条搜索栏，有结果后窗口增高
 - AND 快捷键记号用 Mac 符号，不写 `Ctrl Space`
 - AND 仍是 label `launcher` 的独立窗口，不是主窗口覆盖层，也不画主窗口那种 Overlay 红绿灯
+
+### Requirement: 附加全局快捷键
+
+M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新建提示词（打开本机新建）、快速粘贴最近使用（粘贴上一条已完成变量替换的提示词）。冲突时 MUST 提示失败，不得静默无效。启动器仍 MUST NOT 请求广场或管理接口。
+
+#### Scenario: 新建提示词快捷键
+
+- GIVEN 应用已运行且该快捷键已接通
+- WHEN 用户按下已保存的新建提示词组合
+- THEN 打开本机新建提示词
+- AND 不请求广场
+
+#### Scenario: 粘贴最近使用快捷键
+
+- GIVEN 用户刚完成一次变量替换且该快捷键已接通
+- WHEN 用户按下已保存的快速粘贴组合
+- THEN 上一条完成替换的文本被粘贴或明确降级为复制
+- AND 不请求广场
 
 ### Requirement: 本地即时搜索
 
@@ -115,6 +133,8 @@
 | Enter 填写 | `LauncherApp.spec.js` opens fill step when Enter hits a variable prompt |
 | 直接复制 | `launcherKeyboard.test.js` activates default on Enter and copy on Ctrl+Enter |
 | 快捷键唤起 | `shortcut.test.js` persists after a successful register |
+| 新建提示词快捷键 | 未开始 |
+| 粘贴最近使用快捷键 | 未开始 |
 | 关闭 / 失焦 | `desktop/src-tauri` `focus_grace_is_600ms`；Esc 走 `resetAndHide` |
 | 粘贴成功 / 粘贴失败 | `paste.test.js` keeps clipboard text when paste command fails |
 | 非 macOS | `selectedText.test.js` hides selected-text on windows |

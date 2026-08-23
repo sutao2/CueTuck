@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行 |
-| 阶段 | M5 广场已落地；M6 合同已接受 |
+| 阶段 | M5 广场已落地；M6 已关闭；M7 草稿；M8 设置对齐已立项 |
 | 关联 | [数据模型](data-model.md) · [ADR 0008](decisions/0008-m5-backend-contract.md) · [ADR 0009](decisions/0009-m6-admin-console.md) |
 
 ## 容器

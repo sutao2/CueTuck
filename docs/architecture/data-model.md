@@ -79,6 +79,8 @@
 | key | 设置键 |
 | value_json | JSON |
 
+键名与含义只写在 [设置规格](../specs/settings/spec.md)，本表不重复。M8 增加键不得删已有 `theme` 与启动器快捷键。
+
 ### sync_jobs
 
 第一期不建。M5 再引入。

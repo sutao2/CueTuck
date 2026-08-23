@@ -38,7 +38,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 两级分类 |
 | [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析 |
 | [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 认证；邮箱密码；Refresh 进钥匙串 |
-| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 本机设置 |
+| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 本机设置；M8 对齐原型十类 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 发布；选源后提交，不锁本地 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；不进桌面包 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
@@ -65,6 +65,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/m6-admin-console/design.md](changes/m6-admin-console/design.md) | 目标 | 看 M6 管理台怎么落地 | admin.yaml、同一 backend、独立 admin-web |
 | [changes/m7-contract-gaps/proposal.md](changes/m7-contract-gaps/proposal.md) | 目标 | 接受 M7 合同补齐前 | 草稿；未接受不得写收藏写路径 / 轮换 / me |
 | [changes/m7-contract-gaps/design.md](changes/m7-contract-gaps/design.md) | 目标 | 看 M7 怎么落地 | 收藏表、令牌轮换、GET /v1/admin/me |
+| [changes/m8-settings-ia/proposal.md](changes/m8-settings-ia/proposal.md) | 现行 | 查设置对齐是否已写入合同 | 已接受；只增不减；M7 关闭前不改设置代码 |
+| [changes/m8-settings-ia/design.md](changes/m8-settings-ia/design.md) | 目标 | 看 M8 设置怎么落地 | 十类导航、本机行、云行诚实占位 |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
@@ -80,6 +82,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-m5-online-square.md](plans/2026-08-23-m5-online-square.md) | 归档 | 查 M5 怎么做的 | M5 逐步实现计划 |
 | [plans/2026-08-23-m6-admin-console.md](plans/2026-08-23-m6-admin-console.md) | 归档 | 查 M6 怎么做的 | M6 逐步实现计划 |
 | [plans/2026-08-23-m7-contract-gaps.md](plans/2026-08-23-m7-contract-gaps.md) | 现行 | 做 M7 合同补齐 | M7 逐步实现计划；Task 0 待人接受 |
+| [plans/2026-08-23-m8-settings-ia.md](plans/2026-08-23-m8-settings-ia.md) | 现行 | M7 关闭后做设置对齐 | M8 逐步实现计划；Task 0 待 M7 关闭 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |
@@ -88,13 +91,14 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/milestones/m5.md](plans/milestones/m5.md) | 现行 | 接广场前 | M5 进出标准 |
 | [plans/milestones/m6.md](plans/milestones/m6.md) | 现行 | 做管理台前 | M6 进出标准 |
 | [plans/milestones/m7.md](plans/milestones/m7.md) | 现行 | 做合同补齐前 | M7 进出标准 |
+| [plans/milestones/m8.md](plans/milestones/m8.md) | 现行 | 做设置对齐前 | M8 进出标准 |
 | [plans/modules/README.md](plans/modules/README.md) | 现行 | 问模块怎么切 | 模块地图 |
 | [plans/modules/workbench.md](plans/modules/workbench.md) | 现行 | 做主窗口壳 | 工作台模块完成态 |
 | [plans/modules/library.md](plans/modules/library.md) | 现行 | 做本地库 | 本地库模块完成态 |
 | [plans/modules/categories.md](plans/modules/categories.md) | 现行 | 做分类 | 分类模块完成态 |
 | [plans/modules/collections.md](plans/modules/collections.md) | 现行 | 做合集 | 合集模块完成态 |
 | [plans/modules/variables.md](plans/modules/variables.md) | 现行 | 做使用向导 | 变量模块完成态 |
-| [plans/modules/settings.md](plans/modules/settings.md) | 现行 | 做设置 | 设置模块完成态 |
+| [plans/modules/settings.md](plans/modules/settings.md) | 现行 | 做设置 | 设置模块完成态（M2 子集 + M8 十类） |
 | [plans/modules/launcher.md](plans/modules/launcher.md) | 现行 | 做启动器 | 启动器模块完成态 |
 | [plans/modules/square.md](plans/modules/square.md) | 现行 | M5 广场 | 广场模块完成态 |
 | [plans/modules/admin.md](plans/modules/admin.md) | 现行 | M6 管理台 | 管理台模块完成态 |

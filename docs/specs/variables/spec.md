@@ -60,6 +60,17 @@
 - WHEN 用户在预览后复制
 - THEN 最终文本仍包含 `{{受众}}`
 
+### Requirement: 受设置控制的双语与建议
+
+设置「提示词双语版本」关闭时，向导 MUST 跳过语言步，但仍 MUST 保留库里已有的中英正文，不得删除。变量智能建议关闭时 MUST 不提供建议；打开时 MUST NOT 把提示词正文传到本机以外。
+
+#### Scenario: 关闭双语不删正文
+
+- GIVEN 一条提示词同时有中文与英文正文，且双语开关为关
+- WHEN 用户开始使用
+- THEN 不出现语言选择步
+- AND 两条正文都还在库里
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -69,3 +80,4 @@
 | 逐步填写 | 未开始自动化（主窗口 `UsePromptModal.vue`） |
 | 同源渲染 | 启动器与工作台共用 `desktop/src/lib/renderPrompt.js`；`LauncherApp.spec.js` 填写态预览保留 `{{姓名}}` |
 | 漏填 | `desktop/src/lib/renderPrompt.test.js` keeps unfilled placeholders |
+| 关闭双语不删正文 | 未开始 |

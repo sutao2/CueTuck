@@ -18,6 +18,7 @@ M0 文档体系
                  └─ M5 在线广场（另立变更：复用或改写后端）
                      └─ M6 运营后台
                          └─ M7 合同补齐
+                             └─ M8 设置对齐原型
 ```
 
 M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植旧 repository。
@@ -32,11 +33,12 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 分类 | M2 | [categories](../specs/categories/spec.md) | 同上 |
 | 合集 | M2 | [collections](../specs/collections/spec.md) | 同上 |
 | 变量向导 | M2 | [variables](../specs/variables/spec.md) | 同上 |
-| 设置 | M2 | [settings](../specs/settings/spec.md) | 同上 |
+| 设置 | M2 | [settings](../specs/settings/spec.md) | [2026-08-22-m2-local-workbench.md](2026-08-22-m2-local-workbench.md) |
 | 启动器 | M3 | [launcher](../specs/launcher/spec.md) | [2026-08-23-m3-launcher.md](2026-08-23-m3-launcher.md) |
 | 广场 / 认证 / 发布 | M5 | 对应 specs | [2026-08-23-m5-online-square.md](2026-08-23-m5-online-square.md) |
 | 管理台 | M6 | [admin](../specs/admin/spec.md) | [2026-08-23-m6-admin-console.md](2026-08-23-m6-admin-console.md) |
 | 合同补齐（收藏写 / 轮换 / me） | M7 | 对应 specs | [2026-08-23-m7-contract-gaps.md](2026-08-23-m7-contract-gaps.md) |
+| 设置对齐原型 | M8 | [settings](../specs/settings/spec.md) | [2026-08-23-m8-settings-ia.md](2026-08-23-m8-settings-ia.md) |
 
 ## 通用完成定义（每个里程碑都要满足）
 

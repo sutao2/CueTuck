@@ -9,7 +9,7 @@
 | 分类 | M2 | [categories.md](categories.md) |
 | 合集 | M2 | [collections.md](collections.md) |
 | 变量 | M2 | [variables.md](variables.md) |
-| 设置 | M2 | [settings.md](settings.md) |
+| 设置 | M2 + M8 | [settings.md](settings.md) |
 | 启动器 | M3 | [launcher.md](launcher.md) |
 | 广场（含登录发布） | M5 | [square.md](square.md) |
 | 管理台 | M6 | [admin.md](admin.md) |
