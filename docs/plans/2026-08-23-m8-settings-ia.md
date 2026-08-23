@@ -79,11 +79,11 @@
 - 打开目录、ZIP 完整备份、自动备份
 - 保留 JSON 导入预览/导出与库文件备份恢复
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现；失败不破坏已有备份文件**
-- [ ] **Step 4: 映射「打开目录与 ZIP 行可见」；原备份恢复测试仍绿**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现；失败不破坏已有备份文件**
+- [x] **Step 4: 映射「打开目录与 ZIP 行可见」；原备份恢复测试仍绿**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 
@@ -94,11 +94,11 @@
 - 跟随系统、界面语言、双语开关、密度
 - 保留浅色/深色及启动器同键
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现；关双语不删中英正文**
-- [ ] **Step 4: 映射外观增加项与 variables「关闭双语不删正文」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现；关双语不删中英正文**
+- [x] **Step 4: 映射外观增加项与 variables「关闭双语不删正文」**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 
@@ -112,11 +112,11 @@
 - 网络：广场访问开关；代理/同步状态不假装
 - 更新：真实版本；检查/自动下载/通道标明尚未提供
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现；无 OAuth、无假同步、无假更新结果**
-- [ ] **Step 4: 映射对应 settings 场景**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现；无 OAuth、无假同步、无假更新结果**
+- [x] **Step 4: 映射对应 settings 场景**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 

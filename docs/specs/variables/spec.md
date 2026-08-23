@@ -80,4 +80,4 @@
 | 逐步填写 | 未开始自动化（主窗口 `UsePromptModal.vue`） |
 | 同源渲染 | 启动器与工作台共用 `desktop/src/lib/renderPrompt.js`；`LauncherApp.spec.js` 填写态预览保留 `{{姓名}}` |
 | 漏填 | `desktop/src/lib/renderPrompt.test.js` keeps unfilled placeholders |
-| 关闭双语不删正文 | 未开始 |
+| 关闭双语不删正文 | `WorkbenchShell.spec.js` keeps prompt content when bilingual is turned off |

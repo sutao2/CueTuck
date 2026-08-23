@@ -1,12 +1,12 @@
 use crate::local_database::{
     add_prompt_to_collection_in_dir, apply_import_json_in_dir, backup_library_in_dir,
-    count_local_prompts_in_dir, create_category_in_dir, create_collection_in_dir,
-    create_prompt_in_dir, delete_prompt_in_dir, import_downloaded_prompt_in_dir,
-    export_library_json_in_dir, get_setting_in_dir, list_categories_in_dir,
-    list_collection_members_in_dir, list_collections_in_dir, list_prompts_in_dir,
-    preview_import_json_in_dir, record_prompt_use_in_dir, restore_library_in_dir, set_setting_in_dir,
-    update_prompt_in_dir, CategoryRecord, CollectionRecord, ImportPreview, LocalDatabase,
-    PromptRecord,
+    clear_prompt_use_in_dir, count_local_prompts_in_dir, create_category_in_dir,
+    create_collection_in_dir, create_prompt_in_dir, delete_prompt_in_dir,
+    import_downloaded_prompt_in_dir, export_library_json_in_dir, export_library_zip_in_dir,
+    get_setting_in_dir, list_categories_in_dir, list_collection_members_in_dir,
+    list_collections_in_dir, list_prompts_in_dir, preview_import_json_in_dir,
+    record_prompt_use_in_dir, restore_library_in_dir, set_setting_in_dir, update_prompt_in_dir,
+    CategoryRecord, CollectionRecord, ImportPreview, LocalDatabase, PromptRecord,
 };
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, State};
@@ -194,4 +194,32 @@ pub fn backup_local_library(app: AppHandle, dest: Option<String>) -> Result<Stri
 #[tauri::command]
 pub fn restore_local_library(app: AppHandle, src: String) -> Result<(), String> {
     restore_library_in_dir(&data_dir(&app)?, PathBuf::from(src).as_path())
+}
+
+#[tauri::command]
+pub fn open_library_dir(app: AppHandle) -> Result<String, String> {
+    let dir = data_dir(&app)?;
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&dir)
+            .status()
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(dir.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+pub fn export_library_zip(app: AppHandle, dest: Option<String>) -> Result<String, String> {
+    let dir = data_dir(&app)?;
+    let dest_path = match dest.filter(|value| !value.trim().is_empty()) {
+        Some(path) => PathBuf::from(path),
+        None => dir.join("backups").join("promptark-library.zip"),
+    };
+    export_library_zip_in_dir(&dir, &dest_path)
+}
+
+#[tauri::command]
+pub fn clear_local_prompt_use(app: AppHandle) -> Result<(), String> {
+    clear_prompt_use_in_dir(&data_dir(&app)?)
 }

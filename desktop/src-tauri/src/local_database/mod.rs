@@ -14,10 +14,11 @@ pub use collections::{
     list_collection_members_in_dir, list_collections_in_dir, CollectionRecord,
 };
 pub use prompts::{
-    create_prompt_in_dir, delete_prompt_in_dir, import_downloaded_prompt_in_dir, list_prompts_in_dir,
-    prompt_deleted_at, prompt_use_count, record_prompt_use_in_dir, update_prompt_in_dir, PromptRecord,
+    clear_prompt_use_in_dir, create_prompt_in_dir, delete_prompt_in_dir,
+    import_downloaded_prompt_in_dir, list_prompts_in_dir, prompt_deleted_at, prompt_use_count,
+    record_prompt_use_in_dir, update_prompt_in_dir, PromptRecord,
 };
-pub use backup::{backup_library_in_dir, restore_library_in_dir};
+pub use backup::{backup_library_in_dir, export_library_zip_in_dir, restore_library_in_dir};
 pub use settings::{
     apply_import_json_in_dir, export_library_json_in_dir, get_setting_in_dir,
     preview_import_json_in_dir, set_setting_in_dir, ImportPreview,

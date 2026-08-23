@@ -1,12 +1,14 @@
 use super::{
     add_prompt_to_collection_in_dir, backup_library_in_dir, collection_member_count,
     count_local_prompts_in_dir, create_category_in_dir, create_collection_in_dir,
-    create_prompt_in_dir, delete_prompt_in_dir, get_setting_in_dir, import_downloaded_prompt_in_dir,
+    create_prompt_in_dir, delete_prompt_in_dir, export_library_zip_in_dir, get_setting_in_dir,
+    import_downloaded_prompt_in_dir,
     initialize_in_dir,
     list_categories_in_dir, list_collection_members_in_dir, list_collections_in_dir,
     list_prompts_in_dir,
     list_system_category_names, preview_import_json_in_dir, prompt_deleted_at, prompt_use_count,
-    record_prompt_use_in_dir, restore_library_in_dir, set_setting_in_dir, update_prompt_in_dir,
+    clear_prompt_use_in_dir, record_prompt_use_in_dir, restore_library_in_dir, set_setting_in_dir,
+    update_prompt_in_dir,
 };
 
 #[tokio::test]
@@ -287,6 +289,45 @@ async fn failed_restore_leaves_library() {
     let rows = list_prompts_in_dir(dir.path(), "", None).unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].title, "条目A");
+}
+
+#[tokio::test]
+async fn export_zip_does_not_remove_sqlite() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    create_prompt_in_dir(dir.path(), "条目A", "a", None).unwrap();
+    let zip = dir.path().join("backups").join("library.zip");
+    export_library_zip_in_dir(dir.path(), &zip).unwrap();
+    assert!(zip.exists());
+    assert!(dir.path().join("promptark.sqlite").exists());
+    assert_eq!(count_local_prompts_in_dir(dir.path()).unwrap(), 1);
+}
+
+#[tokio::test]
+async fn auto_backup_leaves_existing_backup() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    create_prompt_in_dir(dir.path(), "条目A", "a", None).unwrap();
+    let existing = dir.path().join("backups").join("manual.sqlite");
+    backup_library_in_dir(dir.path(), &existing).unwrap();
+    let auto = dir.path().join("backups").join("auto-latest.sqlite");
+    backup_library_in_dir(dir.path(), &auto).unwrap();
+    assert!(existing.exists());
+    assert!(auto.exists());
+}
+
+#[tokio::test]
+async fn clear_use_history_keeps_prompt_content() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let created = create_prompt_in_dir(dir.path(), "条目A", "中文 English", None).unwrap();
+    record_prompt_use_in_dir(dir.path(), &created.id).unwrap();
+    assert_eq!(prompt_use_count(dir.path(), &created.id).unwrap(), 1);
+    clear_prompt_use_in_dir(dir.path()).unwrap();
+    let rows = list_prompts_in_dir(dir.path(), "", None).unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].content, "中文 English");
+    assert_eq!(prompt_use_count(dir.path(), &created.id).unwrap(), 0);
 }
 
 #[tokio::test]

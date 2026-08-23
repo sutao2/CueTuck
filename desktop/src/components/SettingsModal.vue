@@ -60,7 +60,11 @@
             <p>当前账号接到已有邮箱密码登录，不提供未选定的第三方绑定。</p>
             <div class="setting-row">
               <span class="setting-copy"><strong>当前账号</strong><small>使用工作台已有登录，不新增 OAuth。</small></span>
-              <span class="setting-control">尚未接到本页</span>
+              <span class="setting-control" data-testid="current-account">{{ session.loggedIn ? session.email : "未登录" }}</span>
+            </div>
+            <div class="modal-actions">
+              <button v-if="!session.loggedIn" type="button" class="button primary-button" data-testid="settings-login" @click="$emit('login')">登录</button>
+              <button v-else type="button" class="button ghost-button" data-testid="settings-logout" @click="$emit('logout')">退出</button>
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>作者主页</strong><small>资料编辑尚未提供，不会假装已保存。</small></span>
@@ -119,41 +123,45 @@
           <section v-else-if="current === 'models'">
             <h3>AI 与模型</h3>
             <p>这些是本机目录、标签与建议，不会把提示词正文发到模型供应商。</p>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>默认目标模型</strong><small>用于筛选和兼容性提示。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>已启用模型库</strong><small>本机目录，不外传正文。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
-            <div class="setting-row">
+            <label class="field">
+              <span>默认目标模型</span>
+              <input v-model="defaultModel" data-testid="default-model" placeholder="本机目录名称">
+            </label>
+            <label class="field">
+              <span>已启用模型库</span>
+              <textarea v-model="modelCatalog" data-testid="model-catalog" rows="3" placeholder="每行一个本机模型名"></textarea>
+            </label>
+            <label class="setting-row">
               <span class="setting-copy"><strong>显示模型标签</strong><small>只影响本机卡片展示。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
-            <div class="setting-row">
+              <input type="checkbox" data-testid="show-model-tags" v-model="showModelTags">
+            </label>
+            <label class="setting-row">
               <span class="setting-copy"><strong>变量智能建议</strong><small>关闭时不提供建议；打开也不上传正文。</small></span>
-              <span class="setting-control">尚未接通</span>
+              <input type="checkbox" data-testid="variable-hints" v-model="variableHints">
+            </label>
+            <div class="modal-actions">
+              <button type="button" class="button primary-button" data-testid="save-models" @click="saveModels">保存本机模型偏好</button>
             </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>自定义模型列表</strong><small>管理本地可选名称。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
+            <label class="field">
+              <span>自定义模型列表</span>
+              <textarea v-model="customModels" data-testid="custom-models" rows="2" placeholder="本机自定义名称"></textarea>
+            </label>
           </section>
           <section v-else-if="current === 'data'">
             <h3>数据与备份</h3>
             <div class="setting-row">
-              <span class="setting-copy"><strong>SQLite 数据库</strong><small>打开库文件所在目录。未接通前只展示该行。</small></span>
-              <span class="setting-control">尚未接通</span>
+              <span class="setting-copy"><strong>SQLite 数据库</strong><small>打开库文件所在目录。</small></span>
+              <button type="button" class="button ghost-button" data-testid="open-library-dir" @click="openDir">打开目录</button>
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>导出完整备份</strong><small>ZIP 含提示词、合集、分类、封面与设置。</small></span>
-              <span class="setting-control">尚未接通</span>
+              <button type="button" class="button ghost-button" data-testid="export-zip" @click="doZip">导出 ZIP</button>
             </div>
-            <div class="setting-row">
+            <label class="setting-row">
               <span class="setting-copy"><strong>自动备份</strong><small>额外调度，不替换 JSON 或库文件备份。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
+              <input type="checkbox" data-testid="auto-backup" :checked="autoBackup" @change="toggleAutoBackup">
+            </label>
+            <p v-if="zipPath" data-testid="zip-path">{{ zipPath }}</p>
             <div class="modal-actions">
               <button type="button" class="button ghost-button" @click="doExport">导出 JSON</button>
             </div>
@@ -182,10 +190,10 @@
           </section>
           <section v-else-if="current === 'network'">
             <h3>网络与代理</h3>
-            <div class="setting-row">
+            <label class="setting-row">
               <span class="setting-copy"><strong>允许访问提示词广场</strong><small>关闭后工作台不请求广场；启动器仍只搜本地。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
+              <input type="checkbox" data-testid="square-access" :checked="squareAccess" @change="toggleSquareAccess">
+            </label>
             <div class="setting-row">
               <span class="setting-copy"><strong>代理</strong><small>跟随系统。未提供手动配置前不假装自建代理。</small></span>
               <span class="setting-control">跟随系统</span>
@@ -199,24 +207,30 @@
             <h3>外观</h3>
             <label class="field">
               <span>主题</span>
-              <select :value="theme" @change="$emit('theme', $event.target.value)">
+              <select data-testid="theme-select" :value="theme" @change="$emit('theme', $event.target.value)">
                 <option value="light">浅色</option>
                 <option value="dark">深色</option>
                 <option value="system">跟随系统</option>
               </select>
             </label>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>界面语言</strong><small>中文 / English。未接通前只展示该行。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
-            <div class="setting-row">
+            <label class="field">
+              <span>界面语言</span>
+              <select data-testid="ui-language" :value="uiLanguage" @change="saveUiLanguage($event.target.value)">
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+            <label class="setting-row">
               <span class="setting-copy"><strong>提示词双语版本</strong><small>关闭不删除已有中英正文。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>内容密度</strong><small>控制卡片间距。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
+              <input type="checkbox" data-testid="prompt-bilingual" :checked="promptBilingual" @change="toggleBilingual">
+            </label>
+            <label class="field">
+              <span>内容密度</span>
+              <select data-testid="density" :value="density" @change="saveDensity($event.target.value)">
+                <option value="comfortable">舒适</option>
+                <option value="compact">紧凑</option>
+              </select>
+            </label>
           </section>
           <section v-else-if="current === 'privacy'">
             <h3>隐私与安全</h3>
@@ -230,7 +244,7 @@
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>清除使用历史</strong><small>只删最近使用记录，不删提示词正文。</small></span>
-              <span class="setting-control">尚未接通</span>
+              <button type="button" class="button ghost-button" data-testid="clear-use-history" @click="clearHistory">清除</button>
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>系统钥匙串</strong><small>Refresh 只在系统密钥库，不进 Web Storage。</small></span>
@@ -268,8 +282,11 @@ import { onMounted, ref } from "vue";
 import {
   applyLocalImport,
   backupLocalLibrary,
+  clearLocalPromptUse,
+  exportLibraryZip,
   exportLocalLibrary,
   getLocalSetting,
+  openLibraryDir,
   previewLocalImport,
   restoreLocalLibrary,
   setLocalSetting,
@@ -281,8 +298,9 @@ import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/deskto
 const props = defineProps({
   theme: { type: String, default: "light" },
   host: { type: String, default: "macos" },
+  session: { type: Object, default: () => ({ loggedIn: false, email: "" }) },
 });
-const emit = defineEmits(["cancel", "theme", "imported"]);
+const emit = defineEmits(["cancel", "theme", "imported", "login", "logout"]);
 
 const pages = [
   { id: "general", label: "常规" },
@@ -314,6 +332,17 @@ const prefError = ref("");
 const launchAtLogin = ref(false);
 const minimizeToTray = ref(false);
 const closeLauncherAfterUse = ref(true);
+const autoBackup = ref(false);
+const zipPath = ref("");
+const squareAccess = ref(true);
+const uiLanguage = ref("zh");
+const promptBilingual = ref(true);
+const density = ref("comfortable");
+const defaultModel = ref("");
+const modelCatalog = ref("");
+const showModelTags = ref(true);
+const variableHints = ref(false);
+const customModels = ref("");
 
 onMounted(async () => {
   const stored = await getLocalSetting("launcher_shortcut");
@@ -328,6 +357,16 @@ onMounted(async () => {
     await getLocalSetting(DESKTOP_PREF_KEYS.closeLauncherAfterUse),
     true,
   );
+  autoBackup.value = isPrefOn(await getLocalSetting("auto_backup"));
+  squareAccess.value = isPrefOn(await getLocalSetting("square_access"), true);
+  uiLanguage.value = (await getLocalSetting("ui_language")) || "zh";
+  promptBilingual.value = isPrefOn(await getLocalSetting("prompt_bilingual"), true);
+  density.value = (await getLocalSetting("density")) || "comfortable";
+  defaultModel.value = (await getLocalSetting("default_model")) || "";
+  modelCatalog.value = (await getLocalSetting("model_catalog")) || "";
+  showModelTags.value = isPrefOn(await getLocalSetting("show_model_tags"), true);
+  variableHints.value = isPrefOn(await getLocalSetting("variable_hints"));
+  customModels.value = (await getLocalSetting("custom_models")) || "";
 });
 
 async function togglePref(key, event) {
@@ -418,5 +457,69 @@ async function doRestore() {
   } catch (error) {
     dataError.value = error instanceof Error ? error.message : String(error);
   }
+}
+
+async function openDir() {
+  dataError.value = "";
+  try {
+    zipPath.value = await openLibraryDir();
+  } catch (error) {
+    dataError.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+async function doZip() {
+  dataError.value = "";
+  try {
+    zipPath.value = await exportLibraryZip();
+  } catch (error) {
+    dataError.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+async function toggleAutoBackup(event) {
+  autoBackup.value = event.target.checked;
+  await setLocalSetting("auto_backup", autoBackup.value ? "1" : "0");
+  if (autoBackup.value) {
+    try {
+      await backupLocalLibrary("backups/auto-latest.sqlite");
+    } catch {
+      /* 浏览器预览没有库文件备份 */
+    }
+  }
+}
+
+async function toggleSquareAccess(event) {
+  squareAccess.value = event.target.checked;
+  await setLocalSetting("square_access", squareAccess.value ? "1" : "0");
+}
+
+async function saveUiLanguage(value) {
+  uiLanguage.value = value;
+  await setLocalSetting("ui_language", value);
+  document.documentElement.lang = value === "en" ? "en" : "zh-CN";
+}
+
+async function toggleBilingual(event) {
+  promptBilingual.value = event.target.checked;
+  await setLocalSetting("prompt_bilingual", promptBilingual.value ? "1" : "0");
+}
+
+async function saveDensity(value) {
+  density.value = value;
+  await setLocalSetting("density", value);
+  document.body.dataset.density = value;
+}
+
+async function saveModels() {
+  await setLocalSetting("default_model", defaultModel.value);
+  await setLocalSetting("model_catalog", modelCatalog.value);
+  await setLocalSetting("show_model_tags", showModelTags.value ? "1" : "0");
+  await setLocalSetting("variable_hints", variableHints.value ? "1" : "0");
+  await setLocalSetting("custom_models", customModels.value);
+}
+
+async function clearHistory() {
+  await clearLocalPromptUse();
 }
 </script>

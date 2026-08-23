@@ -7,6 +7,8 @@ import {
   listLocalPrompts,
   resetMemoryLibrary,
   getLocalSetting,
+  setLocalSetting,
+  recordLocalPromptUse,
 } from "../platform/library.js";
 import { resetMemorySession, setSessionTransport, loginSession } from "../platform/session.js";
 import {
@@ -417,5 +419,100 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="paste-recent-shortcut"]').exists()).toBe(true);
     expect(w.text()).toContain("新建提示词");
     expect(w.text()).toContain("快速粘贴最近使用");
+  });
+
+  it("shows open directory and zip rows with existing backup actions", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="data"]').trigger("click");
+    expect(w.get('[data-testid="open-library-dir"]').exists()).toBe(true);
+    expect(w.get('[data-testid="export-zip"]').exists()).toBe(true);
+    expect(w.get('[data-testid="auto-backup"]').exists()).toBe(true);
+    expect(w.text()).toContain("导出 JSON");
+    expect(w.text()).toContain("备份库文件");
+    await w.get('[data-testid="export-zip"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="zip-path"]').text().length).toBeGreaterThan(0);
+  });
+
+  it("shows appearance extras including follow-system theme", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="appearance"]').trigger("click");
+    const select = w.get('[data-testid="theme-select"]');
+    expect(select.text()).toContain("浅色");
+    expect(select.text()).toContain("深色");
+    expect(select.text()).toContain("跟随系统");
+    expect(w.get('[data-testid="ui-language"]').exists()).toBe(true);
+    expect(w.get('[data-testid="prompt-bilingual"]').exists()).toBe(true);
+    expect(w.get('[data-testid="density"]').exists()).toBe(true);
+  });
+
+  it("keeps prompt content when bilingual is turned off", async () => {
+    await createLocalPrompt({ title: "双语", content: "你好 Hello" });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="appearance"]').trigger("click");
+    await w.get('[data-testid="prompt-bilingual"]').setValue(false);
+    await flushPromises();
+    expect(await getLocalSetting("prompt_bilingual")).toBe("0");
+    const rows = await listLocalPrompts({ query: "" });
+    expect(rows[0].content).toBe("你好 Hello");
+  });
+
+  it("shows model rows without sending prompt bodies", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="models"]').trigger("click");
+    expect(w.get('[data-testid="default-model"]').exists()).toBe(true);
+    expect(w.get('[data-testid="model-catalog"]').exists()).toBe(true);
+    expect(w.get('[data-testid="show-model-tags"]').exists()).toBe(true);
+    expect(w.get('[data-testid="variable-hints"]').exists()).toBe(true);
+    expect(w.get('[data-testid="custom-models"]').exists()).toBe(true);
+    await w.get('[data-testid="variable-hints"]').setValue(true);
+    await w.get('[data-testid="save-models"]').trigger("click");
+    await flushPromises();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the current account from the existing login", async () => {
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="account"]').trigger("click");
+    expect(w.get('[data-testid="current-account"]').text()).toContain("dev@promptark.local");
+    expect(w.text()).not.toMatch(/QQ|LinuxDo|Google/);
+    await w.get('[data-testid="settings-logout"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="current-account"]').text()).toContain("未登录");
+  });
+
+  it("does not request square when access is off", async () => {
+    const squareSpy = vi.fn(async () => [{ id: "sq-1", title: "广场条目", kind: "prompt" }]);
+    setSquareTransport(squareSpy);
+    await setLocalSetting("square_access", "0");
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    expect(squareSpy).not.toHaveBeenCalled();
+    expect(w.get('[data-testid="square-blocked"]').text()).toContain("关闭");
+  });
+
+  it("clears use history without deleting prompt content", async () => {
+    const created = await createLocalPrompt({ title: "条目A", content: "中文 English" });
+    await recordLocalPromptUse(created.id);
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="privacy"]').trigger("click");
+    await w.get('[data-testid="clear-use-history"]').trigger("click");
+    await flushPromises();
+    const rows = await listLocalPrompts({ query: "" });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].content).toBe("中文 English");
+    expect(rows[0].use_count).toBe(0);
   });
 });

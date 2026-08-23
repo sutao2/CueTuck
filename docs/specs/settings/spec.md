@@ -215,12 +215,12 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 新建与粘贴快捷键可见 | `WorkbenchShell.spec.js` shows new and paste shortcut rows |
 | 导入预览 | `desktop/src-tauri` `import_preview_does_not_write`；`library.test.js` previews import without writing |
 | 备份恢复 | `desktop/src-tauri` `restore_replaces_library`、`failed_restore_leaves_library`；`library.test.js` rejects sqlite file backup in the browser memory library |
-| 打开目录与 ZIP 行可见 | 未开始 |
+| 打开目录与 ZIP 行可见 | `WorkbenchShell.spec.js` shows open directory and zip rows with existing backup actions；`library.test.js` exports a zip payload without dropping memory prompts；`desktop/src-tauri` `export_zip_does_not_remove_sqlite`、`auto_backup_leaves_existing_backup` |
 | 切换主题 | `desktop/src-tauri` `theme_persists_as_dark` |
-| 外观增加项可见 | 未开始 |
-| 当前账号接已有登录 | 未开始 |
+| 外观增加项可见 | `WorkbenchShell.spec.js` shows appearance extras including follow-system theme |
+| 当前账号接已有登录 | `WorkbenchShell.spec.js` shows the current account from the existing login |
 | 同步行可见且不假装 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend |
-| 模型页可见且不外传正文 | 未开始 |
-| 关闭广场访问 | 未开始 |
-| 清除使用历史不删正文 | 未开始 |
+| 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
+| 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
+| 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |
 | 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |

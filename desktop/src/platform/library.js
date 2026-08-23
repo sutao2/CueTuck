@@ -362,3 +362,30 @@ export async function recordLocalPromptUse(id) {
   row.use_count = (row.use_count ?? 0) + 1;
   return row;
 }
+
+export async function openLibraryDir() {
+  if (isTauri()) {
+    return tauriInvoke("open_library_dir");
+  }
+  return "memory-library";
+}
+
+export async function exportLibraryZip() {
+  if (isTauri()) {
+    return tauriInvoke("export_library_zip", { dest: null });
+  }
+  return JSON.stringify({
+    prompts: memoryPrompts.map(({ title, content }) => ({ title, content })),
+    collections: memoryCollections.map(({ title }) => ({ title })),
+    settings: memorySettings,
+  });
+}
+
+export async function clearLocalPromptUse() {
+  if (isTauri()) {
+    return tauriInvoke("clear_local_prompt_use");
+  }
+  memoryPrompts.forEach((row) => {
+    row.use_count = 0;
+  });
+}

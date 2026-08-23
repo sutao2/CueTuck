@@ -211,6 +211,18 @@
           </div>
           <button type="button" data-testid="go-local" @click="openLocal">前往本地</button>
         </div>
+        <div
+          v-if="space === 'square' && squareBlocked"
+          data-testid="square-blocked"
+          class="offline-banner"
+        >
+          <span>◌</span>
+          <div>
+            <strong>已关闭广场访问</strong>
+            <small>未请求广场接口。启动器仍只搜本地。</small>
+          </div>
+          <button type="button" data-testid="go-local" @click="openLocal">前往本地</button>
+        </div>
 
         <section class="prompt-section">
           <div class="section-heading-row">
@@ -305,9 +317,12 @@
       v-if="settingsOpen"
       :theme="theme"
       :host="host"
+      :session="session"
       @cancel="settingsOpen = false"
       @theme="applyTheme"
       @imported="reloadPrompts"
+      @login="openLogin('登录账号')"
+      @logout="logoutFromSettings"
     />
     <LoginModal
       v-if="loginReason"
@@ -377,7 +392,7 @@ import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import UsePromptModal from "./UsePromptModal.vue";
-import { getSession } from "../platform/session.js";
+import { getSession, logoutSession } from "../platform/session.js";
 import { createPublication, deleteFavorite, downloadSquareItem, listFavorites, listSquareItems, putFavorite } from "../platform/square.js";
 import { parseCoverUrls } from "../lib/cover.js";
 import { DEFAULT_LAUNCHER_SHORTCUT } from "../platform/shortcut.js";
@@ -437,6 +452,7 @@ const publishSources = ref([]);
 const publishSourceId = ref("");
 const squareItems = ref([]);
 const squareOffline = ref(false);
+const squareBlocked = ref(false);
 const favoriteIds = ref([]);
 const libraryItems = computed(() => [
   ...collections.value.map((item) => ({ ...item, kind: "collection" })),
@@ -516,6 +532,11 @@ async function confirmAddCategory() {
 
 function openLogin(reason) {
   loginReason.value = reason;
+}
+
+async function logoutFromSettings() {
+  await logoutSession();
+  session.value = getSession();
 }
 
 async function downloadSquare(item) {
@@ -605,6 +626,13 @@ async function refreshFavorites() {
 
 async function loadSquare() {
   squareOffline.value = false;
+  squareBlocked.value = false;
+  const access = await getLocalSetting("square_access");
+  if (access === "0") {
+    squareItems.value = [];
+    squareBlocked.value = true;
+    return;
+  }
   try {
     if (sortTab.value === "收藏") {
       if (!getSession().loggedIn) {
@@ -646,7 +674,9 @@ function toggleTheme() {
 
 async function applyTheme(next) {
   theme.value = next;
-  dark.value = next === "dark";
+  const prefersDark =
+    typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-color-scheme: dark)")?.matches);
+  dark.value = next === "dark" || (next === "system" && prefersDark);
   document.body.classList.toggle("theme-dark", dark.value);
   await setLocalSetting("theme", next);
 }
@@ -726,10 +756,8 @@ async function addToOpenedCollection(promptId) {
 onMounted(async () => {
   applyHostChrome(document.body, props.host);
   const stored = await getLocalSetting("theme");
-  if (stored === "dark" || stored === "light") {
-    theme.value = stored;
-    dark.value = stored === "dark";
-    document.body.classList.toggle("theme-dark", dark.value);
+  if (stored === "dark" || stored === "light" || stored === "system") {
+    await applyTheme(stored);
   }
   categoryGroups.value = buildCategoryTree(await listLocalCategories());
   await reloadPrompts();

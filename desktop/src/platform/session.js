@@ -72,3 +72,17 @@ export async function refreshSession() {
   if (result.email) accountEmail = result.email;
   return { email: accountEmail, accessToken };
 }
+
+export async function logoutSession() {
+  const token = accessToken;
+  accessToken = null;
+  accountEmail = null;
+  if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
+  if (token && isTauri()) {
+    try {
+      await tauriInvoke("logout_local_session", { accessToken: token });
+    } catch {
+      /* 本地已清会话 */
+    }
+  }
+}

@@ -10,6 +10,10 @@ import {
   resetMemoryLibrary,
   backupLocalLibrary,
   restoreLocalLibrary,
+  exportLibraryZip,
+  openLibraryDir,
+  recordLocalPromptUse,
+  clearLocalPromptUse,
   createLocalCategory,
   listLocalCategories,
 } from "./library.js";
@@ -80,5 +84,24 @@ describe("memory library", () => {
     await expect(
       createLocalCategory({ name: "再下一层", parentId: "cat-software-1" }),
     ).rejects.toThrow("小分类下不能再创建子分类");
+  });
+
+  it("exports a zip payload without dropping memory prompts", async () => {
+    await createLocalPrompt({ title: "条目A", content: "正文" });
+    const zip = await exportLibraryZip();
+    expect(JSON.parse(zip).prompts).toHaveLength(1);
+    expect(await openLibraryDir()).toBe("memory-library");
+    expect(await listLocalPrompts({ query: "" })).toHaveLength(1);
+  });
+
+  it("clears use counts without deleting prompt content", async () => {
+    const created = await createLocalPrompt({ title: "条目A", content: "中文 English" });
+    await recordLocalPromptUse(created.id);
+    expect((await listLocalPrompts({ query: "" }))[0].use_count).toBe(1);
+    await clearLocalPromptUse();
+    const rows = await listLocalPrompts({ query: "" });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].content).toBe("中文 English");
+    expect(rows[0].use_count).toBe(0);
   });
 });

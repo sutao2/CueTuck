@@ -152,6 +152,13 @@ pub fn prompt_use_count(dir: &Path, id: &str) -> Result<i64, String> {
     Ok(read_prompt(&open_db(dir)?, id)?.use_count)
 }
 
+pub fn clear_prompt_use_in_dir(dir: &Path) -> Result<(), String> {
+    open_db(dir)?
+        .execute("UPDATE prompts SET use_count = 0 WHERE deleted_at IS NULL", [])
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 pub fn record_prompt_use_in_dir(dir: &Path, id: &str) -> Result<PromptRecord, String> {
     let connection = open_db(dir)?;
     let changed = connection
