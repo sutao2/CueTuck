@@ -48,6 +48,16 @@
 - THEN 不出现 Refresh
 - AND 关闭标签后须重新登录
 
+#### Scenario: 查询管理员身份
+
+- GIVEN 调用方持有管理员 Access
+- WHEN 请求 `GET /v1/admin/me`
+- THEN 返回该账号邮箱与管理员角色
+
+- GIVEN 调用方持有普通用户 Access
+- WHEN 请求 `GET /v1/admin/me`
+- THEN 请求失败
+
 ### Requirement: 审核发布
 
 管理员 MUST 能列出待审发布，并能通过或驳回。审核结果 MUST NOT 锁定或改写作者本地正文。
@@ -103,6 +113,7 @@
 | 启动器不请求管理 | `LauncherApp.spec.js` does not request admin APIs while searching locally |
 | 普通令牌不能审核 | `backend` `regular_token_cannot_review_publication` |
 | 管理端不持久化 Refresh | `admin-web` `session.test.js` does not persist refresh in web storage |
+| 查询管理员身份 | 未开始 |
 | 列出待审 | `backend` `admin_lists_pending_and_can_approve`；`admin-web` `AdminApp.spec.js` lists pending after login |
 | 通过不改本地 | `backend` `admin_lists_pending_and_can_approve` 将远端标为 approved；本切片不写桌面库 |
 | 驳回不删本地 | `backend` `admin_rejects_publication` 将远端标为 rejected；本切片不写桌面库 |

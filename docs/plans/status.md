@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-23（M6 完成） |
+| 更新日期 | 2026-08-23（M7 提案草稿） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -18,10 +18,11 @@
 | M4 桌面可分发 | 完成 | [done/2026-08-23-m4-desktop-distributable.md](done/2026-08-23-m4-desktop-distributable.md) |
 | M5 在线广场 | 完成 | [done/2026-08-23-m5-online-square.md](done/2026-08-23-m5-online-square.md) |
 | M6 运营后台 | 完成 | [done/2026-08-23-m6-admin-console.md](done/2026-08-23-m6-admin-console.md) |
+| M7 合同补齐 | 计划中 | [2026-08-23-m7-contract-gaps.md](2026-08-23-m7-contract-gaps.md)；提案未接受 |
 
 ## 当前可执行的下一步
 
-1. M6 已关闭。不要发明第二份 M6 done 记录。
+1. M7 提案仍是草稿。人接受前不得实现收藏写路径、令牌轮换或 `GET /v1/admin/me`。
 2. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
 3. 启动器仍不请求广场或管理接口。
 

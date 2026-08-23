@@ -17,7 +17,7 @@
 | M3 启动器对齐 | 旧启动器行为全部移植并接上新本地库 | 完成 |
 | M4 桌面可分发 | 本机 smoke、备份恢复、文档与规格 converge | 完成 |
 | M5 在线广场 | 改写后端，接广场/登录/发布 | 完成 |
-| M6 运营后台 | 独立管理台 | 完成 |
+| M7 合同补齐 | 已登录收藏、令牌轮换、管理员身份 | 计划中（提案草稿） |
 
 M1 不得早于 M0 的 docs-check 全绿。程序计划与模块完成态见 [plans/program.md](../plans/program.md)。逐步任务只写当前里程碑，见 [ADR 0006](../architecture/decisions/0006-plan-altitude.md)。
 
@@ -35,8 +35,9 @@ M1 不得早于 M0 的 docs-check 全绿。程序计划与模块完成态见 [pl
 3. SQLite 可初始化，启动器能对空库给出空态。
 4. 计划中的骨架测试通过。
 
-## 后期闸门（M6 之后）
+## 后期闸门（M7）
 
 - M6 已关闭，见 [done/2026-08-23-m6-admin-console.md](../plans/done/2026-08-23-m6-admin-console.md)
+- 合同补齐计划：[2026-08-23-m7-contract-gaps.md](../plans/2026-08-23-m7-contract-gaps.md)；提案未接受前不写收藏写路径 / 轮换 / me
 - 管理台不打进桌面安装包
 - 不绑定未选定的 QQ / LinuxDo / Google

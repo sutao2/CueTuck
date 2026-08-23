@@ -26,6 +26,7 @@
 | 下一期怎么一步步做 | 当前的 `docs/plans/YYYY-MM-DD-*.md` |
 | 某能力做完长什么样 | `docs/plans/modules/<模块>.md` |
 | 管理台能不能做、合同在哪 | [admin 规格](../specs/admin/spec.md) + [ADR 0009](../architecture/decisions/0009-m6-admin-console.md) |
+| 收藏写路径、令牌轮换、admin me | [M7 提案](../changes/m7-contract-gaps/proposal.md) + 对应 specs |
 
 ## 进行中的工作
 

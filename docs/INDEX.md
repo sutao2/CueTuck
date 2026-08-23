@@ -63,6 +63,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/m5-backend-contract/design.md](changes/m5-backend-contract/design.md) | 目标 | 看 M5 合同怎么落地 | OpenAPI、Rust 持令牌、本仓库后端 |
 | [changes/m6-admin-console/proposal.md](changes/m6-admin-console/proposal.md) | 现行 | 查 M6 合同是否已接受 | 已接受；决定以 ADR 0009 为准 |
 | [changes/m6-admin-console/design.md](changes/m6-admin-console/design.md) | 目标 | 看 M6 管理台怎么落地 | admin.yaml、同一 backend、独立 admin-web |
+| [changes/m7-contract-gaps/proposal.md](changes/m7-contract-gaps/proposal.md) | 目标 | 接受 M7 合同补齐前 | 草稿；未接受不得写收藏写路径 / 轮换 / me |
+| [changes/m7-contract-gaps/design.md](changes/m7-contract-gaps/design.md) | 目标 | 看 M7 怎么落地 | 收藏表、令牌轮换、GET /v1/admin/me |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
@@ -77,6 +79,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-collection-covers.md](plans/2026-08-23-collection-covers.md) | 归档 | 查合集真封面怎么做的 | cover_json 引用与缺图占位 |
 | [plans/2026-08-23-m5-online-square.md](plans/2026-08-23-m5-online-square.md) | 归档 | 查 M5 怎么做的 | M5 逐步实现计划 |
 | [plans/2026-08-23-m6-admin-console.md](plans/2026-08-23-m6-admin-console.md) | 归档 | 查 M6 怎么做的 | M6 逐步实现计划 |
+| [plans/2026-08-23-m7-contract-gaps.md](plans/2026-08-23-m7-contract-gaps.md) | 现行 | 做 M7 合同补齐 | M7 逐步实现计划；Task 0 待人接受 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |
@@ -84,6 +87,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/milestones/m4.md](plans/milestones/m4.md) | 现行 | 准备可分发前 | M4 进出标准 |
 | [plans/milestones/m5.md](plans/milestones/m5.md) | 现行 | 接广场前 | M5 进出标准 |
 | [plans/milestones/m6.md](plans/milestones/m6.md) | 现行 | 做管理台前 | M6 进出标准 |
+| [plans/milestones/m7.md](plans/milestones/m7.md) | 现行 | 做合同补齐前 | M7 进出标准 |
 | [plans/modules/README.md](plans/modules/README.md) | 现行 | 问模块怎么切 | 模块地图 |
 | [plans/modules/workbench.md](plans/modules/workbench.md) | 现行 | 做主窗口壳 | 工作台模块完成态 |
 | [plans/modules/library.md](plans/modules/library.md) | 现行 | 做本地库 | 本地库模块完成态 |

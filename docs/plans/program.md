@@ -17,6 +17,7 @@ M0 文档体系
              └─ M4 桌面可分发
                  └─ M5 在线广场（另立变更：复用或改写后端）
                      └─ M6 运营后台
+                         └─ M7 合同补齐
 ```
 
 M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植旧 repository。
@@ -35,6 +36,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 启动器 | M3 | [launcher](../specs/launcher/spec.md) | [2026-08-23-m3-launcher.md](2026-08-23-m3-launcher.md) |
 | 广场 / 认证 / 发布 | M5 | 对应 specs | [2026-08-23-m5-online-square.md](2026-08-23-m5-online-square.md) |
 | 管理台 | M6 | [admin](../specs/admin/spec.md) | [2026-08-23-m6-admin-console.md](2026-08-23-m6-admin-console.md) |
+| 合同补齐（收藏写 / 轮换 / me） | M7 | 对应 specs | [2026-08-23-m7-contract-gaps.md](2026-08-23-m7-contract-gaps.md) |
 
 ## 通用完成定义（每个里程碑都要满足）
 

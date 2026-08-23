@@ -51,6 +51,20 @@
 - THEN 出现登录提示且原因包含「收藏」
 - AND 本地库不因此新增副本
 
+#### Scenario: 已登录收藏
+
+- GIVEN 用户已登录且网络可用
+- WHEN 用户收藏一条广场条目
+- THEN 账号收藏关系被写入
+- AND 本地库不因此新增 `source=downloaded` 副本
+
+#### Scenario: 取消收藏
+
+- GIVEN 用户已登录且已收藏该条
+- WHEN 用户取消收藏
+- THEN 账号收藏关系删除
+- AND 本地已下载副本仍在
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -59,5 +73,7 @@
 | 离线 | `WorkbenchShell.spec.js` shows a non-blocking offline notice and can return to local；`LauncherApp.spec.js` does not request square while searching locally |
 | 未登录下载 | `WorkbenchShell.spec.js` downloads a square prompt without login as source=downloaded；`square.test.js` writes a local copy with source=downloaded；`imports_downloaded_prompt_with_source`；`serves_square_item_content_without_login` |
 | 未登录收藏 | `WorkbenchShell.spec.js` opens login from favorite without writing a local copy |
+| 已登录收藏 | 未开始 |
+| 取消收藏 | 未开始 |
 | 合同 path 与匿名下载 | `squareContract.test.js` lists every contract path |
 | 浏览混排 | `WorkbenchShell.spec.js` shows square items in the content grid not the category tree；`backend` `lists_square_items_without_login` |
