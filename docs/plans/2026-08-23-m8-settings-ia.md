@@ -35,11 +35,11 @@
 - `desktop/` 设置侧栏与十个面板
 - 映射 settings「十类都在」「缺少的页不得消失」
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现；同步/更新/未接通行不请求后端**
-- [ ] **Step 4: 测试 PASS；已有打开设置、未实现页、主题测试仍绿**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现；同步/更新/未接通行不请求后端**
+- [x] **Step 4: 测试 PASS；已有打开设置、未实现页、主题测试仍绿**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 

@@ -208,8 +208,8 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 |---|---|
 | 打开设置 | `WorkbenchShell.spec.js` opens settings from the sidebar |
 | 未实现页 | 同上，打开「同步」见 `settings-unavailable` |
-| 十类都在 | 未开始 |
-| 缺少的页不得消失 | 未开始 |
+| 十类都在 | `WorkbenchShell.spec.js` lists ten settings categories |
+| 缺少的页不得消失 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |
 | 开机启动 | 未开始 |
 | 保存快捷键 | `shortcut.test.js` does not persist when register throws |
 | 新建与粘贴快捷键可见 | 未开始 |
@@ -219,8 +219,8 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 切换主题 | `desktop/src-tauri` `theme_persists_as_dark` |
 | 外观增加项可见 | 未开始 |
 | 当前账号接已有登录 | 未开始 |
-| 同步行可见且不假装 | 未开始 |
+| 同步行可见且不假装 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend |
 | 模型页可见且不外传正文 | 未开始 |
 | 关闭广场访问 | 未开始 |
 | 清除使用历史不删正文 | 未开始 |
-| 版本真实、检查不假装 | 未开始 |
+| 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |

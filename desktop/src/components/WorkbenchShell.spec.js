@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import WorkbenchShell from "./WorkbenchShell.vue";
 import {
   createLocalCollection,
@@ -335,5 +335,57 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="settings-modal"]').exists()).toBe(true);
     await w.get('[data-settings-page="sync"]').trigger("click");
     expect(w.get('[data-testid="settings-unavailable"]').text()).toContain("不会请求网络");
+  });
+
+  it("lists ten settings categories", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    expect(w.findAll("[data-settings-page]").map((button) => button.text())).toEqual([
+      "常规",
+      "账号与广场",
+      "快捷键",
+      "同步",
+      "AI 与模型",
+      "数据与备份",
+      "网络与代理",
+      "外观",
+      "隐私与安全",
+      "更新",
+    ]);
+  });
+
+  it("keeps the updates page without claiming a store check", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="updates"]').trigger("click");
+    const panel = w.get('[data-testid="settings-updates"]');
+    expect(panel.text()).toContain("当前版本");
+    expect(panel.text()).toContain("检查更新");
+    expect(panel.text()).toContain("自动下载");
+    expect(panel.text()).toContain("更新通道");
+    expect(panel.text()).toContain("发行说明");
+    await w.get('[data-testid="check-updates"]').trigger("click");
+    expect(panel.text()).not.toMatch(/已从商店|已经连上更新服务器/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("shows sync rows without requesting the backend", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="sync"]').trigger("click");
+    const panel = w.get('[data-testid="settings-unavailable"]');
+    expect(panel.text()).toContain("尚未提供");
+    expect(panel.text()).toContain("自动同步收藏");
+    expect(panel.text()).toContain("仅在 Wi-Fi");
+    expect(panel.text()).toContain("冲突处理");
+    expect(panel.text()).toContain("立即同步");
+    await w.get('[data-testid="sync-now"]').trigger("click");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });
