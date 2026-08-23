@@ -106,5 +106,5 @@
 | 列出待审 | `backend` `admin_lists_pending_and_can_approve`；`admin-web` `AdminApp.spec.js` lists pending after login |
 | 通过不改本地 | `backend` `admin_lists_pending_and_can_approve` 将远端标为 approved；本切片不写桌面库 |
 | 驳回不删本地 | `backend` `admin_rejects_publication` 将远端标为 rejected；本切片不写桌面库 |
-| 看到邮箱与角色 | 未开始 |
+| 看到邮箱与角色 | `backend` `admin_lists_user_emails_and_roles`；`admin-web` `AdminApp.spec.js` lists emails and roles without password or delete controls |
 | 关闭公开广场 | 未开始 |

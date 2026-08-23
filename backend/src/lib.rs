@@ -80,6 +80,17 @@ pub struct AdminPublicationList {
     pub items: Vec<Publication>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AdminUser {
+    pub email: String,
+    pub role: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AdminUserList {
+    pub items: Vec<AdminUser>,
+}
+
 pub fn hash_password(password: &str) -> String {
     format!("{:x}", Sha256::digest(password.as_bytes()))
 }
@@ -147,6 +158,7 @@ pub fn app(state: AppState) -> Router {
             "/v1/admin/publications/:id/reject",
             post(reject_publication),
         )
+        .route("/v1/admin/users", get(list_admin_users))
         .layer(middleware::from_fn(allow_local_preview_cors))
         .with_state(state)
 }
@@ -359,6 +371,30 @@ async fn reject_publication(
     Path(id): Path<String>,
 ) -> Result<Json<Publication>, StatusCode> {
     set_publication_status(&state, &headers, &id, "rejected")
+}
+
+async fn list_admin_users(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<AdminUserList>, StatusCode> {
+    require_admin(&state, &headers)?;
+    let hashes = state
+        .users
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let roles = state
+        .roles
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut items: Vec<AdminUser> = hashes
+        .keys()
+        .map(|email| AdminUser {
+            email: email.clone(),
+            role: roles.get(email).cloned().unwrap_or_else(|| "user".into()),
+        })
+        .collect();
+    items.sort_by(|left, right| left.email.cmp(&right.email));
+    Ok(Json(AdminUserList { items }))
 }
 
 fn set_publication_status(
@@ -772,6 +808,58 @@ mod tests {
         let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(payload["status"], "rejected");
         assert_eq!(payload["id"], id);
+    }
+
+    #[tokio::test]
+    async fn regular_token_cannot_list_users() {
+        let (app, user) = login(app_with_user_and_admin()).await;
+        let denied = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/admin/users")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", user.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(denied.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn admin_lists_user_emails_and_roles() {
+        let (app, admin) = login_as(app_with_user_and_admin(), "admin@promptark.local", "adminpass").await;
+        let listed = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/admin/users")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(listed.status(), StatusCode::OK);
+        let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let items = payload["items"].as_array().unwrap();
+        let emails: Vec<&str> = items.iter().map(|row| row["email"].as_str().unwrap()).collect();
+        assert!(emails.contains(&"dev@promptark.local"));
+        assert!(emails.contains(&"admin@promptark.local"));
+        let admin_row = items
+            .iter()
+            .find(|row| row["email"] == "admin@promptark.local")
+            .unwrap();
+        let user_row = items
+            .iter()
+            .find(|row| row["email"] == "dev@promptark.local")
+            .unwrap();
+        assert_eq!(admin_row["role"], "admin");
+        assert_eq!(user_row["role"], "user");
+        assert!(admin_row.get("password").is_none());
+        assert!(admin_row.get("password_hash").is_none());
     }
 
     #[tokio::test]

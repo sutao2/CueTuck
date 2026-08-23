@@ -21,8 +21,12 @@
 
     <section v-else>
       <p data-testid="admin-account">{{ account }}</p>
+      <nav class="admin-nav">
+        <button type="button" data-testid="nav-review" @click="page = 'review'">审核</button>
+        <button type="button" data-testid="nav-users" @click="openUsers">用户</button>
+      </nav>
       <p v-if="error" data-testid="admin-error">{{ error }}</p>
-      <ul data-testid="review-list" class="review-list">
+      <ul v-if="page === 'review'" data-testid="review-list" class="review-list">
         <li v-for="item in items" :key="item.id" class="review-row">
           <span>{{ item.source_id }}</span>
           <span>{{ item.status }}</span>
@@ -31,13 +35,19 @@
         </li>
         <li v-if="items.length === 0">没有待审发布</li>
       </ul>
+      <ul v-else data-testid="user-list" class="review-list">
+        <li v-for="user in users" :key="user.email" class="review-row user-row">
+          <span>{{ user.email }}</span>
+          <span>{{ user.role }}</span>
+        </li>
+      </ul>
     </section>
   </main>
 </template>
 
 <script setup>
 import { onMounted, ref } from "vue";
-import { approvePublication, listPendingPublications, rejectPublication } from "./adminApi.js";
+import { approvePublication, listAdminUsers, listPendingPublications, rejectPublication } from "./adminApi.js";
 import { getAdminSession, loginAdmin } from "./session.js";
 
 const email = ref("");
@@ -46,6 +56,8 @@ const error = ref("");
 const loggedIn = ref(false);
 const account = ref("");
 const items = ref([]);
+const users = ref([]);
+const page = ref("review");
 
 onMounted(() => {
   const session = getAdminSession();
@@ -68,6 +80,17 @@ async function submitLogin() {
 async function refreshList() {
   const payload = await listPendingPublications();
   items.value = payload.items ?? [];
+}
+
+async function openUsers() {
+  error.value = "";
+  page.value = "users";
+  try {
+    const payload = await listAdminUsers();
+    users.value = payload.items ?? [];
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught);
+  }
 }
 
 async function approve(id) {
@@ -156,5 +179,15 @@ button {
   align-items: center;
   background: #fff;
   padding: 0.75rem 1rem;
+}
+
+.user-row {
+  grid-template-columns: 1fr auto;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
 }
 </style>

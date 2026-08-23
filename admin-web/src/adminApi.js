@@ -21,9 +21,11 @@ async function request(kind, extra = {}) {
   const path =
     kind === "list"
       ? "/v1/admin/publications"
-      : `/v1/admin/publications/${extra.id}/${kind === "approve" ? "approve" : "reject"}`;
+      : kind === "users"
+        ? "/v1/admin/users"
+        : `/v1/admin/publications/${extra.id}/${kind === "approve" ? "approve" : "reject"}`;
   const response = await fetch(`${API_BASE}${path}`, {
-    method: kind === "list" ? "GET" : "POST",
+    method: kind === "list" || kind === "users" ? "GET" : "POST",
     headers: { authorization: `Bearer ${accessToken}` },
   });
   if (response.status === 403) throw new Error("需要管理员账号");
@@ -41,4 +43,8 @@ export function approvePublication(id) {
 
 export function rejectPublication(id) {
   return request("reject", { id });
+}
+
+export function listAdminUsers() {
+  return request("users");
 }
