@@ -23,11 +23,19 @@ async function request(kind, extra = {}) {
       ? "/v1/admin/publications"
       : kind === "users"
         ? "/v1/admin/users"
-        : `/v1/admin/publications/${extra.id}/${kind === "approve" ? "approve" : "reject"}`;
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: kind === "list" || kind === "users" ? "GET" : "POST",
-    headers: { authorization: `Bearer ${accessToken}` },
-  });
+        : kind === "getSettings" || kind === "putSettings"
+          ? "/v1/admin/settings"
+          : `/v1/admin/publications/${extra.id}/${kind === "approve" ? "approve" : "reject"}`;
+  const headers = { authorization: `Bearer ${accessToken}` };
+  const init = { method: "GET", headers };
+  if (kind === "putSettings") {
+    init.method = "PUT";
+    headers["content-type"] = "application/json";
+    init.body = JSON.stringify({ square_public: extra.square_public });
+  } else if (kind !== "list" && kind !== "users" && kind !== "getSettings") {
+    init.method = "POST";
+  }
+  const response = await fetch(`${API_BASE}${path}`, init);
   if (response.status === 403) throw new Error("需要管理员账号");
   if (!response.ok) throw new Error("管理请求失败");
   return response.json();
@@ -47,4 +55,12 @@ export function rejectPublication(id) {
 
 export function listAdminUsers() {
   return request("users");
+}
+
+export function getAdminSettings() {
+  return request("getSettings");
+}
+
+export function putAdminSettings(squarePublic) {
+  return request("putSettings", { square_public: squarePublic });
 }

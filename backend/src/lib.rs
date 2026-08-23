@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct AppState {
     users: Arc<Mutex<HashMap<String, String>>>,
     roles: Arc<Mutex<HashMap<String, String>>>,
@@ -18,6 +18,21 @@ pub struct AppState {
     refresh: Arc<Mutex<HashMap<String, String>>>,
     items: Arc<Mutex<Vec<SquareItem>>>,
     publications: Arc<Mutex<Vec<Publication>>>,
+    square_public: Arc<Mutex<bool>>,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            users: Arc::new(Mutex::new(HashMap::new())),
+            roles: Arc::new(Mutex::new(HashMap::new())),
+            access: Arc::new(Mutex::new(HashMap::new())),
+            refresh: Arc::new(Mutex::new(HashMap::new())),
+            items: Arc::new(Mutex::new(Vec::new())),
+            publications: Arc::new(Mutex::new(Vec::new())),
+            square_public: Arc::new(Mutex::new(true)),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -91,6 +106,11 @@ pub struct AdminUserList {
     pub items: Vec<AdminUser>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AdminSettings {
+    pub square_public: bool,
+}
+
 pub fn hash_password(password: &str) -> String {
     format!("{:x}", Sha256::digest(password.as_bytes()))
 }
@@ -159,6 +179,7 @@ pub fn app(state: AppState) -> Router {
             post(reject_publication),
         )
         .route("/v1/admin/users", get(list_admin_users))
+        .route("/v1/admin/settings", get(get_admin_settings).put(put_admin_settings))
         .layer(middleware::from_fn(allow_local_preview_cors))
         .with_state(state)
 }
@@ -258,6 +279,14 @@ async fn list_square_items(
     State(state): State<AppState>,
     Query(query): Query<SquareListQuery>,
 ) -> Json<SquareListResponse> {
+    let square_public = state
+        .square_public
+        .lock()
+        .map(|flag| *flag)
+        .unwrap_or(true);
+    if !square_public {
+        return Json(SquareListResponse { items: vec![] });
+    }
     let sort = query.sort.unwrap_or_default();
     if sort == "favorites" || sort == "收藏" {
         return Json(SquareListResponse { items: vec![] });
@@ -371,6 +400,32 @@ async fn reject_publication(
     Path(id): Path<String>,
 ) -> Result<Json<Publication>, StatusCode> {
     set_publication_status(&state, &headers, &id, "rejected")
+}
+
+async fn get_admin_settings(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<AdminSettings>, StatusCode> {
+    require_admin(&state, &headers)?;
+    let square_public = state
+        .square_public
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map(|flag| *flag)?;
+    Ok(Json(AdminSettings { square_public }))
+}
+
+async fn put_admin_settings(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<AdminSettings>,
+) -> Result<Json<AdminSettings>, StatusCode> {
+    require_admin(&state, &headers)?;
+    *state
+        .square_public
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? = body.square_public;
+    Ok(Json(body))
 }
 
 async fn list_admin_users(
@@ -860,6 +915,92 @@ mod tests {
         assert_eq!(user_row["role"], "user");
         assert!(admin_row.get("password").is_none());
         assert!(admin_row.get("password_hash").is_none());
+    }
+
+    #[tokio::test]
+    async fn regular_token_cannot_change_settings() {
+        let (app, user) = login(app_with_user_and_admin()).await;
+        let denied = app
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/v1/admin/settings")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", user.access_token))
+                    .body(Body::from(r#"{"square_public":false}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(denied.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn admin_can_close_public_square() {
+        let state = AppState::with_users(&[
+            ("dev@promptark.local", "devpass", "user"),
+            ("admin@promptark.local", "adminpass", "admin"),
+        ]);
+        state.seed_square_demo();
+        let (app, admin) = login_as(app(state), "admin@promptark.local", "adminpass").await;
+        let open = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(open.status(), StatusCode::OK);
+        let body = to_bytes(open.into_body(), usize::MAX).await.unwrap();
+        let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+        assert!(!payload.items.is_empty());
+        let saved = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/v1/admin/settings")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::from(r#"{"square_public":false}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(saved.status(), StatusCode::OK);
+        let closed = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let body = to_bytes(closed.into_body(), usize::MAX).await.unwrap();
+        let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+        assert!(payload.items.is_empty());
+        let settings = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/admin/settings")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(settings.status(), StatusCode::OK);
+        let body = to_bytes(settings.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["square_public"], false);
     }
 
     #[tokio::test]

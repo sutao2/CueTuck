@@ -24,6 +24,7 @@
       <nav class="admin-nav">
         <button type="button" data-testid="nav-review" @click="page = 'review'">审核</button>
         <button type="button" data-testid="nav-users" @click="openUsers">用户</button>
+        <button type="button" data-testid="nav-settings" @click="openSettings">设置</button>
       </nav>
       <p v-if="error" data-testid="admin-error">{{ error }}</p>
       <ul v-if="page === 'review'" data-testid="review-list" class="review-list">
@@ -35,19 +36,33 @@
         </li>
         <li v-if="items.length === 0">没有待审发布</li>
       </ul>
-      <ul v-else data-testid="user-list" class="review-list">
+      <ul v-else-if="page === 'users'" data-testid="user-list" class="review-list">
         <li v-for="user in users" :key="user.email" class="review-row user-row">
           <span>{{ user.email }}</span>
           <span>{{ user.role }}</span>
         </li>
       </ul>
+      <section v-else data-testid="settings-panel" class="settings">
+        <label>
+          <input v-model="squarePublic" type="checkbox" data-testid="setting-square-public">
+          允许匿名浏览广场
+        </label>
+        <button type="button" data-testid="settings-save" @click="saveSettings">保存</button>
+      </section>
     </section>
   </main>
 </template>
 
 <script setup>
 import { onMounted, ref } from "vue";
-import { approvePublication, listAdminUsers, listPendingPublications, rejectPublication } from "./adminApi.js";
+import {
+  approvePublication,
+  getAdminSettings,
+  listAdminUsers,
+  listPendingPublications,
+  putAdminSettings,
+  rejectPublication,
+} from "./adminApi.js";
 import { getAdminSession, loginAdmin } from "./session.js";
 
 const email = ref("");
@@ -58,6 +73,7 @@ const account = ref("");
 const items = ref([]);
 const users = ref([]);
 const page = ref("review");
+const squarePublic = ref(true);
 
 onMounted(() => {
   const session = getAdminSession();
@@ -80,6 +96,27 @@ async function submitLogin() {
 async function refreshList() {
   const payload = await listPendingPublications();
   items.value = payload.items ?? [];
+}
+
+async function openSettings() {
+  error.value = "";
+  page.value = "settings";
+  try {
+    const payload = await getAdminSettings();
+    squarePublic.value = Boolean(payload.square_public);
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught);
+  }
+}
+
+async function saveSettings() {
+  error.value = "";
+  try {
+    const payload = await putAdminSettings(squarePublic.value);
+    squarePublic.value = Boolean(payload.square_public);
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught);
+  }
 }
 
 async function openUsers() {
@@ -189,5 +226,12 @@ button {
   display: flex;
   gap: 0.5rem;
   margin: 0 0 1rem;
+}
+
+.settings {
+  display: grid;
+  gap: 0.75rem;
+  background: #fff;
+  padding: 0.75rem 1rem;
 }
 </style>

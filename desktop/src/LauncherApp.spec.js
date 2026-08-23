@@ -23,6 +23,26 @@ describe("LauncherApp", () => {
     expect(w.get('[data-testid="launcher-chrome"]').classes()).toContain("is-collapsed");
   });
 
+  it("does not request admin APIs while searching locally", async () => {
+    const urls = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input) => {
+      urls.push(String(input));
+      throw new Error("launcher must not fetch");
+    };
+    try {
+      await createLocalPrompt({ title: "官网生成器", content: "写官网" });
+      const w = mount(LauncherApp);
+      await flushPromises();
+      await w.get("input").setValue("官网");
+      await flushPromises();
+      expect(urls.some((url) => url.includes("/v1/admin"))).toBe(false);
+      expect(w.get('[role="listbox"]').text()).toContain("官网生成器");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("does not request square while searching locally", async () => {
     let called = false;
     setSquareTransport(async () => {

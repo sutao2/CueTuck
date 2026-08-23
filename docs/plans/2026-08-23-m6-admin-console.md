@@ -1,6 +1,6 @@
 # M6 Admin Console Implementation Plan
 
-> **For agentic workers:** 合同已接受（[ADR 0009](../architecture/decisions/0009-m6-admin-console.md)）。Task 0–4 已完成。不要接 OAuth。不要把管理页打进桌面。启动器不请求管理接口。
+> **For agentic workers:** 合同已接受（[ADR 0009](../architecture/decisions/0009-m6-admin-console.md)）。Task 0–5 已完成。不要接 OAuth。不要把管理页打进桌面。启动器不请求管理接口。
 
 **Goal:** 独立浏览器管理端能审核待发、只读看用户、改一项运行时开关；桌面安装包不含管理代码。
 
@@ -103,8 +103,8 @@
 - `admin-web/` 设置页
 - `desktop/` 断言包内无 `admin-web`；启动器仍无管理请求
 
-- [ ] **Step 1: Write the failing tests**（关开关后匿名列表失败或空；桌面依赖不含 admin-web；启动器不请求管理）
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现**
-- [ ] **Step 4: 测试 PASS；映射「关闭公开广场」「桌面包不含管理」「启动器不请求管理」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**（关开关后匿名列表失败或空；桌面依赖不含 admin-web；启动器不请求管理）
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现**
+- [x] **Step 4: 测试 PASS；映射「关闭公开广场」「桌面包不含管理」「启动器不请求管理」**
+- [x] **Step 5: `./scripts/docs-check`**

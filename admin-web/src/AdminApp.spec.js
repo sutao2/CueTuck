@@ -30,6 +30,12 @@ describe("AdminApp", () => {
           ],
         };
       }
+      if (request.kind === "getSettings") {
+        return { square_public: true };
+      }
+      if (request.kind === "putSettings") {
+        return { square_public: request.square_public };
+      }
       throw new Error(`unexpected ${request.kind}`);
     });
   });
@@ -71,5 +77,37 @@ describe("AdminApp", () => {
     expect(w.find('[data-testid="user-password"]').exists()).toBe(false);
     expect(w.find('[data-testid="user-delete"]').exists()).toBe(false);
     expect(list.text()).not.toMatch(/改密|删除/);
+  });
+
+  it("saves the anonymous square setting", async () => {
+    const calls = [];
+    setAdminApiTransport(async (request) => {
+      calls.push(request);
+      if (request.kind === "list") {
+        return { items: [] };
+      }
+      if (request.kind === "getSettings") {
+        return { square_public: true };
+      }
+      if (request.kind === "putSettings") {
+        return { square_public: request.square_public };
+      }
+      throw new Error(`unexpected ${request.kind}`);
+    });
+    const w = mount(AdminApp);
+    await w.get('[data-testid="admin-email"]').setValue("admin@promptark.local");
+    await w.get('[data-testid="admin-password"]').setValue("adminpass");
+    await w.get('[data-testid="admin-login"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="nav-settings"]').trigger("click");
+    await flushPromises();
+    const box = w.get('[data-testid="setting-square-public"]');
+    expect(box.element.checked).toBe(true);
+    await box.setValue(false);
+    await w.get('[data-testid="settings-save"]').trigger("click");
+    await flushPromises();
+    expect(calls.some((call) => call.kind === "putSettings" && call.square_public === false)).toBe(
+      true,
+    );
   });
 });

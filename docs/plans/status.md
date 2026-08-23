@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-23（M6 Task 4 用户列表） |
+| 更新日期 | 2026-08-23（M6 Task 5 开关与隔离） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -17,11 +17,11 @@
 | M3 启动器对齐 | 完成 | [done/2026-08-23-m3-launcher.md](done/2026-08-23-m3-launcher.md) |
 | M4 桌面可分发 | 完成 | [done/2026-08-23-m4-desktop-distributable.md](done/2026-08-23-m4-desktop-distributable.md) |
 | M5 在线广场 | 完成 | [done/2026-08-23-m5-online-square.md](done/2026-08-23-m5-online-square.md) |
-| M6 运营后台 | 进行中 | [2026-08-23-m6-admin-console.md](2026-08-23-m6-admin-console.md)；Task 4 完成 |
+| M6 运营后台 | 进行中 | [2026-08-23-m6-admin-console.md](2026-08-23-m6-admin-console.md)；Task 5 完成 |
 
 ## 当前可执行的下一步
 
-1. M6 Task 4 已有用户只读列表。下一步是 Task 5：运行时开关与桌面包隔离。
+1. M6 Task 5 已完成。计划任务做完，尚未写 done 记录，M6 未关闭。
 2. 本仓库 `backend/` 是预发，不是生产。管理端不进桌面包。
 3. 启动器仍不请求广场或管理接口。
 
