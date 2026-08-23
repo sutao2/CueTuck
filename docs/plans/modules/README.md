@@ -12,3 +12,4 @@
 | 设置 | M2 | [settings.md](settings.md) |
 | 启动器 | M3 | [launcher.md](launcher.md) |
 | 广场（含登录发布） | M5 | [square.md](square.md) |
+| 管理台 | M6 | [admin.md](admin.md) |

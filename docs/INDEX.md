@@ -38,6 +38,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 认证；邮箱密码；Refresh 进钥匙串 |
 | [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 本机设置 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 发布；选源后提交，不锁本地 |
+| [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；不进桌面包 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
 | [reference/test-gates.md](reference/test-gates.md) | 现行 | 加测试或 CI | 分阶段门禁 |
 | [reference/openapi/square.yaml](reference/openapi/square.yaml) | 现行 | 改广场 API 时 | M5 广场 / 登录 / 发布合同 |
@@ -57,6 +58,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/_template/tasks.md](changes/_template/tasks.md) | 模板 | 开变更 | 任务模板 |
 | [changes/m5-backend-contract/proposal.md](changes/m5-backend-contract/proposal.md) | 现行 | 查 M5 合同是否已接受 | 已接受；决定以 ADR 0008 为准 |
 | [changes/m5-backend-contract/design.md](changes/m5-backend-contract/design.md) | 目标 | 看 M5 合同怎么落地 | OpenAPI、Rust 持令牌、本仓库后端 |
+| [changes/m6-admin-console/proposal.md](changes/m6-admin-console/proposal.md) | 目标 | 接受 M6 管理台前 | 草稿；未接受不得写 admin-web |
+| [changes/m6-admin-console/design.md](changes/m6-admin-console/design.md) | 目标 | 看 M6 管理台怎么落地 | admin.yaml、同一 backend、独立 admin-web |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
@@ -70,6 +73,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-user-categories.md](plans/2026-08-23-user-categories.md) | 归档 | 查用户小分类怎么做的 | 两级上限，可新增小分类 |
 | [plans/2026-08-23-collection-covers.md](plans/2026-08-23-collection-covers.md) | 归档 | 查合集真封面怎么做的 | cover_json 引用与缺图占位 |
 | [plans/2026-08-23-m5-online-square.md](plans/2026-08-23-m5-online-square.md) | 归档 | 查 M5 怎么做的 | M5 逐步实现计划 |
+| [plans/2026-08-23-m6-admin-console.md](plans/2026-08-23-m6-admin-console.md) | 现行 | 做 M6 管理台 | M6 逐步实现计划；Task 0 待人接受 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |
@@ -86,6 +90,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/modules/settings.md](plans/modules/settings.md) | 现行 | 做设置 | 设置模块完成态 |
 | [plans/modules/launcher.md](plans/modules/launcher.md) | 现行 | 做启动器 | 启动器模块完成态 |
 | [plans/modules/square.md](plans/modules/square.md) | 现行 | M5 广场 | 广场模块完成态 |
+| [plans/modules/admin.md](plans/modules/admin.md) | 现行 | M6 管理台 | 管理台模块完成态 |
 | [plans/done/README.md](plans/done/README.md) | 现行 | 里程碑做完后 | 完成记录怎么写 |
 | [plans/done/_template.md](plans/done/_template.md) | 模板 | 写完成记录 | 完成记录模板 |
 | [plans/done/2026-08-22-m0-documentation.md](plans/done/2026-08-22-m0-documentation.md) | 归档 | 查 M0 是否关闭 | M0 完成证据 |
