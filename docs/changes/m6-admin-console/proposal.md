@@ -6,7 +6,7 @@
 | 日期 | 2026-08-23 |
 | 影响规格 | [admin](../../specs/admin/spec.md) · [publish](../../specs/publish/spec.md) · [auth](../../specs/auth/spec.md) |
 
-已接受。现行决定见 [ADR 0009](../../architecture/decisions/0009-m6-admin-console.md)。尚未归档：OpenAPI 与规格测试映射未进现行文件。
+已接受。现行决定见 [ADR 0009](../../architecture/decisions/0009-m6-admin-console.md)。合同原文见 [admin.yaml](../../reference/openapi/admin.yaml)。
 
 ## 为什么
 

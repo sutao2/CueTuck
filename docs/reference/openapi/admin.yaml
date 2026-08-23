@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: PromptArk Admin
+  version: 0.1.0
+  description: M6 管理合同。不把本路径写进 square.yaml。本仓库 backend 是预发，不声称生产。
+paths:
+  /v1/admin/me:
+    get:
+      operationId: getAdminMe
+      summary: 当前管理员身份与角色
+  /v1/admin/publications:
+    get:
+      operationId: listAdminPublications
+      summary: 待审发布列表
+  /v1/admin/publications/{id}/approve:
+    post:
+      operationId: approvePublication
+      summary: 通过审核
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /v1/admin/publications/{id}/reject:
+    post:
+      operationId: rejectPublication
+      summary: 驳回审核
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /v1/admin/users:
+    get:
+      operationId: listAdminUsers
+      summary: 用户只读列表
+  /v1/admin/settings:
+    get:
+      operationId: getAdminSettings
+      summary: 运行时设置
+    put:
+      operationId: putAdminSettings
+      summary: 保存运行时设置
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+security:
+  - bearer: []

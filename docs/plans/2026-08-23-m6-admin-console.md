@@ -1,6 +1,6 @@
 # M6 Admin Console Implementation Plan
 
-> **For agentic workers:** 合同已接受（[ADR 0009](../architecture/decisions/0009-m6-admin-console.md)）。Task 0 已完成。Task 1 起才写 `admin.yaml`。不要创建 `admin-web/` 直到 Task 3。不要接 OAuth。不要把管理页打进桌面。启动器不请求管理接口。
+> **For agentic workers:** 合同已接受（[ADR 0009](../architecture/decisions/0009-m6-admin-console.md)）。Task 0–1 已完成。Task 2 起才实现 `/v1/admin`。不要创建 `admin-web/` 直到 Task 3。不要接 OAuth。不要把管理页打进桌面。启动器不请求管理接口。
 
 **Goal:** 独立浏览器管理端能审核待发、只读看用户、改一项运行时开关；桌面安装包不含管理代码。
 
@@ -43,11 +43,11 @@
 - Create: `docs/reference/openapi/admin.yaml`
 - Test: 每个 path 一条客户端映射测试（先对契约、不对真服务）
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小合同：登录角色、待审列表、通过/驳回、用户列表、一项设置**
-- [ ] **Step 4: 测试 PASS；INDEX 登记 OpenAPI**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小合同：登录角色、待审列表、通过/驳回、用户列表、一项设置**
+- [x] **Step 4: 测试 PASS；INDEX 登记 OpenAPI**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 

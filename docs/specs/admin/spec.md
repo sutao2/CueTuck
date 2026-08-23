@@ -98,6 +98,7 @@
 
 | 场景 | 测试 |
 |---|---|
+| 管理合同 | `adminContract.test.js` lists `/v1/admin` paths with admin auth |
 | 桌面包不含管理 | 未开始 |
 | 启动器不请求管理 | 未开始 |
 | 普通令牌不能审核 | 未开始 |
