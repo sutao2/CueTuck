@@ -4,6 +4,7 @@ import { getSession } from "./session.js";
 let testTransport = null;
 let testContentTransport = null;
 let testPublishTransport = null;
+let testFavoriteTransport = null;
 
 function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -22,6 +23,7 @@ export function resetSquare() {
   testTransport = null;
   testContentTransport = null;
   testPublishTransport = null;
+  testFavoriteTransport = null;
 }
 
 export function setSquareTransport(transport) {
@@ -34,6 +36,10 @@ export function setSquareContentTransport(transport) {
 
 export function setPublishTransport(transport) {
   testPublishTransport = transport;
+}
+
+export function setFavoriteTransport(transport) {
+  testFavoriteTransport = transport;
 }
 
 export async function listSquareItems({ sort = "推荐", query = "" } = {}) {
@@ -104,4 +110,50 @@ export async function createPublication({ sourceId } = {}) {
   } catch {
     throw new Error("发布失败");
   }
+}
+
+async function favoriteRequest(method, id) {
+  const token = getSession().accessToken;
+  if (!token) throw new Error("收藏需要登录");
+  if (testFavoriteTransport) {
+    return testFavoriteTransport({ method, id });
+  }
+  if (isTauri()) {
+    if (method === "GET") {
+      return tauriInvoke("list_favorites", { access_token: token });
+    }
+    const command = method === "PUT" ? "put_favorite" : "delete_favorite";
+    return tauriInvoke(command, { id, access_token: token });
+  }
+  const path = method === "GET" ? "/v1/favorites" : `/v1/favorites/${encodeURIComponent(id)}`;
+  try {
+    const response = await fetch(`${apiBase()}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (method === "DELETE") {
+      if (!response.ok) throw new Error("取消收藏失败");
+      return { ok: true };
+    }
+    if (!response.ok) throw new Error("收藏失败");
+    return response.json();
+  } catch (error) {
+    if (error instanceof Error && (error.message === "收藏失败" || error.message === "取消收藏失败")) {
+      throw error;
+    }
+    throw new Error("收藏失败");
+  }
+}
+
+export function putFavorite(id) {
+  return favoriteRequest("PUT", id);
+}
+
+export function deleteFavorite(id) {
+  return favoriteRequest("DELETE", id);
+}
+
+export async function listFavorites() {
+  const payload = await favoriteRequest("GET");
+  return payload.items ?? payload ?? [];
 }

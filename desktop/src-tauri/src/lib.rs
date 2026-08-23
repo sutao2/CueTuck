@@ -52,6 +52,9 @@ pub fn run() {
             commands::square::list_square_items,
             commands::square::download_square_item,
             commands::square::create_publication,
+            commands::square::put_favorite,
+            commands::square::delete_favorite,
+            commands::square::list_favorites,
         ])
         .setup(|app| {
             let database = app.state::<LocalDatabase>();

@@ -2,11 +2,11 @@ use axum::extract::{Path, Query, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, Method, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::Response;
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
@@ -19,6 +19,7 @@ pub struct AppState {
     items: Arc<Mutex<Vec<SquareItem>>>,
     publications: Arc<Mutex<Vec<Publication>>>,
     square_public: Arc<Mutex<bool>>,
+    favorites: Arc<Mutex<HashMap<String, HashSet<String>>>>,
 }
 
 impl Default for AppState {
@@ -31,6 +32,7 @@ impl Default for AppState {
             items: Arc::new(Mutex::new(Vec::new())),
             publications: Arc::new(Mutex::new(Vec::new())),
             square_public: Arc::new(Mutex::new(true)),
+            favorites: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -175,6 +177,8 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/square/items", get(list_square_items))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/publications", post(create_publication))
+        .route("/v1/favorites", get(list_favorites))
+        .route("/v1/favorites/:id", put(put_favorite).delete(delete_favorite))
         .route("/v1/admin/me", get(get_admin_me))
         .route("/v1/admin/publications", get(list_admin_publications))
         .route(
@@ -348,6 +352,93 @@ async fn create_publication(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .push(publication.clone());
     Ok(Json(publication))
+}
+
+fn require_user(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
+    let Some(token) = bearer_token(headers) else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+    if token.starts_with("ref.") {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    state
+        .access
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .get(&token)
+        .cloned()
+        .ok_or(StatusCode::UNAUTHORIZED)
+}
+
+#[derive(Serialize)]
+struct FavoriteList {
+    items: Vec<SquareItem>,
+}
+
+async fn list_favorites(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<FavoriteList>, StatusCode> {
+    let email = require_user(&state, &headers)?;
+    let ids = state
+        .favorites
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .get(&email)
+        .cloned()
+        .unwrap_or_default();
+    let items = state
+        .items
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .iter()
+        .filter(|item| ids.contains(&item.id))
+        .cloned()
+        .collect();
+    Ok(Json(FavoriteList { items }))
+}
+
+async fn put_favorite(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<SquareItem>, StatusCode> {
+    let email = require_user(&state, &headers)?;
+    let item = state
+        .items
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .iter()
+        .find(|row| row.id == id)
+        .cloned()
+        .ok_or(StatusCode::NOT_FOUND)?;
+    state
+        .favorites
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .entry(email)
+        .or_default()
+        .insert(id);
+    Ok(Json(item))
+}
+
+async fn delete_favorite(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> StatusCode {
+    let Ok(email) = require_user(&state, &headers) else {
+        return StatusCode::UNAUTHORIZED;
+    };
+    match state.favorites.lock() {
+        Ok(mut map) => {
+            if let Some(ids) = map.get_mut(&email) {
+                ids.remove(&id);
+            }
+            StatusCode::NO_CONTENT
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
 }
 
 fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
@@ -1078,6 +1169,105 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    fn app_with_square_user() -> Router {
+        let state = AppState::with_user("dev@promptark.local", "devpass");
+        state.seed_square_demo();
+        app(state)
+    }
+
+    #[tokio::test]
+    async fn put_favorite_lists_for_account() {
+        let (app, session) = login(app_with_square_user()).await;
+        let put = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/v1/favorites/sq-1")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(put.status(), StatusCode::OK);
+        let listed = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/favorites")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(listed.status(), StatusCode::OK);
+        let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["items"][0]["id"], "sq-1");
+    }
+
+    #[tokio::test]
+    async fn delete_favorite_removes_account_relation() {
+        let (app, session) = login(app_with_square_user()).await;
+        let _ = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/v1/favorites/sq-1")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let deleted = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri("/v1/favorites/sq-1")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(deleted.status(), StatusCode::NO_CONTENT);
+        let listed = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/favorites")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["items"].as_array().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn favorites_require_access_token() {
+        let app = app_with_square_user();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/v1/favorites/sq-1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 }
 

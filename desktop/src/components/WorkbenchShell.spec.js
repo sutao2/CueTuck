@@ -7,9 +7,10 @@ import {
   listLocalPrompts,
   resetMemoryLibrary,
 } from "../platform/library.js";
-import { resetMemorySession, setSessionTransport } from "../platform/session.js";
+import { resetMemorySession, setSessionTransport, loginSession } from "../platform/session.js";
 import {
   resetSquare,
+  setFavoriteTransport,
   setPublishTransport,
   setSquareContentTransport,
   setSquareTransport,
@@ -22,6 +23,10 @@ describe("WorkbenchShell", () => {
     resetSquare();
     setSquareTransport(async () => {
       throw new Error("广场暂时不可用");
+    });
+    setFavoriteTransport(async (request) => {
+      if (request.method === "GET") return { items: [] };
+      return { id: request.id };
     });
   });
 
@@ -198,6 +203,62 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="favorite-square"]').trigger("click");
     expect(w.get('[data-testid="login-reason"]').text()).toContain("收藏");
     expect(await listLocalPrompts({ query: "" })).toHaveLength(0);
+  });
+
+  it("favorites a square item while logged in without writing a local copy", async () => {
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    setSessionTransport(async () => ({
+      access_token: "acc.1",
+      refresh_token: "ref.1",
+      email: "dev@promptark.local",
+    }));
+    const favoriteCalls = [];
+    setFavoriteTransport(async (request) => {
+      favoriteCalls.push(request);
+      if (request.method === "GET") return { items: [] };
+      return { id: request.id };
+    });
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="favorite-square"]').trigger("click");
+    await flushPromises();
+    expect(favoriteCalls.some((call) => call.method === "PUT" && call.id === "sq-1")).toBe(true);
+    expect(w.find('[data-testid="login-reason"]').exists()).toBe(false);
+    expect(await listLocalPrompts({ query: "" })).toHaveLength(0);
+  });
+
+  it("keeps a downloaded copy after unfavorite", async () => {
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    setSquareContentTransport(async (id) => ({
+      id,
+      title: "自然光群像",
+      content: "清透蓝天下的多元人物群像。",
+    }));
+    setSessionTransport(async () => ({
+      access_token: "acc.1",
+      refresh_token: "ref.1",
+      email: "dev@promptark.local",
+    }));
+    const ids = new Set(["sq-1"]);
+    setFavoriteTransport(async (request) => {
+      if (request.method === "GET") return { items: [...ids].map((id) => ({ id })) };
+      if (request.method === "DELETE") ids.delete(request.id);
+      return { id: request.id };
+    });
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="download-square"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="favorite-square"]').text()).toBe("已收藏");
+    await w.get('[data-testid="favorite-square"]').trigger("click");
+    await flushPromises();
+    const rows = await listLocalPrompts({ query: "自然光群像" });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].source).toBe("downloaded");
   });
 
   it("opens login from publish and resumes after success", async () => {

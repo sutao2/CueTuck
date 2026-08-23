@@ -268,7 +268,7 @@
                     data-testid="favorite-square"
                     @click.stop="favoriteSquare(item)"
                   >
-                    收藏
+                    {{ favoriteIds.includes(item.id) ? "已收藏" : "收藏" }}
                   </button>
                 </template>
                 <button v-else type="button" class="card-action" @click.stop="using = item">使用</button>
@@ -377,7 +377,7 @@ import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import UsePromptModal from "./UsePromptModal.vue";
 import { getSession } from "../platform/session.js";
-import { createPublication, downloadSquareItem, listSquareItems } from "../platform/square.js";
+import { createPublication, deleteFavorite, downloadSquareItem, listFavorites, listSquareItems, putFavorite } from "../platform/square.js";
 import { parseCoverUrls } from "../lib/cover.js";
 import { DEFAULT_LAUNCHER_SHORTCUT } from "../platform/shortcut.js";
 import { applyHostChrome, detectHost, formatShortcutLabel, trafficLightInsetPx } from "../platform/windowChrome.js";
@@ -436,6 +436,7 @@ const publishSources = ref([]);
 const publishSourceId = ref("");
 const squareItems = ref([]);
 const squareOffline = ref(false);
+const favoriteIds = ref([]);
 const libraryItems = computed(() => [
   ...collections.value.map((item) => ({ ...item, kind: "collection" })),
   ...prompts.value.map((item) => ({ ...item, kind: "prompt" })),
@@ -524,9 +525,21 @@ async function downloadSquare(item) {
   }
 }
 
-function favoriteSquare() {
+async function favoriteSquare(item) {
   if (!getSession().loggedIn) {
     openLogin("收藏需要登录");
+    return;
+  }
+  try {
+    if (favoriteIds.value.includes(item.id)) {
+      await deleteFavorite(item.id);
+      favoriteIds.value = favoriteIds.value.filter((id) => id !== item.id);
+    } else {
+      await putFavorite(item.id);
+      favoriteIds.value = [...favoriteIds.value, item.id];
+    }
+  } catch {
+    squareOffline.value = true;
   }
 }
 
@@ -559,6 +572,7 @@ async function startPublish() {
 async function finishLogin() {
   session.value = getSession();
   loginReason.value = "";
+  await refreshFavorites();
   if (pendingPublish.value) {
     pendingPublish.value = false;
     await openPublish();
@@ -575,10 +589,32 @@ async function submitPublish() {
   }
 }
 
+async function refreshFavorites() {
+  if (!getSession().loggedIn) {
+    favoriteIds.value = [];
+    return;
+  }
+  try {
+    const rows = await listFavorites();
+    favoriteIds.value = rows.map((row) => row.id);
+  } catch {
+    favoriteIds.value = [];
+  }
+}
+
 async function loadSquare() {
   squareOffline.value = false;
   try {
-    squareItems.value = await listSquareItems({ sort: sortTab.value, query: query.value });
+    if (sortTab.value === "收藏") {
+      if (!getSession().loggedIn) {
+        squareItems.value = [];
+        openLogin("收藏需要登录");
+        return;
+      }
+      squareItems.value = await listFavorites();
+    } else {
+      squareItems.value = await listSquareItems({ sort: sortTab.value, query: query.value });
+    }
   } catch {
     squareItems.value = [];
     squareOffline.value = true;
@@ -696,5 +732,6 @@ onMounted(async () => {
   }
   categoryGroups.value = buildCategoryTree(await listLocalCategories());
   await reloadPrompts();
+  await refreshFavorites();
 });
 </script>

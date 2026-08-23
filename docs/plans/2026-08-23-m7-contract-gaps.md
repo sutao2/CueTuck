@@ -57,11 +57,11 @@
 - `backend/` `PUT`/`DELETE`/`GET` `/v1/favorites`
 - `desktop/` 已登录收藏不写 downloaded 副本
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现；启动器仍不请求广场**
-- [ ] **Step 4: 测试 PASS；映射 square「已登录收藏」「取消收藏」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现；启动器仍不请求广场**
+- [x] **Step 4: 测试 PASS；映射 square「已登录收藏」「取消收藏」**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 

@@ -4,16 +4,20 @@ import {
   createPublication,
   downloadSquareItem,
   listSquareItems,
+  putFavorite,
   resetSquare,
+  setFavoriteTransport,
   setPublishTransport,
   setSquareContentTransport,
   setSquareTransport,
 } from "./square.js";
+import { loginSession, resetMemorySession, setSessionTransport } from "./session.js";
 
 describe("square client", () => {
   beforeEach(() => {
     resetSquare();
     resetMemoryLibrary();
+    resetMemorySession();
   });
 
   it("returns injected items when online", async () => {
@@ -51,5 +55,22 @@ describe("square client", () => {
     expect(result.status).toBe("pending");
     const listed = await listLocalPrompts({ query: "本地源" });
     expect(listed[0].content).toBe("旧正文");
+  });
+
+  it("puts a favorite without writing a local copy", async () => {
+    setSessionTransport(async () => ({
+      access_token: "acc.1",
+      refresh_token: "ref.1",
+      email: "dev@promptark.local",
+    }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const calls = [];
+    setFavoriteTransport(async (request) => {
+      calls.push(request);
+      return { id: request.id };
+    });
+    await putFavorite("sq-1");
+    expect(calls).toEqual([{ method: "PUT", id: "sq-1" }]);
+    expect(await listLocalPrompts({ query: "" })).toHaveLength(0);
   });
 });
