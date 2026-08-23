@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-23（M6 Task 2 审核 API） |
+| 更新日期 | 2026-08-23（M6 Task 3 admin-web） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -17,17 +17,17 @@
 | M3 启动器对齐 | 完成 | [done/2026-08-23-m3-launcher.md](done/2026-08-23-m3-launcher.md) |
 | M4 桌面可分发 | 完成 | [done/2026-08-23-m4-desktop-distributable.md](done/2026-08-23-m4-desktop-distributable.md) |
 | M5 在线广场 | 完成 | [done/2026-08-23-m5-online-square.md](done/2026-08-23-m5-online-square.md) |
-| M6 运营后台 | 进行中 | [2026-08-23-m6-admin-console.md](2026-08-23-m6-admin-console.md)；Task 2 完成 |
+| M6 运营后台 | 进行中 | [2026-08-23-m6-admin-console.md](2026-08-23-m6-admin-console.md)；Task 3 完成 |
 
 ## 当前可执行的下一步
 
-1. M6 Task 2 已落地审核 API。下一步是 Task 3：独立 `admin-web` 登录与审核页。
-2. 尚未创建 `admin-web/`。本仓库 `backend/` 是预发，不是生产。
+1. M6 Task 3 已有独立 `admin-web`。下一步是 Task 4：用户只读列表。
+2. 本仓库 `backend/` 是预发，不是生产。管理端不进桌面包。
 3. 启动器仍不请求广场或管理接口。
 
 ## 仓库事实
 
-- 应用代码：`desktop/` 本地工作台 + 独立启动器；`backend/` 本机会话 / 广场 / 发布（内存）
+- 应用代码：`desktop/` 本地工作台 + 独立启动器；`backend/` 本机会话 / 广场 / 发布 / 审核（内存）；`admin-web/` 独立管理端
 - 验证：见 [如何在本机工作](../how-to/local-dev.md)
 - docs-check：本地可通过
 - 旧仓库：只读参考，不是本仓库状态

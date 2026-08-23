@@ -26,6 +26,8 @@ cargo test --locked
 cd ../../backend
 unset CARGO_TARGET_DIR
 cargo test --locked
+cd ../admin-web
+npm test
 ```
 
 M5 会话服务（可选，浏览器预览不持久化 Refresh）：
@@ -36,7 +38,18 @@ unset CARGO_TARGET_DIR
 cargo run
 ```
 
-默认 `127.0.0.1:8787`。普通开发用户 `dev@promptark.local` / `devpass`；管理员 `admin@promptark.local` / `adminpass`。桌面窗口登录会把 Refresh 写入系统钥匙串。管理端尚未创建，审核目前只有 API。
+默认 `127.0.0.1:8787`。普通开发用户 `dev@promptark.local` / `devpass`；管理员 `admin@promptark.local` / `adminpass`。桌面窗口登录会把 Refresh 写入系统钥匙串。
+
+管理台（不要和桌面抢 `1420`）：
+
+```bash
+cd admin-web
+npm install
+npm test
+npm run dev
+```
+
+打开 `http://localhost:5174`。Refresh 不进 Web Storage。
 
 ## 浏览器验证（最快）
 

@@ -1,6 +1,6 @@
 # PromptArk API
 
-本仓库预发服务。广场合同见 [square.yaml](../docs/reference/openapi/square.yaml)；管理审核见 [admin.yaml](../docs/reference/openapi/admin.yaml)。当前切片：邮箱密码会话、广场列表与匿名正文、登录后提交审核（pending）、管理员列出/通过/驳回。浏览器预览（`:1420`）靠 CORS 读本机 API。
+本仓库预发服务。广场合同见 [square.yaml](../docs/reference/openapi/square.yaml)；管理审核见 [admin.yaml](../docs/reference/openapi/admin.yaml)。当前切片：邮箱密码会话、广场列表与匿名正文、登录后提交审核（pending）、管理员列出/通过/驳回。浏览器预览（`:1420`）与管理台（`:5174`）靠 CORS 读本机 API。
 
 ```bash
 cd backend

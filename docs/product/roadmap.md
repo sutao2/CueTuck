@@ -38,6 +38,6 @@ M1 不得早于 M0 的 docs-check 全绿。程序计划与模块完成态见 [pl
 ## 后期闸门（M6）
 
 - M5 已关闭，见 [done/2026-08-23-m5-online-square.md](../plans/done/2026-08-23-m5-online-square.md)
-- 管理台计划：[2026-08-23-m6-admin-console.md](../plans/2026-08-23-m6-admin-console.md)；合同见 [ADR 0009](../architecture/decisions/0009-m6-admin-console.md)；Task 3 前不创建 `admin-web`
+- 管理台计划：[2026-08-23-m6-admin-console.md](../plans/2026-08-23-m6-admin-console.md)；合同见 [ADR 0009](../architecture/decisions/0009-m6-admin-console.md)；`admin-web` 不进桌面包
 - 不打进桌面安装包
 - 不绑定未选定的 QQ / LinuxDo / Google

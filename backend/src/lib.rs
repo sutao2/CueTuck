@@ -151,7 +151,12 @@ pub fn app(state: AppState) -> Router {
         .with_state(state)
 }
 
-const PREVIEW_ORIGINS: &[&str] = &["http://localhost:1420", "http://127.0.0.1:1420"];
+const PREVIEW_ORIGINS: &[&str] = &[
+    "http://localhost:1420",
+    "http://127.0.0.1:1420",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+];
 
 async fn allow_local_preview_cors(request: Request, next: Next) -> Response {
     let origin = request
@@ -536,6 +541,35 @@ mod tests {
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
         assert_eq!(payload.items[0].title, "自然光群像");
+    }
+
+    #[tokio::test]
+    async fn allows_admin_web_preview_cors() {
+        let app = app(AppState::with_square_items(vec![SquareItem {
+            id: "sq-1".into(),
+            title: "自然光群像".into(),
+            kind: "prompt".into(),
+            excerpt: None,
+            model: None,
+            member_count: None,
+            content: None,
+        }]));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items")
+                    .header(header::ORIGIN, "http://localhost:5174")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(),
+            "http://localhost:5174"
+        );
     }
 
     #[tokio::test]

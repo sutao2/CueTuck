@@ -1,6 +1,6 @@
 # M6 Admin Console Implementation Plan
 
-> **For agentic workers:** 合同已接受（[ADR 0009](../architecture/decisions/0009-m6-admin-console.md)）。Task 0–2 已完成。Task 3 才创建 `admin-web/`。不要接 OAuth。不要把管理页打进桌面。启动器不请求管理接口。
+> **For agentic workers:** 合同已接受（[ADR 0009](../architecture/decisions/0009-m6-admin-console.md)）。Task 0–3 已完成。不要接 OAuth。不要把管理页打进桌面。启动器不请求管理接口。
 
 **Goal:** 独立浏览器管理端能审核待发、只读看用户、改一项运行时开关；桌面安装包不含管理代码。
 
@@ -72,11 +72,11 @@
 - Create: `admin-web/`（不得加入桌面打包）
 - Test: 管理端不把 Refresh 写入 Web Storage；审核列表可操作
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现**
-- [ ] **Step 4: 测试 PASS；映射「管理端不持久化 Refresh」「列出待审」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现**
+- [x] **Step 4: 测试 PASS；映射「管理端不持久化 Refresh」「列出待审」**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 

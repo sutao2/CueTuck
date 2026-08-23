@@ -102,8 +102,8 @@
 | 桌面包不含管理 | 未开始 |
 | 启动器不请求管理 | 未开始 |
 | 普通令牌不能审核 | `backend` `regular_token_cannot_review_publication` |
-| 管理端不持久化 Refresh | 未开始 |
-| 列出待审 | `backend` `admin_lists_pending_and_can_approve` |
+| 管理端不持久化 Refresh | `admin-web` `session.test.js` does not persist refresh in web storage |
+| 列出待审 | `backend` `admin_lists_pending_and_can_approve`；`admin-web` `AdminApp.spec.js` lists pending after login |
 | 通过不改本地 | `backend` `admin_lists_pending_and_can_approve` 将远端标为 approved；本切片不写桌面库 |
 | 驳回不删本地 | `backend` `admin_rejects_publication` 将远端标为 rejected；本切片不写桌面库 |
 | 看到邮箱与角色 | 未开始 |
