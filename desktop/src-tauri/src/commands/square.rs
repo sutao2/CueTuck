@@ -62,3 +62,22 @@ pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRe
         Some(&payload.id),
     )
 }
+
+#[tauri::command]
+pub async fn create_publication(source_id: String, access_token: String) -> Result<serde_json::Value, String> {
+    if source_id.trim().is_empty() {
+        return Err("未选择本地内容".to_string());
+    }
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{}/v1/publications", api_base()))
+        .bearer_auth(&access_token)
+        .json(&serde_json::json!({ "source_id": source_id }))
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("发布失败".to_string());
+    }
+    response.json().await.map_err(|error| error.to_string())
+}

@@ -13,14 +13,7 @@
 
 ### Requirement: 第一期无发布提交
 
-第一期 MUST NOT 出现可成功提交审核的发布动作。若界面保留「发布」文案，MUST 说明未开放。
-
-#### Scenario: 点击发布
-
-- GIVEN 第一期构建
-- WHEN 用户点击发布
-- THEN 不产生审核记录或网络写请求
-- AND 用户得到未开放说明
+M0–M4 MUST NOT 出现可成功提交审核的发布动作。M5 起以「选择本地源」与「审核与本地并行」为准。
 
 ### Requirement: 选择本地源（M5）
 
@@ -36,11 +29,18 @@
 
 提交后本地内容 MUST 仍可编辑。远端审核状态 MUST 不覆盖未发布的本地正文。
 
+#### Scenario: 审核与本地并行
+
+- GIVEN 用户已提交一条本地提示词审核
+- WHEN 用户编辑该条本地正文并保存
+- THEN 本地列表显示新正文
+- AND 编辑器不被禁用
+
 ## 测试映射
 
 | 场景 | 测试 |
 |---|---|
-| 点击发布 | 未开始（第一期不得成功提交） |
-| 未选源 | 未开始 |
-| 审核与本地并行 | 未开始 |
-| 合同提交 | `squareContract.test.js` `POST /v1/publications` |
+| 点击发布 | M0–M4 无提交；M5 见「未选源」「审核与本地并行」 |
+| 未选源 | `WorkbenchShell.spec.js` disables publish submit until a local source is selected |
+| 审核与本地并行 | `WorkbenchShell.spec.js` keeps the local prompt editable after publish；`square.test.js` submits a publication without changing the local copy |
+| 合同提交 | `squareContract.test.js` `POST /v1/publications`；`backend` `create_publication_requires_access_and_keeps_pending` |

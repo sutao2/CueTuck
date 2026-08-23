@@ -320,15 +320,33 @@
         <header class="modal-header">
           <div>
             <p class="modal-kicker">PUBLISH</p>
-            <h2>继续发布</h2>
+            <h2>发布到广场</h2>
           </div>
           <button type="button" class="modal-close" aria-label="关闭" @click="publishResume = false">×</button>
         </header>
         <div class="create-body">
-          <p>登录已完成。尚未提交审核，本地正文不会被锁定。</p>
+          <label class="field">
+            <span>本地内容</span>
+            <select v-model="publishSourceId" data-testid="publish-source">
+              <option value="">选择要发布的本地提示词或合集</option>
+              <option v-for="item in publishSources" :key="item.id" :value="item.id">
+                {{ item.title }}
+              </option>
+            </select>
+          </label>
+          <p>提交后本地正文仍可编辑，审核状态不会覆盖本机内容。</p>
         </div>
         <footer class="modal-footer">
           <button type="button" class="button ghost-button" @click="publishResume = false">关闭</button>
+          <button
+            type="button"
+            class="button primary-button"
+            data-testid="publish-submit"
+            :disabled="!publishSourceId"
+            @click="submitPublish"
+          >
+            提交审核
+          </button>
         </footer>
       </section>
     </div>
@@ -359,7 +377,7 @@ import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import UsePromptModal from "./UsePromptModal.vue";
 import { getSession } from "../platform/session.js";
-import { downloadSquareItem, listSquareItems } from "../platform/square.js";
+import { createPublication, downloadSquareItem, listSquareItems } from "../platform/square.js";
 import { parseCoverUrls } from "../lib/cover.js";
 import { DEFAULT_LAUNCHER_SHORTCUT } from "../platform/shortcut.js";
 import { applyHostChrome, detectHost, formatShortcutLabel, trafficLightInsetPx } from "../platform/windowChrome.js";
@@ -414,6 +432,8 @@ const session = ref(getSession());
 const loginReason = ref("");
 const publishResume = ref(false);
 const pendingPublish = ref(false);
+const publishSources = ref([]);
+const publishSourceId = ref("");
 const squareItems = ref([]);
 const squareOffline = ref(false);
 const libraryItems = computed(() => [
@@ -510,21 +530,48 @@ function favoriteSquare() {
   }
 }
 
-function startPublish() {
+async function loadPublishSources() {
+  const [localPrompts, localCollections] = await Promise.all([
+    listLocalPrompts({ query: "", categoryId: null }),
+    listLocalCollections({ query: "", categoryId: null }),
+  ]);
+  publishSources.value = [
+    ...localPrompts.map((item) => ({ id: item.id, title: item.title, kind: "prompt" })),
+    ...localCollections.map((item) => ({ id: item.id, title: item.title, kind: "collection" })),
+  ];
+  publishSourceId.value = "";
+}
+
+async function openPublish() {
+  await loadPublishSources();
+  publishResume.value = true;
+}
+
+async function startPublish() {
   if (!getSession().loggedIn) {
     pendingPublish.value = true;
     openLogin("发布需要登录");
     return;
   }
-  publishResume.value = true;
+  await openPublish();
 }
 
-function finishLogin() {
+async function finishLogin() {
   session.value = getSession();
   loginReason.value = "";
   if (pendingPublish.value) {
     pendingPublish.value = false;
-    publishResume.value = true;
+    await openPublish();
+  }
+}
+
+async function submitPublish() {
+  if (!publishSourceId.value) return;
+  try {
+    await createPublication({ sourceId: publishSourceId.value });
+    publishResume.value = false;
+  } catch {
+    squareOffline.value = true;
   }
 }
 

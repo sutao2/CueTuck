@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { listLocalPrompts, resetMemoryLibrary } from "./library.js";
+import { createLocalPrompt, listLocalPrompts, resetMemoryLibrary } from "./library.js";
 import {
+  createPublication,
   downloadSquareItem,
   listSquareItems,
   resetSquare,
+  setPublishTransport,
   setSquareContentTransport,
   setSquareTransport,
 } from "./square.js";
@@ -40,5 +42,14 @@ describe("square client", () => {
     const listed = await listLocalPrompts({ query: "自然光群像" });
     expect(listed).toHaveLength(1);
     expect(listed[0].source).toBe("downloaded");
+  });
+
+  it("submits a publication without changing the local copy", async () => {
+    const created = await createLocalPrompt({ title: "本地源", content: "旧正文" });
+    setPublishTransport(async ({ sourceId }) => ({ id: "pub-1", source_id: sourceId, status: "pending" }));
+    const result = await createPublication({ sourceId: created.id });
+    expect(result.status).toBe("pending");
+    const listed = await listLocalPrompts({ query: "本地源" });
+    expect(listed[0].content).toBe("旧正文");
   });
 });

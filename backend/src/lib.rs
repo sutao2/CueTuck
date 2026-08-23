@@ -16,6 +16,7 @@ pub struct AppState {
     access: Arc<Mutex<HashMap<String, String>>>,
     refresh: Arc<Mutex<HashMap<String, String>>>,
     items: Arc<Mutex<Vec<SquareItem>>>,
+    publications: Arc<Mutex<Vec<Publication>>>,
 }
 
 #[derive(Deserialize)]
@@ -48,6 +49,18 @@ pub struct SquareContentResponse {
     pub id: String,
     pub title: String,
     pub content: String,
+}
+
+#[derive(Deserialize)]
+pub struct PublicationRequest {
+    pub source_id: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Publication {
+    pub id: String,
+    pub source_id: String,
+    pub status: String,
 }
 
 #[derive(Deserialize, Default)]
@@ -111,6 +124,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/session", post(create_session).delete(delete_session))
         .route("/v1/square/items", get(list_square_items))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
+        .route("/v1/publications", post(create_publication))
         .layer(middleware::from_fn(allow_local_preview_cors))
         .with_state(state)
 }
@@ -222,6 +236,43 @@ async fn list_square_items(
         })
         .unwrap_or_default();
     Json(SquareListResponse { items })
+}
+
+async fn create_publication(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<PublicationRequest>,
+) -> Result<Json<Publication>, StatusCode> {
+    let Some(token) = bearer_token(&headers) else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+    if token.starts_with("ref.") {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let email = state
+        .access
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .get(&token)
+        .cloned();
+    if email.is_none() {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let source_id = body.source_id.trim().to_string();
+    if source_id.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let publication = Publication {
+        id: format!("pub.{}", Uuid::new_v4()),
+        source_id,
+        status: "pending".into(),
+    };
+    state
+        .publications
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .push(publication.clone());
+    Ok(Json(publication))
 }
 
 async fn get_square_item_content(
@@ -383,6 +434,69 @@ mod tests {
         assert_eq!(payload["id"], "sq-1");
         assert_eq!(payload["title"], "自然光群像");
         assert_eq!(payload["content"], "清透蓝天下的多元人物群像。");
+    }
+
+    #[tokio::test]
+    async fn create_publication_requires_access_and_keeps_pending() {
+        let (app, session) = login(app_with_dev_user()).await;
+        let denied = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/publications")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"source_id":"mem-1"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(denied.status(), StatusCode::UNAUTHORIZED);
+        let refresh_denied = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/publications")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.refresh_token))
+                    .body(Body::from(r#"{"source_id":"mem-1"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(refresh_denied.status(), StatusCode::UNAUTHORIZED);
+        let empty = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/publications")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::from(r#"{"source_id":"   "}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(empty.status(), StatusCode::BAD_REQUEST);
+        let accepted = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/publications")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::from(r#"{"source_id":"mem-1"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(accepted.status(), StatusCode::OK);
+        let body = to_bytes(accepted.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["status"], "pending");
+        assert_eq!(payload["source_id"], "mem-1");
     }
 
     #[tokio::test]

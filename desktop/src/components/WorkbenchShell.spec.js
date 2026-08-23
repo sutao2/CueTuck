@@ -8,7 +8,12 @@ import {
   resetMemoryLibrary,
 } from "../platform/library.js";
 import { resetMemorySession, setSessionTransport } from "../platform/session.js";
-import { resetSquare, setSquareContentTransport, setSquareTransport } from "../platform/square.js";
+import {
+  resetSquare,
+  setPublishTransport,
+  setSquareContentTransport,
+  setSquareTransport,
+} from "../platform/square.js";
 
 describe("WorkbenchShell", () => {
   beforeEach(() => {
@@ -210,6 +215,57 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="login-submit"]').trigger("click");
     await flushPromises();
     expect(w.get('[data-testid="publish-resume"]').exists()).toBe(true);
+  });
+
+  it("disables publish submit until a local source is selected", async () => {
+    const created = await createLocalPrompt({ title: "本地源", content: "旧正文" });
+    setSessionTransport(async () => ({
+      access_token: "acc.1",
+      refresh_token: "ref.1",
+      email: "dev@promptark.local",
+    }));
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-space="square"]').trigger("click");
+    await w.get('[data-testid="publish-prompt"]').trigger("click");
+    await w.get('[data-testid="login-email"]').setValue("dev@promptark.local");
+    await w.get('[data-testid="login-password"]').setValue("devpass");
+    await w.get('[data-testid="login-submit"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="publish-submit"]').element.disabled).toBe(true);
+    await w.get('[data-testid="publish-source"]').setValue(created.id);
+    expect(w.get('[data-testid="publish-submit"]').element.disabled).toBe(false);
+  });
+
+  it("keeps the local prompt editable after publish", async () => {
+    const created = await createLocalPrompt({ title: "本地源", content: "旧正文" });
+    setSessionTransport(async () => ({
+      access_token: "acc.1",
+      refresh_token: "ref.1",
+      email: "dev@promptark.local",
+    }));
+    setPublishTransport(async () => ({ id: "pub-1", status: "pending" }));
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-space="square"]').trigger("click");
+    await w.get('[data-testid="publish-prompt"]').trigger("click");
+    await w.get('[data-testid="login-email"]').setValue("dev@promptark.local");
+    await w.get('[data-testid="login-password"]').setValue("devpass");
+    await w.get('[data-testid="login-submit"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="publish-source"]').setValue(created.id);
+    await w.get('[data-testid="publish-submit"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-space="local"]').trigger("click");
+    await flushPromises();
+    await w.get(".prompt-card").trigger("click");
+    expect(w.get('[data-testid="prompt-editor"] textarea').element.disabled).toBe(false);
+    await w.get('[data-testid="prompt-editor"] textarea').setValue("新正文");
+    await w.get(".modal-footer .primary-button").trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="library-view"]').text()).toContain("新正文");
+    const rows = await listLocalPrompts({ query: "本地源" });
+    expect(rows[0].content).toBe("新正文");
   });
 
   it("opens settings from the sidebar", async () => {

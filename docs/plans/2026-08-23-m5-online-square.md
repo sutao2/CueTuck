@@ -94,8 +94,8 @@
 
 ### Task 5: 发布不锁本地
 
-- [ ] **Step 1: Write the failing tests**（未选源禁用提交；提交后本地仍可编辑）
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现**
-- [ ] **Step 4: 测试 PASS；映射 publish「未选源」「审核与本地并行」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**（未选源禁用提交；提交后本地仍可编辑）
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现**
+- [x] **Step 4: 测试 PASS；映射 publish「未选源」「审核与本地并行」**
+- [x] **Step 5: `./scripts/docs-check`**
