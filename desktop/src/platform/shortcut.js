@@ -1,6 +1,8 @@
 import { setLocalSetting } from "./library.js";
 
 export const DEFAULT_LAUNCHER_SHORTCUT = "Control+Space";
+export const DEFAULT_NEW_PROMPT_SHORTCUT = "Control+Alt+N";
+export const DEFAULT_PASTE_RECENT_SHORTCUT = "Control+Shift+V";
 
 export async function registerLauncherShortcut(
   combo = DEFAULT_LAUNCHER_SHORTCUT,
@@ -8,6 +10,7 @@ export async function registerLauncherShortcut(
     register,
     unregisterAll,
     persist = (value) => setLocalSetting("launcher_shortcut", value),
+    extras = [],
   } = {},
 ) {
   const plugin = register && unregisterAll
@@ -20,6 +23,9 @@ export async function registerLauncherShortcut(
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("toggle_launcher");
     });
+    for (const extra of extras) {
+      await plugin.register(extra.combo, extra.handler);
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(message.includes("冲突") ? message : `快捷键冲突：${message}`);

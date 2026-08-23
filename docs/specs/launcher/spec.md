@@ -133,8 +133,8 @@ M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新�
 | Enter 填写 | `LauncherApp.spec.js` opens fill step when Enter hits a variable prompt |
 | 直接复制 | `launcherKeyboard.test.js` activates default on Enter and copy on Ctrl+Enter |
 | 快捷键唤起 | `shortcut.test.js` persists after a successful register |
-| 新建提示词快捷键 | 未开始 |
-| 粘贴最近使用快捷键 | 未开始 |
+| 新建提示词快捷键 | `shortcut.test.js` does not persist when an extra shortcut register throws；`open_new_prompt` 打开主窗口 |
+| 粘贴最近使用快捷键 | 同上 extras；启动器写入 `last_rendered_prompt` 后 `paste_recent_prompt` 粘贴 |
 | 关闭 / 失焦 | `desktop/src-tauri` `focus_grace_is_600ms`；Esc 走 `resetAndHide` |
 | 粘贴成功 / 粘贴失败 | `paste.test.js` keeps clipboard text when paste command fails |
 | 非 macOS | `selectedText.test.js` hides selected-text on windows |

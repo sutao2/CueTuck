@@ -64,11 +64,11 @@
 - 设置快捷键页三行；启动器新建与粘贴最近使用
 - 保留唤起快捷键与冲突失败提示
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现；启动器仍不请求广场**
-- [ ] **Step 4: 映射 settings「新建与粘贴快捷键可见」与 launcher 对应场景**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现；启动器仍不请求广场**
+- [x] **Step 4: 映射 settings「新建与粘贴快捷键可见」与 launcher 对应场景**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 

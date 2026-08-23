@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, LogicalSize, Manager, Size};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, Size};
 
 pub const LAUNCHER_LABEL: &str = "launcher";
 const FOCUS_GRACE: Duration = Duration::from_millis(600);
@@ -183,6 +183,55 @@ pub fn toggle_launcher(app: AppHandle) -> Result<(), String> {
         hide_launcher_window(&app)
     } else {
         show_launcher_window(&app)
+    }
+}
+
+#[tauri::command]
+pub fn open_new_prompt(app: AppHandle) -> Result<(), String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "主窗口不存在".to_string())?;
+    window.show().map_err(|error| error.to_string())?;
+    window.set_focus().map_err(|error| error.to_string())?;
+    window
+        .emit("open-new-prompt", ())
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn paste_recent_prompt(app: AppHandle) -> Result<(), String> {
+    let dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
+    let text = crate::local_database::get_setting_in_dir(&dir, "last_rendered_prompt").unwrap_or_default();
+    if text.trim().is_empty() {
+        return Err("没有最近使用的提示词".into());
+    }
+    copy_text_to_clipboard(&text)?;
+    crate::commands::paste::paste_to_active_app(app).await
+}
+
+fn copy_text_to_clipboard(text: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+        let mut child = Command::new("pbcopy")
+            .stdin(Stdio::piped())
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| "无法写入剪贴板".to_string())?
+            .write_all(text.as_bytes())
+            .map_err(|error| error.to_string())?;
+        child.wait().map_err(|error| error.to_string())?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = text;
+        Err("当前系统尚未验证粘贴最近使用".into())
     }
 }
 

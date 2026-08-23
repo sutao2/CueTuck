@@ -408,4 +408,14 @@ describe("WorkbenchShell", () => {
     expect(await getLocalSetting("launch_at_login")).not.toBe("1");
     expect(w.get('[data-testid="launch-at-login"]').element.checked).toBe(false);
   });
+
+  it("shows new and paste shortcut rows", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="shortcuts"]').trigger("click");
+    expect(w.get('[data-testid="new-prompt-shortcut"]').exists()).toBe(true);
+    expect(w.get('[data-testid="paste-recent-shortcut"]').exists()).toBe(true);
+    expect(w.text()).toContain("新建提示词");
+    expect(w.text()).toContain("快速粘贴最近使用");
+  });
 });

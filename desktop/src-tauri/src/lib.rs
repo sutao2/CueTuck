@@ -47,6 +47,8 @@ pub fn run() {
             commands::launcher::hide_launcher_if_idle,
             commands::launcher::resize_launcher,
             commands::launcher::toggle_launcher,
+            commands::launcher::open_new_prompt,
+            commands::launcher::paste_recent_prompt,
             commands::paste::paste_to_active_app,
             commands::paste::capture_selected_text,
             commands::session::login_local_session,

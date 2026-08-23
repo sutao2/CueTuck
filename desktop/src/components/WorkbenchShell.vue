@@ -734,5 +734,11 @@ onMounted(async () => {
   categoryGroups.value = buildCategoryTree(await listLocalCategories());
   await reloadPrompts();
   await refreshFavorites();
+  if (window.__TAURI_INTERNALS__) {
+    const { listen } = await import("@tauri-apps/api/event");
+    await listen("open-new-prompt", () => {
+      creating.value = true;
+    });
+  }
 });
 </script>

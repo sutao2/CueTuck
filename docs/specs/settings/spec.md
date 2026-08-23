@@ -212,7 +212,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 缺少的页不得消失 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |
 | 开机启动 | `desktopPrefs.test.js` persists launch at login on macos；`WorkbenchShell.spec.js` saves launch at login on macos / does not claim launch at login on windows |
 | 保存快捷键 | `shortcut.test.js` does not persist when register throws |
-| 新建与粘贴快捷键可见 | 未开始 |
+| 新建与粘贴快捷键可见 | `WorkbenchShell.spec.js` shows new and paste shortcut rows |
 | 导入预览 | `desktop/src-tauri` `import_preview_does_not_write`；`library.test.js` previews import without writing |
 | 备份恢复 | `desktop/src-tauri` `restore_replaces_library`、`failed_restore_leaves_library`；`library.test.js` rejects sqlite file backup in the browser memory library |
 | 打开目录与 ZIP 行可见 | 未开始 |

@@ -126,7 +126,7 @@ import {
   resizeLauncherWindow,
   startDraggingLauncher,
 } from "./platform/launcherWindow.js";
-import { getLocalSetting, listLocalPrompts, recordLocalPromptUse } from "./platform/library.js";
+import { getLocalSetting, listLocalPrompts, recordLocalPromptUse, setLocalSetting } from "./platform/library.js";
 import { copyThenPaste } from "./platform/paste.js";
 import { supportsSelectedText } from "./platform/selectedText.js";
 import { applyHostChrome, detectHost, formatShortcutLabel } from "./platform/windowChrome.js";
@@ -229,6 +229,7 @@ async function finishUse(text, pasted) {
     }
   }
   feedback.value = pasted === false ? "已复制，未能粘贴" : "已复制";
+  await setLocalSetting("last_rendered_prompt", text);
   const closeAfter = await getLocalSetting("close_launcher_after_use");
   if (pasted !== false && closeAfter !== "0") {
     await resetAndHide();

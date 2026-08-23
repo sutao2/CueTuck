@@ -86,14 +86,14 @@
               <button type="button" class="button primary-button" @click="saveShortcut">保存快捷键</button>
             </div>
             <p v-if="shortcutError" data-testid="shortcut-error">{{ shortcutError }}</p>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>新建提示词</strong><small>打开本机新建窗口。未接通前只展示该行。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>快速粘贴最近使用</strong><small>粘贴上一条已完成变量替换的提示词。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
+            <label class="field">
+              <span>新建提示词</span>
+              <input v-model="newPromptShortcut" data-testid="new-prompt-shortcut" placeholder="Control+Alt+N">
+            </label>
+            <label class="field">
+              <span>快速粘贴最近使用</span>
+              <input v-model="pasteRecentShortcut" data-testid="paste-recent-shortcut" placeholder="Control+Shift+V">
+            </label>
           </section>
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
             <h3>同步</h3>
@@ -274,7 +274,7 @@ import {
   restoreLocalLibrary,
   setLocalSetting,
 } from "../platform/library.js";
-import { DEFAULT_LAUNCHER_SHORTCUT, registerLauncherShortcut } from "../platform/shortcut.js";
+import { DEFAULT_LAUNCHER_SHORTCUT, DEFAULT_NEW_PROMPT_SHORTCUT, DEFAULT_PASTE_RECENT_SHORTCUT, registerLauncherShortcut } from "../platform/shortcut.js";
 import pkg from "../../package.json";
 import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/desktopPrefs.js";
 
@@ -301,6 +301,8 @@ const exportText = ref("");
 const importText = ref("");
 const preview = ref(null);
 const shortcut = ref(DEFAULT_LAUNCHER_SHORTCUT);
+const newPromptShortcut = ref(DEFAULT_NEW_PROMPT_SHORTCUT);
+const pasteRecentShortcut = ref(DEFAULT_PASTE_RECENT_SHORTCUT);
 const shortcutError = ref("");
 const restorePath = ref("");
 const backupPath = ref("");
@@ -316,6 +318,10 @@ const closeLauncherAfterUse = ref(true);
 onMounted(async () => {
   const stored = await getLocalSetting("launcher_shortcut");
   if (stored) shortcut.value = stored;
+  const storedNew = await getLocalSetting("new_prompt_shortcut");
+  if (storedNew) newPromptShortcut.value = storedNew;
+  const storedPaste = await getLocalSetting("paste_recent_shortcut");
+  if (storedPaste) pasteRecentShortcut.value = storedPaste;
   launchAtLogin.value = isPrefOn(await getLocalSetting(DESKTOP_PREF_KEYS.launchAtLogin));
   minimizeToTray.value = isPrefOn(await getLocalSetting(DESKTOP_PREF_KEYS.minimizeToTray));
   closeLauncherAfterUse.value = isPrefOn(
@@ -351,7 +357,31 @@ function noteUpdates() {
 async function saveShortcut() {
   shortcutError.value = "";
   try {
-    await registerLauncherShortcut(shortcut.value.trim() || DEFAULT_LAUNCHER_SHORTCUT);
+    const invokeCombo = shortcut.value.trim() || DEFAULT_LAUNCHER_SHORTCUT;
+    const createCombo = newPromptShortcut.value.trim() || DEFAULT_NEW_PROMPT_SHORTCUT;
+    const pasteCombo = pasteRecentShortcut.value.trim() || DEFAULT_PASTE_RECENT_SHORTCUT;
+    await registerLauncherShortcut(invokeCombo, {
+      extras: [
+        {
+          combo: createCombo,
+          handler: async (event) => {
+            if (event?.state && event.state !== "Pressed") return;
+            const { invoke } = await import("@tauri-apps/api/core");
+            await invoke("open_new_prompt");
+          },
+        },
+        {
+          combo: pasteCombo,
+          handler: async (event) => {
+            if (event?.state && event.state !== "Pressed") return;
+            const { invoke } = await import("@tauri-apps/api/core");
+            await invoke("paste_recent_prompt");
+          },
+        },
+      ],
+    });
+    await setLocalSetting("new_prompt_shortcut", createCombo);
+    await setLocalSetting("paste_recent_shortcut", pasteCombo);
   } catch (error) {
     shortcutError.value = error instanceof Error ? error.message : String(error);
   }
