@@ -229,7 +229,8 @@ async function finishUse(text, pasted) {
     }
   }
   feedback.value = pasted === false ? "已复制，未能粘贴" : "已复制";
-  if (pasted !== false) {
+  const closeAfter = await getLocalSetting("close_launcher_after_use");
+  if (pasted !== false && closeAfter !== "0") {
     await resetAndHide();
   }
   return text;

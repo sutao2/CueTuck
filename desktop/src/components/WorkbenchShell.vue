@@ -304,6 +304,7 @@
     <SettingsModal
       v-if="settingsOpen"
       :theme="theme"
+      :host="host"
       @cancel="settingsOpen = false"
       @theme="applyTheme"
       @imported="reloadPrompts"

@@ -26,18 +26,34 @@
           <section v-if="current === 'general'">
             <h3>常规</h3>
             <p>第一期只使用本机库。启动器仍是独立窗口。</p>
-            <div class="setting-row">
+            <p v-if="prefError" data-testid="pref-error">{{ prefError }}</p>
+            <label class="setting-row">
               <span class="setting-copy"><strong>开机启动</strong><small>登录系统后自动打开应用。未验证的系统不会声称已生效。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>关闭后最小化到托盘</strong><small>保留快捷搜索，不退出应用。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
-            <div class="setting-row">
+              <input
+                type="checkbox"
+                data-testid="launch-at-login"
+                :checked="launchAtLogin"
+                @change="togglePref(DESKTOP_PREF_KEYS.launchAtLogin, $event)"
+              >
+            </label>
+            <label class="setting-row">
+              <span class="setting-copy"><strong>关闭后最小化到托盘</strong><small>已验证的 macOS 会隐藏主窗口而不是退出。</small></span>
+              <input
+                type="checkbox"
+                data-testid="minimize-to-tray"
+                :checked="minimizeToTray"
+                @change="togglePref(DESKTOP_PREF_KEYS.minimizeToTray, $event)"
+              >
+            </label>
+            <label class="setting-row">
               <span class="setting-copy"><strong>使用后自动关闭快捷窗口</strong><small>完成粘贴后收起启动器。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
+              <input
+                type="checkbox"
+                data-testid="close-launcher-after-use"
+                :checked="closeLauncherAfterUse"
+                @change="togglePref(DESKTOP_PREF_KEYS.closeLauncherAfterUse, $event)"
+              >
+            </label>
           </section>
           <section v-else-if="current === 'account'">
             <h3>账号与广场</h3>
@@ -256,12 +272,15 @@ import {
   getLocalSetting,
   previewLocalImport,
   restoreLocalLibrary,
+  setLocalSetting,
 } from "../platform/library.js";
 import { DEFAULT_LAUNCHER_SHORTCUT, registerLauncherShortcut } from "../platform/shortcut.js";
 import pkg from "../../package.json";
+import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/desktopPrefs.js";
 
-defineProps({
+const props = defineProps({
   theme: { type: String, default: "light" },
+  host: { type: String, default: "macos" },
 });
 const emit = defineEmits(["cancel", "theme", "imported"]);
 
@@ -289,11 +308,37 @@ const dataError = ref("");
 const syncNote = ref("");
 const updateNote = ref("");
 const appVersion = pkg.version;
+const prefError = ref("");
+const launchAtLogin = ref(false);
+const minimizeToTray = ref(false);
+const closeLauncherAfterUse = ref(true);
 
 onMounted(async () => {
   const stored = await getLocalSetting("launcher_shortcut");
   if (stored) shortcut.value = stored;
+  launchAtLogin.value = isPrefOn(await getLocalSetting(DESKTOP_PREF_KEYS.launchAtLogin));
+  minimizeToTray.value = isPrefOn(await getLocalSetting(DESKTOP_PREF_KEYS.minimizeToTray));
+  closeLauncherAfterUse.value = isPrefOn(
+    await getLocalSetting(DESKTOP_PREF_KEYS.closeLauncherAfterUse),
+    true,
+  );
 });
+
+async function togglePref(key, event) {
+  const enabled = event.target.checked;
+  prefError.value = "";
+  try {
+    await saveDesktopPref(key, enabled, props.host, setLocalSetting);
+    if (key === DESKTOP_PREF_KEYS.launchAtLogin) launchAtLogin.value = enabled;
+    if (key === DESKTOP_PREF_KEYS.minimizeToTray) minimizeToTray.value = enabled;
+    if (key === DESKTOP_PREF_KEYS.closeLauncherAfterUse) closeLauncherAfterUse.value = enabled;
+  } catch (error) {
+    prefError.value = error instanceof Error ? error.message : String(error);
+    event.target.checked = false;
+    if (key === DESKTOP_PREF_KEYS.launchAtLogin) launchAtLogin.value = false;
+    if (key === DESKTOP_PREF_KEYS.minimizeToTray) minimizeToTray.value = false;
+  }
+}
 
 function noteSync() {
   syncNote.value = "云同步尚未提供，没有向服务器发请求。";

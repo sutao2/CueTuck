@@ -3,8 +3,8 @@ mod local_database;
 mod session;
 
 use commands::launcher::LauncherFocusGuard;
-use local_database::LocalDatabase;
-use tauri::Manager;
+use local_database::{get_setting_in_dir, LocalDatabase};
+use tauri::{Manager, WindowEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -40,6 +40,8 @@ pub fn run() {
             commands::database::apply_local_import,
             commands::database::backup_local_library,
             commands::database::restore_local_library,
+            commands::desktop::apply_launch_at_login,
+            commands::desktop::apply_minimize_to_tray,
             commands::launcher::show_launcher,
             commands::launcher::hide_launcher,
             commands::launcher::hide_launcher_if_idle,
@@ -66,6 +68,20 @@ pub fn run() {
                 let _ = window.show();
             }
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if window.label() != "main" {
+                return;
+            }
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                let Ok(dir) = window.app_handle().path().app_data_dir() else {
+                    return;
+                };
+                if get_setting_in_dir(&dir, "minimize_to_tray").ok().as_deref() == Some("1") {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running PromptArk");

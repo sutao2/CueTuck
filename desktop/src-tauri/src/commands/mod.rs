@@ -1,4 +1,5 @@
 pub mod database;
+pub mod desktop;
 pub mod launcher;
 pub mod paste;
 pub mod session;

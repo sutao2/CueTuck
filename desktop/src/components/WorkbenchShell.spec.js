@@ -6,6 +6,7 @@ import {
   createLocalPrompt,
   listLocalPrompts,
   resetMemoryLibrary,
+  getLocalSetting,
 } from "../platform/library.js";
 import { resetMemorySession, setSessionTransport, loginSession } from "../platform/session.js";
 import {
@@ -387,5 +388,24 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="sync-now"]').trigger("click");
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  it("saves launch at login on macos", async () => {
+    const w = mount(WorkbenchShell, { props: { host: "macos" } });
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-testid="launch-at-login"]').setValue(true);
+    await flushPromises();
+    expect(await getLocalSetting("launch_at_login")).toBe("1");
+    expect(w.find('[data-testid="pref-error"]').exists()).toBe(false);
+  });
+
+  it("does not claim launch at login on windows", async () => {
+    const w = mount(WorkbenchShell, { props: { host: "windows" } });
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-testid="launch-at-login"]').setValue(true);
+    await flushPromises();
+    expect(w.get('[data-testid="pref-error"]').text()).toContain("尚未验证");
+    expect(await getLocalSetting("launch_at_login")).not.toBe("1");
+    expect(w.get('[data-testid="launch-at-login"]').element.checked).toBe(false);
   });
 });

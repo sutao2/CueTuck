@@ -49,11 +49,11 @@
 
 - 开机启动、关闭到托盘、使用后关闭启动器
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现；未验证 OS 不得声称已生效**
-- [ ] **Step 4: 映射「开机启动」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现；未验证 OS 不得声称已生效**
+- [x] **Step 4: 映射「开机启动」**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 
