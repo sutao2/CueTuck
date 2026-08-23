@@ -55,6 +55,31 @@
 - THEN 先看到 2 条预览
 - AND 确认前数据库条数不变
 
+#### Scenario: 备份恢复
+
+- GIVEN 库里有提示词 A，并已备份库文件
+- WHEN 再写入提示词 B 后恢复该备份
+- THEN 库里只剩 A
+- AND 恢复无效文件时库仍是恢复前的内容
+
 ### Requirement: 外观
 
 系统 MUST 支持浅色/深色，并持久化到 `settings` 表。启动器 MUST 读取同一主题键。
+
+#### Scenario: 切换主题
+
+- GIVEN 用户在外观页选择深色
+- WHEN 系统保存
+- THEN 再次读取 theme 为 `dark`
+- AND 启动器读取同一键
+
+## 测试映射
+
+| 场景 | 测试 |
+|---|---|
+| 打开设置 | `WorkbenchShell.spec.js` opens settings from the sidebar |
+| 未实现页 | 同上，打开「同步」见 `settings-unavailable` |
+| 保存快捷键 | `shortcut.test.js` does not persist when register throws |
+| 导入预览 | `desktop/src-tauri` `import_preview_does_not_write`；`library.test.js` previews import without writing |
+| 备份恢复 | `desktop/src-tauri` `restore_replaces_library`、`failed_restore_leaves_library`；`library.test.js` rejects sqlite file backup in the browser memory library |
+| 外观 | `desktop/src-tauri` `theme_persists_as_dark` |

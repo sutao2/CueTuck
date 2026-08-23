@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定，M5 实现 |
+| 状态 | 实现中 |
 | 第一期 | 不实现登录 |
 
 ## Purpose
@@ -35,4 +35,13 @@
 
 ### Requirement: 令牌（M5）
 
-Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Access 与 Refresh MUST 类型隔离并轮换。具体提供者在 M5 变更中选定，第一期不绑定 QQ / LinuxDo / Google。
+Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Access 与 Refresh MUST 类型隔离并轮换。M5 提供者是邮箱 + 密码，见 [ADR 0008](../../architecture/decisions/0008-m5-backend-contract.md)。不绑定 QQ / LinuxDo / Google。
+
+## 测试映射
+
+| 场景 | 测试 |
+|---|---|
+| 本地不要求账号 | 本地 CRUD 与启动器既有测试 |
+| 发布触发 | `WorkbenchShell.spec.js` opens login from publish and resumes after success |
+| 令牌 | `session.test.js` does not persist refresh in web storage；`desktop/src-tauri` `refresh_goes_to_store_access_does_not`；`backend` `create_session_isolates_access_and_refresh` |
+| 合同登录 | `squareContract.test.js` `POST /v1/session` |

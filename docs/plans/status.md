@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-22（M0 关闭） |
+| 更新日期 | 2026-08-23（M5 合同已接受，实现未开始） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -12,20 +12,23 @@
 | 里程碑 | 状态 | 证据 |
 |---|---|---|
 | M0 文档先行 | 完成 | [done/2026-08-22-m0-documentation.md](done/2026-08-22-m0-documentation.md) |
-| M1 桌面骨架 | 进行中 | 分支 `m1-desktop-skeleton`；Task 1 包装与 `npm test` 已绿 |
-| M2 本地工作台 | 未开始 | — |
-| M3 启动器对齐 | 未开始 | — |
-| M4 桌面可分发 | 未开始 | — |
-| M5 在线广场 | 未开始 | — |
+| M1 桌面骨架 | 完成 | [done/2026-08-22-m1-desktop-skeleton.md](done/2026-08-22-m1-desktop-skeleton.md) |
+| M2 本地工作台 | 完成 | [done/2026-08-23-m2-local-workbench.md](done/2026-08-23-m2-local-workbench.md) |
+| M3 启动器对齐 | 完成 | [done/2026-08-23-m3-launcher.md](done/2026-08-23-m3-launcher.md) |
+| M4 桌面可分发 | 完成 | [done/2026-08-23-m4-desktop-distributable.md](done/2026-08-23-m4-desktop-distributable.md) |
+| M5 在线广场 | 合同已接受 | [ADR 0008](../architecture/decisions/0008-m5-backend-contract.md)；尚无 done 记录 |
 | M6 运营后台 | 未开始 | — |
 
 ## 当前可执行的下一步
 
-1. 按 [2026-08-22-m1-desktop-skeleton.md](2026-08-22-m1-desktop-skeleton.md) 在功能分支做 M1。
+1. M5 Task 3 已落地（广场列表、离线说明、回本地）。下一步是 Task 4：匿名下载与收藏分离。启动器仍不请求广场。
+2. 覆盖率已写入 [测试门禁](../reference/test-gates.md)：行 80%、分支 70%。
+3. 不要在签名未齐时声称可公开下载或上架商店。
 
 ## 仓库事实
 
-- 应用代码：`desktop/` 仅有 Vue 探活，尚无 Tauri / SQLite
+- 应用代码：`desktop/` 本地工作台 + 独立启动器（搜索、填写、快捷键、粘贴降级）
+- 验证：见 [如何在本机工作](../how-to/local-dev.md)
 - 后端：无
 - docs-check：本地可通过
 - 旧仓库：只读参考，不是本仓库状态

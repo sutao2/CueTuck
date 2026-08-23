@@ -53,3 +53,12 @@
 - WHEN 用户选中「图片生成」
 - THEN 两条都出现
 - AND 其他大分类内容不出现
+
+## 测试映射
+
+| 场景 | 测试 |
+|---|---|
+| 空库首次打开 | `desktop/src-tauri` `seeds_ten_system_categories` |
+| 拒绝第三级 | `desktop/src-tauri` `rejects_grandchild_under_frontend`；`library.test.js` rejects a third-level category；`WorkbenchShell.spec.js` refuses a third-level category from a child |
+| 本地新增小分类 | `desktop/src-tauri` `creates_user_child_under_office`；`library.test.js` adds a user child category under a parent；`WorkbenchShell.spec.js` adds a local child category under the selected parent |
+| 选中大分类 | `desktop/src-tauri` `selecting_parent_lists_child_prompts` |

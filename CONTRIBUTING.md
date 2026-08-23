@@ -13,5 +13,6 @@
 - 新文档已写入 INDEX
 - 行为变化已写入现行规格或 `docs/changes/`
 - `./scripts/docs-check` 退出码为 0
+- 每个可独立验收的切片做完后立即 `git commit`，不要攒到里程碑结束。Agent 写完同样立刻提交，不必再问。
 
 更细的步骤：[如何更新文档](docs/how-to/update-docs.md)。

@@ -59,3 +59,13 @@
 - GIVEN 变量「受众」未填
 - WHEN 用户在预览后复制
 - THEN 最终文本仍包含 `{{受众}}`
+
+## 测试映射
+
+| 场景 | 测试 |
+|---|---|
+| 重复变量 | `desktop/src/lib/renderPrompt.test.js` dedupes repeated variables |
+| 无变量 | 未单独测；无 `{{` 时向导直接预览 |
+| 逐步填写 | 未开始自动化（主窗口 `UsePromptModal.vue`） |
+| 同源渲染 | 启动器与工作台共用 `desktop/src/lib/renderPrompt.js`；`LauncherApp.spec.js` 填写态预览保留 `{{姓名}}` |
+| 漏填 | `desktop/src/lib/renderPrompt.test.js` keeps unfilled placeholders |

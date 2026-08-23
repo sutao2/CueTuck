@@ -4,7 +4,7 @@
 |---|---|
 | 里程碑 | M2 |
 | 规格 | [library](../../specs/library/spec.md) |
-| 分步计划 | M2 开工时写 |
+| 分步计划 | [2026-08-22-m2-local-workbench.md](../2026-08-22-m2-local-workbench.md) |
 
 ## 完成时必须为真
 

@@ -30,6 +30,14 @@
 - THEN 窗口隐藏
 - AND 搜索态恢复为空查询
 
+#### Scenario: macOS 启动器窗口
+
+- GIVEN 用户在 macOS 唤起启动器
+- WHEN 独立窗口显示
+- THEN 它是旧产品那种无框透明调色板：空查询收成一条搜索栏，有结果后窗口增高
+- AND 快捷键记号用 Mac 符号，不写 `Ctrl Space`
+- AND 仍是 label `launcher` 的独立窗口，不是主窗口覆盖层，也不画主窗口那种 Overlay 红绿灯
+
 ### Requirement: 本地即时搜索
 
 系统 MUST 只依赖本地数据返回第一批结果，不得为展示本地结果等待网络。1 万条提示词下单次查询 MUST 小于 50ms。
@@ -96,3 +104,19 @@
 ### Requirement: 失焦
 
 系统 MUST 在失焦后隐藏启动器，但唤起后的短保护期内不得因系统抢焦而闪关。保护期行为以旧 `launcher.rs` 为准。
+
+## 测试映射
+
+| 场景 | 测试 |
+|---|---|
+| 独立窗口 label | `desktop/src/platform/launcherWindow.test.js`；`launcher_label_is_stable` |
+| 空查询 | `LauncherApp.spec.js` hides results on empty query |
+| 输入即搜 | `LauncherApp.spec.js` lists a local title hit |
+| Enter 填写 | `LauncherApp.spec.js` opens fill step when Enter hits a variable prompt |
+| 直接复制 | `launcherKeyboard.test.js` activates default on Enter and copy on Ctrl+Enter |
+| 快捷键唤起 | `shortcut.test.js` persists after a successful register |
+| 关闭 / 失焦 | `desktop/src-tauri` `focus_grace_is_600ms`；Esc 走 `resetAndHide` |
+| 粘贴成功 / 粘贴失败 | `paste.test.js` keeps clipboard text when paste command fails |
+| 非 macOS | `selectedText.test.js` hides selected-text on windows |
+| macOS 启动器窗口 | `LauncherApp.spec.js` uses mac chrome on macos；空查询 `is-collapsed`；`launcherWindow.test.js` sizes the palette like the old independent window；`palette_heights_match_old_window` |
+| 1 万条查询预算 | `./scripts/launcher-search-bench`（`search_ten_thousand_prompts_bench`，release，不作为 CI 红灯） |

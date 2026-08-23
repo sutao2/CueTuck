@@ -1,0 +1,11 @@
+---
+description: 每个可验收切片做完后立刻 git commit，不必再问
+alwaysApply: true
+---
+
+# 写完就提交
+
+- 计划里的一个 Task、一次可独立验收的修复或文档切片做完（测试/docs-check 过了）后，立刻 `git commit`。
+- 不要等用户再说「提交」；这是本仓库的默认要求。
+- 不要把多个无关切片攒成一次提交。
+- 仍遵守：不改 git config、不跳过 hooks、不 force push、不把密钥推进库。

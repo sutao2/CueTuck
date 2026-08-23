@@ -62,3 +62,13 @@
 - GIVEN 某提示词 `use_count` 为 3
 - WHEN 用户从详情或启动器成功复制
 - THEN `use_count` 为 4
+
+## 测试映射
+
+| 场景 | 测试 |
+|---|---|
+| 新建并保存 | `desktop/src-tauri` `creates_prompt_and_lists_it`；`desktop/src/platform/library.test.js` |
+| 增加变量 | `desktop/src/lib/renderPrompt.test.js` dedupes repeated variables |
+| 删除后搜索 | `desktop/src-tauri` `soft_deleted_prompt_is_hidden` |
+| 按正文命中 | `desktop/src-tauri` `search_hits_content` |
+| 复制后计数 | `desktop/src-tauri` `recording_use_increments_count` |

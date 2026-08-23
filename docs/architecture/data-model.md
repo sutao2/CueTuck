@@ -5,7 +5,7 @@
 | 状态 | 现行（目标模型） |
 | 关联 | [架构](overview.md) · [分类规格](../specs/categories/spec.md) · [合集规格](../specs/collections/spec.md) |
 
-第一期只实现本地 SQLite。表名以下列为准，实现时用 Flyway 或 Tauri 侧 migration 落地，并回写本文实际类型。
+第一期本地库由 Rust `rusqlite` 打开 `app_data_dir/promptark.sqlite`。初始化会建 `settings`、`categories`、`collections`、完整 `prompts`，并幂等写入十大系统分类及首包小分类。见 [ADR 0007](decisions/0007-sqlite-access.md)。
 
 ## 本地表
 

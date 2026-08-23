@@ -27,13 +27,13 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 |---|---|---|---|
 | 文档体系 | M0 | [documentation](../specs/documentation/spec.md) | 无应用计划 |
 | 工作台壳 | M1 | [workbench](../specs/workbench/spec.md) | [2026-08-22-m1-desktop-skeleton.md](2026-08-22-m1-desktop-skeleton.md) |
-| 本地库 | M2 | [library](../specs/library/spec.md) | M2 开工时写 |
-| 分类 | M2 | [categories](../specs/categories/spec.md) | M2 开工时写 |
-| 合集 | M2 | [collections](../specs/collections/spec.md) | M2 开工时写 |
-| 变量向导 | M2 | [variables](../specs/variables/spec.md) | M2 开工时写 |
-| 设置 | M2 | [settings](../specs/settings/spec.md) | M2 开工时写 |
-| 启动器 | M3 | [launcher](../specs/launcher/spec.md) | M3 开工时写 |
-| 广场 / 认证 / 发布 | M5 | 对应 specs | M5 开工时写 |
+| 本地库 | M2 | [library](../specs/library/spec.md) | [2026-08-22-m2-local-workbench.md](2026-08-22-m2-local-workbench.md) |
+| 分类 | M2 | [categories](../specs/categories/spec.md) | 同上 |
+| 合集 | M2 | [collections](../specs/collections/spec.md) | 同上 |
+| 变量向导 | M2 | [variables](../specs/variables/spec.md) | 同上 |
+| 设置 | M2 | [settings](../specs/settings/spec.md) | 同上 |
+| 启动器 | M3 | [launcher](../specs/launcher/spec.md) | [2026-08-23-m3-launcher.md](2026-08-23-m3-launcher.md) |
+| 广场 / 认证 / 发布 | M5 | 对应 specs | [2026-08-23-m5-online-square.md](2026-08-23-m5-online-square.md) |
 
 ## 通用完成定义（每个里程碑都要满足）
 

@@ -54,3 +54,12 @@
 - WHEN 用户打开合集详情
 - THEN 详情仍打开
 - AND 已有图片可见
+
+## 测试映射
+
+| 场景 | 测试 |
+|---|---|
+| 筛选小分类 | `desktop/src-tauri` `selecting_parent_lists_child_prompts`（合集走同一分类过滤）；侧栏树无合集行 |
+| 新建合集 | `desktop/src-tauri` `creates_empty_collection` |
+| 向合集添加 | `desktop/src-tauri` `adds_member_via_collection_id`；`library.test.js` adds a prompt to a collection |
+| 九宫格缺图 | `desktop/src-tauri` `persists_grid_cover_refs`；`library.test.js` stores cover refs；`cover.test.js` 缺项填占位；`CollectionDetailModal.spec.js` 3 图 + 6 占位；`WorkbenchShell.spec.js` 卡片预览前 3 张 |

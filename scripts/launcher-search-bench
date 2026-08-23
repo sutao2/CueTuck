@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+unset CARGO_TARGET_DIR
+cd "$(dirname "$0")/../desktop/src-tauri"
+exec cargo test --release --locked search_ten_thousand_prompts_bench -- --ignored --nocapture

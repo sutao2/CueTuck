@@ -39,15 +39,15 @@
 
 | 门 | 范围 | 失败则 |
 |---|---|---|
-| 本机 smoke | 安装或 `tauri dev`：新建、搜索、启动器、备份 | 不得打桌面标签 |
-| E2E | Playwright 覆盖本地主路径 | CI 红则不得发行 |
+| 本机 smoke | [发行前 QA](../how-to/release-qa.md) + 备份恢复单测；或 `tauri dev` 走同一清单 | 不得打桌面标签 |
+| E2E | Playwright 覆盖本地主路径 | **未启用**。CI 未跑不得在 README 写成已通过 |
 
 ## M5 起
 
 | 门 | 范围 | 失败则 |
 |---|---|---|
-| 后端 | Testcontainers；覆盖率阈值在启动 M5 的变更提案里写死，未写死不得开始后端实现 | 不得合并后端 |
-| 合同 | OpenAPI 与客户端映射测试 | 不得合并 API 变更 |
+| 后端 | Testcontainers；新后端生产代码行覆盖率 ≥ 80%、分支覆盖率 ≥ 70%（[ADR 0008](../architecture/decisions/0008-m5-backend-contract.md)） | 不得合并后端 |
+| 合同 | OpenAPI 与客户端映射测试；每个 path 至少一条 | 不得合并 API 变更 |
 
 ## 规格到测试
 

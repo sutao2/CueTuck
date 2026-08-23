@@ -10,7 +10,7 @@
 
 ## Decision
 
-M1–M4 只做本机桌面：SQLite、主窗口、启动器。不接旧 Spring Boot，不实现 OAuth、同步、广场、计费。M5 再单独立项决定复用或改写后端。
+M1–M4 只做本机桌面：SQLite、主窗口、启动器。不接旧 Spring Boot，不实现 OAuth、同步、广场、计费。M5 合同见 [ADR 0008](0008-m5-backend-contract.md)。
 
 ## Consequences
 

@@ -55,6 +55,18 @@
 - WHEN 用户切换到列表视图
 - THEN 同一批结果以行展示而不是卡片网格
 
+### Requirement: 宿主窗口样式
+
+系统 MUST 按宿主操作系统画窗口控件与快捷键记号。原型只定四区节奏与内容，不定 Windows 风窗框。macOS 上 MUST 使用系统红绿灯（左上），自定义顶栏 MUST 为红绿灯留出 inset，不得把无框矩形窗 + 右侧工具簇当成成品。快捷键展示 MUST 用 Mac 符号（如 `⌃Space`），不得写 `Ctrl Space`。
+
+#### Scenario: macOS 主窗口
+
+- GIVEN 用户在 macOS 打开桌面主窗口
+- WHEN 窗口显示
+- THEN 左上为系统红绿灯，可拖区域不与按钮重叠
+- AND 顶栏快捷键记号为 `⌃Space` 而不是 `Ctrl Space`
+- AND 不得出现 Windows 风格的右侧最小化 / 最大化 / 关闭
+
 ### Requirement: 底栏
 
 系统 MUST 显示本地库状态与本地条数。第一期不显示同步队列为「连接广场」。
@@ -64,3 +76,14 @@
 - GIVEN 本地库初始化成功
 - WHEN 工作台渲染底栏
 - THEN 显示库已就绪与当前未删除的本地提示词数量
+
+## 测试映射
+
+| 场景 | 测试 |
+|---|---|
+| 打开应用 | `desktop/src/components/WorkbenchShell.spec.js` renders four chrome regions；renders prototype sidebar chrome |
+| 第一期点击广场 | `desktop/src/components/WorkbenchShell.spec.js` keeps square offline on first phase |
+| SQLite 就绪 | `desktop/src-tauri` `status_is_ready_after_initialize` |
+| 展开大分类 | `desktop/src/components/WorkbenchShell.spec.js` loads preset categories into the tree；`lists_children_under_software` |
+| 切换网格列表 | `WorkbenchShell.spec.js` shows the same prompts as rows in list view |
+| macOS 主窗口 | `WorkbenchShell.spec.js` uses mac chrome on macos；`windowChrome.test.js` gives traffic-light inset and glyph shortcut on macos |
