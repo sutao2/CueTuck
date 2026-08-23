@@ -113,7 +113,7 @@
 | 启动器不请求管理 | `LauncherApp.spec.js` does not request admin APIs while searching locally |
 | 普通令牌不能审核 | `backend` `regular_token_cannot_review_publication` |
 | 管理端不持久化 Refresh | `admin-web` `session.test.js` does not persist refresh in web storage |
-| 查询管理员身份 | 未开始 |
+| 查询管理员身份 | `backend` `admin_me_returns_email_and_role`、`admin_me_rejects_regular_access` |
 | 列出待审 | `backend` `admin_lists_pending_and_can_approve`；`admin-web` `AdminApp.spec.js` lists pending after login |
 | 通过不改本地 | `backend` `admin_lists_pending_and_can_approve` 将远端标为 approved；本切片不写桌面库 |
 | 驳回不删本地 | `backend` `admin_rejects_publication` 将远端标为 rejected；本切片不写桌面库 |

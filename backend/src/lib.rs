@@ -111,6 +111,12 @@ pub struct AdminSettings {
     pub square_public: bool,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct AdminMe {
+    pub email: String,
+    pub role: String,
+}
+
 pub fn hash_password(password: &str) -> String {
     format!("{:x}", Sha256::digest(password.as_bytes()))
 }
@@ -169,6 +175,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/square/items", get(list_square_items))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/publications", post(create_publication))
+        .route("/v1/admin/me", get(get_admin_me))
         .route("/v1/admin/publications", get(list_admin_publications))
         .route(
             "/v1/admin/publications/:id/approve",
@@ -368,6 +375,21 @@ fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<String, Status
         return Err(StatusCode::FORBIDDEN);
     }
     Ok(email)
+}
+
+async fn get_admin_me(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<AdminMe>, StatusCode> {
+    let email = require_admin(&state, &headers)?;
+    let role = state
+        .roles
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .get(&email)
+        .cloned()
+        .unwrap_or_else(|| "admin".into());
+    Ok(Json(AdminMe { email, role }))
 }
 
 async fn list_admin_publications(
@@ -1018,6 +1040,44 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    }
+
+    #[tokio::test]
+    async fn admin_me_returns_email_and_role() {
+        let (app, admin) = login_as(app_with_user_and_admin(), "admin@promptark.local", "adminpass").await;
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/admin/me")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["email"], "admin@promptark.local");
+        assert_eq!(payload["role"], "admin");
+    }
+
+    #[tokio::test]
+    async fn admin_me_rejects_regular_access() {
+        let (app, session) = login(app_with_user_and_admin()).await;
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/admin/me")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
 }
 

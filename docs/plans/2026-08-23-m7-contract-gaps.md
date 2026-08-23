@@ -42,11 +42,11 @@
 - `backend/` 管理员身份
 - 映射测试
 
-- [ ] **Step 1: Write the failing tests**（管理员 200 + 角色；普通令牌拒绝）
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现**
-- [ ] **Step 4: 测试 PASS；映射 admin「查询管理员身份」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**（管理员 200 + 角色；普通令牌拒绝）
+- [x] **Step 2: Run tests — FAIL**（404）
+- [x] **Step 3: 最小实现**
+- [x] **Step 4: 测试 PASS；映射 admin「查询管理员身份」**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 
