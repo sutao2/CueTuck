@@ -122,6 +122,6 @@
 
 ### Task 7: 关闭 M8
 
-- [ ] **Step 1:** 勾选 `docs/plans/milestones/m8.md` 退出标准
-- [ ] **Step 2:** 写 done 记录，更新 status / roadmap / INDEX
-- [ ] **Step 3:** `./scripts/docs-check`
+- [x] **Step 1:** 勾选 `docs/plans/milestones/m8.md` 退出标准
+- [x] **Step 2:** 写 done 记录，更新 status / roadmap / INDEX
+- [x] **Step 3:** `./scripts/docs-check`

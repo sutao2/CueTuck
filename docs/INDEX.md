@@ -39,7 +39,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 两级分类 |
 | [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析 |
 | [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 认证；邮箱密码；Refresh 进钥匙串 |
-| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 本机设置；M8 对齐原型十类 |
+| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 本机设置；M8 已对齐原型十类 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 发布；选源后提交，不锁本地 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；不进桌面包 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
@@ -83,7 +83,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-m5-online-square.md](plans/2026-08-23-m5-online-square.md) | 归档 | 查 M5 怎么做的 | M5 逐步实现计划 |
 | [plans/2026-08-23-m6-admin-console.md](plans/2026-08-23-m6-admin-console.md) | 归档 | 查 M6 怎么做的 | M6 逐步实现计划 |
 | [plans/2026-08-23-m7-contract-gaps.md](plans/2026-08-23-m7-contract-gaps.md) | 归档 | 查 M7 怎么做的 | M7 逐步实现计划 |
-| [plans/2026-08-23-m8-settings-ia.md](plans/2026-08-23-m8-settings-ia.md) | 现行 | 做 M8 设置对齐 | M8 逐步实现计划 |
+| [plans/2026-08-23-m8-settings-ia.md](plans/2026-08-23-m8-settings-ia.md) | 归档 | 查 M8 怎么做的 | M8 逐步实现计划 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |
@@ -113,6 +113,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-23-m5-online-square.md](plans/done/2026-08-23-m5-online-square.md) | 归档 | 查 M5 是否关闭 | M5 完成证据 |
 | [plans/done/2026-08-23-m6-admin-console.md](plans/done/2026-08-23-m6-admin-console.md) | 归档 | 查 M6 是否关闭 | M6 完成证据 |
 | [plans/done/2026-08-23-m7-contract-gaps.md](plans/done/2026-08-23-m7-contract-gaps.md) | 归档 | 查 M7 是否关闭 | M7 完成证据 |
+| [plans/done/2026-08-23-m8-settings-ia.md](plans/done/2026-08-23-m8-settings-ia.md) | 归档 | 查 M8 是否关闭 | M8 完成证据 |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |

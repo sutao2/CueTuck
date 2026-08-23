@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行 |
-| 阶段 | M7 已关闭；M8 设置对齐可实现 |
+| 阶段 | M8 已关闭 |
 | 关联 | [数据模型](data-model.md) · [ADR 0008](decisions/0008-m5-backend-contract.md) · [ADR 0009](decisions/0009-m6-admin-console.md) · [ADR 0010](decisions/0010-m7-contract-gaps.md) |
 
 ## 容器
