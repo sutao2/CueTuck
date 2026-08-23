@@ -4,8 +4,15 @@ use promptark_api::{app, AppState};
 async fn main() {
     let email = std::env::var("PROMPTARK_DEV_EMAIL").unwrap_or_else(|_| "dev@promptark.local".into());
     let password = std::env::var("PROMPTARK_DEV_PASSWORD").unwrap_or_else(|_| "devpass".into());
+    let admin_email =
+        std::env::var("PROMPTARK_ADMIN_EMAIL").unwrap_or_else(|_| "admin@promptark.local".into());
+    let admin_password =
+        std::env::var("PROMPTARK_ADMIN_PASSWORD").unwrap_or_else(|_| "adminpass".into());
     let addr = std::env::var("PROMPTARK_API_BIND").unwrap_or_else(|_| "127.0.0.1:8787".into());
-    let state = AppState::with_user(&email, &password);
+    let state = AppState::with_users(&[
+        (&email, &password, "user"),
+        (&admin_email, &admin_password, "admin"),
+    ]);
     state.seed_square_demo();
     let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind API");
     axum::serve(listener, app(state))

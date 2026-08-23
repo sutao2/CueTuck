@@ -36,7 +36,7 @@ unset CARGO_TARGET_DIR
 cargo run
 ```
 
-默认 `127.0.0.1:8787`。桌面窗口登录会把 Refresh 写入系统钥匙串。
+默认 `127.0.0.1:8787`。普通开发用户 `dev@promptark.local` / `devpass`；管理员 `admin@promptark.local` / `adminpass`。桌面窗口登录会把 Refresh 写入系统钥匙串。管理端尚未创建，审核目前只有 API。
 
 ## 浏览器验证（最快）
 

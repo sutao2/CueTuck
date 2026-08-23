@@ -13,6 +13,7 @@ use uuid::Uuid;
 #[derive(Clone, Default)]
 pub struct AppState {
     users: Arc<Mutex<HashMap<String, String>>>,
+    roles: Arc<Mutex<HashMap<String, String>>>,
     access: Arc<Mutex<HashMap<String, String>>>,
     refresh: Arc<Mutex<HashMap<String, String>>>,
     items: Arc<Mutex<Vec<SquareItem>>>,
@@ -74,18 +75,30 @@ pub struct SquareListResponse {
     pub items: Vec<SquareItem>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct AdminPublicationList {
+    pub items: Vec<Publication>,
+}
+
 pub fn hash_password(password: &str) -> String {
     format!("{:x}", Sha256::digest(password.as_bytes()))
 }
 
 impl AppState {
     pub fn with_user(email: &str, password: &str) -> Self {
+        Self::with_users(&[(email, password, "user")])
+    }
+
+    pub fn with_users(users: &[(&str, &str, &str)]) -> Self {
         let state = Self::default();
-        state
-            .users
-            .lock()
-            .expect("users")
-            .insert(email.to_string(), hash_password(password));
+        {
+            let mut hashes = state.users.lock().expect("users");
+            let mut roles = state.roles.lock().expect("roles");
+            for (email, password, role) in users {
+                hashes.insert((*email).to_string(), hash_password(password));
+                roles.insert((*email).to_string(), (*role).to_string());
+            }
+        }
         state
     }
 
@@ -125,6 +138,15 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/square/items", get(list_square_items))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/publications", post(create_publication))
+        .route("/v1/admin/publications", get(list_admin_publications))
+        .route(
+            "/v1/admin/publications/:id/approve",
+            post(approve_publication),
+        )
+        .route(
+            "/v1/admin/publications/:id/reject",
+            post(reject_publication),
+        )
         .layer(middleware::from_fn(allow_local_preview_cors))
         .with_state(state)
 }
@@ -275,6 +297,84 @@ async fn create_publication(
     Ok(Json(publication))
 }
 
+fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
+    let Some(token) = bearer_token(headers) else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+    if token.starts_with("ref.") {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let email = state
+        .access
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .get(&token)
+        .cloned()
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    let role = state
+        .roles
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .get(&email)
+        .cloned()
+        .unwrap_or_else(|| "user".into());
+    if role != "admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    Ok(email)
+}
+
+async fn list_admin_publications(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<AdminPublicationList>, StatusCode> {
+    require_admin(&state, &headers)?;
+    let items = state
+        .publications
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .iter()
+        .filter(|row| row.status == "pending")
+        .cloned()
+        .collect();
+    Ok(Json(AdminPublicationList { items }))
+}
+
+async fn approve_publication(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Publication>, StatusCode> {
+    set_publication_status(&state, &headers, &id, "approved")
+}
+
+async fn reject_publication(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Publication>, StatusCode> {
+    set_publication_status(&state, &headers, &id, "rejected")
+}
+
+fn set_publication_status(
+    state: &AppState,
+    headers: &HeaderMap,
+    id: &str,
+    status: &str,
+) -> Result<Json<Publication>, StatusCode> {
+    require_admin(state, headers)?;
+    let mut rows = state
+        .publications
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let publication = rows
+        .iter_mut()
+        .find(|row| row.id == id)
+        .ok_or(StatusCode::NOT_FOUND)?;
+    publication.status = status.into();
+    Ok(Json(publication.clone()))
+}
+
 async fn get_square_item_content(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -312,6 +412,10 @@ mod tests {
     }
 
     async fn login(app: Router) -> (Router, SessionResponse) {
+        login_as(app, "dev@promptark.local", "devpass").await
+    }
+
+    async fn login_as(app: Router, email: &str, password: &str) -> (Router, SessionResponse) {
         let response = app
             .clone()
             .oneshot(
@@ -319,9 +423,9 @@ mod tests {
                     .method("POST")
                     .uri("/v1/session")
                     .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(
-                        r#"{"email":"dev@promptark.local","password":"devpass"}"#,
-                    ))
+                    .body(Body::from(format!(
+                        r#"{{"email":"{email}","password":"{password}"}}"#
+                    )))
                     .unwrap(),
             )
             .await
@@ -329,6 +433,33 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         (app, serde_json::from_slice(&body).unwrap())
+    }
+
+    fn app_with_user_and_admin() -> Router {
+        app(AppState::with_users(&[
+            ("dev@promptark.local", "devpass", "user"),
+            ("admin@promptark.local", "adminpass", "admin"),
+        ]))
+    }
+
+    async fn publish(app: &Router, access_token: &str, source_id: &str) -> String {
+        let accepted = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/publications")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .header(header::AUTHORIZATION, format!("Bearer {access_token}"))
+                    .body(Body::from(format!(r#"{{"source_id":"{source_id}"}}"#)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(accepted.status(), StatusCode::OK);
+        let body = to_bytes(accepted.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        payload["id"].as_str().unwrap().to_string()
     }
 
     #[tokio::test]
@@ -497,6 +628,116 @@ mod tests {
         let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(payload["status"], "pending");
         assert_eq!(payload["source_id"], "mem-1");
+    }
+
+    #[tokio::test]
+    async fn regular_token_cannot_review_publication() {
+        let (app, user) = login(app_with_user_and_admin()).await;
+        let id = publish(&app, &user.access_token, "mem-1").await;
+        let denied = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/v1/admin/publications/{id}/approve"))
+                    .header(header::AUTHORIZATION, format!("Bearer {}", user.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(denied.status(), StatusCode::FORBIDDEN);
+        let listed = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/admin/publications")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", user.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(listed.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn admin_lists_pending_and_can_approve() {
+        let (app, user) = login(app_with_user_and_admin()).await;
+        let id = publish(&app, &user.access_token, "mem-1").await;
+        let (app, admin) = login_as(app, "admin@promptark.local", "adminpass").await;
+        let listed = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/admin/publications")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(listed.status(), StatusCode::OK);
+        let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["items"][0]["id"], id);
+        assert_eq!(payload["items"][0]["source_id"], "mem-1");
+        assert_eq!(payload["items"][0]["status"], "pending");
+        let approved = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/v1/admin/publications/{id}/approve"))
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(approved.status(), StatusCode::OK);
+        let body = to_bytes(approved.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["status"], "approved");
+        assert_eq!(payload["source_id"], "mem-1");
+        let listed = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/admin/publications")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["items"].as_array().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn admin_rejects_publication() {
+        let (app, user) = login(app_with_user_and_admin()).await;
+        let id = publish(&app, &user.access_token, "mem-2").await;
+        let (app, admin) = login_as(app, "admin@promptark.local", "adminpass").await;
+        let rejected = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/v1/admin/publications/{id}/reject"))
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(rejected.status(), StatusCode::OK);
+        let body = to_bytes(rejected.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["status"], "rejected");
+        assert_eq!(payload["id"], id);
     }
 
     #[tokio::test]

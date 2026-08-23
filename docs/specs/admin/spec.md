@@ -101,10 +101,10 @@
 | 管理合同 | `adminContract.test.js` lists `/v1/admin` paths with admin auth |
 | 桌面包不含管理 | 未开始 |
 | 启动器不请求管理 | 未开始 |
-| 普通令牌不能审核 | 未开始 |
+| 普通令牌不能审核 | `backend` `regular_token_cannot_review_publication` |
 | 管理端不持久化 Refresh | 未开始 |
-| 列出待审 | 未开始 |
-| 通过不改本地 | 未开始 |
-| 驳回不删本地 | 未开始 |
+| 列出待审 | `backend` `admin_lists_pending_and_can_approve` |
+| 通过不改本地 | `backend` `admin_lists_pending_and_can_approve` 将远端标为 approved；本切片不写桌面库 |
+| 驳回不删本地 | `backend` `admin_rejects_publication` 将远端标为 rejected；本切片不写桌面库 |
 | 看到邮箱与角色 | 未开始 |
 | 关闭公开广场 | 未开始 |
