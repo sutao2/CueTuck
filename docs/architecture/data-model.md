@@ -20,7 +20,7 @@
 | category_id | 小分类，可空表示未分类 |
 | collection_id | 所属合集，可空 |
 | model | 适用模型标签，本地可空 |
-| source | `local` / 后期 `downloaded` |
+| source | `local` / `downloaded` |
 | remote_id | 后期用，第一期空 |
 | version | 本地版本号 |
 | use_count | 使用次数 |

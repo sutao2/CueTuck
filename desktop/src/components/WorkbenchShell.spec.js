@@ -1,9 +1,14 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, it, expect } from "vitest";
 import WorkbenchShell from "./WorkbenchShell.vue";
-import { createLocalCollection, createLocalPrompt, resetMemoryLibrary } from "../platform/library.js";
+import {
+  createLocalCollection,
+  createLocalPrompt,
+  listLocalPrompts,
+  resetMemoryLibrary,
+} from "../platform/library.js";
 import { resetMemorySession, setSessionTransport } from "../platform/session.js";
-import { resetSquare, setSquareTransport } from "../platform/square.js";
+import { resetSquare, setSquareContentTransport, setSquareTransport } from "../platform/square.js";
 
 describe("WorkbenchShell", () => {
   beforeEach(() => {
@@ -157,6 +162,37 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="add-category"]').trigger("click");
     expect(w.get('[data-testid="category-error"]').text()).toContain("小分类下不能再创建子分类");
     expect(w.find('[data-testid="new-category-name"]').exists()).toBe(false);
+  });
+
+  it("downloads a square prompt without login as source=downloaded", async () => {
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    setSquareContentTransport(async (id) => ({
+      id,
+      title: "自然光群像",
+      content: "清透蓝天下的多元人物群像。",
+    }));
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="download-square"]').trigger("click");
+    await flushPromises();
+    expect(w.find('[data-testid="login-modal"]').exists()).toBe(false);
+    const rows = await listLocalPrompts({ query: "自然光群像" });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].source).toBe("downloaded");
+    await w.get('[data-space="local"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="library-view"]').text()).toContain("自然光群像");
+  });
+
+  it("opens login from favorite without writing a local copy", async () => {
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="favorite-square"]').trigger("click");
+    expect(w.get('[data-testid="login-reason"]').text()).toContain("收藏");
+    expect(await listLocalPrompts({ query: "" })).toHaveLength(0);
   });
 
   it("opens login from publish and resumes after success", async () => {

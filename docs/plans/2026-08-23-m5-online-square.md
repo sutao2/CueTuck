@@ -84,11 +84,11 @@
 
 ### Task 4: 匿名下载与收藏分离
 
-- [ ] **Step 1: Write the failing tests**（未登录下载写入 `source=downloaded`；未登录收藏只开登录、不写库）
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现**
-- [ ] **Step 4: 测试 PASS；映射 square「未登录下载」「未登录收藏」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**（未登录下载写入 `source=downloaded`；未登录收藏只开登录、不写库）
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现**
+- [x] **Step 4: 测试 PASS；映射 square「未登录下载」「未登录收藏」**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ---
 

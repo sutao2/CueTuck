@@ -1,6 +1,6 @@
 # PromptArk API
 
-M5 广场合同的本仓库服务。只实现已在 [OpenAPI](../docs/reference/openapi/square.yaml) 里的路径。当前切片：邮箱密码会话。
+M5 广场合同的本仓库服务。只实现已在 [OpenAPI](../docs/reference/openapi/square.yaml) 里的路径。当前切片：邮箱密码会话、广场列表与匿名正文。浏览器预览（`:1420`）靠 CORS 读本机 API。
 
 ```bash
 cd backend

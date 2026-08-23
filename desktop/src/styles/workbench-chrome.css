@@ -393,7 +393,7 @@
   white-space: nowrap;
 }
 .prompt-card.as-row .card-footer { margin: 0; padding: 0; }
-.card-footer { margin-top: auto; display: flex; justify-content: flex-end; padding-top: 11px; }
+.card-footer { margin-top: auto; display: flex; justify-content: flex-end; gap: 12px; padding-top: 11px; }
 .card-action { border: 0; background: transparent; color: var(--accent); font-size: 11px; }
 .danger-button { color: var(--danger); border-color: #e1b7b3; background: #fff; }
 .danger-button:hover { background: #fff4f3; }

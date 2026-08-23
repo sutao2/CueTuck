@@ -101,7 +101,7 @@ async function tauriInvoke(command, args) {
   return invoke(command, args);
 }
 
-export async function createLocalPrompt({ title, content, categoryId = null } = {}) {
+export async function createLocalPrompt({ title, content, categoryId = null, source = "local" } = {}) {
   if (isTauri()) {
     return tauriInvoke("create_local_prompt", {
       title,
@@ -117,6 +117,30 @@ export async function createLocalPrompt({ title, content, categoryId = null } = 
     category_id: categoryId,
     collection_id: null,
     use_count: 0,
+    source,
+  };
+  memoryPrompts.unshift(row);
+  return row;
+}
+
+export async function importDownloadedPrompt({ title, content, remoteId = null } = {}) {
+  if (isTauri()) {
+    return tauriInvoke("import_downloaded_prompt", {
+      title,
+      content,
+      remote_id: remoteId,
+    });
+  }
+  const row = {
+    id: `dl-${Date.now()}`,
+    title: String(title ?? "").trim(),
+    summary: null,
+    content: content ?? "",
+    category_id: null,
+    collection_id: null,
+    use_count: 0,
+    source: "downloaded",
+    remote_id: remoteId,
   };
   memoryPrompts.unshift(row);
   return row;

@@ -57,7 +57,7 @@
 |---|---|
 | M2 构建无广场请求 | 已由 M5 浏览替代；离线不阻断本地 |
 | 离线 | `WorkbenchShell.spec.js` shows a non-blocking offline notice and can return to local；`LauncherApp.spec.js` does not request square while searching locally |
-| 未登录下载 | 未开始 |
-| 未登录收藏 | 未开始 |
+| 未登录下载 | `WorkbenchShell.spec.js` downloads a square prompt without login as source=downloaded；`square.test.js` writes a local copy with source=downloaded；`imports_downloaded_prompt_with_source`；`serves_square_item_content_without_login` |
+| 未登录收藏 | `WorkbenchShell.spec.js` opens login from favorite without writing a local copy |
 | 合同 path 与匿名下载 | `squareContract.test.js` lists every contract path |
 | 浏览混排 | `WorkbenchShell.spec.js` shows square items in the content grid not the category tree；`backend` `lists_square_items_without_login` |

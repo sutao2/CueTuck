@@ -22,6 +22,7 @@ pub fn run() {
             commands::database::get_local_database_status,
             commands::database::count_local_prompts,
             commands::database::create_local_prompt,
+            commands::database::import_downloaded_prompt,
             commands::database::list_local_prompts,
             commands::database::update_local_prompt,
             commands::database::delete_local_prompt,
@@ -49,6 +50,7 @@ pub fn run() {
             commands::session::login_local_session,
             commands::session::logout_local_session,
             commands::square::list_square_items,
+            commands::square::download_square_item,
         ])
         .setup(|app| {
             let database = app.state::<LocalDatabase>();

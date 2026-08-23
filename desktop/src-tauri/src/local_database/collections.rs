@@ -156,7 +156,8 @@ pub fn list_collection_members_in_dir(
     let connection = open_db(dir)?;
     let mut statement = connection
         .prepare(
-            "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0)
+            "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0),
+                    COALESCE(source, 'local')
              FROM prompts
              WHERE deleted_at IS NULL AND collection_id = ?1
              ORDER BY title",
@@ -172,6 +173,7 @@ pub fn list_collection_members_in_dir(
                 category_id: row.get(4)?,
                 collection_id: row.get(5)?,
                 use_count: row.get(6)?,
+                source: row.get(7)?,
             })
         })
         .map_err(|error| error.to_string())?

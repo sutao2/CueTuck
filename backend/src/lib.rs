@@ -1,5 +1,7 @@
-use axum::extract::{Query, State};
-use axum::http::{header, HeaderMap, StatusCode};
+use axum::extract::{Path, Query, Request, State};
+use axum::http::{header, HeaderMap, HeaderValue, Method, StatusCode};
+use axum::middleware::{self, Next};
+use axum::response::Response;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
@@ -37,6 +39,15 @@ pub struct SquareItem {
     pub excerpt: Option<String>,
     pub model: Option<String>,
     pub member_count: Option<i64>,
+    #[serde(default, skip_serializing)]
+    pub content: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SquareContentResponse {
+    pub id: String,
+    pub title: String,
+    pub content: String,
 }
 
 #[derive(Deserialize, Default)]
@@ -80,6 +91,7 @@ impl AppState {
                 excerpt: Some("清透蓝天下的多元人物群像。".into()),
                 model: Some("Flux".into()),
                 member_count: None,
+                content: Some("清透蓝天下的多元人物群像。".into()),
             },
             SquareItem {
                 id: "col-portrait".into(),
@@ -88,6 +100,7 @@ impl AppState {
                 excerpt: Some("9 个真实人像参考与摄影提示词。".into()),
                 model: None,
                 member_count: Some(9),
+                content: None,
             },
         ];
     }
@@ -97,7 +110,45 @@ pub fn app(state: AppState) -> Router {
     Router::new()
         .route("/v1/session", post(create_session).delete(delete_session))
         .route("/v1/square/items", get(list_square_items))
+        .route("/v1/square/items/:id/content", get(get_square_item_content))
+        .layer(middleware::from_fn(allow_local_preview_cors))
         .with_state(state)
+}
+
+const PREVIEW_ORIGINS: &[&str] = &["http://localhost:1420", "http://127.0.0.1:1420"];
+
+async fn allow_local_preview_cors(request: Request, next: Next) -> Response {
+    let origin = request
+        .headers()
+        .get(header::ORIGIN)
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| PREVIEW_ORIGINS.contains(value))
+        .map(str::to_string);
+    if request.method() == Method::OPTIONS {
+        let mut response = Response::new(axum::body::Body::empty());
+        *response.status_mut() = StatusCode::NO_CONTENT;
+        apply_cors(response.headers_mut(), origin.as_deref());
+        return response;
+    }
+    let mut response = next.run(request).await;
+    apply_cors(response.headers_mut(), origin.as_deref());
+    response
+}
+
+fn apply_cors(headers: &mut HeaderMap, origin: Option<&str>) {
+    if let Some(origin) = origin {
+        if let Ok(value) = HeaderValue::from_str(origin) {
+            headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, value);
+        }
+    }
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_HEADERS,
+        HeaderValue::from_static("authorization, content-type"),
+    );
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_METHODS,
+        HeaderValue::from_static("GET, POST, PUT, DELETE, OPTIONS"),
+    );
 }
 
 async fn create_session(
@@ -171,6 +222,26 @@ async fn list_square_items(
         })
         .unwrap_or_default();
     Json(SquareListResponse { items })
+}
+
+async fn get_square_item_content(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<SquareContentResponse>, StatusCode> {
+    let items = state
+        .items
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let item = items
+        .iter()
+        .find(|item| item.id == id)
+        .cloned()
+        .ok_or(StatusCode::NOT_FOUND)?;
+    Ok(Json(SquareContentResponse {
+        id: item.id,
+        title: item.title,
+        content: item.content.unwrap_or_default(),
+    }))
 }
 
 fn bearer_token(headers: &HeaderMap) -> Option<String> {
@@ -262,12 +333,45 @@ mod tests {
             excerpt: None,
             model: None,
             member_count: None,
+            content: None,
         }]));
         let response = app
             .oneshot(
                 Request::builder()
                     .method("GET")
                     .uri("/v1/square/items?sort=recommended")
+                    .header(header::ORIGIN, "http://localhost:1420")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(),
+            "http://localhost:1420"
+        );
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload.items[0].title, "自然光群像");
+    }
+
+    #[tokio::test]
+    async fn serves_square_item_content_without_login() {
+        let app = app(AppState::with_square_items(vec![SquareItem {
+            id: "sq-1".into(),
+            title: "自然光群像".into(),
+            kind: "prompt".into(),
+            excerpt: None,
+            model: None,
+            member_count: None,
+            content: Some("清透蓝天下的多元人物群像。".into()),
+        }]));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items/sq-1/content")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -275,8 +379,10 @@ mod tests {
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
-        assert_eq!(payload.items[0].title, "自然光群像");
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["id"], "sq-1");
+        assert_eq!(payload["title"], "自然光群像");
+        assert_eq!(payload["content"], "清透蓝天下的多元人物群像。");
     }
 
     #[tokio::test]

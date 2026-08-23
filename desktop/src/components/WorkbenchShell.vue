@@ -145,7 +145,7 @@
             </p>
           </div>
           <div class="content-actions">
-            <button v-if="space === 'square'" type="button" class="button ghost-button">↻ 刷新</button>
+            <button v-if="space === 'square'" type="button" class="button ghost-button" @click="loadSquare">↻ 刷新</button>
             <button
               v-if="space === 'square'"
               type="button"
@@ -252,8 +252,26 @@
                     : item.content || item.excerpt || "还没有正文"
                 }}
               </p>
-              <div v-if="item.kind === 'prompt' && space === 'local'" class="card-footer">
-                <button type="button" class="card-action" @click.stop="using = item">使用</button>
+              <div v-if="item.kind === 'prompt'" class="card-footer">
+                <template v-if="space === 'square'">
+                  <button
+                    type="button"
+                    class="card-action"
+                    data-testid="download-square"
+                    @click.stop="downloadSquare(item)"
+                  >
+                    下载
+                  </button>
+                  <button
+                    type="button"
+                    class="card-action"
+                    data-testid="favorite-square"
+                    @click.stop="favoriteSquare(item)"
+                  >
+                    收藏
+                  </button>
+                </template>
+                <button v-else type="button" class="card-action" @click.stop="using = item">使用</button>
               </div>
             </article>
           </div>
@@ -341,7 +359,7 @@ import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import UsePromptModal from "./UsePromptModal.vue";
 import { getSession } from "../platform/session.js";
-import { listSquareItems } from "../platform/square.js";
+import { downloadSquareItem, listSquareItems } from "../platform/square.js";
 import { parseCoverUrls } from "../lib/cover.js";
 import { DEFAULT_LAUNCHER_SHORTCUT } from "../platform/shortcut.js";
 import { applyHostChrome, detectHost, formatShortcutLabel, trafficLightInsetPx } from "../platform/windowChrome.js";
@@ -476,6 +494,20 @@ async function confirmAddCategory() {
 
 function openLogin(reason) {
   loginReason.value = reason;
+}
+
+async function downloadSquare(item) {
+  try {
+    await downloadSquareItem(item.id);
+  } catch {
+    squareOffline.value = true;
+  }
+}
+
+function favoriteSquare() {
+  if (!getSession().loggedIn) {
+    openLogin("收藏需要登录");
+  }
 }
 
 function startPublish() {

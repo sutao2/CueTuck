@@ -1,7 +1,8 @@
 use super::{
     add_prompt_to_collection_in_dir, backup_library_in_dir, collection_member_count,
     count_local_prompts_in_dir, create_category_in_dir, create_collection_in_dir,
-    create_prompt_in_dir, delete_prompt_in_dir, get_setting_in_dir, initialize_in_dir,
+    create_prompt_in_dir, delete_prompt_in_dir, get_setting_in_dir, import_downloaded_prompt_in_dir,
+    initialize_in_dir,
     list_categories_in_dir, list_collection_members_in_dir, list_collections_in_dir,
     list_prompts_in_dir,
     list_system_category_names, preview_import_json_in_dir, prompt_deleted_at, prompt_use_count,
@@ -52,6 +53,17 @@ async fn creates_prompt_and_lists_it() {
     let rows = list_prompts_in_dir(dir.path(), "测试", None).unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].title, "测试");
+}
+
+#[tokio::test]
+async fn imports_downloaded_prompt_with_source() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let created = import_downloaded_prompt_in_dir(dir.path(), "自然光群像", "正文", Some("sq-1")).unwrap();
+    assert_eq!(created.source, "downloaded");
+    let rows = list_prompts_in_dir(dir.path(), "自然光群像", None).unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].source, "downloaded");
 }
 
 #[tokio::test]

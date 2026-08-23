@@ -12,6 +12,7 @@ pub struct PromptRecord {
     pub category_id: Option<String>,
     pub collection_id: Option<String>,
     pub use_count: i64,
+    pub source: String,
 }
 
 fn open_db(dir: &Path) -> Result<Connection, String> {
@@ -29,7 +30,8 @@ fn now_iso() -> String {
 fn read_prompt(connection: &Connection, id: &str) -> Result<PromptRecord, String> {
     connection
         .query_row(
-            "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0)
+            "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0),
+                    COALESCE(source, 'local')
              FROM prompts WHERE id = ?1",
             [id],
             |row| {
@@ -41,6 +43,7 @@ fn read_prompt(connection: &Connection, id: &str) -> Result<PromptRecord, String
                     category_id: row.get(4)?,
                     collection_id: row.get(5)?,
                     use_count: row.get(6)?,
+                    source: row.get(7)?,
                 })
             },
         )
@@ -66,6 +69,30 @@ pub fn create_prompt_in_dir(
                 id, title, summary, content, category_id, source, version, use_count, created_at, updated_at
             ) VALUES (?1, ?2, NULL, ?3, ?4, 'local', 1, 0, ?5, ?5)",
             rusqlite::params![id, title, content, category_id, now],
+        )
+        .map_err(|error| error.to_string())?;
+    read_prompt(&connection, &id)
+}
+
+pub fn import_downloaded_prompt_in_dir(
+    dir: &Path,
+    title: &str,
+    content: &str,
+    remote_id: Option<&str>,
+) -> Result<PromptRecord, String> {
+    let title = title.trim();
+    if title.is_empty() {
+        return Err("标题不能为空".to_string());
+    }
+    let now = now_iso();
+    let id = Uuid::new_v4().to_string();
+    let connection = open_db(dir)?;
+    connection
+        .execute(
+            "INSERT INTO prompts (
+                id, title, summary, content, category_id, source, remote_id, version, use_count, created_at, updated_at
+            ) VALUES (?1, ?2, NULL, ?3, NULL, 'downloaded', ?4, 1, 0, ?5, ?5)",
+            rusqlite::params![id, title, content, remote_id, now],
         )
         .map_err(|error| error.to_string())?;
     read_prompt(&connection, &id)
@@ -150,7 +177,8 @@ pub fn list_prompts_in_dir(
     let pattern = format!("%{}%", query.trim());
     let mut statement = connection
         .prepare(
-            "SELECT p.id, p.title, p.summary, p.content, p.category_id, p.collection_id, COALESCE(p.use_count, 0)
+            "SELECT p.id, p.title, p.summary, p.content, p.category_id, p.collection_id, COALESCE(p.use_count, 0),
+                    COALESCE(p.source, 'local')
              FROM prompts p
              LEFT JOIN categories c ON c.id = p.category_id
              LEFT JOIN categories parent ON parent.id = c.parent_id
@@ -174,6 +202,7 @@ pub fn list_prompts_in_dir(
                 category_id: row.get(4)?,
                 collection_id: row.get(5)?,
                 use_count: row.get(6)?,
+                source: row.get(7)?,
             })
         })
         .map_err(|error| error.to_string())?
