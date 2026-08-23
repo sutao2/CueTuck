@@ -1,6 +1,6 @@
 # 设计：M7 合同补齐
 
-对照 [提案](proposal.md)，不重复「为什么」。提案未接受前本文不是现行真相。
+对照 [提案](proposal.md)，不重复「为什么」。提案已接受；实现以 [ADR 0010](../../architecture/decisions/0010-m7-contract-gaps.md) 为准。
 
 ## 方案
 

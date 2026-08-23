@@ -30,6 +30,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0007-sqlite-access.md](architecture/decisions/0007-sqlite-access.md) | 现行 | 改本地库访问方式时 | rusqlite 而不是 plugin-sql |
 | [architecture/decisions/0008-m5-backend-contract.md](architecture/decisions/0008-m5-backend-contract.md) | 现行 | 接广场或后端前 | 改写 API；邮箱密码；覆盖率 |
 | [architecture/decisions/0009-m6-admin-console.md](architecture/decisions/0009-m6-admin-console.md) | 现行 | 做管理台或审核 API 前 | 独立 admin.yaml；admin-web 不进桌面 |
+| [architecture/decisions/0010-m7-contract-gaps.md](architecture/decisions/0010-m7-contract-gaps.md) | 现行 | 做已登录收藏、轮换或 admin me 前 | 收藏是账号关系；Refresh 轮换；GET /v1/admin/me |
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 独立窗口行为合同 |
 | [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
@@ -63,7 +64,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/m5-backend-contract/design.md](changes/m5-backend-contract/design.md) | 目标 | 看 M5 合同怎么落地 | OpenAPI、Rust 持令牌、本仓库后端 |
 | [changes/m6-admin-console/proposal.md](changes/m6-admin-console/proposal.md) | 现行 | 查 M6 合同是否已接受 | 已接受；决定以 ADR 0009 为准 |
 | [changes/m6-admin-console/design.md](changes/m6-admin-console/design.md) | 目标 | 看 M6 管理台怎么落地 | admin.yaml、同一 backend、独立 admin-web |
-| [changes/m7-contract-gaps/proposal.md](changes/m7-contract-gaps/proposal.md) | 目标 | 接受 M7 合同补齐前 | 草稿；未接受不得写收藏写路径 / 轮换 / me |
+| [changes/m7-contract-gaps/proposal.md](changes/m7-contract-gaps/proposal.md) | 现行 | 查 M7 合同是否已接受 | 已接受；决定以 ADR 0010 为准 |
 | [changes/m7-contract-gaps/design.md](changes/m7-contract-gaps/design.md) | 目标 | 看 M7 怎么落地 | 收藏表、令牌轮换、GET /v1/admin/me |
 | [changes/m8-settings-ia/proposal.md](changes/m8-settings-ia/proposal.md) | 现行 | 查设置对齐是否已写入合同 | 已接受；只增不减；M7 关闭前不改设置代码 |
 | [changes/m8-settings-ia/design.md](changes/m8-settings-ia/design.md) | 目标 | 看 M8 设置怎么落地 | 十类导航、本机行、云行诚实占位 |
@@ -81,7 +82,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-collection-covers.md](plans/2026-08-23-collection-covers.md) | 归档 | 查合集真封面怎么做的 | cover_json 引用与缺图占位 |
 | [plans/2026-08-23-m5-online-square.md](plans/2026-08-23-m5-online-square.md) | 归档 | 查 M5 怎么做的 | M5 逐步实现计划 |
 | [plans/2026-08-23-m6-admin-console.md](plans/2026-08-23-m6-admin-console.md) | 归档 | 查 M6 怎么做的 | M6 逐步实现计划 |
-| [plans/2026-08-23-m7-contract-gaps.md](plans/2026-08-23-m7-contract-gaps.md) | 现行 | 做 M7 合同补齐 | M7 逐步实现计划；Task 0 待人接受 |
+| [plans/2026-08-23-m7-contract-gaps.md](plans/2026-08-23-m7-contract-gaps.md) | 现行 | 做 M7 合同补齐 | M7 逐步实现计划；提案已接受 |
 | [plans/2026-08-23-m8-settings-ia.md](plans/2026-08-23-m8-settings-ia.md) | 现行 | M7 关闭后做设置对齐 | M8 逐步实现计划；Task 0 待 M7 关闭 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |

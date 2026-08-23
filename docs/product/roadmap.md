@@ -18,7 +18,7 @@
 | M4 桌面可分发 | 本机 smoke、备份恢复、文档与规格 converge | 完成 |
 | M5 在线广场 | 改写后端，接广场/登录/发布 | 完成 |
 | M6 运营后台 | 独立管理端审核、用户只读、运行时设置 | 完成 |
-| M7 合同补齐 | 已登录收藏、令牌轮换、管理员身份 | 计划中（提案草稿） |
+| M7 合同补齐 | 已登录收藏、令牌轮换、管理员身份 | 计划中（提案已接受） |
 | M8 设置对齐 | 设置弹窗对齐原型十类；只增不减已有本机设置 | 计划中 |
 
 M1 不得早于 M0 的 docs-check 全绿。程序计划与模块完成态见 [plans/program.md](../plans/program.md)。逐步任务只写当前里程碑，见 [ADR 0006](../architecture/decisions/0006-plan-altitude.md)。
@@ -40,7 +40,7 @@ M1 不得早于 M0 的 docs-check 全绿。程序计划与模块完成态见 [pl
 ## 后期闸门（M7）
 
 - M6 已关闭，见 [done/2026-08-23-m6-admin-console.md](../plans/done/2026-08-23-m6-admin-console.md)
-- 合同补齐计划：[2026-08-23-m7-contract-gaps.md](../plans/2026-08-23-m7-contract-gaps.md)；提案未接受前不写收藏写路径 / 轮换 / me
+- 合同补齐计划：[2026-08-23-m7-contract-gaps.md](../plans/2026-08-23-m7-contract-gaps.md)；提案已接受，正在实现
 - 管理台不打进桌面安装包
 - 不绑定未选定的 QQ / LinuxDo / Google
 

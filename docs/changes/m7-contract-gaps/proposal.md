@@ -2,11 +2,11 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 草稿 |
+| 状态 | 接受 |
 | 日期 | 2026-08-23 |
 | 影响规格 | [square](../../specs/square/spec.md) · [auth](../../specs/auth/spec.md) · [admin](../../specs/admin/spec.md) |
 
-未接受。Agent 不得自称接受。接受前不得实现收藏写路径、令牌轮换或 `GET /v1/admin/me`。
+2026-08-23 人授权通宵继续后续开发（先 M7 再 M8），视为接受。接受后按 [M7 计划](../../plans/2026-08-23-m7-contract-gaps.md) 实现。决定以 [ADR 0010](../../architecture/decisions/0010-m7-contract-gaps.md) 为准。
 
 ## 为什么
 
@@ -25,8 +25,7 @@ M5 / M6 已接受的 OpenAPI 与规格要求：已登录可收藏/取消收藏�
 - 密码 KDF、Postgres、OAuth、计费、完整 Web 个人库
 - 把管理页打进桌面或让启动器请求广场 / 管理
 - 声称生产已上线、商店分发或公开下载
-- 在提案被接受前写上述 API 或桌面收藏写路径
 
 ## 依赖
 
-M6 已完成。本提案被接受后，才执行 [M7 计划](../../plans/2026-08-23-m7-contract-gaps.md)。
+M6 已完成。本提案已接受，执行 [M7 计划](../../plans/2026-08-23-m7-contract-gaps.md)。
