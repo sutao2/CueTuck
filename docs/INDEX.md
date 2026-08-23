@@ -28,6 +28,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0006-plan-altitude.md](architecture/decisions/0006-plan-altitude.md) | 现行 | 想一次写完所有逐步任务时 | 计划只写一层深 |
 | [architecture/decisions/0007-sqlite-access.md](architecture/decisions/0007-sqlite-access.md) | 现行 | 改本地库访问方式时 | rusqlite 而不是 plugin-sql |
 | [architecture/decisions/0008-m5-backend-contract.md](architecture/decisions/0008-m5-backend-contract.md) | 现行 | 接广场或后端前 | 改写 API；邮箱密码；覆盖率 |
+| [architecture/decisions/0009-m6-admin-console.md](architecture/decisions/0009-m6-admin-console.md) | 现行 | 做管理台或审核 API 前 | 独立 admin.yaml；admin-web 不进桌面 |
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 独立窗口行为合同 |
 | [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
@@ -58,7 +59,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/_template/tasks.md](changes/_template/tasks.md) | 模板 | 开变更 | 任务模板 |
 | [changes/m5-backend-contract/proposal.md](changes/m5-backend-contract/proposal.md) | 现行 | 查 M5 合同是否已接受 | 已接受；决定以 ADR 0008 为准 |
 | [changes/m5-backend-contract/design.md](changes/m5-backend-contract/design.md) | 目标 | 看 M5 合同怎么落地 | OpenAPI、Rust 持令牌、本仓库后端 |
-| [changes/m6-admin-console/proposal.md](changes/m6-admin-console/proposal.md) | 目标 | 接受 M6 管理台前 | 草稿；未接受不得写 admin-web |
+| [changes/m6-admin-console/proposal.md](changes/m6-admin-console/proposal.md) | 现行 | 查 M6 合同是否已接受 | 已接受；决定以 ADR 0009 为准 |
 | [changes/m6-admin-console/design.md](changes/m6-admin-console/design.md) | 目标 | 看 M6 管理台怎么落地 | admin.yaml、同一 backend、独立 admin-web |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
@@ -73,7 +74,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-user-categories.md](plans/2026-08-23-user-categories.md) | 归档 | 查用户小分类怎么做的 | 两级上限，可新增小分类 |
 | [plans/2026-08-23-collection-covers.md](plans/2026-08-23-collection-covers.md) | 归档 | 查合集真封面怎么做的 | cover_json 引用与缺图占位 |
 | [plans/2026-08-23-m5-online-square.md](plans/2026-08-23-m5-online-square.md) | 归档 | 查 M5 怎么做的 | M5 逐步实现计划 |
-| [plans/2026-08-23-m6-admin-console.md](plans/2026-08-23-m6-admin-console.md) | 现行 | 做 M6 管理台 | M6 逐步实现计划；Task 0 待人接受 |
+| [plans/2026-08-23-m6-admin-console.md](plans/2026-08-23-m6-admin-console.md) | 现行 | 做 M6 管理台 | M6 逐步实现计划；Task 0 已接受 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |

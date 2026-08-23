@@ -2,11 +2,11 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 草稿 |
+| 状态 | 接受 |
 | 日期 | 2026-08-23 |
 | 影响规格 | [admin](../../specs/admin/spec.md) · [publish](../../specs/publish/spec.md) · [auth](../../specs/auth/spec.md) |
 
-未接受。Agent 不得自称接受。接受前不得创建 `admin-web/`，不得扩展管理 OpenAPI，不得实现审核写路径。
+已接受。现行决定见 [ADR 0009](../../architecture/decisions/0009-m6-admin-console.md)。尚未归档：OpenAPI 与规格测试映射未进现行文件。
 
 ## 为什么
 
@@ -30,7 +30,7 @@
 - 把管理页嵌进桌面或改成启动器覆盖层
 - 登录收藏 `PUT`、令牌轮换、密码 KDF、Postgres（M5 遗留，另开或后续）
 - OAuth、计费、完整 Web 个人库
-- 在提案被接受前写管理应用代码或管理 API
+- 在 Task 0 完成前写管理应用代码或管理 API（本提案已接受后按计划执行）
 
 ## 依赖
 

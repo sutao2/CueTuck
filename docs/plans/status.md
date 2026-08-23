@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-23（M6 提案草稿） |
+| 更新日期 | 2026-08-23（M6 Task 0 接受） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -17,12 +17,12 @@
 | M3 启动器对齐 | 完成 | [done/2026-08-23-m3-launcher.md](done/2026-08-23-m3-launcher.md) |
 | M4 桌面可分发 | 完成 | [done/2026-08-23-m4-desktop-distributable.md](done/2026-08-23-m4-desktop-distributable.md) |
 | M5 在线广场 | 完成 | [done/2026-08-23-m5-online-square.md](done/2026-08-23-m5-online-square.md) |
-| M6 运营后台 | 计划中 | [2026-08-23-m6-admin-console.md](2026-08-23-m6-admin-console.md)；提案未接受 |
+| M6 运营后台 | 进行中 | [2026-08-23-m6-admin-console.md](2026-08-23-m6-admin-console.md)；Task 0 完成 |
 
 ## 当前可执行的下一步
 
-1. M6 提案仍是草稿。人接受前不得创建 `admin-web/`，不得写管理 OpenAPI 或审核 API。
-2. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
+1. M6 Task 0 已接受（[ADR 0009](../architecture/decisions/0009-m6-admin-console.md)）。下一步是 Task 1：`admin.yaml` 与映射测试。
+2. 尚未创建 `admin-web/`。本仓库 `backend/` 是预发，不是生产。
 3. 启动器仍不请求广场或管理接口。
 
 ## 仓库事实

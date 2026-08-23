@@ -25,7 +25,7 @@
 | 现在做到哪 | [status.md](../plans/status.md) |
 | 下一期怎么一步步做 | 当前的 `docs/plans/YYYY-MM-DD-*.md` |
 | 某能力做完长什么样 | `docs/plans/modules/<模块>.md` |
-| 管理台能不能做、合同在哪 | [admin 规格](../specs/admin/spec.md) + [M6 提案](../changes/m6-admin-console/proposal.md) |
+| 管理台能不能做、合同在哪 | [admin 规格](../specs/admin/spec.md) + [ADR 0009](../architecture/decisions/0009-m6-admin-console.md) |
 
 ## 进行中的工作
 

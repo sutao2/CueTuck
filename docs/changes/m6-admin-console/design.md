@@ -1,6 +1,6 @@
 # 设计：M6 管理台
 
-未接受提案前本文不是现行真相。对照 [提案](proposal.md)，不重复「为什么」。
+对照 [提案](proposal.md) 与 [ADR 0009](../../architecture/decisions/0009-m6-admin-console.md)，不重复「为什么」。尚未实现。
 
 ## 方案
 

@@ -1,6 +1,6 @@
 # M6 Admin Console Implementation Plan
 
-> **For agentic workers:** 提案仍是草稿。未完成 Task 0（人接受提案）不得创建 `admin-web/`，不得写 `admin.yaml`，不得实现 `/v1/admin`。不要接 OAuth。不要把管理页打进桌面。启动器不请求管理接口。
+> **For agentic workers:** 合同已接受（[ADR 0009](../architecture/decisions/0009-m6-admin-console.md)）。Task 0 已完成。Task 1 起才写 `admin.yaml`。不要创建 `admin-web/` 直到 Task 3。不要接 OAuth。不要把管理页打进桌面。启动器不请求管理接口。
 
 **Goal:** 独立浏览器管理端能审核待发、只读看用户、改一项运行时开关；桌面安装包不含管理代码。
 
@@ -28,9 +28,9 @@
 - Modify: `docs/architecture/overview.md`（补管理端容器，不画进桌面包）
 - Modify: `docs/INDEX.md`
 
-- [ ] **Step 1:** 提案状态变为「接受」（人确认，Agent 不得自称接受）
-- [ ] **Step 2:** 写 ADR；INDEX 更新
-- [ ] **Step 3:** `./scripts/docs-check`
+- [x] **Step 1:** 提案状态变为「接受」（人确认，Agent 不得自称接受）
+- [x] **Step 2:** 写 ADR；INDEX 更新
+- [x] **Step 3:** `./scripts/docs-check`
 
 未完成 Task 0，不得开始 Task 1。
 
