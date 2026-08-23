@@ -31,13 +31,13 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 独立窗口行为合同 |
 | [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
-| [specs/square/spec.md](specs/square/spec.md) | 目标 | M5 或有人要做广场 | 广场；第一期不可用 |
+| [specs/square/spec.md](specs/square/spec.md) | 目标 | 改广场浏览、下载或收藏 | 广场；M5 已实现浏览与匿名下载 |
 | [specs/collections/spec.md](specs/collections/spec.md) | 目标 | 做合集 | 合集 |
 | [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 两级分类 |
 | [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析 |
-| [specs/auth/spec.md](specs/auth/spec.md) | 目标 | M5 或登录入口 | 认证；第一期无登录 |
+| [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 认证；邮箱密码；Refresh 进钥匙串 |
 | [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 本机设置 |
-| [specs/publish/spec.md](specs/publish/spec.md) | 目标 | M5 发布 | 发布；第一期无提交 |
+| [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 发布；选源后提交，不锁本地 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
 | [reference/test-gates.md](reference/test-gates.md) | 现行 | 加测试或 CI | 分阶段门禁 |
 | [reference/openapi/square.yaml](reference/openapi/square.yaml) | 现行 | 改广场 API 时 | M5 广场 / 登录 / 发布合同 |
@@ -69,7 +69,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-library-list-view.md](plans/2026-08-23-library-list-view.md) | 归档 | 查列表视图怎么做的 | 同一批结果改成行 |
 | [plans/2026-08-23-user-categories.md](plans/2026-08-23-user-categories.md) | 归档 | 查用户小分类怎么做的 | 两级上限，可新增小分类 |
 | [plans/2026-08-23-collection-covers.md](plans/2026-08-23-collection-covers.md) | 归档 | 查合集真封面怎么做的 | cover_json 引用与缺图占位 |
-| [plans/2026-08-23-m5-online-square.md](plans/2026-08-23-m5-online-square.md) | 现行 | 做 M5（提案接受后） | 广场 / 登录 / 发布；先接受合同 |
+| [plans/2026-08-23-m5-online-square.md](plans/2026-08-23-m5-online-square.md) | 归档 | 查 M5 怎么做的 | M5 逐步实现计划 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |
@@ -93,6 +93,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-23-m2-local-workbench.md](plans/done/2026-08-23-m2-local-workbench.md) | 归档 | 查 M2 是否关闭 | M2 完成证据 |
 | [plans/done/2026-08-23-m3-launcher.md](plans/done/2026-08-23-m3-launcher.md) | 归档 | 查 M3 是否关闭 | M3 完成证据 |
 | [plans/done/2026-08-23-m4-desktop-distributable.md](plans/done/2026-08-23-m4-desktop-distributable.md) | 归档 | 查 M4 是否关闭 | M4 完成证据 |
+| [plans/done/2026-08-23-m5-online-square.md](plans/done/2026-08-23-m5-online-square.md) | 归档 | 查 M5 是否关闭 | M5 完成证据 |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |

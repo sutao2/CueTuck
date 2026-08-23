@@ -16,7 +16,7 @@
 | M2 本地工作台 | 本地库、分类、合集、使用向导、设置、导入导出 | 完成 |
 | M3 启动器对齐 | 旧启动器行为全部移植并接上新本地库 | 完成 |
 | M4 桌面可分发 | 本机 smoke、备份恢复、文档与规格 converge | 完成 |
-| M5 在线广场 | 复用或改写后端，接广场/登录/发布 | 合同已接受（[ADR 0008](../architecture/decisions/0008-m5-backend-contract.md)），实现未开始 |
+| M5 在线广场 | 改写后端，接广场/登录/发布 | 完成 |
 | M6 运营后台 | 独立管理台 | 未开始 |
 
 M1 不得早于 M0 的 docs-check 全绿。程序计划与模块完成态见 [plans/program.md](../plans/program.md)。逐步任务只写当前里程碑，见 [ADR 0006](../architecture/decisions/0006-plan-altitude.md)。
@@ -35,8 +35,8 @@ M1 不得早于 M0 的 docs-check 全绿。程序计划与模块完成态见 [pl
 3. SQLite 可初始化，启动器能对空库给出空态。
 4. 计划中的骨架测试通过。
 
-## 后期闸门（M5 之前不启动）
+## 后期闸门（M6 之前）
 
-- 第一期本地路径稳定
-- 单独变更提案：后端复用还是重写 API — 已接受，改写，见 ADR 0008
-- 广场与发布规格从「已指定」转为「实现中」
+- M5 已关闭，见 [done/2026-08-23-m5-online-square.md](../plans/done/2026-08-23-m5-online-square.md)
+- 管理台另立计划；不打进桌面安装包
+- 不绑定未选定的 QQ / LinuxDo / Google
