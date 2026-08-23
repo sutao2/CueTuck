@@ -15,7 +15,7 @@
 - `docs/specs/settings/spec.md`：十类导航与行；已有场景保留
 - `docs/specs/launcher/spec.md`：附加两条全局快捷键
 - `docs/specs/variables/spec.md`：双语开关不得删正文
-- `desktop/` 设置弹窗、快捷键、备份（M7 关闭后才改）
+- `desktop/` 设置弹窗、快捷键、备份
 - 测试映射未开始的场景在实现时补，不得删场景
 
 ## 风险

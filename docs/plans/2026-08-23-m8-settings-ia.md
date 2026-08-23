@@ -1,6 +1,6 @@
 # M8 Settings IA Implementation Plan
 
-> **For agentic workers:** 当前实现里程碑仍是 M7。未关闭 M7 不得执行本计划里的应用代码任务。不要删已有设置行为。不要接 OAuth。不要实现云同步引擎或自动更新安装。启动器不请求广场。
+> **For agentic workers:** 当前实现里程碑是 M8。不要删已有设置行为。不要接 OAuth。不要实现云同步引擎或自动更新安装。启动器不请求广场。
 
 **Goal:** 设置弹窗对齐原型十类；只增加本机行为与诚实占位行，不减少 M2/M4 已交付能力。
 
@@ -21,8 +21,8 @@
 
 ### Task 0: M7 已关闭
 
-- [ ] **Step 1:** `docs/plans/status.md` 中 M7 为完成并有 done 记录
-- [ ] **Step 2:** 才允许开始 Task 1
+- [x] **Step 1:** `docs/plans/status.md` 中 M7 为完成并有 done 记录
+- [x] **Step 2:** 才允许开始 Task 1
 
 未完成 Task 0，不得改 `desktop/` 设置代码。
 

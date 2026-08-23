@@ -78,3 +78,11 @@
 - [x] **Step 3: 最小实现；Web Storage 仍无 Refresh**
 - [x] **Step 4: 测试 PASS；映射 auth「刷新轮换」**
 - [x] **Step 5: `./scripts/docs-check`**
+
+---
+
+### Task 4: 关闭 M7
+
+- [x] **Step 1:** 勾选 `docs/plans/milestones/m7.md` 退出标准
+- [x] **Step 2:** 写 done 记录，更新 status / roadmap / INDEX
+- [x] **Step 3:** `./scripts/docs-check`

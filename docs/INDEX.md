@@ -66,7 +66,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/m6-admin-console/design.md](changes/m6-admin-console/design.md) | 目标 | 看 M6 管理台怎么落地 | admin.yaml、同一 backend、独立 admin-web |
 | [changes/m7-contract-gaps/proposal.md](changes/m7-contract-gaps/proposal.md) | 现行 | 查 M7 合同是否已接受 | 已接受；决定以 ADR 0010 为准 |
 | [changes/m7-contract-gaps/design.md](changes/m7-contract-gaps/design.md) | 目标 | 看 M7 怎么落地 | 收藏表、令牌轮换、GET /v1/admin/me |
-| [changes/m8-settings-ia/proposal.md](changes/m8-settings-ia/proposal.md) | 现行 | 查设置对齐是否已写入合同 | 已接受；只增不减；M7 关闭前不改设置代码 |
+| [changes/m8-settings-ia/proposal.md](changes/m8-settings-ia/proposal.md) | 现行 | 查设置对齐是否已写入合同 | 已接受；只增不减；M7 已关闭可改设置代码 |
 | [changes/m8-settings-ia/design.md](changes/m8-settings-ia/design.md) | 目标 | 看 M8 设置怎么落地 | 十类导航、本机行、云行诚实占位 |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
@@ -82,8 +82,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-collection-covers.md](plans/2026-08-23-collection-covers.md) | 归档 | 查合集真封面怎么做的 | cover_json 引用与缺图占位 |
 | [plans/2026-08-23-m5-online-square.md](plans/2026-08-23-m5-online-square.md) | 归档 | 查 M5 怎么做的 | M5 逐步实现计划 |
 | [plans/2026-08-23-m6-admin-console.md](plans/2026-08-23-m6-admin-console.md) | 归档 | 查 M6 怎么做的 | M6 逐步实现计划 |
-| [plans/2026-08-23-m7-contract-gaps.md](plans/2026-08-23-m7-contract-gaps.md) | 现行 | 做 M7 合同补齐 | M7 逐步实现计划；提案已接受 |
-| [plans/2026-08-23-m8-settings-ia.md](plans/2026-08-23-m8-settings-ia.md) | 现行 | M7 关闭后做设置对齐 | M8 逐步实现计划；Task 0 待 M7 关闭 |
+| [plans/2026-08-23-m7-contract-gaps.md](plans/2026-08-23-m7-contract-gaps.md) | 归档 | 查 M7 怎么做的 | M7 逐步实现计划 |
+| [plans/2026-08-23-m8-settings-ia.md](plans/2026-08-23-m8-settings-ia.md) | 现行 | 做 M8 设置对齐 | M8 逐步实现计划 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |
@@ -112,6 +112,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-23-m4-desktop-distributable.md](plans/done/2026-08-23-m4-desktop-distributable.md) | 归档 | 查 M4 是否关闭 | M4 完成证据 |
 | [plans/done/2026-08-23-m5-online-square.md](plans/done/2026-08-23-m5-online-square.md) | 归档 | 查 M5 是否关闭 | M5 完成证据 |
 | [plans/done/2026-08-23-m6-admin-console.md](plans/done/2026-08-23-m6-admin-console.md) | 归档 | 查 M6 是否关闭 | M6 完成证据 |
+| [plans/done/2026-08-23-m7-contract-gaps.md](plans/done/2026-08-23-m7-contract-gaps.md) | 归档 | 查 M7 是否关闭 | M7 完成证据 |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |
