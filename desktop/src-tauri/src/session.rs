@@ -85,4 +85,12 @@ mod tests {
         assert!(error.contains("access token 类型不对"));
         assert!(store.load_refresh().unwrap().is_none());
     }
+
+    #[test]
+    fn rotate_replaces_refresh_in_store() {
+        let store = MemoryRefreshStore::default();
+        persist_session_tokens(&store, "acc.1", "ref.1").unwrap();
+        persist_session_tokens(&store, "acc.2", "ref.2").unwrap();
+        assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.2"));
+    }
 }

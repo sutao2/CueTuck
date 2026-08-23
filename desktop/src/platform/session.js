@@ -57,3 +57,18 @@ export async function loginSession({ email, password } = {}) {
   accountEmail = result.email ?? title;
   return { email: accountEmail, accessToken };
 }
+
+export async function refreshSession() {
+  let result;
+  if (testTransport) {
+    result = await testTransport({ refresh: true });
+  } else if (isTauri()) {
+    result = await tauriInvoke("refresh_local_session");
+  } else {
+    throw new Error("浏览器预览不持久化登录令牌");
+  }
+  if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
+  accessToken = result.access_token ?? result.accessToken ?? null;
+  if (result.email) accountEmail = result.email;
+  return { email: accountEmail, accessToken };
+}

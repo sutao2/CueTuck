@@ -73,8 +73,8 @@
 - `backend/` 轮换并使旧令牌失效
 - `desktop/` 钥匙串只持新 Refresh
 
-- [ ] **Step 1: Write the failing tests**
-- [ ] **Step 2: Run tests — FAIL**
-- [ ] **Step 3: 最小实现；Web Storage 仍无 Refresh**
-- [ ] **Step 4: 测试 PASS；映射 auth「刷新轮换」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing tests**
+- [x] **Step 2: Run tests — FAIL**
+- [x] **Step 3: 最小实现；Web Storage 仍无 Refresh**
+- [x] **Step 4: 测试 PASS；映射 auth「刷新轮换」**
+- [x] **Step 5: `./scripts/docs-check`**

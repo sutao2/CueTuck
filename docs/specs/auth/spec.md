@@ -51,5 +51,5 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 | 本地不要求账号 | 本地 CRUD 与启动器既有测试 |
 | 发布触发 | `WorkbenchShell.spec.js` opens login from publish and resumes after success |
 | 令牌 | `session.test.js` does not persist refresh in web storage；`desktop/src-tauri` `refresh_goes_to_store_access_does_not`；`backend` `create_session_isolates_access_and_refresh` |
-| 刷新轮换 | 未开始 |
+| 刷新轮换 | `session.test.js` rotates access without writing refresh to web storage；`desktop/src-tauri` `rotate_replaces_refresh_in_store`；`backend` `refresh_rotates_and_invalidates_old_pair` |
 | 合同登录 | `squareContract.test.js` `POST /v1/session` |

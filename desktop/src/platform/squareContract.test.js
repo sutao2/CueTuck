@@ -15,6 +15,7 @@ const REQUIRED = [
   { method: "GET", path: "/v1/square/items/{id}/content", auth: "none" },
   { method: "POST", path: "/v1/session", auth: "none" },
   { method: "DELETE", path: "/v1/session", auth: "user" },
+  { method: "POST", path: "/v1/session/refresh", auth: "none" },
   { method: "GET", path: "/v1/favorites", auth: "user" },
   { method: "PUT", path: "/v1/favorites/{id}", auth: "user" },
   { method: "DELETE", path: "/v1/favorites/{id}", auth: "user" },

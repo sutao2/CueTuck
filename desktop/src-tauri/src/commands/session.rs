@@ -48,3 +48,26 @@ pub async fn logout_local_session(access_token: String) -> Result<(), String> {
         .await;
     KeyringRefreshStore.clear_refresh()
 }
+
+#[tauri::command]
+pub async fn refresh_local_session() -> Result<SessionView, String> {
+    let refresh = KeyringRefreshStore
+        .load_refresh()?
+        .ok_or_else(|| "没有 refresh".to_string())?;
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{}/v1/session/refresh", api_base()))
+        .json(&serde_json::json!({ "refresh_token": refresh }))
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("刷新失败".to_string());
+    }
+    let pair: TokenPair = response.json().await.map_err(|error| error.to_string())?;
+    persist_session_tokens(&KeyringRefreshStore, &pair.access_token, &pair.refresh_token)?;
+    Ok(SessionView {
+        email: pair.email,
+        access_token: pair.access_token,
+    })
+}

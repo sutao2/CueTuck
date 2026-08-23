@@ -174,6 +174,7 @@ impl AppState {
 pub fn app(state: AppState) -> Router {
     Router::new()
         .route("/v1/session", post(create_session).delete(delete_session))
+        .route("/v1/session/refresh", post(refresh_session))
         .route("/v1/square/items", get(list_square_items))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/publications", post(create_publication))
@@ -253,6 +254,15 @@ async fn create_session(
     if expected.as_deref() != Some(hash_password(&body.password).as_str()) {
         return Err(StatusCode::UNAUTHORIZED);
     }
+    Ok(Json(issue_session(&state, email)?))
+}
+
+#[derive(Deserialize)]
+struct RefreshRequest {
+    refresh_token: String,
+}
+
+fn issue_session(state: &AppState, email: String) -> Result<SessionResponse, StatusCode> {
     let access_token = format!("acc.{}", Uuid::new_v4());
     let refresh_token = format!("ref.{}", Uuid::new_v4());
     state
@@ -265,11 +275,33 @@ async fn create_session(
         .lock()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .insert(refresh_token.clone(), email.clone());
-    Ok(Json(SessionResponse {
+    Ok(SessionResponse {
         email,
         access_token,
         refresh_token,
-    }))
+    })
+}
+
+async fn refresh_session(
+    State(state): State<AppState>,
+    Json(body): Json<RefreshRequest>,
+) -> Result<Json<SessionResponse>, StatusCode> {
+    let presented = body.refresh_token.trim().to_string();
+    if !presented.starts_with("ref.") {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let email = state
+        .refresh
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .remove(&presented)
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    state
+        .access
+        .lock()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .retain(|_, holder| holder != &email);
+    Ok(Json(issue_session(&state, email)?))
 }
 
 async fn delete_session(State(state): State<AppState>, headers: HeaderMap) -> StatusCode {
@@ -1268,6 +1300,74 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn refresh_rotates_and_invalidates_old_pair() {
+        let (app, session) = login(app_with_dev_user()).await;
+        let rotated = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/session/refresh")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"refresh_token":"{}"}}"#,
+                        session.refresh_token
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(rotated.status(), StatusCode::OK);
+        let body = to_bytes(rotated.into_body(), usize::MAX).await.unwrap();
+        let next: SessionResponse = serde_json::from_slice(&body).unwrap();
+        assert_ne!(next.access_token, session.access_token);
+        assert_ne!(next.refresh_token, session.refresh_token);
+        assert!(next.access_token.starts_with("acc."));
+        assert!(next.refresh_token.starts_with("ref."));
+        let old_access = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/favorites")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(old_access.status(), StatusCode::UNAUTHORIZED);
+        let old_refresh = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/session/refresh")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"refresh_token":"{}"}}"#,
+                        session.refresh_token
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(old_refresh.status(), StatusCode::UNAUTHORIZED);
+        let new_access = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/favorites")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", next.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(new_access.status(), StatusCode::OK);
     }
 }
 

@@ -39,6 +39,11 @@ paths:
     delete:
       operationId: deleteSession
       summary: 退出
+  /v1/session/refresh:
+    post:
+      operationId: refreshSession
+      security: []
+      summary: 用 Refresh 轮换 Access 与 Refresh；旧对失效
   /v1/favorites:
     get:
       operationId: listFavorites
