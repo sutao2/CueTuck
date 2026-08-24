@@ -42,6 +42,17 @@
 - WHEN 用户在浏览器工作台查看数据说明
 - THEN 不出现「已与桌面库同步」或等价假状态
 
+### Requirement: 标签页内存库
+
+浏览器工作台 MUST 能在当前标签页新建提示词，并立即出现在本地列表。MUST 把数据放在内存里。MUST NOT 写入桌面 SQLite。刷新后丢失是预期，不得写成已持久化到桌面。
+
+#### Scenario: 新建出现在列表
+
+- GIVEN 浏览器工作台本地空间为空
+- WHEN 用户创建标题为「测试」的提示词并保存
+- THEN 列表出现「测试」
+- AND 数据说明仍写尚未与桌面 SQLite 同步
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -49,3 +60,4 @@
 | 桌面包不含 Web 工作台 | `desktop/src/platform/packageIsolation.test.js` does not depend on or bundle web workbench |
 | 窄桌面可收起侧栏 | `web/src/WebApp.spec.js` keeps local space when the sidebar is collapsed |
 | 不声称已同步 | `web/src/WebApp.spec.js` does not claim the browser library is synced to desktop sqlite |
+| 新建出现在列表 | `web/src/WebApp.spec.js` creates a memory prompt and lists it without claiming desktop sync |

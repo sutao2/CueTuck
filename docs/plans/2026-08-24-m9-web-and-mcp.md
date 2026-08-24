@@ -52,3 +52,13 @@
 - [x] **Step 3: 独立 web 应用 + 窄桌面可收起侧栏；不声称已同步**
 - [x] **Step 4: 测试 PASS；映射 web 三场景**
 - [x] **Step 5: `./scripts/docs-check`**
+
+### Task 4: 浏览器内存库新建与列出
+
+**Files:** `web/`
+
+- [x] **Step 1: Write the failing test**
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 标签页内存库可新建；列表立即出现；仍不声称已同步**
+- [x] **Step 4: 测试 PASS；映射「新建出现在列表」**
+- [x] **Step 5: `./scripts/docs-check`**
