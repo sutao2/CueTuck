@@ -72,6 +72,8 @@ pub struct SquareContentResponse {
 #[derive(Deserialize)]
 pub struct PublicationRequest {
     pub source_id: String,
+    pub title: Option<String>,
+    pub content: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -79,12 +81,17 @@ pub struct Publication {
     pub id: String,
     pub source_id: String,
     pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
 }
 
 #[derive(Deserialize, Default)]
 pub struct SquareListQuery {
     pub sort: Option<String>,
     pub q: Option<String>,
+    pub model: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -177,6 +184,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/session/refresh", post(refresh_session))
         .route("/v1/square/items", get(list_square_items))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
+        .route("/v1/square/items/:id", get(get_square_item))
         .route("/v1/publications", post(create_publication))
         .route("/v1/favorites", get(list_favorites))
         .route("/v1/favorites/:id", put(put_favorite).delete(delete_favorite))
@@ -320,6 +328,7 @@ async fn delete_session(State(state): State<AppState>, headers: HeaderMap) -> St
 
 async fn list_square_items(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(query): Query<SquareListQuery>,
 ) -> Json<SquareListResponse> {
     let square_public = state
@@ -331,22 +340,53 @@ async fn list_square_items(
         return Json(SquareListResponse { items: vec![] });
     }
     let sort = query.sort.unwrap_or_default();
-    if sort == "favorites" || sort == "收藏" {
-        return Json(SquareListResponse { items: vec![] });
-    }
     let needle = query.q.unwrap_or_default().trim().to_lowercase();
-    let items = state
+    let model = query.model.unwrap_or_default();
+    let mut items = state
         .items
         .lock()
         .map(|rows| {
             rows
                 .iter()
                 .filter(|item| needle.is_empty() || item.title.to_lowercase().contains(&needle))
+                .filter(|item| {
+                    model.is_empty() || item.model.as_deref() == Some(model.as_str())
+                })
                 .cloned()
-                .collect()
+                .collect::<Vec<_>>()
         })
         .unwrap_or_default();
+    if sort == "favorites" || sort == "收藏" {
+        let Some(email) = optional_access_email(&state, &headers) else {
+            return Json(SquareListResponse { items: vec![] });
+        };
+        let ids = state
+            .favorites
+            .lock()
+            .ok()
+            .and_then(|map| map.get(&email).cloned())
+            .unwrap_or_default();
+        items.retain(|item| ids.contains(&item.id));
+        return Json(SquareListResponse { items });
+    }
+    apply_preview_sort(&mut items, &sort);
     Json(SquareListResponse { items })
+}
+
+fn apply_preview_sort(items: &mut [SquareItem], sort: &str) {
+    match sort {
+        "latest" | "最新" => items.reverse(),
+        "hot" | "热门" => items.sort_by(|left, right| left.title.cmp(&right.title)),
+        _ => {}
+    }
+}
+
+fn optional_access_email(state: &AppState, headers: &HeaderMap) -> Option<String> {
+    let token = bearer_token(headers)?;
+    if token.starts_with("ref.") {
+        return None;
+    }
+    state.access.lock().ok()?.get(&token).cloned()
 }
 
 async fn create_publication(
@@ -377,6 +417,8 @@ async fn create_publication(
         id: format!("pub.{}", Uuid::new_v4()),
         source_id,
         status: "pending".into(),
+        title: body.title.filter(|value| !value.trim().is_empty()),
+        content: body.content,
     };
     state
         .publications
@@ -604,16 +646,58 @@ fn set_publication_status(
     status: &str,
 ) -> Result<Json<Publication>, StatusCode> {
     require_admin(state, headers)?;
-    let mut rows = state
-        .publications
+    let publication = {
+        let mut rows = state
+            .publications
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let publication = rows
+            .iter_mut()
+            .find(|row| row.id == id)
+            .ok_or(StatusCode::NOT_FOUND)?;
+        publication.status = status.into();
+        publication.clone()
+    };
+    if status == "approved" {
+        let title = publication
+            .title
+            .as_deref()
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if !title.is_empty() {
+            let mut items = state
+                .items
+                .lock()
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            items.push(SquareItem {
+                id: publication.id.clone(),
+                title,
+                kind: "prompt".into(),
+                excerpt: None,
+                model: None,
+                member_count: None,
+                content: publication.content.clone(),
+            });
+        }
+    }
+    Ok(Json(publication))
+}
+
+async fn get_square_item(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<SquareItem>, StatusCode> {
+    let items = state
+        .items
         .lock()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let publication = rows
-        .iter_mut()
-        .find(|row| row.id == id)
-        .ok_or(StatusCode::NOT_FOUND)?;
-    publication.status = status.into();
-    Ok(Json(publication.clone()))
+    items
+        .iter()
+        .find(|item| item.id == id)
+        .cloned()
+        .map(Json)
+        .ok_or(StatusCode::NOT_FOUND)
 }
 
 async fn get_square_item_content(
@@ -835,6 +919,271 @@ mod tests {
         assert_eq!(payload["id"], "sq-1");
         assert_eq!(payload["title"], "自然光群像");
         assert_eq!(payload["content"], "清透蓝天下的多元人物群像。");
+    }
+
+    #[tokio::test]
+    async fn serves_square_item_without_login() {
+        let app = app(AppState::with_square_items(vec![SquareItem {
+            id: "sq-1".into(),
+            title: "自然光群像".into(),
+            kind: "prompt".into(),
+            excerpt: Some("摘要".into()),
+            model: Some("Flux".into()),
+            member_count: None,
+            content: Some("不该出现在详情里".into()),
+        }]));
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items/sq-1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["id"], "sq-1");
+        assert_eq!(payload["title"], "自然光群像");
+        assert_eq!(payload["kind"], "prompt");
+        assert_eq!(payload["excerpt"], "摘要");
+        assert!(payload.get("content").is_none() || payload["content"].is_null());
+        let missing = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items/no-such")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(missing.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn sorts_recommended_latest_and_hot_apart() {
+        let app = app(AppState::with_square_items(vec![
+            SquareItem {
+                id: "a".into(),
+                title: "Beta".into(),
+                kind: "prompt".into(),
+                excerpt: None,
+                model: Some("Flux".into()),
+                member_count: None,
+                content: None,
+            },
+            SquareItem {
+                id: "b".into(),
+                title: "Alpha".into(),
+                kind: "prompt".into(),
+                excerpt: None,
+                model: Some("Midjourney".into()),
+                member_count: None,
+                content: None,
+            },
+            SquareItem {
+                id: "c".into(),
+                title: "Gamma".into(),
+                kind: "prompt".into(),
+                excerpt: None,
+                model: Some("Flux".into()),
+                member_count: None,
+                content: None,
+            },
+        ]));
+        async fn titles(app: &Router, uri: &str) -> Vec<String> {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri(uri)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+            let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+            payload.items.into_iter().map(|item| item.title).collect()
+        }
+        let recommended = titles(&app, "/v1/square/items?sort=recommended").await;
+        let latest = titles(&app, "/v1/square/items?sort=latest").await;
+        let hot = titles(&app, "/v1/square/items?sort=hot").await;
+        assert_eq!(recommended, vec!["Beta", "Alpha", "Gamma"]);
+        assert_eq!(latest, vec!["Gamma", "Alpha", "Beta"]);
+        assert_eq!(hot, vec!["Alpha", "Beta", "Gamma"]);
+        assert_ne!(recommended, latest);
+        assert_ne!(recommended, hot);
+        assert_ne!(latest, hot);
+        let flux = titles(&app, "/v1/square/items?model=Flux").await;
+        assert_eq!(flux, vec!["Beta", "Gamma"]);
+        assert_eq!(
+            titles(&app, "/v1/square/items?sort=%E6%8E%A8%E8%8D%90").await,
+            recommended
+        );
+        assert_eq!(
+            titles(&app, "/v1/square/items?sort=%E6%9C%80%E6%96%B0").await,
+            latest
+        );
+        assert_eq!(
+            titles(&app, "/v1/square/items?sort=%E7%83%AD%E9%97%A8").await,
+            hot
+        );
+    }
+
+    #[tokio::test]
+    async fn favorites_sort_requires_login() {
+        let (app, session) = login(app_with_square_user()).await;
+        let anonymous = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items?sort=favorites")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(anonymous.status(), StatusCode::OK);
+        let body = to_bytes(anonymous.into_body(), usize::MAX).await.unwrap();
+        let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+        assert!(payload.items.is_empty());
+        let _ = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/v1/favorites/sq-1")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let logged_in = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items?sort=favorites")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(logged_in.status(), StatusCode::OK);
+        let body = to_bytes(logged_in.into_body(), usize::MAX).await.unwrap();
+        let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload.items.len(), 1);
+        assert_eq!(payload.items[0].id, "sq-1");
+        let chinese = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items?sort=%E6%94%B6%E8%97%8F")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(chinese.status(), StatusCode::OK);
+        let body = to_bytes(chinese.into_body(), usize::MAX).await.unwrap();
+        let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload.items[0].id, "sq-1");
+    }
+
+    #[tokio::test]
+    async fn approve_without_snapshot_does_not_list_on_square() {
+        let (app, user) = login(app_with_user_and_admin()).await;
+        let id = publish(&app, &user.access_token, "mem-1").await;
+        let (app, admin) = login_as(app, "admin@promptark.local", "adminpass").await;
+        let approved = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/v1/admin/publications/{id}/approve"))
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(approved.status(), StatusCode::OK);
+        let listed = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+        let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+        assert!(payload.items.is_empty());
+    }
+
+    #[tokio::test]
+    async fn approve_with_snapshot_lists_on_square() {
+        let (app, user) = login(app_with_user_and_admin()).await;
+        let accepted = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/publications")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", user.access_token))
+                    .body(Body::from(
+                        r#"{"source_id":"mem-1","title":"新稿","content":"快照正文"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(accepted.status(), StatusCode::OK);
+        let body = to_bytes(accepted.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let id = payload["id"].as_str().unwrap().to_string();
+        let (app, admin) = login_as(app, "admin@promptark.local", "adminpass").await;
+        let approved = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/v1/admin/publications/{id}/approve"))
+                    .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(approved.status(), StatusCode::OK);
+        let listed = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/square/items")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(listed.status(), StatusCode::OK);
+        let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+        let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+        assert!(payload.items.iter().any(|item| item.title == "新稿"));
     }
 
     #[tokio::test]

@@ -70,7 +70,7 @@ paths:
   /v1/publications:
     post:
       operationId: createPublication
-      summary: 提交审核
+      summary: 提交审核；可带 title 与 content 快照，通过后进入广场列表
 components:
   securitySchemes:
     bearer:

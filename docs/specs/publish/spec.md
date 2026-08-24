@@ -36,6 +36,17 @@ M0–M4 MUST NOT 出现可成功提交审核的发布动作。M5 起以「选择
 - THEN 本地列表显示新正文
 - AND 编辑器不被禁用
 
+### Requirement: 提交快照与通过后上架
+
+`POST /v1/publications` MUST 能带上标题与正文快照。管理员通过后，该快照 MUST 出现在广场列表。MUST NOT 用审核结果覆盖本地正文。缺快照时 MUST NOT 把该条假装已上架。
+
+#### Scenario: 通过后进广场列表
+
+- GIVEN 已登录提交标题为「新稿」的快照
+- WHEN 管理员通过该审核
+- THEN `GET /v1/square/items` 含「新稿」
+- AND 本地库正文不被该操作改写
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -44,3 +55,4 @@ M0–M4 MUST NOT 出现可成功提交审核的发布动作。M5 起以「选择
 | 未选源 | `WorkbenchShell.spec.js` disables publish submit until a local source is selected |
 | 审核与本地并行 | `WorkbenchShell.spec.js` keeps the local prompt editable after publish；`square.test.js` submits a publication without changing the local copy |
 | 合同提交 | `squareContract.test.js` `POST /v1/publications`；`backend` `create_publication_requires_access_and_keeps_pending` |
+| 通过后进广场列表 | `backend` `approve_with_snapshot_lists_on_square`；`approve_without_snapshot_does_not_list_on_square`；`square.test.js` submits a publication without changing the local copy |

@@ -33,6 +33,28 @@
 - THEN 显示非阻断离线说明
 - AND 提供前往本地的入口
 
+#### Scenario: 条目详情
+
+- GIVEN 广场有 id 为 `sq-1` 的条目
+- WHEN 匿名请求 `GET /v1/square/items/sq-1`
+- THEN 返回 200 且含标题
+- AND 请求不存在的 id 返回 404
+
+#### Scenario: 浏览排序与模型筛选
+
+- GIVEN 预发种子含不同标题与模型
+- WHEN 分别请求 `sort=recommended`、`latest`、`hot`
+- THEN 三种顺序可区分
+- AND `model` 查询只返回该模型
+- AND 不得声称这是生产热度算法
+
+#### Scenario: 已登录收藏排序
+
+- GIVEN 用户已登录并收藏了某条
+- WHEN 请求 `sort=favorites` 且携带 Access
+- THEN 列表含该条
+- AND 未登录时收藏排序为空列表
+
 ### Requirement: 下载与收藏分离（M5）
 
 「下载」MUST 把远端记录复制到本地 SQLite，不要求登录。「收藏」MUST 是账号关系，未登录时打开登录并说明原因。
@@ -77,3 +99,6 @@
 | 取消收藏 | `WorkbenchShell.spec.js` keeps a downloaded copy after unfavorite；`backend` `delete_favorite_removes_account_relation` |
 | 合同 path 与匿名下载 | `squareContract.test.js` lists every contract path |
 | 浏览混排 | `WorkbenchShell.spec.js` shows square items in the content grid not the category tree；`backend` `lists_square_items_without_login` |
+| 条目详情 | `backend` `serves_square_item_without_login` |
+| 浏览排序与模型筛选 | `backend` `sorts_recommended_latest_and_hot_apart` |
+| 已登录收藏排序 | `backend` `favorites_sort_requires_login` |

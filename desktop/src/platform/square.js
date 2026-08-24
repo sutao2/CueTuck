@@ -84,14 +84,16 @@ export async function downloadSquareItem(id) {
   });
 }
 
-export async function createPublication({ sourceId } = {}) {
+export async function createPublication({ sourceId, title, content } = {}) {
   const id = String(sourceId ?? "").trim();
   if (!id) throw new Error("未选择本地内容");
-  if (testPublishTransport) return testPublishTransport({ sourceId: id });
+  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content });
   if (isTauri()) {
     return tauriInvoke("create_publication", {
       source_id: id,
       access_token: getSession().accessToken,
+      title: title ?? null,
+      content: content ?? null,
     });
   }
   const token = getSession().accessToken;
@@ -103,7 +105,7 @@ export async function createPublication({ sourceId } = {}) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ source_id: id }),
+      body: JSON.stringify({ source_id: id, title, content }),
     });
     if (!response.ok) throw new Error("发布失败");
     return response.json();

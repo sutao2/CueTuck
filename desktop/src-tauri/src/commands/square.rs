@@ -64,7 +64,12 @@ pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRe
 }
 
 #[tauri::command]
-pub async fn create_publication(source_id: String, access_token: String) -> Result<serde_json::Value, String> {
+pub async fn create_publication(
+    source_id: String,
+    access_token: String,
+    title: Option<String>,
+    content: Option<String>,
+) -> Result<serde_json::Value, String> {
     if source_id.trim().is_empty() {
         return Err("未选择本地内容".to_string());
     }
@@ -72,7 +77,11 @@ pub async fn create_publication(source_id: String, access_token: String) -> Resu
     let response = client
         .post(format!("{}/v1/publications", api_base()))
         .bearer_auth(&access_token)
-        .json(&serde_json::json!({ "source_id": source_id }))
+        .json(&serde_json::json!({
+            "source_id": source_id,
+            "title": title,
+            "content": content,
+        }))
         .send()
         .await
         .map_err(|error| error.to_string())?;

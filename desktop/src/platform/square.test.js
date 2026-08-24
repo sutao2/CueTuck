@@ -50,9 +50,18 @@ describe("square client", () => {
 
   it("submits a publication without changing the local copy", async () => {
     const created = await createLocalPrompt({ title: "本地源", content: "旧正文" });
-    setPublishTransport(async ({ sourceId }) => ({ id: "pub-1", source_id: sourceId, status: "pending" }));
-    const result = await createPublication({ sourceId: created.id });
+    const calls = [];
+    setPublishTransport(async (payload) => {
+      calls.push(payload);
+      return { id: "pub-1", source_id: payload.sourceId, status: "pending" };
+    });
+    const result = await createPublication({
+      sourceId: created.id,
+      title: created.title,
+      content: created.content,
+    });
     expect(result.status).toBe("pending");
+    expect(calls[0]).toEqual({ sourceId: created.id, title: "本地源", content: "旧正文" });
     const listed = await listLocalPrompts({ query: "本地源" });
     expect(listed[0].content).toBe("旧正文");
   });

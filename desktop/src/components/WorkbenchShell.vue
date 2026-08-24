@@ -571,8 +571,8 @@ async function loadPublishSources() {
     listLocalCollections({ query: "", categoryId: null }),
   ]);
   publishSources.value = [
-    ...localPrompts.map((item) => ({ id: item.id, title: item.title, kind: "prompt" })),
-    ...localCollections.map((item) => ({ id: item.id, title: item.title, kind: "collection" })),
+    ...localPrompts.map((item) => ({ id: item.id, title: item.title, kind: "prompt", content: item.content })),
+    ...localCollections.map((item) => ({ id: item.id, title: item.title, kind: "collection", content: "" })),
   ];
   publishSourceId.value = "";
 }
@@ -603,8 +603,13 @@ async function finishLogin() {
 
 async function submitPublish() {
   if (!publishSourceId.value) return;
+  const source = publishSources.value.find((item) => item.id === publishSourceId.value);
   try {
-    await createPublication({ sourceId: publishSourceId.value });
+    await createPublication({
+      sourceId: publishSourceId.value,
+      title: source?.title,
+      content: source?.content ?? "",
+    });
     publishResume.value = false;
   } catch {
     squareOffline.value = true;

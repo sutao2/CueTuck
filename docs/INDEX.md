@@ -94,8 +94,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-24-use-wizard-no-vars.md](plans/2026-08-24-use-wizard-no-vars.md) | 归档 | 查无变量预览与 Enter 怎么测的 | 无 `{{` 直接预览；Enter 前进 |
 | [plans/2026-08-24-windows-nsis.md](plans/2026-08-24-windows-nsis.md) | 归档 | 查 Windows NSIS 怎么配的 | 不声称 Windows 已验证 |
 | [plans/2026-08-24-m9-web-and-mcp.md](plans/2026-08-24-m9-web-and-mcp.md) | 归档 | 查 M9 怎么做的 | 先 MCP 后 Web |
-| [plans/2026-08-24-square-preview-gaps.md](plans/2026-08-24-square-preview-gaps.md) | 现行 | 做广场预发缺口 | 详情 / 排序 / 审核进列表 |
-| [plans/2026-08-24-web-edit-prompt.md](plans/2026-08-24-web-edit-prompt.md) | 目标 | 队首关闭后再做 | 浏览器内存库编辑 |
+| [plans/2026-08-24-square-preview-gaps.md](plans/2026-08-24-square-preview-gaps.md) | 归档 | 查广场预发缺口怎么补的 | 详情 / 排序 / 审核进列表 |
+| [plans/2026-08-24-web-edit-prompt.md](plans/2026-08-24-web-edit-prompt.md) | 现行 | 做浏览器内存库编辑 | 浏览器内存库编辑 |
 | [plans/2026-08-24-web-use-wizard.md](plans/2026-08-24-web-use-wizard.md) | 目标 | 编辑切片关闭后再做 | 浏览器逐步填写 |
 | [plans/2026-08-24-web-square-preview.md](plans/2026-08-24-web-square-preview.md) | 目标 | 向导切片关闭后再做 | 浏览器接预发广场 |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问 KDF / Postgres / OAuth / 云同步何时做 | 另立项，无逐步任务 |
