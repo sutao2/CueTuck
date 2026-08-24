@@ -99,6 +99,25 @@
 - WHEN 用户进入预览
 - THEN 最终文本仍包含 `{{受众}}`
 
+### Requirement: 浏览器预发广场
+
+浏览器工作台 MUST 能请求本仓库预发广场。失败时 MUST 给出非阻断离线说明并可回到本地。匿名下载 MUST 写入当前标签页内存库，MUST NOT 声称写入桌面 SQLite。未登录收藏 MUST NOT 因此新增内存副本。
+
+#### Scenario: 浏览器广场离线
+
+- GIVEN 预发 API 不可用
+- WHEN 用户打开浏览器广场
+- THEN 显示离线说明
+- AND 可以回到本地空间
+
+#### Scenario: 浏览器匿名下载
+
+- GIVEN 预发广场有一条「自然光群像」
+- WHEN 用户匿名下载
+- THEN 当前标签页内存库出现该标题
+- AND 说明仍写尚未与桌面 SQLite 同步
+- AND 不出现「已写入本机 SQLite」
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -112,3 +131,5 @@
 | 逐步填写 | `web/src/WebApp.spec.js` fills wizard variables one at a time then previews and copies |
 | 无变量直接预览 | `web/src/WebApp.spec.js` skips fill and previews when there are no variables |
 | 漏填保留占位 | `web/src/renderPrompt.spec.js` keeps unfilled placeholders |
+| 浏览器广场离线 | `web/src/WebApp.spec.js` shows a square offline notice and can return to local |
+| 浏览器匿名下载 | `web/src/WebApp.spec.js` downloads a square prompt into the memory library without claiming sqlite |

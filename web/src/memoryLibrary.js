@@ -4,13 +4,24 @@ export function resetMemoryLibrary() {
   prompts = [];
 }
 
-export function createLocalPrompt({ title, content } = {}) {
+export function createLocalPrompt({ title, content, source = "local" } = {}) {
   const row = {
     id: `mem-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     title: String(title ?? "").trim(),
     content: content ?? "",
+    source,
   };
   prompts = [row, ...prompts];
+  return row;
+}
+
+export function importDownloadedPrompt({ title, content, remoteId = null } = {}) {
+  const row = createLocalPrompt({
+    title,
+    content,
+    source: "downloaded",
+  });
+  row.remote_id = remoteId;
   return row;
 }
 

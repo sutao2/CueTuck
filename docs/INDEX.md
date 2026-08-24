@@ -97,7 +97,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-24-square-preview-gaps.md](plans/2026-08-24-square-preview-gaps.md) | 归档 | 查广场预发缺口怎么补的 | 详情 / 排序 / 审核进列表 |
 | [plans/2026-08-24-web-edit-prompt.md](plans/2026-08-24-web-edit-prompt.md) | 归档 | 查浏览器内存库编辑怎么做的 | 浏览器内存库编辑 |
 | [plans/2026-08-24-web-use-wizard.md](plans/2026-08-24-web-use-wizard.md) | 归档 | 查浏览器使用向导怎么做的 | 浏览器逐步填写 |
-| [plans/2026-08-24-web-square-preview.md](plans/2026-08-24-web-square-preview.md) | 现行 | 做浏览器接预发广场 | 浏览器接预发广场 |
+| [plans/2026-08-24-web-square-preview.md](plans/2026-08-24-web-square-preview.md) | 归档 | 查浏览器接预发广场怎么做的 | 浏览器接预发广场 |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问 KDF / Postgres / OAuth / 云同步何时做 | 另立项，无逐步任务 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |

@@ -21,35 +21,35 @@
 
 **Files:** `docs/specs/web/spec.md` · 本计划
 
-- [ ] **Step 1: 增加浏览器广场离线说明、匿名下载进内存库、不声称桌面已同步；映射先写「未开始」**
-- [ ] **Step 2: `./scripts/docs-check`**
+- [x] **Step 1: 增加浏览器广场离线说明、匿名下载进内存库、不声称桌面已同步；映射先写「未开始」**
+- [x] **Step 2: `./scripts/docs-check`**
 
 ### Task 1: CORS
 
 **Files:** `backend/src/lib.rs`
 
-- [ ] **Step 1: Write the failing test**（Origin `http://localhost:5175` 的 OPTIONS 或 GET 带 ACAO）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: `PREVIEW_ORIGINS` 加入 5175（localhost 与 127.0.0.1）。不要对任意 Origin 放行**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**（Origin `http://localhost:5175` 的 OPTIONS 或 GET 带 ACAO）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: `PREVIEW_ORIGINS` 加入 5175（localhost 与 127.0.0.1）。不要对任意 Origin 放行**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ### Task 2: 列表与离线
 
 **Files:** `web/src/square.js` · `web/src/WebApp.vue` · `web/src/WebApp.spec.js`
 
-- [ ] **Step 1: Write the failing test**（fetch 失败时广场显示离线说明且可回本地；成功时列表出现标题）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 广场空间拉预发列表；失败不阻断切回本地**
-- [ ] **Step 4: 测试 PASS；映射「浏览器广场离线」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**（fetch 失败时广场显示离线说明且可回本地；成功时列表出现标题）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 广场空间拉预发列表；失败不阻断切回本地**
+- [x] **Step 4: 测试 PASS；映射「浏览器广场离线」**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ### Task 3: 下载进内存
 
 **Files:** `web/src/square.js` · `web/src/memoryLibrary.js` · `web/src/WebApp.spec.js`
 
-- [ ] **Step 1: Write the failing test**（点下载后内存列表有该标题；说明仍写尚未与桌面同步；不出现「已写入本机 SQLite」）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 匿名 GET content，写入内存库。收藏未登录不得新增内存副本**
-- [ ] **Step 4: 测试 PASS；映射「浏览器匿名下载」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**（点下载后内存列表有该标题；说明仍写尚未与桌面同步；不出现「已写入本机 SQLite」）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 匿名 GET content，写入内存库。收藏未登录不得新增内存副本**
+- [x] **Step 4: 测试 PASS；映射「浏览器匿名下载」**
+- [x] **Step 5: `./scripts/docs-check`**

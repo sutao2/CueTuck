@@ -23,7 +23,7 @@
         <button type="button" class="space-tab" data-space="local" :class="{ active: space === 'local' }" @click="space = 'local'">
           本地提示词
         </button>
-        <button type="button" class="space-tab" data-space="square" :class="{ active: space === 'square' }" @click="space = 'square'">
+        <button type="button" class="space-tab" data-space="square" :class="{ active: space === 'square' }" @click="openSquare">
           提示词广场
         </button>
       </aside>
@@ -89,7 +89,21 @@
           </div>
         </section>
         <p v-if="space === 'local' && !prompts.length" class="empty">浏览器内存库是空的。点「新建」只会写在这个标签页里。</p>
-        <p v-else-if="space === 'square'" class="empty">广场仍走本仓库预发 API。未开后端时列表为空。</p>
+        <div v-else-if="space === 'square'" class="square-pane">
+          <p v-if="squareOffline" data-testid="square-offline" class="empty">
+            当前离线。预发广场暂时不可用，本地内存库仍可使用。
+          </p>
+          <button v-if="squareOffline" type="button" class="primary-button" data-testid="go-local" @click="openLocal">前往本地</button>
+          <p v-if="favoriteNote" data-testid="favorite-note">{{ favoriteNote }}</p>
+          <ul v-if="!squareOffline && squareItems.length" data-testid="square-list" class="prompt-list">
+            <li v-for="item in squareItems" :key="item.id">
+              <span>{{ item.title }}</span>
+              <button type="button" data-testid="square-download" @click="downloadItem(item.id)">下载</button>
+              <button type="button" data-testid="square-favorite" @click="favoriteNeedLogin">收藏</button>
+            </li>
+          </ul>
+          <p v-else-if="!squareOffline" class="empty">广场仍走本仓库预发 API。未开后端时列表为空。</p>
+        </div>
       </main>
     </div>
   </div>
@@ -99,6 +113,7 @@
 import { computed, onMounted, ref } from "vue";
 import { createLocalPrompt, getLocalPrompt, listLocalPrompts, updateLocalPrompt } from "./memoryLibrary.js";
 import { extractVariables, renderPrompt } from "./renderPrompt.js";
+import { downloadSquareItem, listSquareItems } from "./square.js";
 
 const sidebarCollapsed = ref(false);
 const space = ref("local");
@@ -114,6 +129,9 @@ const wizardIndex = ref(0);
 const wizardValues = ref({});
 const wizardStep = ref("fill");
 const draftVar = ref("");
+const squareItems = ref([]);
+const squareOffline = ref(false);
+const favoriteNote = ref("");
 
 function reload() {
   prompts.value = listLocalPrompts();
@@ -189,6 +207,32 @@ function savePrompt() {
   draftContent.value = "";
   reload();
   opened.value = keepId ? getLocalPrompt(keepId) : (prompts.value[0] ?? null);
+}
+
+function openLocal() {
+  space.value = "local";
+}
+
+async function openSquare() {
+  space.value = "square";
+  favoriteNote.value = "";
+  squareOffline.value = false;
+  try {
+    squareItems.value = await listSquareItems();
+  } catch {
+    squareOffline.value = true;
+    squareItems.value = [];
+  }
+}
+
+async function downloadItem(id) {
+  await downloadSquareItem(id);
+  reload();
+  space.value = "local";
+}
+
+function favoriteNeedLogin() {
+  favoriteNote.value = "收藏需要登录";
 }
 
 onMounted(reload);

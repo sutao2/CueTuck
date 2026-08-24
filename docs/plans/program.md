@@ -42,7 +42,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 1 已关闭 | [2026-08-24-square-preview-gaps.md](2026-08-24-square-preview-gaps.md) | 归档 |
 | 2 已关闭 | [2026-08-24-web-edit-prompt.md](2026-08-24-web-edit-prompt.md) | 归档 |
 | 3 已关闭 | [2026-08-24-web-use-wizard.md](2026-08-24-web-use-wizard.md) | 归档 |
-| 4 队首 | [2026-08-24-web-square-preview.md](2026-08-24-web-square-preview.md) | 现行 |
+| 4 已关闭 | [2026-08-24-web-square-preview.md](2026-08-24-web-square-preview.md) | 归档 |
 | 之后 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
