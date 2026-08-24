@@ -42,4 +42,22 @@ describe("UsePromptModal", () => {
     await w.get('[data-testid="use-next"]').trigger("click");
     expect(w.emitted("copied")[0][0]).toBe("直接复制这段");
   });
+
+  it("advances on Enter and stays on Shift+Enter", async () => {
+    const w = mount(UsePromptModal, {
+      props: {
+        prompt: {
+          id: "p-3",
+          title: "行程",
+          content: "去 {{城市}} 玩 {{天数}} 天",
+        },
+      },
+    });
+    await w.get('[data-testid="use-value"]').setValue("京都");
+    await w.get('[data-testid="use-value"]').trigger("keydown", { key: "Enter", shiftKey: false });
+    expect(w.get('[data-testid="use-variable"]').text()).toBe("天数");
+    await w.get('[data-testid="use-value"]').trigger("keydown", { key: "Enter", shiftKey: true });
+    expect(w.get('[data-testid="use-variable"]').text()).toBe("天数");
+    expect(w.find('[data-testid="use-preview"]').exists()).toBe(false);
+  });
 });

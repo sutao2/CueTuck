@@ -38,8 +38,8 @@
 - `desktop/src/components/UsePromptModal.vue`
 - `docs/specs/variables/spec.md`
 
-- [ ] **Step 1: Write the failing test**
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 只在填写框处理 Enter / Shift+Enter**
-- [ ] **Step 4: 测试 PASS；映射该场景**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 只在填写框处理 Enter / Shift+Enter**
+- [x] **Step 4: 测试 PASS；映射该场景**
+- [x] **Step 5: `./scripts/docs-check`**

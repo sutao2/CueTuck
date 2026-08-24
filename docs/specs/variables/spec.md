@@ -40,6 +40,13 @@
 - AND 下一步才是「天数」
 - AND 预览展示替换后的完整正文
 
+#### Scenario: Enter 前进
+
+- GIVEN 当前在变量填写步
+- WHEN 用户按 Enter
+- THEN 进入下一步
+- AND Shift+Enter 不前进，用于换行
+
 ### Requirement: 启动器填写
 
 启动器填写态可以一屏展示全部变量，但解析规则 MUST 与主窗口相同。渲染函数 MUST 共用同一实现。
@@ -78,6 +85,7 @@
 | 重复变量 | `desktop/src/lib/renderPrompt.test.js` dedupes repeated variables |
 | 无变量 | `desktop/src/components/UsePromptModal.spec.js` skips fill and previews when the prompt has no variables |
 | 逐步填写 | `desktop/src/components/UsePromptModal.spec.js` asks for one variable at a time then previews the filled text |
+| Enter 前进 | `desktop/src/components/UsePromptModal.spec.js` advances on Enter and stays on Shift+Enter |
 | 同源渲染 | 启动器与工作台共用 `desktop/src/lib/renderPrompt.js`；`LauncherApp.spec.js` 填写态预览保留 `{{姓名}}` |
 | 漏填 | `desktop/src/lib/renderPrompt.test.js` keeps unfilled placeholders |
 | 关闭双语不删正文 | `WorkbenchShell.spec.js` keeps prompt content when bilingual is turned off |

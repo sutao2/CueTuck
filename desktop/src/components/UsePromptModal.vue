@@ -19,6 +19,7 @@
               rows="4"
               data-testid="use-value"
               :placeholder="'请输入' + currentName"
+              @keydown="onValueKeydown"
             ></textarea>
           </label>
         </template>
@@ -77,6 +78,12 @@ function next() {
     return;
   }
   emit("copied", preview.value);
+}
+
+function onValueKeydown(event) {
+  if (event.key !== "Enter" || event.shiftKey) return;
+  event.preventDefault();
+  next();
 }
 
 function back() {
