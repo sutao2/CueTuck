@@ -53,6 +53,16 @@
 - THEN 列表出现「测试」
 - AND 数据说明仍写尚未与桌面 SQLite 同步
 
+### Requirement: 打开查看正文
+
+浏览器工作台 MUST 允许从本地列表打开一条提示词并看到正文。MUST NOT 为此去读桌面 SQLite。
+
+#### Scenario: 点开看到正文
+
+- GIVEN 列表中有标题「测试」、正文「你好」的提示词
+- WHEN 用户点开该条
+- THEN 内容区显示正文「你好」
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -61,3 +71,4 @@
 | 窄桌面可收起侧栏 | `web/src/WebApp.spec.js` keeps local space when the sidebar is collapsed |
 | 不声称已同步 | `web/src/WebApp.spec.js` does not claim the browser library is synced to desktop sqlite |
 | 新建出现在列表 | `web/src/WebApp.spec.js` creates a memory prompt and lists it without claiming desktop sync |
+| 点开看到正文 | `web/src/WebApp.spec.js` opens a memory prompt and shows its body |

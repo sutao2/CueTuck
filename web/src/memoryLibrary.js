@@ -17,3 +17,7 @@ export function createLocalPrompt({ title, content } = {}) {
 export function listLocalPrompts() {
   return [...prompts];
 }
+
+export function getLocalPrompt(id) {
+  return prompts.find((row) => row.id === id) ?? null;
+}

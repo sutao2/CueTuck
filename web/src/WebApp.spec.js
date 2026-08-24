@@ -34,4 +34,14 @@ describe("WebApp", () => {
     expect(w.get('[data-testid="library-note"]').text()).toContain("尚未与桌面");
     expect(w.text()).not.toContain("已与桌面库同步");
   });
+
+  it("opens a memory prompt and shows its body", async () => {
+    const w = mount(WebApp);
+    await w.get('[data-testid="new-prompt"]').trigger("click");
+    await w.get('[data-testid="prompt-title"]').setValue("测试");
+    await w.get('[data-testid="prompt-content"]').setValue("你好");
+    await w.get('[data-testid="save-prompt"]').trigger("click");
+    await w.get('[data-testid="prompt-row"]').trigger("click");
+    expect(w.get('[data-testid="prompt-body"]').text()).toContain("你好");
+  });
 });

@@ -62,3 +62,13 @@
 - [x] **Step 3: 标签页内存库可新建；列表立即出现；仍不声称已同步**
 - [x] **Step 4: 测试 PASS；映射「新建出现在列表」**
 - [x] **Step 5: `./scripts/docs-check`**
+
+### Task 5: 打开查看正文
+
+**Files:** `web/`
+
+- [x] **Step 1: Write the failing test**
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 点列表项显示正文；仍不读桌面 SQLite**
+- [x] **Step 4: 测试 PASS；映射「点开看到正文」**
+- [x] **Step 5: `./scripts/docs-check`**

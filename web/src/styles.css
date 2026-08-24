@@ -107,10 +107,26 @@ body { font: 14px/1.45 "IBM Plex Sans", "Noto Sans SC", sans-serif; color: var(-
   gap: 8px;
 }
 .prompt-list li {
-  background: var(--panel);
+  padding: 0;
+}
+.prompt-row {
+  width: 100%;
+  text-align: left;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
+  background: var(--panel);
+  color: inherit;
+  cursor: pointer;
+}
+.prompt-detail {
+  margin-top: 20px;
+}
+.prompt-detail h2 { margin: 0 0 8px; font-size: 20px; }
+.prompt-body {
+  margin: 0;
+  white-space: pre-wrap;
+  font: inherit;
 }
 .empty { color: var(--muted); }
 

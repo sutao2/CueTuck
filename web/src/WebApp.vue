@@ -60,10 +60,18 @@
           <button type="button" class="primary-button" data-testid="save-prompt" @click="savePrompt">保存</button>
         </form>
         <ul v-if="space === 'local' && prompts.length" data-testid="prompt-list" class="prompt-list">
-          <li v-for="row in prompts" :key="row.id">{{ row.title }}</li>
+          <li v-for="row in prompts" :key="row.id">
+            <button type="button" class="prompt-row" data-testid="prompt-row" @click="openPrompt(row.id)">
+              {{ row.title }}
+            </button>
+          </li>
         </ul>
-        <p v-else-if="space === 'local'" class="empty">浏览器内存库是空的。点「新建」只会写在这个标签页里。</p>
-        <p v-else class="empty">广场仍走本仓库预发 API。未开后端时列表为空。</p>
+        <article v-if="space === 'local' && opened" class="prompt-detail">
+          <h2>{{ opened.title }}</h2>
+          <pre data-testid="prompt-body" class="prompt-body">{{ opened.content }}</pre>
+        </article>
+        <p v-if="space === 'local' && !prompts.length" class="empty">浏览器内存库是空的。点「新建」只会写在这个标签页里。</p>
+        <p v-else-if="space === 'square'" class="empty">广场仍走本仓库预发 API。未开后端时列表为空。</p>
       </main>
     </div>
   </div>
@@ -71,7 +79,7 @@
 
 <script setup>
 import { onMounted, ref } from "vue";
-import { createLocalPrompt, listLocalPrompts } from "./memoryLibrary.js";
+import { createLocalPrompt, getLocalPrompt, listLocalPrompts } from "./memoryLibrary.js";
 
 const sidebarCollapsed = ref(false);
 const space = ref("local");
@@ -79,6 +87,7 @@ const prompts = ref([]);
 const editing = ref(false);
 const draftTitle = ref("");
 const draftContent = ref("");
+const opened = ref(null);
 
 function reload() {
   prompts.value = listLocalPrompts();
@@ -86,8 +95,14 @@ function reload() {
 
 function startCreate() {
   editing.value = true;
+  opened.value = null;
   draftTitle.value = "";
   draftContent.value = "";
+}
+
+function openPrompt(id) {
+  editing.value = false;
+  opened.value = getLocalPrompt(id);
 }
 
 function savePrompt() {
@@ -97,6 +112,7 @@ function savePrompt() {
   draftTitle.value = "";
   draftContent.value = "";
   reload();
+  opened.value = prompts.value[0] ?? null;
 }
 
 onMounted(reload);
