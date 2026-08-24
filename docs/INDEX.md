@@ -33,6 +33,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0009-m6-admin-console.md](architecture/decisions/0009-m6-admin-console.md) | 现行 | 做管理台或审核 API 前 | 独立 admin.yaml；admin-web 不进桌面 |
 | [architecture/decisions/0010-m7-contract-gaps.md](architecture/decisions/0010-m7-contract-gaps.md) | 现行 | 做已登录收藏、轮换或 admin me 前 | 收藏是账号关系；Refresh 轮换；GET /v1/admin/me |
 | [architecture/decisions/0011-web-and-mcp.md](architecture/decisions/0011-web-and-mcp.md) | 现行 | 做浏览器工作台或 MCP 前 | Web 独立 SPA；Agent 入口是 MCP stdio |
+| [architecture/decisions/0012-postgres-backend.md](architecture/decisions/0012-postgres-backend.md) | 现行 | 接 Postgres、Redis、MinIO 或改口令存储时 | 预发存本机 `promptark` 库；Argon2id |
+| [architecture/decisions/0013-oauth-google-github.md](architecture/decisions/0013-oauth-google-github.md) | 现行 | 接 Google / GitHub 登录前 | 选定 Google 与 GitHub；仍不接 QQ/LinuxDo |
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 独立窗口行为合同 |
 | [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
@@ -74,6 +76,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/m8-settings-ia/design.md](changes/m8-settings-ia/design.md) | 目标 | 看 M8 设置怎么落地 | 十类导航、本机行、云行诚实占位 |
 | [changes/m9-web-and-mcp/proposal.md](changes/m9-web-and-mcp/proposal.md) | 现行 | 查 M9 合同是否已接受 | 已接受；决定以 ADR 0011 为准 |
 | [changes/m9-web-and-mcp/design.md](changes/m9-web-and-mcp/design.md) | 目标 | 看 M9 怎么落地 | 独立 web/；mcp stdio 读 SQLite |
+| [changes/postgres-backend/proposal.md](changes/postgres-backend/proposal.md) | 现行 | 查预发后端持久化是否已接受 | 已接受；ADR 0012 / 0013 |
+| [changes/postgres-backend/design.md](changes/postgres-backend/design.md) | 目标 | 看预发后端怎么接到本机库 | 独立库 promptark；Argon2；OAuth；MinIO |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
@@ -98,7 +102,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-24-web-edit-prompt.md](plans/2026-08-24-web-edit-prompt.md) | 归档 | 查浏览器内存库编辑怎么做的 | 浏览器内存库编辑 |
 | [plans/2026-08-24-web-use-wizard.md](plans/2026-08-24-web-use-wizard.md) | 归档 | 查浏览器使用向导怎么做的 | 浏览器逐步填写 |
 | [plans/2026-08-24-web-square-preview.md](plans/2026-08-24-web-square-preview.md) | 归档 | 查浏览器接预发广场怎么做的 | 浏览器接预发广场 |
-| [plans/deferred.md](plans/deferred.md) | 目标 | 问 KDF / Postgres / OAuth / 云同步何时做 | 另立项，无逐步任务 |
+| [plans/2026-08-24-postgres-backend.md](plans/2026-08-24-postgres-backend.md) | 现行 | 把预发后端接到本机 Postgres | Argon2、OAuth、Redis、MinIO |
+| [plans/deferred.md](plans/deferred.md) | 目标 | 问云同步 / 账单 / 商店何时做 | 另立项，无逐步任务 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |

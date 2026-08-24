@@ -40,7 +40,7 @@ unset CARGO_TARGET_DIR
 cargo run
 ```
 
-默认 `127.0.0.1:8787`。普通开发用户 `dev@promptark.local` / `devpass`；管理员 `admin@promptark.local` / `adminpass`。桌面窗口登录会把 Refresh 写入系统钥匙串。
+默认 `127.0.0.1:8787`。`cargo run` 使用本机已有 Postgres（库 `promptark`）、Redis、MinIO。普通开发用户 `dev@promptark.local` / `devpass`；管理员 `admin@promptark.local` / `adminpass`。桌面窗口登录会把 Refresh 写入系统钥匙串。默认 URL 见 `backend/.env.example`。表不对时可 `PROMPTARK_RESET_SCHEMA=1 cargo run`。
 
 管理台（不要和桌面抢 `1420`）：
 

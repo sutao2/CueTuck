@@ -119,3 +119,4 @@
 | 驳回不删本地 | `backend` `admin_rejects_publication` 将远端标为 rejected；本切片不写桌面库 |
 | 看到邮箱与角色 | `backend` `admin_lists_user_emails_and_roles`；`admin-web` `AdminApp.spec.js` lists emails and roles without password or delete controls |
 | 关闭公开广场 | `backend` `admin_can_close_public_square`；`admin-web` `AdminApp.spec.js` saves the anonymous square setting |
+| 重启后设置仍在 | `backend` `publication_favorite_and_settings_survive_postgres` |

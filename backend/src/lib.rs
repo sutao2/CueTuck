@@ -1,14 +1,23 @@
+mod media;
+mod oauth;
+mod password;
+mod postgres;
+mod state;
+
 use axum::extract::{Path, Query, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, Method, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::Response;
 use axum::routing::{get, post, put};
 use axum::{Json, Router};
+use oauth::OAuthSettings;
+use postgres::Pg;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
+
+pub use password::{hash_password, verify_password};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -20,6 +29,11 @@ pub struct AppState {
     publications: Arc<Mutex<Vec<Publication>>>,
     square_public: Arc<Mutex<bool>>,
     favorites: Arc<Mutex<HashMap<String, HashSet<String>>>>,
+    db: Option<Pg>,
+    redis: Option<redis::aio::ConnectionManager>,
+    pub oauth: OAuthSettings,
+    pub media: Option<media::MediaConfig>,
+    oauth_flows: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl Default for AppState {
@@ -33,6 +47,11 @@ impl Default for AppState {
             publications: Arc::new(Mutex::new(Vec::new())),
             square_public: Arc::new(Mutex::new(true)),
             favorites: Arc::new(Mutex::new(HashMap::new())),
+            db: None,
+            redis: None,
+            oauth: OAuthSettings::default(),
+            media: None,
+            oauth_flows: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -126,9 +145,6 @@ pub struct AdminMe {
     pub role: String,
 }
 
-pub fn hash_password(password: &str) -> String {
-    format!("{:x}", Sha256::digest(password.as_bytes()))
-}
 
 impl AppState {
     pub fn with_user(email: &str, password: &str) -> Self {
@@ -180,8 +196,18 @@ impl AppState {
 
 pub fn app(state: AppState) -> Router {
     Router::new()
+        .route("/v1/health", get(health))
         .route("/v1/session", post(create_session).delete(delete_session))
         .route("/v1/session/refresh", post(refresh_session))
+        .route("/v1/session/oauth/providers", get(oauth::list_providers))
+        .route("/v1/session/oauth/callback", get(oauth::callback))
+        .route(
+            "/v1/session/oauth/session/:flow_id",
+            get(oauth::poll_session),
+        )
+        .route("/v1/session/oauth/:provider", get(oauth::start))
+        .route("/v1/media/upload", post(media::upload))
+        .route("/v1/media/:id/url", get(media::signed_url))
         .route("/v1/square/items", get(list_square_items))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/square/items/:id", get(get_square_item))
@@ -247,6 +273,20 @@ fn apply_cors(headers: &mut HeaderMap, origin: Option<&str>) {
     );
 }
 
+async fn health(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let postgres = state.ping_db().await;
+    let redis = state.ping_redis().await;
+    let minio = match &state.media {
+        Some(media) => media.ping().await,
+        None => false,
+    };
+    Json(serde_json::json!({
+        "postgres": postgres,
+        "redis": redis,
+        "minio": minio,
+    }))
+}
+
 async fn create_session(
     State(state): State<AppState>,
     Json(body): Json<LoginRequest>,
@@ -255,41 +295,13 @@ async fn create_session(
     if email.is_empty() || body.password.is_empty() {
         return Err(StatusCode::BAD_REQUEST);
     }
-    let expected = state
-        .users
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .get(&email)
-        .cloned();
-    if expected.as_deref() != Some(hash_password(&body.password).as_str()) {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-    Ok(Json(issue_session(&state, email)?))
+    state.verify_login(&email, &body.password).await?;
+    Ok(Json(state.issue_session(email).await?))
 }
 
 #[derive(Deserialize)]
 struct RefreshRequest {
     refresh_token: String,
-}
-
-fn issue_session(state: &AppState, email: String) -> Result<SessionResponse, StatusCode> {
-    let access_token = format!("acc.{}", Uuid::new_v4());
-    let refresh_token = format!("ref.{}", Uuid::new_v4());
-    state
-        .access
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .insert(access_token.clone(), email.clone());
-    state
-        .refresh
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .insert(refresh_token.clone(), email.clone());
-    Ok(SessionResponse {
-        email,
-        access_token,
-        refresh_token,
-    })
 }
 
 async fn refresh_session(
@@ -300,18 +312,8 @@ async fn refresh_session(
     if !presented.starts_with("ref.") {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let email = state
-        .refresh
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .remove(&presented)
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    state
-        .access
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .retain(|_, holder| holder != &email);
-    Ok(Json(issue_session(&state, email)?))
+    let email = state.rotate_refresh(&presented).await?;
+    Ok(Json(state.issue_session(email).await?))
 }
 
 async fn delete_session(State(state): State<AppState>, headers: HeaderMap) -> StatusCode {
@@ -321,11 +323,11 @@ async fn delete_session(State(state): State<AppState>, headers: HeaderMap) -> St
     if token.starts_with("ref.") {
         return StatusCode::UNAUTHORIZED;
     }
-    let email = state.access.lock().ok().and_then(|mut map| map.remove(&token));
-    if email.is_none() {
-        return StatusCode::UNAUTHORIZED;
+    match state.revoke_access(&token).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::UNAUTHORIZED,
+        Err(status) => status,
     }
-    StatusCode::NO_CONTENT
 }
 
 async fn list_square_items(
@@ -333,11 +335,7 @@ async fn list_square_items(
     headers: HeaderMap,
     Query(query): Query<SquareListQuery>,
 ) -> Json<SquareListResponse> {
-    let square_public = state
-        .square_public
-        .lock()
-        .map(|flag| *flag)
-        .unwrap_or(true);
+    let square_public = state.square_public().await.unwrap_or(true);
     if !square_public {
         return Json(SquareListResponse { items: vec![] });
     }
@@ -345,30 +343,19 @@ async fn list_square_items(
     let needle = query.q.unwrap_or_default().trim().to_lowercase();
     let model = query.model.unwrap_or_default();
     let mut items = state
-        .items
-        .lock()
-        .map(|rows| {
-            rows
-                .iter()
-                .filter(|item| needle.is_empty() || item.title.to_lowercase().contains(&needle))
-                .filter(|item| {
-                    model.is_empty() || item.model.as_deref() == Some(model.as_str())
-                })
-                .cloned()
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+        .all_items()
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|item| needle.is_empty() || item.title.to_lowercase().contains(&needle))
+        .filter(|item| model.is_empty() || item.model.as_deref() == Some(model.as_str()))
+        .collect::<Vec<_>>();
     if sort == "favorites" || sort == "收藏" {
-        let Some(email) = optional_access_email(&state, &headers) else {
+        let Some(email) = optional_access_email(&state, &headers).await else {
             return Json(SquareListResponse { items: vec![] });
         };
-        let ids = state
-            .favorites
-            .lock()
-            .ok()
-            .and_then(|map| map.get(&email).cloned())
-            .unwrap_or_default();
-        items.retain(|item| ids.contains(&item.id));
+        let ids = state.favorite_ids(&email).await.unwrap_or_default();
+        items.retain(|item| ids.iter().any(|id| id == &item.id));
         return Json(SquareListResponse { items });
     }
     apply_preview_sort(&mut items, &sort);
@@ -383,12 +370,12 @@ fn apply_preview_sort(items: &mut [SquareItem], sort: &str) {
     }
 }
 
-fn optional_access_email(state: &AppState, headers: &HeaderMap) -> Option<String> {
+async fn optional_access_email(state: &AppState, headers: &HeaderMap) -> Option<String> {
     let token = bearer_token(headers)?;
     if token.starts_with("ref.") {
         return None;
     }
-    state.access.lock().ok()?.get(&token).cloned()
+    state.email_for_access(&token).await.ok().flatten()
 }
 
 async fn create_publication(
@@ -396,21 +383,7 @@ async fn create_publication(
     headers: HeaderMap,
     Json(body): Json<PublicationRequest>,
 ) -> Result<Json<Publication>, StatusCode> {
-    let Some(token) = bearer_token(&headers) else {
-        return Err(StatusCode::UNAUTHORIZED);
-    };
-    if token.starts_with("ref.") {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-    let email = state
-        .access
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .get(&token)
-        .cloned();
-    if email.is_none() {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
+    require_user(&state, &headers).await?;
     let source_id = body.source_id.trim().to_string();
     if source_id.is_empty() {
         return Err(StatusCode::BAD_REQUEST);
@@ -422,15 +395,11 @@ async fn create_publication(
         title: body.title.filter(|value| !value.trim().is_empty()),
         content: body.content,
     };
-    state
-        .publications
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .push(publication.clone());
+    state.insert_publication(&publication).await?;
     Ok(Json(publication))
 }
 
-fn require_user(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
+pub(crate) async fn require_user(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
     let Some(token) = bearer_token(headers) else {
         return Err(StatusCode::UNAUTHORIZED);
     };
@@ -438,11 +407,8 @@ fn require_user(state: &AppState, headers: &HeaderMap) -> Result<String, StatusC
         return Err(StatusCode::UNAUTHORIZED);
     }
     state
-        .access
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .get(&token)
-        .cloned()
+        .email_for_access(&token)
+        .await?
         .ok_or(StatusCode::UNAUTHORIZED)
 }
 
@@ -455,21 +421,13 @@ async fn list_favorites(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<FavoriteList>, StatusCode> {
-    let email = require_user(&state, &headers)?;
-    let ids = state
-        .favorites
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .get(&email)
-        .cloned()
-        .unwrap_or_default();
+    let email = require_user(&state, &headers).await?;
+    let ids = state.favorite_ids(&email).await?;
     let items = state
-        .items
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .iter()
-        .filter(|item| ids.contains(&item.id))
-        .cloned()
+        .all_items()
+        .await?
+        .into_iter()
+        .filter(|item| ids.iter().any(|id| id == &item.id))
         .collect();
     Ok(Json(FavoriteList { items }))
 }
@@ -479,22 +437,9 @@ async fn put_favorite(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<SquareItem>, StatusCode> {
-    let email = require_user(&state, &headers)?;
-    let item = state
-        .items
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .iter()
-        .find(|row| row.id == id)
-        .cloned()
-        .ok_or(StatusCode::NOT_FOUND)?;
-    state
-        .favorites
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .entry(email)
-        .or_default()
-        .insert(id);
+    let email = require_user(&state, &headers).await?;
+    let item = state.get_item(&id).await?.ok_or(StatusCode::NOT_FOUND)?;
+    state.put_favorite(&email, &id).await?;
     Ok(Json(item))
 }
 
@@ -503,42 +448,18 @@ async fn delete_favorite(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> StatusCode {
-    let Ok(email) = require_user(&state, &headers) else {
+    let Ok(email) = require_user(&state, &headers).await else {
         return StatusCode::UNAUTHORIZED;
     };
-    match state.favorites.lock() {
-        Ok(mut map) => {
-            if let Some(ids) = map.get_mut(&email) {
-                ids.remove(&id);
-            }
-            StatusCode::NO_CONTENT
-        }
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    match state.delete_favorite(&email, &id).await {
+        Ok(()) => StatusCode::NO_CONTENT,
+        Err(status) => status,
     }
 }
 
-fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
-    let Some(token) = bearer_token(headers) else {
-        return Err(StatusCode::UNAUTHORIZED);
-    };
-    if token.starts_with("ref.") {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-    let email = state
-        .access
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .get(&token)
-        .cloned()
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    let role = state
-        .roles
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .get(&email)
-        .cloned()
-        .unwrap_or_else(|| "user".into());
-    if role != "admin" {
+async fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
+    let email = require_user(state, headers).await?;
+    if state.role_of(&email).await? != "admin" {
         return Err(StatusCode::FORBIDDEN);
     }
     Ok(email)
@@ -548,14 +469,8 @@ async fn get_admin_me(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<AdminMe>, StatusCode> {
-    let email = require_admin(&state, &headers)?;
-    let role = state
-        .roles
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .get(&email)
-        .cloned()
-        .unwrap_or_else(|| "admin".into());
+    let email = require_admin(&state, &headers).await?;
+    let role = state.role_of(&email).await?;
     Ok(Json(AdminMe { email, role }))
 }
 
@@ -563,16 +478,10 @@ async fn list_admin_publications(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<AdminPublicationList>, StatusCode> {
-    require_admin(&state, &headers)?;
-    let items = state
-        .publications
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .iter()
-        .filter(|row| row.status == "pending")
-        .cloned()
-        .collect();
-    Ok(Json(AdminPublicationList { items }))
+    require_admin(&state, &headers).await?;
+    Ok(Json(AdminPublicationList {
+        items: state.pending_publications().await?,
+    }))
 }
 
 async fn approve_publication(
@@ -580,7 +489,7 @@ async fn approve_publication(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<Publication>, StatusCode> {
-    set_publication_status(&state, &headers, &id, "approved")
+    set_publication_status(&state, &headers, &id, "approved").await
 }
 
 async fn reject_publication(
@@ -588,20 +497,17 @@ async fn reject_publication(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<Publication>, StatusCode> {
-    set_publication_status(&state, &headers, &id, "rejected")
+    set_publication_status(&state, &headers, &id, "rejected").await
 }
 
 async fn get_admin_settings(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<AdminSettings>, StatusCode> {
-    require_admin(&state, &headers)?;
-    let square_public = state
-        .square_public
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
-        .map(|flag| *flag)?;
-    Ok(Json(AdminSettings { square_public }))
+    require_admin(&state, &headers).await?;
+    Ok(Json(AdminSettings {
+        square_public: state.square_public().await?,
+    }))
 }
 
 async fn put_admin_settings(
@@ -609,11 +515,8 @@ async fn put_admin_settings(
     headers: HeaderMap,
     Json(body): Json<AdminSettings>,
 ) -> Result<Json<AdminSettings>, StatusCode> {
-    require_admin(&state, &headers)?;
-    *state
-        .square_public
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? = body.square_public;
+    require_admin(&state, &headers).await?;
+    state.set_square_public(body.square_public).await?;
     Ok(Json(body))
 }
 
@@ -621,83 +524,29 @@ async fn list_admin_users(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<AdminUserList>, StatusCode> {
-    require_admin(&state, &headers)?;
-    let hashes = state
-        .users
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let roles = state
-        .roles
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let mut items: Vec<AdminUser> = hashes
-        .keys()
-        .map(|email| AdminUser {
-            email: email.clone(),
-            role: roles.get(email).cloned().unwrap_or_else(|| "user".into()),
-        })
-        .collect();
-    items.sort_by(|left, right| left.email.cmp(&right.email));
-    Ok(Json(AdminUserList { items }))
+    require_admin(&state, &headers).await?;
+    Ok(Json(AdminUserList {
+        items: state.list_users().await?,
+    }))
 }
 
-fn set_publication_status(
+async fn set_publication_status(
     state: &AppState,
     headers: &HeaderMap,
     id: &str,
     status: &str,
 ) -> Result<Json<Publication>, StatusCode> {
-    require_admin(state, headers)?;
-    let publication = {
-        let mut rows = state
-            .publications
-            .lock()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let publication = rows
-            .iter_mut()
-            .find(|row| row.id == id)
-            .ok_or(StatusCode::NOT_FOUND)?;
-        publication.status = status.into();
-        publication.clone()
-    };
-    if status == "approved" {
-        let title = publication
-            .title
-            .as_deref()
-            .unwrap_or("")
-            .trim()
-            .to_string();
-        if !title.is_empty() {
-            let mut items = state
-                .items
-                .lock()
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            items.push(SquareItem {
-                id: publication.id.clone(),
-                title,
-                kind: "prompt".into(),
-                excerpt: None,
-                model: None,
-                member_count: None,
-                content: publication.content.clone(),
-            });
-        }
-    }
-    Ok(Json(publication))
+    require_admin(state, headers).await?;
+    Ok(Json(state.set_publication_status(id, status).await?))
 }
 
 async fn get_square_item(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<SquareItem>, StatusCode> {
-    let items = state
-        .items
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    items
-        .iter()
-        .find(|item| item.id == id)
-        .cloned()
+    state
+        .get_item(&id)
+        .await?
         .map(Json)
         .ok_or(StatusCode::NOT_FOUND)
 }
@@ -706,15 +555,7 @@ async fn get_square_item_content(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<SquareContentResponse>, StatusCode> {
-    let items = state
-        .items
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let item = items
-        .iter()
-        .find(|item| item.id == id)
-        .cloned()
-        .ok_or(StatusCode::NOT_FOUND)?;
+    let item = state.get_item(&id).await?.ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(SquareContentResponse {
         id: item.id,
         title: item.title,
@@ -1749,13 +1590,125 @@ mod tests {
             .unwrap();
         assert_eq!(new_access.status(), StatusCode::OK);
     }
+
+    #[tokio::test]
+    async fn password_uses_argon2id_not_sha256() {
+        let encoded = hash_password("devpass");
+        assert!(encoded.starts_with("$argon2"));
+        assert_ne!(encoded.len(), 64);
+        assert!(verify_password("devpass", &encoded));
+        assert!(!verify_password("nope", &encoded));
+        let sha256_hex = {
+            use sha2::{Digest, Sha256};
+            format!("{:x}", Sha256::digest(b"devpass"))
+        };
+        assert!(!verify_password("devpass", &sha256_hex));
+    }
+
+    #[tokio::test]
+    async fn oauth_google_redirects_when_configured() {
+        let mut state = AppState::default();
+        state.oauth.providers.insert(
+            "google".into(),
+            crate::oauth::ProviderConfig {
+                client_id: "google-client".into(),
+                client_secret: "google-secret".into(),
+                authorization_uri: "https://accounts.example/oauth/authorize".into(),
+                token_uri: "https://accounts.example/oauth/token".into(),
+                user_info_uri: "https://accounts.example/oauth/userinfo".into(),
+                emails_uri: None,
+                redirect_uri: "http://localhost:8787/v1/session/oauth/callback".into(),
+                scope: "openid email".into(),
+            },
+        );
+        let response = app(state)
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/session/oauth/google")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
+        let location = response
+            .headers()
+            .get(header::LOCATION)
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(location.starts_with("https://accounts.example/oauth/authorize?"));
+        assert!(location.contains("client_id=google-client"));
+    }
+
+    #[tokio::test]
+    async fn oauth_callback_with_mock_code_issues_session() {
+        let mut state = AppState::default();
+        state.oauth.providers.insert(
+            "google".into(),
+            crate::oauth::ProviderConfig {
+                client_id: "google-client".into(),
+                client_secret: "google-secret".into(),
+                authorization_uri: "https://accounts.example/oauth/authorize".into(),
+                token_uri: "https://accounts.example/oauth/token".into(),
+                user_info_uri: "https://accounts.example/oauth/userinfo".into(),
+                emails_uri: None,
+                redirect_uri: "http://localhost:8787/v1/session/oauth/callback".into(),
+                scope: "openid email".into(),
+            },
+        );
+        state.oauth.mock_users.insert(
+            "code-123".into(),
+            crate::oauth::OAuthUser {
+                provider: "google".into(),
+                provider_uid: "g-1".into(),
+                email: "oauth@promptark.local".into(),
+            },
+        );
+        let start = app(state.clone())
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/session/oauth/google")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let location = start
+            .headers()
+            .get(header::LOCATION)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+        let state_param = location
+            .split("state=")
+            .nth(1)
+            .unwrap()
+            .split('&')
+            .next()
+            .unwrap();
+        let response = app(state)
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!(
+                        "/v1/session/oauth/callback?code=code-123&state={state_param}"
+                    ))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let session: SessionResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(session.email, "oauth@promptark.local");
+        assert!(session.access_token.starts_with("acc."));
+    }
 }
 
 #[cfg(test)]
-mod container_tests {
-    #[tokio::test]
-    #[ignore = "needs Docker; enable when Postgres store lands"]
-    async fn session_api_postgres_container() {
-        panic!("Docker Testcontainers 未在本机启用");
-    }
-}
+mod persistence_tests;

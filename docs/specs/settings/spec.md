@@ -138,14 +138,14 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 
 账号与广场页 MUST 展示：当前账号、作者主页、我的发布、下载时保留作者信息。
 
-当前账号 MUST 接到已有邮箱密码登录/登出，不得改成未选定的 OAuth。作者主页与我的发布在对应产品面未交付前 MUST 标明尚未提供，MUST NOT 假装已编辑资料或已列出远端发布。下载时保留作者信息是本机开关，接通后 MUST 影响本机副本展示，未接通时仍保留该行。
+当前账号 MUST 接到已有邮箱密码登录/登出。Google / GitHub 由后端提供，见 [ADR 0013](../../architecture/decisions/0013-oauth-google-github.md)；桌面设置页未接线前可以不展示绑定入口。MUST NOT 出现 QQ / LinuxDo 绑定入口。作者主页与我的发布在对应产品面未交付前 MUST 标明尚未提供，MUST NOT 假装已编辑资料或已列出远端发布。下载时保留作者信息是本机开关，接通后 MUST 影响本机副本展示，未接通时仍保留该行。
 
 #### Scenario: 当前账号接已有登录
 
 - GIVEN 用户已用邮箱登录
 - WHEN 打开账号与广场页
 - THEN 「当前账号」显示该邮箱或已登录态，并可登出
-- AND 不出现 QQ / LinuxDo / Google 绑定入口
+- AND 不出现 QQ / LinuxDo 绑定入口
 
 ### Requirement: 同步
 

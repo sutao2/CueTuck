@@ -9,4 +9,4 @@ cargo test --locked
 PROMPTARK_ALLOW_DEV_USER=1 cargo run
 ```
 
-默认监听 `127.0.0.1:8787`。开发用户 `dev@promptark.local` / `devpass`（普通角色）。管理员 `admin@promptark.local` / `adminpass`。Postgres Testcontainers 测试在无 Docker 时保持 `ignore`。
+默认监听 `127.0.0.1:8787`。`cargo run` 连接本机 Postgres 库 `promptark`（不是 Flyway 库 `pl`）、Redis、MinIO。开发用户 `dev@promptark.local` / `devpass`（普通角色）。管理员 `admin@promptark.local` / `adminpass`。Google / GitHub 可读 `PL_GOOGLE_*` / `PL_GITHUB_*`。表不对时可 `PROMPTARK_RESET_SCHEMA=1` 删表重建。

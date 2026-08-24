@@ -71,6 +71,58 @@ paths:
     post:
       operationId: createPublication
       summary: 提交审核；可带 title 与 content 快照，通过后进入广场列表
+  /v1/health:
+    get:
+      operationId: health
+      security: []
+      summary: Postgres / Redis / MinIO 是否可达
+  /v1/session/oauth/providers:
+    get:
+      operationId: listOAuthProviders
+      security: []
+      summary: 已配置的 Google / GitHub
+  /v1/session/oauth/callback:
+    get:
+      operationId: oauthCallback
+      security: []
+      summary: OAuth 授权码回调
+  /v1/session/oauth/session/{flowId}:
+    get:
+      operationId: oauthBrowserSession
+      security: []
+      summary: 浏览器 OAuth 轮询
+      parameters:
+        - name: flowId
+          in: path
+          required: true
+          schema:
+            type: string
+  /v1/session/oauth/{provider}:
+    get:
+      operationId: startOAuth
+      security: []
+      summary: 跳转 Google 或 GitHub 授权
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+  /v1/media/upload:
+    post:
+      operationId: uploadMedia
+      summary: 登录后上传对象到 MinIO
+  /v1/media/{id}/url:
+    get:
+      operationId: mediaUrl
+      security: []
+      summary: 对象预签名 GET
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
 components:
   securitySchemes:
     bearer:

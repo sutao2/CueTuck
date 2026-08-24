@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-24（切片队列已做完；另立项见 deferred） |
+| 更新日期 | 2026-08-24（预发后端接到本机 `promptark` 库） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,13 +24,13 @@
 
 ## 当前可执行的下一步
 
-1. 排队四份切片已关闭。另立项见 [deferred.md](deferred.md)（KDF、Postgres、OAuth、云同步等，无逐步任务）。
+1. 当前计划：[2026-08-24-postgres-backend.md](2026-08-24-postgres-backend.md)（Postgres / Argon2 / Google·GitHub / Redis / MinIO）。
 2. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
 3. 启动器仍不请求广场或管理接口。
 
 ## 仓库事实
 
-- 应用代码：`desktop/` 本地工作台 + 独立启动器；`mcp/` 本机 MCP；`web/` 浏览器工作台；`backend/` 本机会话 / 广场 / 发布 / 审核（内存）；`admin-web/` 独立管理端
+- 应用代码：`desktop/` 本地工作台 + 独立启动器；`mcp/` 本机 MCP；`web/` 浏览器工作台；`backend/` 本机会话 / 广场 / 发布 / 审核（Postgres 库 `promptark`）；`admin-web/` 独立管理端
 - 验证：见 [如何在本机工作](../how-to/local-dev.md)
 - docs-check：本地可通过
 - 旧仓库：只读参考，不是本仓库状态

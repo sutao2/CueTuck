@@ -102,3 +102,4 @@
 | 条目详情 | `backend` `serves_square_item_without_login` |
 | 浏览排序与模型筛选 | `backend` `sorts_recommended_latest_and_hot_apart` |
 | 已登录收藏排序 | `backend` `favorites_sort_requires_login` |
+| 进程重启后列表仍在 | `backend` `publication_favorite_and_settings_survive_postgres` |

@@ -34,7 +34,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 2. 浏览器编辑内存提示词
 3. 浏览器使用向导
 4. 浏览器接预发广场
-5. 另立项：见 deferred.md（无逐步任务）
+5. 另立项：见 deferred.md（云同步 / 账单 / 商店等，无逐步任务）
 ```
 
 | 顺序 | 计划 | INDEX |
@@ -43,6 +43,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 2 已关闭 | [2026-08-24-web-edit-prompt.md](2026-08-24-web-edit-prompt.md) | 归档 |
 | 3 已关闭 | [2026-08-24-web-use-wizard.md](2026-08-24-web-use-wizard.md) | 归档 |
 | 4 已关闭 | [2026-08-24-web-square-preview.md](2026-08-24-web-square-preview.md) | 归档 |
+| 现在 | [2026-08-24-postgres-backend.md](2026-08-24-postgres-backend.md) | 现行 |
 | 之后 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属

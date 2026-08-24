@@ -34,7 +34,7 @@ flowchart TB
   adminWeb -->|/v1/admin| api
 ```
 
-主窗口与启动器共享本机 SQLite。MCP 只读同一文件。M5 起 Rust 访问本仓库广场 API；启动器与 MCP 不请求广场或管理接口。`admin-web` 与 `web/` 是独立浏览器应用，不进桌面安装包。`backend/` 是本机预发，不声称生产。浏览器工作台未做云同步前不声称与桌面库一致。
+主窗口与启动器共享本机 SQLite。MCP 只读同一文件。M5 起 Rust 访问本仓库广场 API；启动器与 MCP 不请求广场或管理接口。`admin-web` 与 `web/` 是独立浏览器应用，不进桌面安装包。`backend/` 预发状态存本机 Postgres 库 `promptark`（不是旧 Flyway 库 `pl`），不声称生产托管。浏览器工作台未做云同步前不声称与桌面库一致。
 
 ## 子系统
 
@@ -65,7 +65,7 @@ flowchart TB
 
 ## 广场后端
 
-合同见 [ADR 0008](decisions/0008-m5-backend-contract.md)。不画旧 Spring 路径。运行时是本仓库 `backend/`。
+合同见 [ADR 0008](decisions/0008-m5-backend-contract.md) 与 [ADR 0012](decisions/0012-postgres-backend.md)。不画旧 Spring 路径。运行时是本仓库 `backend/`，默认连本机 `promptark` 库。
 
 ## 管理后端
 

@@ -20,6 +20,13 @@ const REQUIRED = [
   { method: "PUT", path: "/v1/favorites/{id}", auth: "user" },
   { method: "DELETE", path: "/v1/favorites/{id}", auth: "user" },
   { method: "POST", path: "/v1/publications", auth: "user" },
+  { method: "GET", path: "/v1/health", auth: "none" },
+  { method: "GET", path: "/v1/session/oauth/providers", auth: "none" },
+  { method: "GET", path: "/v1/session/oauth/callback", auth: "none" },
+  { method: "GET", path: "/v1/session/oauth/session/{flowId}", auth: "none" },
+  { method: "GET", path: "/v1/session/oauth/{provider}", auth: "none" },
+  { method: "POST", path: "/v1/media/upload", auth: "user" },
+  { method: "GET", path: "/v1/media/{id}/url", auth: "none" },
 ];
 
 describe("square OpenAPI mapping", () => {
