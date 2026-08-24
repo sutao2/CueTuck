@@ -44,4 +44,19 @@ describe("WebApp", () => {
     await w.get('[data-testid="prompt-row"]').trigger("click");
     expect(w.get('[data-testid="prompt-body"]').text()).toContain("你好");
   });
+
+  it("updates a memory prompt title in the list after edit", async () => {
+    const w = mount(WebApp);
+    await w.get('[data-testid="new-prompt"]').trigger("click");
+    await w.get('[data-testid="prompt-title"]').setValue("测试");
+    await w.get('[data-testid="prompt-content"]').setValue("正文");
+    await w.get('[data-testid="save-prompt"]').trigger("click");
+    await w.get('[data-testid="prompt-row"]').trigger("click");
+    await w.get('[data-testid="edit-prompt"]').trigger("click");
+    await w.get('[data-testid="prompt-title"]').setValue("已改");
+    await w.get('[data-testid="save-prompt"]').trigger("click");
+    expect(w.get('[data-testid="prompt-list"]').text()).toContain("已改");
+    expect(w.get('[data-testid="prompt-list"]').text()).not.toContain("测试");
+    expect(w.get('[data-testid="library-note"]').text()).toContain("尚未与桌面");
+  });
 });

@@ -128,6 +128,7 @@ body { font: 14px/1.45 "IBM Plex Sans", "Noto Sans SC", sans-serif; color: var(-
   white-space: pre-wrap;
   font: inherit;
 }
+.prompt-detail .primary-button { margin-top: 12px; }
 .empty { color: var(--muted); }
 
 @media (max-width: 900px) {

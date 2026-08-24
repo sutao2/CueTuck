@@ -63,6 +63,18 @@
 - WHEN 用户点开该条
 - THEN 内容区显示正文「你好」
 
+### Requirement: 编辑内存提示词
+
+浏览器工作台 MUST 能修改当前标签页里已有提示词的标题与正文。保存后列表 MUST 立即显示新标题。MUST NOT 写入桌面 SQLite。
+
+#### Scenario: 编辑后列表更新
+
+- GIVEN 列表中有标题为「测试」的提示词
+- WHEN 用户打开该条，把标题改为「已改」并保存
+- THEN 列表出现「已改」
+- AND 列表不再以「测试」作为该条标题
+- AND 数据说明仍写尚未与桌面 SQLite 同步
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -72,3 +84,4 @@
 | 不声称已同步 | `web/src/WebApp.spec.js` does not claim the browser library is synced to desktop sqlite |
 | 新建出现在列表 | `web/src/WebApp.spec.js` creates a memory prompt and lists it without claiming desktop sync |
 | 点开看到正文 | `web/src/WebApp.spec.js` opens a memory prompt and shows its body |
+| 编辑后列表更新 | `web/src/WebApp.spec.js` updates a memory prompt title in the list after edit |

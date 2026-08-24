@@ -66,9 +66,10 @@
             </button>
           </li>
         </ul>
-        <article v-if="space === 'local' && opened" class="prompt-detail">
+        <article v-if="space === 'local' && opened && !editing" class="prompt-detail">
           <h2>{{ opened.title }}</h2>
           <pre data-testid="prompt-body" class="prompt-body">{{ opened.content }}</pre>
+          <button type="button" class="primary-button" data-testid="edit-prompt" @click="startEdit">编辑</button>
         </article>
         <p v-if="space === 'local' && !prompts.length" class="empty">浏览器内存库是空的。点「新建」只会写在这个标签页里。</p>
         <p v-else-if="space === 'square'" class="empty">广场仍走本仓库预发 API。未开后端时列表为空。</p>
@@ -79,12 +80,13 @@
 
 <script setup>
 import { onMounted, ref } from "vue";
-import { createLocalPrompt, getLocalPrompt, listLocalPrompts } from "./memoryLibrary.js";
+import { createLocalPrompt, getLocalPrompt, listLocalPrompts, updateLocalPrompt } from "./memoryLibrary.js";
 
 const sidebarCollapsed = ref(false);
 const space = ref("local");
 const prompts = ref([]);
 const editing = ref(false);
+const editingId = ref(null);
 const draftTitle = ref("");
 const draftContent = ref("");
 const opened = ref(null);
@@ -95,24 +97,44 @@ function reload() {
 
 function startCreate() {
   editing.value = true;
+  editingId.value = null;
   opened.value = null;
   draftTitle.value = "";
   draftContent.value = "";
 }
 
+function startEdit() {
+  if (!opened.value) return;
+  editing.value = true;
+  editingId.value = opened.value.id;
+  draftTitle.value = opened.value.title;
+  draftContent.value = opened.value.content;
+}
+
 function openPrompt(id) {
   editing.value = false;
+  editingId.value = null;
   opened.value = getLocalPrompt(id);
 }
 
 function savePrompt() {
   if (!draftTitle.value.trim()) return;
-  createLocalPrompt({ title: draftTitle.value, content: draftContent.value });
+  if (editingId.value) {
+    updateLocalPrompt({
+      id: editingId.value,
+      title: draftTitle.value,
+      content: draftContent.value,
+    });
+  } else {
+    createLocalPrompt({ title: draftTitle.value, content: draftContent.value });
+  }
+  const keepId = editingId.value;
   editing.value = false;
+  editingId.value = null;
   draftTitle.value = "";
   draftContent.value = "";
   reload();
-  opened.value = prompts.value[0] ?? null;
+  opened.value = keepId ? getLocalPrompt(keepId) : (prompts.value[0] ?? null);
 }
 
 onMounted(reload);

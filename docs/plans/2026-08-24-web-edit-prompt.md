@@ -21,15 +21,15 @@
 
 **Files:** `docs/specs/web/spec.md` · 本计划
 
-- [ ] **Step 1: 增加「编辑后列表更新」场景；映射先写「未开始」**
-- [ ] **Step 2: `./scripts/docs-check`**
+- [x] **Step 1: 增加「编辑后列表更新」场景；映射先写「未开始」**
+- [x] **Step 2: `./scripts/docs-check`**
 
 ### Task 1: 保存编辑
 
 **Files:** `web/src/memoryLibrary.js` · `web/src/WebApp.vue` · `web/src/WebApp.spec.js`
 
-- [ ] **Step 1: Write the failing test**（新建「测试」后打开，改标题为「已改」并保存，列表出现「已改」且不含旧标题；说明仍写尚未与桌面同步）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: `updateLocalPrompt({ id, title, content })`；详情可进入编辑；空标题不保存**
-- [ ] **Step 4: 测试 PASS；映射「编辑后列表更新」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**（新建「测试」后打开，改标题为「已改」并保存，列表出现「已改」且不含旧标题；说明仍写尚未与桌面同步）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: `updateLocalPrompt({ id, title, content })`；详情可进入编辑；空标题不保存**
+- [x] **Step 4: 测试 PASS；映射「编辑后列表更新」**
+- [x] **Step 5: `./scripts/docs-check`**

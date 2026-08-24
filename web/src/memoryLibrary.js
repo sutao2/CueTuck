@@ -21,3 +21,13 @@ export function listLocalPrompts() {
 export function getLocalPrompt(id) {
   return prompts.find((row) => row.id === id) ?? null;
 }
+
+export function updateLocalPrompt({ id, title, content } = {}) {
+  const row = prompts.find((item) => item.id === id);
+  if (!row) throw new Error("提示词不存在");
+  const nextTitle = String(title ?? "").trim();
+  if (!nextTitle) return row;
+  row.title = nextTitle;
+  row.content = content ?? "";
+  return row;
+}
