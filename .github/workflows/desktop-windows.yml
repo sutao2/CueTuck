@@ -2,6 +2,8 @@ name: desktop-windows
 
 on:
   workflow_dispatch:
+  push:
+    branches: [m1-desktop-skeleton, main]
 
 jobs:
   nsis:
@@ -23,9 +25,16 @@ jobs:
       - name: Install frontend
         run: npm ci
       - name: Build current-feature NSIS
-        run: npx tauri build --bundles nsis
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          args: --bundles nsis
       - uses: actions/upload-artifact@v4
         with:
           name: promptark-windows-nsis
-          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          path: |
+            desktop/src-tauri/target/release/bundle/nsis/*.exe
+            desktop/src-tauri/target/release/PromptArk.exe
           if-no-files-found: error
