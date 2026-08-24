@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:nsis": "tauri build --bundles nsis"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",

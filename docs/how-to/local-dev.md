@@ -97,6 +97,22 @@ npm run tauri dev
 
 发行前手工表见 [发行前 QA](release-qa.md)。当前没有商店包，也没有可公开下载声明。
 
+## Windows NSIS（当前功能，未验证）
+
+这台开发机是 macOS，**不能**交叉编译出可用的 Windows 安装包。不要把未跑过的 Windows 勾成通过，也不要宣传已支持 Windows。
+
+在一台已装 Node、Rust、WebView2 的 Windows 机器上，打当前功能的 NSIS：
+
+```bash
+cd desktop
+npm install
+npm run tauri:nsis
+```
+
+产物在 `desktop/src-tauri/target/release/bundle/nsis/`。包内是现行桌面功能；不含 `admin-web`。开机启动与托盘在 Windows 上仍不得声称已生效。广场要另开本仓库 `backend/` 预发，安装包不捆绑后端。
+
+若仓库已推到 GitHub，可手动跑 `.github/workflows/desktop-windows.yml`（`workflow_dispatch`），下载 artifact `promptark-windows-nsis`。该工作流不是合并红灯，也不是商店包。
+
 ## 阅读顺序（新人）
 
 1. [README](../../README.md) 与 [文档体系](../README.md)
