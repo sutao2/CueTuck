@@ -84,7 +84,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-m6-admin-console.md](plans/2026-08-23-m6-admin-console.md) | 归档 | 查 M6 怎么做的 | M6 逐步实现计划 |
 | [plans/2026-08-23-m7-contract-gaps.md](plans/2026-08-23-m7-contract-gaps.md) | 归档 | 查 M7 怎么做的 | M7 逐步实现计划 |
 | [plans/2026-08-23-m8-settings-ia.md](plans/2026-08-23-m8-settings-ia.md) | 归档 | 查 M8 怎么做的 | M8 逐步实现计划 |
-| [plans/2026-08-24-use-wizard-steps.md](plans/2026-08-24-use-wizard-steps.md) | 现行 | 补使用向导逐步填写测试 | 一次只问一个变量 |
+| [plans/2026-08-24-use-wizard-steps.md](plans/2026-08-24-use-wizard-steps.md) | 归档 | 查使用向导逐步填写怎么测的 | 一次只问一个变量 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |

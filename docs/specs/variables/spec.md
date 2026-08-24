@@ -77,7 +77,7 @@
 |---|---|
 | 重复变量 | `desktop/src/lib/renderPrompt.test.js` dedupes repeated variables |
 | 无变量 | 未单独测；无 `{{` 时向导直接预览 |
-| 逐步填写 | 未开始自动化（主窗口 `UsePromptModal.vue`） |
+| 逐步填写 | `desktop/src/components/UsePromptModal.spec.js` asks for one variable at a time then previews the filled text |
 | 同源渲染 | 启动器与工作台共用 `desktop/src/lib/renderPrompt.js`；`LauncherApp.spec.js` 填写态预览保留 `{{姓名}}` |
 | 漏填 | `desktop/src/lib/renderPrompt.test.js` keeps unfilled placeholders |
 | 关闭双语不删正文 | `WorkbenchShell.spec.js` keeps prompt content when bilingual is turned off |

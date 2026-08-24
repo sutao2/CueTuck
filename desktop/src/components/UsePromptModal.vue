@@ -13,13 +13,18 @@
         <template v-if="step === 'variable'">
           <p class="use-hint">填写后进入下一步。未填会在最终文本里保留变量名。</p>
           <label class="field">
-            <span>{{ currentName }}</span>
-            <textarea v-model="currentValue" rows="4" :placeholder="'请输入' + currentName"></textarea>
+            <span data-testid="use-variable">{{ currentName }}</span>
+            <textarea
+              v-model="currentValue"
+              rows="4"
+              data-testid="use-value"
+              :placeholder="'请输入' + currentName"
+            ></textarea>
           </label>
         </template>
         <template v-else>
           <p class="use-hint">确认后复制到剪贴板，并记一次使用。</p>
-          <pre class="preview-box">{{ preview }}</pre>
+          <pre class="preview-box" data-testid="use-preview">{{ preview }}</pre>
         </template>
       </div>
       <footer class="modal-footer">
@@ -28,7 +33,7 @@
           <button v-if="step !== 'preview' || names.length" type="button" class="button ghost-button" @click="back">
             上一步
           </button>
-          <button type="button" class="button primary-button" @click="next">
+          <button type="button" class="button primary-button" data-testid="use-next" @click="next">
             {{ step === "preview" ? "复制并完成" : "下一步" }}
           </button>
         </div>

@@ -25,8 +25,8 @@
 - `desktop/src/components/UsePromptModal.spec.js`
 - `docs/specs/variables/spec.md`
 
-- [ ] **Step 1: Write the failing test**
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 最小测试钩子；行为已存在则不改流程**
-- [ ] **Step 4: 测试 PASS；映射「逐步填写」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 最小测试钩子；行为已存在则不改流程**
+- [x] **Step 4: 测试 PASS；映射「逐步填写」**
+- [x] **Step 5: `./scripts/docs-check`**
