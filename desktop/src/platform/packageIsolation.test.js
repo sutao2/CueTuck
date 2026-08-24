@@ -15,4 +15,24 @@ describe("desktop package isolation", () => {
     expect(tauri).not.toContain("admin-web");
     expect(JSON.parse(tauri).build.frontendDist).toBe("../dist");
   });
+
+  it("does not depend on or bundle web workbench", () => {
+    const pkg = JSON.parse(readFileSync(resolve(desktopRoot, "package.json"), "utf8"));
+    expect(JSON.stringify(pkg)).not.toContain("promptark-web");
+    expect(JSON.stringify(pkg)).not.toContain("../web");
+    const tauri = readFileSync(resolve(desktopRoot, "src-tauri/tauri.conf.json"), "utf8");
+    expect(tauri).not.toContain("promptark-web");
+    expect(tauri).not.toContain("../web");
+    expect(JSON.parse(tauri).build.frontendDist).toBe("../dist");
+  });
+
+  it("does not depend on or bundle the mcp server", () => {
+    const pkg = JSON.parse(readFileSync(resolve(desktopRoot, "package.json"), "utf8"));
+    expect(JSON.stringify(pkg)).not.toContain("promptark-mcp");
+    expect(JSON.stringify(pkg)).not.toContain("../mcp");
+    const tauri = readFileSync(resolve(desktopRoot, "src-tauri/tauri.conf.json"), "utf8");
+    expect(tauri).not.toContain("promptark-mcp");
+    expect(tauri).not.toContain("../mcp");
+    expect(JSON.parse(tauri).build.frontendDist).toBe("../dist");
+  });
 });

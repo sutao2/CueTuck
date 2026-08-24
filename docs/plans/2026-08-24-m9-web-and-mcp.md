@@ -47,8 +47,8 @@
 
 **Files:** `web/` · `desktop/src/platform/packageIsolation.test.js`
 
-- [ ] **Step 1: Write the failing test**
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 独立 web 应用 + 窄桌面可收起侧栏；不声称已同步**
-- [ ] **Step 4: 测试 PASS；映射 web 三场景**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 独立 web 应用 + 窄桌面可收起侧栏；不声称已同步**
+- [x] **Step 4: 测试 PASS；映射 web 三场景**
+- [x] **Step 5: `./scripts/docs-check`**

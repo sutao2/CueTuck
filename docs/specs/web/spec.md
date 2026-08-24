@@ -46,6 +46,6 @@
 
 | 场景 | 测试 |
 |---|---|
-| 桌面包不含 Web 工作台 | 未开始 |
-| 窄桌面可收起侧栏 | 未开始 |
-| 不声称已同步 | 未开始 |
+| 桌面包不含 Web 工作台 | `desktop/src/platform/packageIsolation.test.js` does not depend on or bundle web workbench |
+| 窄桌面可收起侧栏 | `web/src/WebApp.spec.js` keeps local space when the sidebar is collapsed |
+| 不声称已同步 | `web/src/WebApp.spec.js` does not claim the browser library is synced to desktop sqlite |

@@ -28,6 +28,8 @@ unset CARGO_TARGET_DIR
 cargo test --locked
 cd ../admin-web
 npm test
+cd ../web
+npm test
 ```
 
 M5 会话服务（可选，浏览器预览不持久化 Refresh）：
@@ -76,7 +78,16 @@ PROMPTARK_LIBRARY_DIR="$HOME/Library/Application Support/app.promptark.desktop" 
 }
 ```
 
-浏览器工作台独立 `web/` 尚未开工。不要声称浏览器库与桌面已同步。
+浏览器工作台（不要和桌面抢 `1420`，不要和管理台抢 `5174`）：
+
+```bash
+cd web
+npm install
+npm test
+npm run dev
+```
+
+打开 `http://localhost:5175`。浏览器使用内存库，尚未与桌面 SQLite 同步。
 
 ## 浏览器验证（最快）
 

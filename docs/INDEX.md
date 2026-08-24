@@ -9,6 +9,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [../README.md](../README.md) | 现行 | 人第一次进仓库 | 产品一句话与入口 |
 | [../backend/README.md](../backend/README.md) | 现行 | 跑 M5 API | 本仓库会话服务 |
 | [../admin-web/README.md](../admin-web/README.md) | 现行 | 跑管理台预览 | 独立 admin-web；不进桌面包 |
+| [../web/README.md](../web/README.md) | 现行 | 跑浏览器工作台 | 独立 web；不进桌面包 |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | 现行 | 准备提交改动 | 参与规则 |
 | [../AGENTS.md](../AGENTS.md) | 现行 | 任何 Agent 开场 | 阅读顺序与禁令 |
 | [../CLAUDE.md](../CLAUDE.md) | 现行 | Claude/Cursor 开场 | 指向 INDEX 的薄入口 |
