@@ -61,8 +61,8 @@ MCP 进程在搜索与读取时 MUST NOT 发起广场或管理接口请求。
 
 | 场景 | 测试 |
 |---|---|
-| 列出工具 | 未开始 |
-| 按标题命中 | 未开始 |
-| 缺库文件 | 未开始 |
-| 未填保留占位 | 未开始 |
-| 搜索不联网 | 未开始 |
+| 列出工具 | `mcp` `lists_required_tools` |
+| 按标题命中 | `mcp` `search_hits_title` |
+| 缺库文件 | `mcp` `search_missing_library_errors` |
+| 未填保留占位 | `mcp` `render_keeps_unfilled_placeholder` |
+| 搜索不联网 | `mcp` `search_has_no_http_client` |

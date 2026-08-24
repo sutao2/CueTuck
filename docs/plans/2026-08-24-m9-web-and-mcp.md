@@ -27,21 +27,21 @@
 
 **Files:** `mcp/`
 
-- [ ] **Step 1: Write the failing test**
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 最小 stdio 工具：search_prompts / get_prompt**
-- [ ] **Step 4: 测试 PASS；映射「列出工具」「按标题命中」「缺库文件」「搜索不联网」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 最小 stdio 工具：search_prompts / get_prompt**
+- [x] **Step 4: 测试 PASS；映射「列出工具」「按标题命中」「缺库文件」「搜索不联网」**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ### Task 2: MCP 渲染
 
 **Files:** `mcp/`
 
-- [ ] **Step 1: Write the failing test**
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: render_prompt，未填保留占位**
-- [ ] **Step 4: 测试 PASS；映射「未填保留占位」**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: render_prompt，未填保留占位**
+- [x] **Step 4: 测试 PASS；映射「未填保留占位」**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ### Task 3: 浏览器工作台壳
 

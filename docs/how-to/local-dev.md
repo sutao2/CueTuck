@@ -51,6 +51,33 @@ npm run dev
 
 打开 `http://localhost:5174`。Refresh 不进 Web Storage。
 
+## 本机 MCP（给 Codex 等宿主）
+
+```bash
+cd mcp
+unset CARGO_TARGET_DIR
+cargo test --locked
+PROMPTARK_LIBRARY_DIR="$HOME/Library/Application Support/app.promptark.desktop" cargo run
+```
+
+`PROMPTARK_LIBRARY_DIR` 必须是含 `promptark.sqlite` 的目录（与桌面 `app_data_dir` 相同）。进程走 stdio，不请求广场。Codex 配置示例：
+
+```json
+{
+  "mcpServers": {
+    "promptark": {
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "mcp/Cargo.toml", "--quiet"],
+      "env": {
+        "PROMPTARK_LIBRARY_DIR": "/绝对路径/到/含 promptark.sqlite 的目录"
+      }
+    }
+  }
+}
+```
+
+浏览器工作台独立 `web/` 尚未开工。不要声称浏览器库与桌面已同步。
+
 ## 浏览器验证（最快）
 
 ```bash
