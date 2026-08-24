@@ -20,9 +20,30 @@ M0 文档体系
                          └─ M7 合同补齐
                              └─ M8 设置对齐原型
                                  └─ M9 浏览器工作台与本机 MCP
+                                     └─ 关闭后的切片队列（不是新里程碑）
 ```
 
 M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植旧 repository。
+
+## M9 之后的切片队列
+
+详细逐步任务仍一次只执行**队首**。四份计划已写齐，避免做完一份再想下一份。后一份在 INDEX 标「目标」，队首标「现行」。关闭队首后把下一份改成现行。
+
+```text
+1. 广场预发缺口（详情 / 排序筛选 / 收藏排序 / 审核进列表）
+2. 浏览器编辑内存提示词
+3. 浏览器使用向导
+4. 浏览器接预发广场
+5. 另立项：见 deferred.md（无逐步任务）
+```
+
+| 顺序 | 计划 | INDEX |
+|---|---|---|
+| 1 队首 | [2026-08-24-square-preview-gaps.md](2026-08-24-square-preview-gaps.md) | 现行 |
+| 2 | [2026-08-24-web-edit-prompt.md](2026-08-24-web-edit-prompt.md) | 目标 |
+| 3 | [2026-08-24-web-use-wizard.md](2026-08-24-web-use-wizard.md) | 目标 |
+| 4 | [2026-08-24-web-square-preview.md](2026-08-24-web-square-preview.md) | 目标 |
+| 之后 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
 
@@ -42,6 +63,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 设置对齐原型 | M8 | [settings](../specs/settings/spec.md) | [2026-08-23-m8-settings-ia.md](2026-08-23-m8-settings-ia.md) |
 | 浏览器工作台 | M9 | [web](../specs/web/spec.md) | [2026-08-24-m9-web-and-mcp.md](2026-08-24-m9-web-and-mcp.md) |
 | 本机 MCP | M9 | [mcp](../specs/mcp/spec.md) | 同上 |
+| 广场预发缺口 | M5 合同补丁 | [square](../specs/square/spec.md) / [publish](../specs/publish/spec.md) | [2026-08-24-square-preview-gaps.md](2026-08-24-square-preview-gaps.md) |
 
 ## 通用完成定义（每个里程碑都要满足）
 
