@@ -76,7 +76,7 @@
 | 场景 | 测试 |
 |---|---|
 | 重复变量 | `desktop/src/lib/renderPrompt.test.js` dedupes repeated variables |
-| 无变量 | 未单独测；无 `{{` 时向导直接预览 |
+| 无变量 | `desktop/src/components/UsePromptModal.spec.js` skips fill and previews when the prompt has no variables |
 | 逐步填写 | `desktop/src/components/UsePromptModal.spec.js` asks for one variable at a time then previews the filled text |
 | 同源渲染 | 启动器与工作台共用 `desktop/src/lib/renderPrompt.js`；`LauncherApp.spec.js` 填写态预览保留 `{{姓名}}` |
 | 漏填 | `desktop/src/lib/renderPrompt.test.js` keeps unfilled placeholders |

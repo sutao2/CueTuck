@@ -25,4 +25,21 @@ describe("UsePromptModal", () => {
     await w.get('[data-testid="use-next"]').trigger("click");
     expect(w.emitted("copied")[0][0]).toBe("去 京都 玩 3 天，再提一次 京都");
   });
+
+  it("skips fill and previews when the prompt has no variables", async () => {
+    const w = mount(UsePromptModal, {
+      props: {
+        prompt: {
+          id: "p-2",
+          title: "直出",
+          content: "直接复制这段",
+        },
+      },
+    });
+    expect(w.find('[data-testid="use-variable"]').exists()).toBe(false);
+    expect(w.get('[data-testid="use-preview"]').text()).toBe("直接复制这段");
+    expect(w.get('[data-testid="use-next"]').text()).toContain("复制并完成");
+    await w.get('[data-testid="use-next"]').trigger("click");
+    expect(w.emitted("copied")[0][0]).toBe("直接复制这段");
+  });
 });
