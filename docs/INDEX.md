@@ -93,7 +93,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-24-use-wizard-steps.md](plans/2026-08-24-use-wizard-steps.md) | 归档 | 查使用向导逐步填写怎么测的 | 一次只问一个变量 |
 | [plans/2026-08-24-use-wizard-no-vars.md](plans/2026-08-24-use-wizard-no-vars.md) | 归档 | 查无变量预览与 Enter 怎么测的 | 无 `{{` 直接预览；Enter 前进 |
 | [plans/2026-08-24-windows-nsis.md](plans/2026-08-24-windows-nsis.md) | 归档 | 查 Windows NSIS 怎么配的 | 不声称 Windows 已验证 |
-| [plans/2026-08-24-m9-web-and-mcp.md](plans/2026-08-24-m9-web-and-mcp.md) | 现行 | 做 M9 浏览器工作台与 MCP | 先 MCP 后 Web |
+| [plans/2026-08-24-m9-web-and-mcp.md](plans/2026-08-24-m9-web-and-mcp.md) | 归档 | 查 M9 怎么做的 | 先 MCP 后 Web |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |
@@ -103,7 +103,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/milestones/m6.md](plans/milestones/m6.md) | 现行 | 做管理台前 | M6 进出标准 |
 | [plans/milestones/m7.md](plans/milestones/m7.md) | 现行 | 做合同补齐前 | M7 进出标准 |
 | [plans/milestones/m8.md](plans/milestones/m8.md) | 现行 | 做设置对齐前 | M8 进出标准 |
-| [plans/milestones/m9.md](plans/milestones/m9.md) | 现行 | 做浏览器工作台或 MCP 前 | M9 进出标准 |
+| [plans/milestones/m9.md](plans/milestones/m9.md) | 现行 | 关闭或检查 M9 | M9 进出标准 |
 | [plans/modules/README.md](plans/modules/README.md) | 现行 | 问模块怎么切 | 模块地图 |
 | [plans/modules/workbench.md](plans/modules/workbench.md) | 现行 | 做主窗口壳 | 工作台模块完成态 |
 | [plans/modules/library.md](plans/modules/library.md) | 现行 | 做本地库 | 本地库模块完成态 |
@@ -127,6 +127,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-23-m6-admin-console.md](plans/done/2026-08-23-m6-admin-console.md) | 归档 | 查 M6 是否关闭 | M6 完成证据 |
 | [plans/done/2026-08-23-m7-contract-gaps.md](plans/done/2026-08-23-m7-contract-gaps.md) | 归档 | 查 M7 是否关闭 | M7 完成证据 |
 | [plans/done/2026-08-23-m8-settings-ia.md](plans/done/2026-08-23-m8-settings-ia.md) | 归档 | 查 M8 是否关闭 | M8 完成证据 |
+| [plans/done/2026-08-24-m9-web-and-mcp.md](plans/done/2026-08-24-m9-web-and-mcp.md) | 归档 | 查 M9 是否关闭 | M9 完成证据 |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |

@@ -28,7 +28,7 @@
 | 管理台能不能做、合同在哪 | [admin 规格](../specs/admin/spec.md) + [ADR 0009](../architecture/decisions/0009-m6-admin-console.md) |
 | 收藏写路径、令牌轮换、admin me | [M7 提案](../changes/m7-contract-gaps/proposal.md) + [ADR 0010](../architecture/decisions/0010-m7-contract-gaps.md) |
 | 原型设置项为什么缺、何时补 | [设置规格](../specs/settings/spec.md) + [M8 完成记录](../plans/done/2026-08-23-m8-settings-ia.md) |
-| 浏览器工作台或 MCP 怎么做 | [ADR 0011](../architecture/decisions/0011-web-and-mcp.md) + [M9 计划](../plans/2026-08-24-m9-web-and-mcp.md) |
+| 浏览器工作台或 MCP 怎么做 | [ADR 0011](../architecture/decisions/0011-web-and-mcp.md) + [M9 完成记录](../plans/done/2026-08-24-m9-web-and-mcp.md) |
 
 ## 进行中的工作
 

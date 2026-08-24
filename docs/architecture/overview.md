@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行 |
-| 阶段 | M9 进行中 |
+| 阶段 | M9 已关闭 |
 | 关联 | [数据模型](data-model.md) · [ADR 0008](decisions/0008-m5-backend-contract.md) · [ADR 0009](decisions/0009-m6-admin-console.md) · [ADR 0010](decisions/0010-m7-contract-gaps.md) · [ADR 0011](decisions/0011-web-and-mcp.md) |
 
 ## 容器

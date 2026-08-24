@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定，M9 目标 |
+| 状态 | 已指定，M9 实现 |
 | 关联 | [工作台](../workbench/spec.md) · [ADR 0011](../../architecture/decisions/0011-web-and-mcp.md) |
 
 ## Purpose

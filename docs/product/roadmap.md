@@ -20,7 +20,7 @@
 | M6 运营后台 | 独立管理端审核、用户只读、运行时设置 | 完成 |
 | M7 合同补齐 | 已登录收藏、令牌轮换、管理员身份 | 完成 |
 | M8 设置对齐 | 设置弹窗对齐原型十类；只增不减已有本机设置 | 完成 |
-| M9 浏览器工作台与 MCP | 独立 Web 流体布局；本机 MCP 查询提示词 | 进行中 |
+| M9 浏览器工作台与 MCP | 独立 Web 流体布局；本机 MCP 查询提示词 | 完成 |
 
 M1 不得早于 M0 的 docs-check 全绿。程序计划与模块完成态见 [plans/program.md](../plans/program.md)。逐步任务只写当前里程碑，见 [ADR 0006](../architecture/decisions/0006-plan-altitude.md)。
 
@@ -52,6 +52,7 @@ M1 不得早于 M0 的 docs-check 全绿。程序计划与模块完成态见 [pl
 
 ## 后期闸门（M9）
 
+- M9 已关闭，见 [done/2026-08-24-m9-web-and-mcp.md](../plans/done/2026-08-24-m9-web-and-mcp.md)
 - 浏览器工作台不进桌面包，不做原生移动端
 - MCP 只读本机库，不请求广场
 - 不声称浏览器库与桌面 SQLite 已同步
