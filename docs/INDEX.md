@@ -31,6 +31,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0008-m5-backend-contract.md](architecture/decisions/0008-m5-backend-contract.md) | 现行 | 接广场或后端前 | 改写 API；邮箱密码；覆盖率 |
 | [architecture/decisions/0009-m6-admin-console.md](architecture/decisions/0009-m6-admin-console.md) | 现行 | 做管理台或审核 API 前 | 独立 admin.yaml；admin-web 不进桌面 |
 | [architecture/decisions/0010-m7-contract-gaps.md](architecture/decisions/0010-m7-contract-gaps.md) | 现行 | 做已登录收藏、轮换或 admin me 前 | 收藏是账号关系；Refresh 轮换；GET /v1/admin/me |
+| [architecture/decisions/0011-web-and-mcp.md](architecture/decisions/0011-web-and-mcp.md) | 现行 | 做浏览器工作台或 MCP 前 | Web 独立 SPA；Agent 入口是 MCP stdio |
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 独立窗口行为合同 |
 | [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
@@ -42,6 +43,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 本机设置；M8 已对齐原型十类 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 发布；选源后提交，不锁本地 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；不进桌面包 |
+| [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 流体桌面布局；不进桌面包 |
+| [specs/mcp/spec.md](specs/mcp/spec.md) | 目标 | 做本机 MCP | stdio 查询本地提示词 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
 | [reference/test-gates.md](reference/test-gates.md) | 现行 | 加测试或 CI | 分阶段门禁 |
 | [reference/openapi/square.yaml](reference/openapi/square.yaml) | 现行 | 改广场 API 时 | M5 广场 / 登录 / 发布合同 |
@@ -68,6 +71,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/m7-contract-gaps/design.md](changes/m7-contract-gaps/design.md) | 目标 | 看 M7 怎么落地 | 收藏表、令牌轮换、GET /v1/admin/me |
 | [changes/m8-settings-ia/proposal.md](changes/m8-settings-ia/proposal.md) | 现行 | 查设置对齐是否已写入合同 | 已接受；只增不减；M7 已关闭可改设置代码 |
 | [changes/m8-settings-ia/design.md](changes/m8-settings-ia/design.md) | 目标 | 看 M8 设置怎么落地 | 十类导航、本机行、云行诚实占位 |
+| [changes/m9-web-and-mcp/proposal.md](changes/m9-web-and-mcp/proposal.md) | 现行 | 查 M9 合同是否已接受 | 已接受；决定以 ADR 0011 为准 |
+| [changes/m9-web-and-mcp/design.md](changes/m9-web-and-mcp/design.md) | 目标 | 看 M9 怎么落地 | 独立 web/；mcp stdio 读 SQLite |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
@@ -86,7 +91,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-23-m8-settings-ia.md](plans/2026-08-23-m8-settings-ia.md) | 归档 | 查 M8 怎么做的 | M8 逐步实现计划 |
 | [plans/2026-08-24-use-wizard-steps.md](plans/2026-08-24-use-wizard-steps.md) | 归档 | 查使用向导逐步填写怎么测的 | 一次只问一个变量 |
 | [plans/2026-08-24-use-wizard-no-vars.md](plans/2026-08-24-use-wizard-no-vars.md) | 归档 | 查无变量预览与 Enter 怎么测的 | 无 `{{` 直接预览；Enter 前进 |
-| [plans/2026-08-24-windows-nsis.md](plans/2026-08-24-windows-nsis.md) | 现行 | 打当前功能的 Windows NSIS | 不声称 Windows 已验证 |
+| [plans/2026-08-24-windows-nsis.md](plans/2026-08-24-windows-nsis.md) | 归档 | 查 Windows NSIS 怎么配的 | 不声称 Windows 已验证 |
+| [plans/2026-08-24-m9-web-and-mcp.md](plans/2026-08-24-m9-web-and-mcp.md) | 现行 | 做 M9 浏览器工作台与 MCP | 先 MCP 后 Web |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |
@@ -96,6 +102,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/milestones/m6.md](plans/milestones/m6.md) | 现行 | 做管理台前 | M6 进出标准 |
 | [plans/milestones/m7.md](plans/milestones/m7.md) | 现行 | 做合同补齐前 | M7 进出标准 |
 | [plans/milestones/m8.md](plans/milestones/m8.md) | 现行 | 做设置对齐前 | M8 进出标准 |
+| [plans/milestones/m9.md](plans/milestones/m9.md) | 现行 | 做浏览器工作台或 MCP 前 | M9 进出标准 |
 | [plans/modules/README.md](plans/modules/README.md) | 现行 | 问模块怎么切 | 模块地图 |
 | [plans/modules/workbench.md](plans/modules/workbench.md) | 现行 | 做主窗口壳 | 工作台模块完成态 |
 | [plans/modules/library.md](plans/modules/library.md) | 现行 | 做本地库 | 本地库模块完成态 |
@@ -106,6 +113,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/modules/launcher.md](plans/modules/launcher.md) | 现行 | 做启动器 | 启动器模块完成态 |
 | [plans/modules/square.md](plans/modules/square.md) | 现行 | M5 广场 | 广场模块完成态 |
 | [plans/modules/admin.md](plans/modules/admin.md) | 现行 | M6 管理台 | 管理台模块完成态 |
+| [plans/modules/web.md](plans/modules/web.md) | 现行 | 做浏览器工作台 | Web 模块完成态 |
+| [plans/modules/mcp.md](plans/modules/mcp.md) | 现行 | 做本机 MCP | MCP 模块完成态 |
 | [plans/done/README.md](plans/done/README.md) | 现行 | 里程碑做完后 | 完成记录怎么写 |
 | [plans/done/_template.md](plans/done/_template.md) | 模板 | 写完成记录 | 完成记录模板 |
 | [plans/done/2026-08-22-m0-documentation.md](plans/done/2026-08-22-m0-documentation.md) | 归档 | 查 M0 是否关闭 | M0 完成证据 |

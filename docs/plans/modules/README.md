@@ -13,3 +13,5 @@
 | 启动器 | M3 | [launcher.md](launcher.md) |
 | 广场（含登录发布） | M5 | [square.md](square.md) |
 | 管理台 | M6 | [admin.md](admin.md) |
+| 浏览器工作台 | M9 | [web.md](web.md) |
+| 本机 MCP | M9 | [mcp.md](mcp.md) |

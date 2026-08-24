@@ -28,7 +28,7 @@
 
 11. 第一期（M1–M2）纯本地：SQLite、主窗口、启动器。不接旧 Spring Boot，不实现 QQ / LinuxDo / Stripe。
 12. 新仓库在 `IdeaProjects/PromptArk`，与旧 `PromptLauncher` 仓库分离。旧仓库只读参考。
-13. 管理后台、完整 Web 个人库、移动端不在第一期。
+13. 管理后台已在 M6 以独立 `admin-web` 交付。原生移动端不做。完整云端同步个人库不做。M9 增加浏览器工作台与本机 MCP，见 [ADR 0011](architecture/decisions/0011-web-and-mcp.md)。
 
 ## 质量
 

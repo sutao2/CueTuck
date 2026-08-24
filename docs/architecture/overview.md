@@ -3,8 +3,8 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行 |
-| 阶段 | M8 已关闭 |
-| 关联 | [数据模型](data-model.md) · [ADR 0008](decisions/0008-m5-backend-contract.md) · [ADR 0009](decisions/0009-m6-admin-console.md) · [ADR 0010](decisions/0010-m7-contract-gaps.md) |
+| 阶段 | M9 进行中 |
+| 关联 | [数据模型](data-model.md) · [ADR 0008](decisions/0008-m5-backend-contract.md) · [ADR 0009](decisions/0009-m6-admin-console.md) · [ADR 0010](decisions/0010-m7-contract-gaps.md) · [ADR 0011](decisions/0011-web-and-mcp.md) |
 
 ## 容器
 
@@ -18,17 +18,23 @@ flowchart TB
   sqlite[(SQLite)]
   api[本仓库 backend]
   adminWeb[admin-web]
+  webApp[浏览器工作台]
+  mcp[MCP stdio]
   user --> main
   user -->|全局快捷键| launcher
+  user --> webApp
+  user -->|Codex 等宿主| mcp
   operator --> adminWeb
   main --> rust
   launcher --> rust
   rust --> sqlite
+  mcp --> sqlite
   rust -->|广场 / 登录 / 发布| api
+  webApp -->|广场 / 登录 / 发布| api
   adminWeb -->|/v1/admin| api
 ```
 
-主窗口与启动器共享本机 SQLite。M5 起 Rust 访问本仓库广场 API；启动器命令不请求广场或管理接口。`admin-web` 是独立浏览器应用，不进桌面安装包，不进 Tauri 窗口。`backend/` 是本机预发，不声称生产。
+主窗口与启动器共享本机 SQLite。MCP 只读同一文件。M5 起 Rust 访问本仓库广场 API；启动器与 MCP 不请求广场或管理接口。`admin-web` 与 `web/` 是独立浏览器应用，不进桌面安装包。`backend/` 是本机预发，不声称生产。浏览器工作台未做云同步前不声称与桌面库一致。
 
 ## 子系统
 
@@ -40,6 +46,8 @@ flowchart TB
 | 桌面集成 | 快捷键、托盘、剪贴板、粘贴、权限 | 随启动器一起移植 |
 | 云与广场 | 认证、广场、发布 | M5：新合同，见 ADR 0008 |
 | 管理台 | 审核、用户只读、运行时开关 | M6：独立合同，见 ADR 0009 |
+| 浏览器工作台 | 独立 SPA，流体桌面布局 | M9：见 ADR 0011 |
+| 本机 MCP | stdio 查询本地提示词 | M9：见 ADR 0011 |
 
 ## 窗口
 
