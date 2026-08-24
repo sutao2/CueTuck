@@ -66,11 +66,28 @@
             </button>
           </li>
         </ul>
-        <article v-if="space === 'local' && opened && !editing" class="prompt-detail">
+        <article v-if="space === 'local' && opened && !editing && !using" class="prompt-detail">
           <h2>{{ opened.title }}</h2>
           <pre data-testid="prompt-body" class="prompt-body">{{ opened.content }}</pre>
           <button type="button" class="primary-button" data-testid="edit-prompt" @click="startEdit">编辑</button>
+          <button type="button" class="primary-button" data-testid="use-prompt" @click="startUse">使用</button>
         </article>
+        <section v-if="space === 'local' && using" class="wizard" data-testid="use-wizard">
+          <div v-if="wizardStep === 'fill'">
+            <p data-testid="wizard-step">{{ wizardNames[wizardIndex] }}</p>
+            <input
+              v-model="draftVar"
+              data-testid="wizard-var"
+              class="title-input"
+              @keydown.enter.prevent="wizardNext"
+            >
+            <button type="button" class="primary-button" data-testid="wizard-next" @click="wizardNext">下一步</button>
+          </div>
+          <div v-else>
+            <pre data-testid="wizard-preview" class="prompt-body">{{ previewText }}</pre>
+            <button type="button" class="primary-button" data-testid="wizard-copy" @click="copyPreview">复制</button>
+          </div>
+        </section>
         <p v-if="space === 'local' && !prompts.length" class="empty">浏览器内存库是空的。点「新建」只会写在这个标签页里。</p>
         <p v-else-if="space === 'square'" class="empty">广场仍走本仓库预发 API。未开后端时列表为空。</p>
       </main>
@@ -79,8 +96,9 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { createLocalPrompt, getLocalPrompt, listLocalPrompts, updateLocalPrompt } from "./memoryLibrary.js";
+import { extractVariables, renderPrompt } from "./renderPrompt.js";
 
 const sidebarCollapsed = ref(false);
 const space = ref("local");
@@ -90,6 +108,12 @@ const editingId = ref(null);
 const draftTitle = ref("");
 const draftContent = ref("");
 const opened = ref(null);
+const using = ref(false);
+const wizardNames = ref([]);
+const wizardIndex = ref(0);
+const wizardValues = ref({});
+const wizardStep = ref("fill");
+const draftVar = ref("");
 
 function reload() {
   prompts.value = listLocalPrompts();
@@ -99,6 +123,7 @@ function startCreate() {
   editing.value = true;
   editingId.value = null;
   opened.value = null;
+  using.value = false;
   draftTitle.value = "";
   draftContent.value = "";
 }
@@ -114,7 +139,36 @@ function startEdit() {
 function openPrompt(id) {
   editing.value = false;
   editingId.value = null;
+  using.value = false;
   opened.value = getLocalPrompt(id);
+}
+
+function startUse() {
+  if (!opened.value) return;
+  editing.value = false;
+  using.value = true;
+  wizardNames.value = extractVariables(opened.value.content);
+  wizardIndex.value = 0;
+  wizardValues.value = {};
+  draftVar.value = "";
+  wizardStep.value = wizardNames.value.length ? "fill" : "preview";
+}
+
+function wizardNext() {
+  const name = wizardNames.value[wizardIndex.value];
+  if (name) wizardValues.value[name] = draftVar.value;
+  if (wizardIndex.value < wizardNames.value.length - 1) {
+    wizardIndex.value += 1;
+    draftVar.value = wizardValues.value[wizardNames.value[wizardIndex.value]] ?? "";
+    return;
+  }
+  wizardStep.value = "preview";
+}
+
+const previewText = computed(() => renderPrompt(opened.value?.content ?? "", wizardValues.value));
+
+async function copyPreview() {
+  await navigator.clipboard.writeText(previewText.value);
 }
 
 function savePrompt() {

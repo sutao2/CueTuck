@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetMemoryLibrary } from "./memoryLibrary.js";
 import WebApp from "./WebApp.vue";
 
@@ -58,5 +58,37 @@ describe("WebApp", () => {
     expect(w.get('[data-testid="prompt-list"]').text()).toContain("已改");
     expect(w.get('[data-testid="prompt-list"]').text()).not.toContain("测试");
     expect(w.get('[data-testid="library-note"]').text()).toContain("尚未与桌面");
+  });
+
+  it("fills wizard variables one at a time then previews and copies", async () => {
+    const writeText = vi.fn();
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const w = mount(WebApp);
+    await w.get('[data-testid="new-prompt"]').trigger("click");
+    await w.get('[data-testid="prompt-title"]').setValue("行程");
+    await w.get('[data-testid="prompt-content"]').setValue("去{{城市}}玩{{天数}}天");
+    await w.get('[data-testid="save-prompt"]').trigger("click");
+    await w.get('[data-testid="use-prompt"]').trigger("click");
+    expect(w.get('[data-testid="wizard-step"]').text()).toBe("城市");
+    expect(w.text()).not.toContain("天数");
+    await w.get('[data-testid="wizard-var"]').setValue("上海");
+    await w.get('[data-testid="wizard-next"]').trigger("click");
+    expect(w.get('[data-testid="wizard-step"]').text()).toBe("天数");
+    await w.get('[data-testid="wizard-var"]').setValue("3");
+    await w.get('[data-testid="wizard-next"]').trigger("click");
+    expect(w.get('[data-testid="wizard-preview"]').text()).toBe("去上海玩3天");
+    await w.get('[data-testid="wizard-copy"]').trigger("click");
+    expect(writeText).toHaveBeenCalledWith("去上海玩3天");
+  });
+
+  it("skips fill and previews when there are no variables", async () => {
+    const w = mount(WebApp);
+    await w.get('[data-testid="new-prompt"]').trigger("click");
+    await w.get('[data-testid="prompt-title"]').setValue("直出");
+    await w.get('[data-testid="prompt-content"]').setValue("你好");
+    await w.get('[data-testid="save-prompt"]').trigger("click");
+    await w.get('[data-testid="use-prompt"]').trigger("click");
+    expect(w.find('[data-testid="wizard-var"]').exists()).toBe(false);
+    expect(w.get('[data-testid="wizard-preview"]').text()).toBe("你好");
   });
 });

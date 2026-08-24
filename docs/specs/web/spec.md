@@ -75,6 +75,30 @@
 - AND 列表不再以「测试」作为该条标题
 - AND 数据说明仍写尚未与桌面 SQLite 同步
 
+### Requirement: 浏览器使用向导
+
+浏览器工作台 MUST 按与桌面相同的规则解析 `{{名称}}`：同名只填一次，未填保留 `{{名称}}`。有变量时 MUST 一次只问一个；无变量时 MUST 跳过填写进入预览。MUST NOT 把正文传到本机以外。
+
+#### Scenario: 逐步填写
+
+- GIVEN 正文含 `{{城市}}` 与 `{{天数}}`
+- WHEN 用户开始使用
+- THEN 先只要求填写「城市」
+- AND 下一步才是「天数」
+- AND 预览展示替换后的完整正文
+
+#### Scenario: 无变量直接预览
+
+- GIVEN 正文不含 `{{`
+- WHEN 用户开始使用
+- THEN 跳过填写，直接进入预览
+
+#### Scenario: 漏填保留占位
+
+- GIVEN 变量「受众」未填
+- WHEN 用户进入预览
+- THEN 最终文本仍包含 `{{受众}}`
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -85,3 +109,6 @@
 | 新建出现在列表 | `web/src/WebApp.spec.js` creates a memory prompt and lists it without claiming desktop sync |
 | 点开看到正文 | `web/src/WebApp.spec.js` opens a memory prompt and shows its body |
 | 编辑后列表更新 | `web/src/WebApp.spec.js` updates a memory prompt title in the list after edit |
+| 逐步填写 | `web/src/WebApp.spec.js` fills wizard variables one at a time then previews and copies |
+| 无变量直接预览 | `web/src/WebApp.spec.js` skips fill and previews when there are no variables |
+| 漏填保留占位 | `web/src/renderPrompt.spec.js` keeps unfilled placeholders |

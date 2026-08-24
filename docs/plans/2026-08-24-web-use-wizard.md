@@ -21,25 +21,25 @@
 
 **Files:** `docs/specs/web/spec.md` · 本计划
 
-- [ ] **Step 1: 增加浏览器向导场景：逐步填写、无变量直接预览、漏填保留占位；映射先写「未开始」。不把 desktop 主窗口向导场景改到 web**
-- [ ] **Step 2: `./scripts/docs-check`**
+- [x] **Step 1: 增加浏览器向导场景：逐步填写、无变量直接预览、漏填保留占位；映射先写「未开始」。不把 desktop 主窗口向导场景改到 web**
+- [x] **Step 2: `./scripts/docs-check`**
 
 ### Task 1: 解析与渲染
 
 **Files:** `web/src/renderPrompt.js` · `web/src/renderPrompt.spec.js`
 
-- [ ] **Step 1: Write the failing test**（重复 `{{产品}}` 只一个名；未填保留 `{{受众}}`）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: `extractVariables` / `renderPrompt`，规则与桌面相同**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**（重复 `{{产品}}` 只一个名；未填保留 `{{受众}}`）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: `extractVariables` / `renderPrompt`，规则与桌面相同**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check`**
 
 ### Task 2: 向导 UI
 
 **Files:** `web/src/WebApp.vue` · `web/src/WebApp.spec.js`
 
-- [ ] **Step 1: Write the failing test**（正文 `{{城市}}` 与 `{{天数}}`：先只填城市，下一步天数，预览为替换结果；点复制时调用 clipboard）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 「使用」打开向导；每次一个变量；Enter 前进（测试可点下一步）。无 `{{` 跳过填写进预览**
-- [ ] **Step 4: 测试 PASS；映射 web 向导三场景**
-- [ ] **Step 5: `./scripts/docs-check`**
+- [x] **Step 1: Write the failing test**（正文 `{{城市}}` 与 `{{天数}}`：先只填城市，下一步天数，预览为替换结果；点复制时调用 clipboard）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 「使用」打开向导；每次一个变量；Enter 前进（测试可点下一步）。无 `{{` 跳过填写进预览**
+- [x] **Step 4: 测试 PASS；映射 web 向导三场景**
+- [x] **Step 5: `./scripts/docs-check`**
