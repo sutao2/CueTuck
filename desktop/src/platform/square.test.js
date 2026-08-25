@@ -3,10 +3,12 @@ import { createLocalPrompt, listLocalPrompts, resetMemoryLibrary, setLocalSettin
 import {
   createPublication,
   downloadSquareItem,
+  listMyPublications,
   listSquareItems,
   putFavorite,
   resetSquare,
   setFavoriteTransport,
+  setMineTransport,
   setPublishTransport,
   setSquareContentTransport,
   setSquareTransport,
@@ -88,6 +90,16 @@ describe("square client", () => {
     expect(calls[0]).toEqual({ sourceId: created.id, title: "本地源", content: "旧正文" });
     const listed = await listLocalPrompts({ query: "本地源" });
     expect(listed[0].content).toBe("旧正文");
+  });
+
+  it("lists my publications from the injected transport", async () => {
+    setMineTransport(async () => [
+      { id: "pub-1", source_id: "mem-1", status: "pending", title: "新稿" },
+    ]);
+    const rows = await listMyPublications();
+    expect(rows).toEqual([
+      { id: "pub-1", source_id: "mem-1", status: "pending", title: "新稿" },
+    ]);
   });
 
   it("puts a favorite without writing a local copy", async () => {

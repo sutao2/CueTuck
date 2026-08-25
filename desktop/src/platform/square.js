@@ -5,6 +5,7 @@ let testTransport = null;
 let testContentTransport = null;
 let testPublishTransport = null;
 let testFavoriteTransport = null;
+let testMineTransport = null;
 
 function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -24,6 +25,7 @@ export function resetSquare() {
   testContentTransport = null;
   testPublishTransport = null;
   testFavoriteTransport = null;
+  testMineTransport = null;
 }
 
 export function setSquareTransport(transport) {
@@ -40,6 +42,10 @@ export function setPublishTransport(transport) {
 
 export function setFavoriteTransport(transport) {
   testFavoriteTransport = transport;
+}
+
+export function setMineTransport(transport) {
+  testMineTransport = transport;
 }
 
 export async function listSquareItems({ sort = "推荐", query = "" } = {}) {
@@ -159,4 +165,24 @@ export function deleteFavorite(id) {
 export async function listFavorites() {
   const payload = await favoriteRequest("GET");
   return payload.items ?? payload ?? [];
+}
+
+export async function listMyPublications() {
+  if (testMineTransport) return testMineTransport();
+  const token = getSession().accessToken;
+  if (!token) throw new Error("查看发布需要登录");
+  if (isTauri()) {
+    const payload = await tauriInvoke("list_my_publications", { access_token: token });
+    return payload.items ?? payload ?? [];
+  }
+  try {
+    const response = await fetch(`${apiBase()}/v1/publications/mine`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("发布列表暂时不可用");
+    const payload = await response.json();
+    return payload.items ?? [];
+  } catch {
+    throw new Error("发布列表暂时不可用");
+  }
 }

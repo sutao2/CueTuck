@@ -19,6 +19,7 @@ import {
 import {
   resetSquare,
   setFavoriteTransport,
+  setMineTransport,
   setPublishTransport,
   setSquareContentTransport,
   setSquareTransport,
@@ -619,6 +620,23 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="settings-logout"]').trigger("click");
     await flushPromises();
     expect(w.get('[data-testid="current-account"]').text()).toContain("未登录");
+  });
+
+  it("lists my pending publications on the account page", async () => {
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    setMineTransport(async () => [
+      { id: "pub-1", source_id: "mem-1", status: "pending", title: "新稿" },
+    ]);
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="account"]').trigger("click");
+    await flushPromises();
+    const mine = w.get('[data-testid="my-publications"]');
+    expect(mine.text()).toContain("新稿");
+    expect(mine.text()).toContain("pending");
+    expect(w.text()).not.toMatch(/QQ|LinuxDo|Google/);
   });
 
   it("does not request square when access is off", async () => {

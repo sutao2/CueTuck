@@ -108,6 +108,21 @@ pub async fn create_publication(
 }
 
 #[tauri::command]
+pub async fn list_my_publications(access_token: String) -> Result<serde_json::Value, String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(format!("{}/v1/publications/mine", api_base()))
+        .bearer_auth(&access_token)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("发布列表暂时不可用".to_string());
+    }
+    response.json().await.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub async fn put_favorite(id: String, access_token: String) -> Result<serde_json::Value, String> {
     favorite_request("PUT", Some(&id), &access_token).await
 }

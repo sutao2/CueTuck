@@ -301,6 +301,23 @@ impl AppState {
             .collect())
     }
 
+    pub(crate) async fn publications_for(
+        &self,
+        email: &str,
+    ) -> Result<Vec<crate::Publication>, StatusCode> {
+        if let Some(pg) = &self.db {
+            return pg.publications_for(email).await;
+        }
+        Ok(self
+            .publications
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .iter()
+            .filter(|row| row.author_email.as_deref() == Some(email))
+            .cloned()
+            .collect())
+    }
+
     pub(crate) async fn set_publication_status(
         &self,
         id: &str,

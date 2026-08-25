@@ -71,8 +71,16 @@
               <span class="setting-control">尚未提供</span>
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>我的发布</strong><small>远端发布列表尚未提供。</small></span>
-              <span class="setting-control">尚未提供</span>
+              <span class="setting-copy"><strong>我的发布</strong><small>当前账号提交到广场的审核状态。</small></span>
+              <span class="setting-control" data-testid="my-publications">
+                <template v-if="!session.loggedIn">未登录</template>
+                <template v-else-if="!myPublications.length">暂无投稿</template>
+                <ul v-else class="mine-list">
+                  <li v-for="row in myPublications" :key="row.id">
+                    {{ row.title || row.source_id }} · {{ row.status }}
+                  </li>
+                </ul>
+              </span>
             </div>
             <label class="setting-row">
               <span class="setting-copy"><strong>下载时保留作者信息</strong><small>打开后，新下载的本地副本展示作者，不改正文。</small></span>
@@ -299,6 +307,7 @@ import {
 import { DEFAULT_LAUNCHER_SHORTCUT, DEFAULT_NEW_PROMPT_SHORTCUT, DEFAULT_PASTE_RECENT_SHORTCUT, registerLauncherShortcut } from "../platform/shortcut.js";
 import pkg from "../../package.json";
 import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/desktopPrefs.js";
+import { listMyPublications } from "../platform/square.js";
 
 const props = defineProps({
   theme: { type: String, default: "light" },
@@ -349,6 +358,7 @@ const showModelTags = ref(true);
 const variableHints = ref(false);
 const customModels = ref("");
 const keepAuthorOnDownload = ref(false);
+const myPublications = ref([]);
 
 onMounted(async () => {
   const stored = await getLocalSetting("launcher_shortcut");
@@ -374,6 +384,13 @@ onMounted(async () => {
   variableHints.value = isPrefOn(await getLocalSetting("variable_hints"));
   customModels.value = (await getLocalSetting("custom_models")) || "";
   keepAuthorOnDownload.value = isPrefOn(await getLocalSetting("keep_author_on_download"));
+  if (props.session.loggedIn) {
+    try {
+      myPublications.value = await listMyPublications();
+    } catch {
+      myPublications.value = [];
+    }
+  }
 });
 
 async function togglePref(key, event) {

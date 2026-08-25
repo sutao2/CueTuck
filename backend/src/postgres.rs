@@ -107,7 +107,8 @@ impl Pg {
                   source_id TEXT NOT NULL,
                   status TEXT NOT NULL,
                   title TEXT,
-                  content TEXT
+                  content TEXT,
+                  author_email TEXT
                 )",
                 self.t("publications")
             ),
@@ -143,6 +144,12 @@ impl Pg {
         for sql in statements {
             sqlx::query(&sql).execute(&self.pool).await?;
         }
+        sqlx::query(&format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS author_email TEXT",
+            self.t("publications")
+        ))
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -377,7 +384,7 @@ impl Pg {
 
     pub async fn insert_publication(&self, publication: &Publication) -> Result<(), StatusCode> {
         sqlx::query(&format!(
-            "INSERT INTO {} (id, source_id, status, title, content) VALUES ($1,$2,$3,$4,$5)",
+            "INSERT INTO {} (id, source_id, status, title, content, author_email) VALUES ($1,$2,$3,$4,$5,$6)",
             self.t("publications")
         ))
         .bind(&publication.id)
@@ -385,30 +392,45 @@ impl Pg {
         .bind(&publication.status)
         .bind(&publication.title)
         .bind(&publication.content)
+        .bind(&publication.author_email)
         .execute(&self.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         Ok(())
     }
 
+    fn publication_from_row(row: &sqlx::postgres::PgRow) -> Publication {
+        Publication {
+            id: row.get("id"),
+            source_id: row.get("source_id"),
+            status: row.get("status"),
+            title: row.get("title"),
+            content: row.get("content"),
+            author_email: row.get("author_email"),
+        }
+    }
+
     pub async fn pending_publications(&self) -> Result<Vec<Publication>, StatusCode> {
         let rows = sqlx::query(&format!(
-            "SELECT id, source_id, status, title, content FROM {} WHERE status = 'pending'",
+            "SELECT id, source_id, status, title, content, author_email FROM {} WHERE status = 'pending'",
             self.t("publications")
         ))
         .fetch_all(&self.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        Ok(rows
-            .into_iter()
-            .map(|row| Publication {
-                id: row.get("id"),
-                source_id: row.get("source_id"),
-                status: row.get("status"),
-                title: row.get("title"),
-                content: row.get("content"),
-            })
-            .collect())
+        Ok(rows.iter().map(Self::publication_from_row).collect())
+    }
+
+    pub async fn publications_for(&self, email: &str) -> Result<Vec<Publication>, StatusCode> {
+        let rows = sqlx::query(&format!(
+            "SELECT id, source_id, status, title, content, author_email FROM {} WHERE author_email = $1 ORDER BY id",
+            self.t("publications")
+        ))
+        .bind(email)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(rows.iter().map(Self::publication_from_row).collect())
     }
 
     pub async fn set_publication_status(
@@ -418,7 +440,7 @@ impl Pg {
     ) -> Result<Publication, StatusCode> {
         let row = sqlx::query(&format!(
             "UPDATE {} SET status = $2 WHERE id = $1
-             RETURNING id, source_id, status, title, content",
+             RETURNING id, source_id, status, title, content, author_email",
             self.t("publications")
         ))
         .bind(id)
@@ -427,13 +449,7 @@ impl Pg {
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
-        Ok(Publication {
-            id: row.get("id"),
-            source_id: row.get("source_id"),
-            status: row.get("status"),
-            title: row.get("title"),
-            content: row.get("content"),
-        })
+        Ok(Self::publication_from_row(&row))
     }
 
     pub async fn favorite_ids(&self, email: &str) -> Result<Vec<String>, StatusCode> {

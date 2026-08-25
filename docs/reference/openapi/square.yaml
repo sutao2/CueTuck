@@ -71,6 +71,10 @@ paths:
     post:
       operationId: createPublication
       summary: 提交审核；可带 title 与 content 快照，通过后进入广场列表
+  /v1/publications/mine:
+    get:
+      operationId: listMyPublications
+      summary: 当前账号投稿与审核状态
   /v1/health:
     get:
       operationId: health

@@ -104,6 +104,8 @@ pub struct Publication {
     pub title: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author_email: Option<String>,
 }
 
 #[derive(Deserialize, Default)]
@@ -212,6 +214,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/square/items/:id", get(get_square_item))
         .route("/v1/publications", post(create_publication))
+        .route("/v1/publications/mine", get(list_my_publications))
         .route("/v1/favorites", get(list_favorites))
         .route("/v1/favorites/:id", put(put_favorite).delete(delete_favorite))
         .route("/v1/admin/me", get(get_admin_me))
@@ -383,7 +386,7 @@ async fn create_publication(
     headers: HeaderMap,
     Json(body): Json<PublicationRequest>,
 ) -> Result<Json<Publication>, StatusCode> {
-    require_user(&state, &headers).await?;
+    let author_email = require_user(&state, &headers).await?;
     let source_id = body.source_id.trim().to_string();
     if source_id.is_empty() {
         return Err(StatusCode::BAD_REQUEST);
@@ -394,9 +397,20 @@ async fn create_publication(
         status: "pending".into(),
         title: body.title.filter(|value| !value.trim().is_empty()),
         content: body.content,
+        author_email: Some(author_email),
     };
     state.insert_publication(&publication).await?;
     Ok(Json(publication))
+}
+
+async fn list_my_publications(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<AdminPublicationList>, StatusCode> {
+    let email = require_user(&state, &headers).await?;
+    Ok(Json(AdminPublicationList {
+        items: state.publications_for(&email).await?,
+    }))
 }
 
 pub(crate) async fn require_user(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
@@ -1119,6 +1133,7 @@ mod tests {
         let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(payload["status"], "pending");
         assert_eq!(payload["source_id"], "mem-1");
+        assert_eq!(payload["author_email"], "dev@promptark.local");
     }
 
     #[tokio::test]

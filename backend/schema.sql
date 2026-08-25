@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS publications (
   source_id TEXT NOT NULL,
   status TEXT NOT NULL,
   title TEXT,
-  content TEXT
+  content TEXT,
+  author_email TEXT
 );
 
 CREATE TABLE IF NOT EXISTS favorites (

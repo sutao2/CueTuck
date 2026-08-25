@@ -535,6 +535,7 @@ body.theme-dark .offline-banner { background: #2a2418; border-color: #6b5a3a; co
 .setting-copy { display: grid; gap: 2px; min-width: 0; }
 .setting-copy small { color: var(--muted); }
 .setting-control { color: var(--muted); white-space: nowrap; font-size: 12px; }
+.setting-control .mine-list { margin: 0; padding-left: 1.1em; white-space: normal; text-align: left; }
 .create-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .create-type { text-align: left; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 10px; }
 .create-type.active { border-color: var(--accent); background: var(--accent-soft); }
