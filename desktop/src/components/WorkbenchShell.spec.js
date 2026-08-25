@@ -608,8 +608,20 @@ describe("WorkbenchShell", () => {
     expect(w.find('[data-testid="pref-error"]').exists()).toBe(false);
   });
 
-  it("does not claim launch at login on windows", async () => {
+  it("saves launch at login and tray on windows without claiming nsis", async () => {
     const w = mount(WorkbenchShell, { props: { host: "windows" } });
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-testid="launch-at-login"]').setValue(true);
+    await w.get('[data-testid="minimize-to-tray"]').setValue(true);
+    await flushPromises();
+    expect(await getLocalSetting("launch_at_login")).toBe("1");
+    expect(await getLocalSetting("minimize_to_tray")).toBe("1");
+    expect(w.find('[data-testid="pref-error"]').exists()).toBe(false);
+    expect(w.text()).not.toMatch(/NSIS 已验证|Windows 已验证/);
+  });
+
+  it("does not claim launch at login on linux", async () => {
+    const w = mount(WorkbenchShell, { props: { host: "linux" } });
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-testid="launch-at-login"]').setValue(true);
     await flushPromises();

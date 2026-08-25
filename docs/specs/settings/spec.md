@@ -249,7 +249,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 未实现页 | 同上，打开「同步」见 `settings-unavailable` |
 | 十类都在 | `WorkbenchShell.spec.js` lists ten settings categories |
 | 缺少的页不得消失 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |
-| 开机启动 | `desktopPrefs.test.js` persists launch at login on macos；`WorkbenchShell.spec.js` saves launch at login on macos / does not claim launch at login on windows |
+| 开机启动 | `desktopPrefs.test.js` persists launch at login on macos / persists launch at login and tray on windows；`WorkbenchShell.spec.js` saves launch at login on macos / saves launch at login and tray on windows without claiming nsis / does not claim launch at login on linux |
 | 保存快捷键 | `shortcut.test.js` does not persist when register throws |
 | 新建与粘贴快捷键可见 | `WorkbenchShell.spec.js` shows new and paste shortcut rows |
 | 导入预览 | `desktop/src-tauri` `import_preview_does_not_write`；`library.test.js` previews import without writing |

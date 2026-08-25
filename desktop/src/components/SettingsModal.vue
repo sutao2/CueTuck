@@ -37,7 +37,7 @@
               >
             </label>
             <label class="setting-row">
-              <span class="setting-copy"><strong>关闭后最小化到托盘</strong><small>已验证的 macOS 会隐藏主窗口而不是退出。</small></span>
+              <span class="setting-copy"><strong>关闭后最小化到托盘</strong><small>已接通的 macOS 与 Windows 会隐藏主窗口而不是退出。未验证的系统不会声称已生效。</small></span>
               <input
                 type="checkbox"
                 data-testid="minimize-to-tray"

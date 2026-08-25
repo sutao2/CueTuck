@@ -35,13 +35,50 @@ pub fn apply_launch_agent(dir: &Path, enabled: bool, program: &str) -> Result<()
     Ok(())
 }
 
+#[cfg(any(test, target_os = "windows"))]
+pub fn windows_run_value(program: &str) -> String {
+    format!("\"{}\"", program.replace('"', ""))
+}
+
+#[cfg(any(test, target_os = "windows"))]
+pub fn apply_windows_startup_record(dir: &Path, enabled: bool, program: &str) -> Result<(), String> {
+    fs::create_dir_all(dir).map_err(|error| error.to_string())?;
+    let path = dir.join("PromptArk.run");
+    if enabled {
+        let mut bytes = vec![0xFF, 0xFE];
+        for unit in windows_run_value(program).encode_utf16() {
+            bytes.extend_from_slice(&unit.to_le_bytes());
+        }
+        fs::write(&path, bytes).map_err(|error| error.to_string())?;
+    } else if path.exists() {
+        fs::remove_file(&path).map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn apply_windows_run_key(enabled: bool, program: &str) -> Result<(), String> {
+    let value = windows_run_value(program).replace('\'', "''");
+    let script = if enabled {
+        format!(
+            "Set-ItemProperty -LiteralPath 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'PromptArk' -Type String -Value '{value}'"
+        )
+    } else {
+        "if (Get-ItemProperty -LiteralPath 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'PromptArk' -ErrorAction SilentlyContinue) { Remove-ItemProperty -LiteralPath 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'PromptArk' -ErrorAction SilentlyContinue }".into()
+    };
+    let status = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .status()
+        .map_err(|error| error.to_string())?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err("当前系统尚未验证开机启动，不会声称已生效".into())
+    }
+}
+
 #[tauri::command]
 pub fn apply_launch_at_login(enabled: bool) -> Result<(), String> {
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = enabled;
-        return Err("当前系统尚未验证开机启动，不会声称已生效".into());
-    }
     #[cfg(target_os = "macos")]
     {
         let home = std::env::var("HOME").map_err(|error| error.to_string())?;
@@ -50,18 +87,31 @@ pub fn apply_launch_at_login(enabled: bool) -> Result<(), String> {
             .map_err(|error| error.to_string())?
             .to_string_lossy()
             .into_owned();
-        apply_launch_agent(&dir, enabled, &program)
+        return apply_launch_agent(&dir, enabled, &program);
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let program = std::env::current_exe()
+            .map_err(|error| error.to_string())?
+            .to_string_lossy()
+            .into_owned();
+        return apply_windows_run_key(enabled, &program);
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        let _ = enabled;
+        Err("当前系统尚未验证开机启动，不会声称已生效".into())
     }
 }
 
 #[tauri::command]
 pub fn apply_minimize_to_tray(_app: AppHandle, enabled: bool) -> Result<(), String> {
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let _ = enabled;
         return Err("当前系统尚未验证托盘，不会声称已生效".into());
     }
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         let _ = enabled;
         Ok(())
@@ -82,6 +132,26 @@ mod tests {
         assert!(body.contains("app.promptark.desktop.login"));
         assert!(body.contains("/tmp/PromptArk.app"));
         apply_launch_agent(dir.path(), false, "/tmp/PromptArk.app").unwrap();
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn writes_and_removes_windows_startup_record() {
+        let dir = tempdir().unwrap();
+        let program = r"C:\Users\测试\PromptArk.exe";
+        apply_windows_startup_record(dir.path(), true, program).unwrap();
+        let path = dir.path().join("PromptArk.run");
+        let bytes = fs::read(&path).unwrap();
+        assert_eq!(&bytes[..2], [0xFF, 0xFE]);
+        let units: Vec<u16> = bytes[2..]
+            .chunks_exact(2)
+            .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+            .collect();
+        let body = String::from_utf16(&units).unwrap();
+        assert_eq!(body, windows_run_value(program));
+        assert!(body.contains("测试"));
+        assert!(!body.contains("NSIS 已验证"));
+        apply_windows_startup_record(dir.path(), false, program).unwrap();
         assert!(!path.exists());
     }
 }

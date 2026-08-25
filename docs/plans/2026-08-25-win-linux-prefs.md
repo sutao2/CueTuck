@@ -21,11 +21,11 @@
 
 **Files:** `desktop/src-tauri/src/commands/desktop.rs` · `desktop/src/platform/desktopPrefs.js` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（Windows 上打开开机启动与托盘能保存；失败时开关回退；不声称 NSIS 已验证）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 按 Windows 实现现有偏好命令，保存失败回退**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（Windows 上打开开机启动与托盘能保存；失败时开关回退；不声称 NSIS 已验证）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 按 Windows 实现现有偏好命令，保存失败回退**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: Linux 开机启动与托盘
 
