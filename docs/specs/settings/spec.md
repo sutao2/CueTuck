@@ -265,6 +265,6 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
 | 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |
-| 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check；`updates.test.js` asks GitHub Releases and reports none when the list is empty |
+| 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check；`packageIsolation.test.js` keeps package version aligned with tauri and cargo；`updates.test.js` reports no update when the latest stable tag matches the tauri build；`updates.test.js` asks GitHub Releases and reports none when the list is empty |
 | 检查失败不写成没有更新 | `WorkbenchShell.spec.js` does not treat a failed update check as no updates；`updates.test.js` does not treat a failed GitHub read as no updates |
 | 自动下载按通道排队安装 | `WorkbenchShell.spec.js` queues an updater install when auto-download is on and the channel has a package；`updates.test.js` queues an updater install when auto-download is on and the channel has a package |

@@ -26,6 +26,20 @@ describe("desktop package isolation", () => {
     expect(JSON.parse(tauri).build.frontendDist).toBe("../dist");
   });
 
+  it("keeps package version aligned with tauri and cargo", () => {
+    const pkg = JSON.parse(readFileSync(resolve(desktopRoot, "package.json"), "utf8"));
+    const tauri = JSON.parse(
+      readFileSync(resolve(desktopRoot, "src-tauri/tauri.conf.json"), "utf8"),
+    );
+    const cargo = readFileSync(resolve(desktopRoot, "src-tauri/Cargo.toml"), "utf8");
+    const cargoVersion = cargo.match(/^version = "([^"]+)"/m)?.[1];
+    const lock = JSON.parse(readFileSync(resolve(desktopRoot, "package-lock.json"), "utf8"));
+    expect(pkg.version).toBe(tauri.version);
+    expect(pkg.version).toBe(cargoVersion);
+    expect(lock.version).toBe(pkg.version);
+    expect(lock.packages[""].version).toBe(pkg.version);
+  });
+
   it("does not depend on or bundle the mcp server", () => {
     const pkg = JSON.parse(readFileSync(resolve(desktopRoot, "package.json"), "utf8"));
     expect(JSON.stringify(pkg)).not.toContain("promptark-mcp");
