@@ -364,6 +364,50 @@ impl AppState {
         })
     }
 
+    pub(crate) async fn list_library_changes(
+        &self,
+        email: &str,
+        since: &str,
+    ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
+        if let Some(pg) = &self.db {
+            return pg.list_library_changes(email, since).await;
+        }
+        let map = self
+            .library
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let mut items = map
+            .get(email)
+            .map(|rows| rows.values().cloned().collect::<Vec<_>>())
+            .unwrap_or_default();
+        if !since.is_empty() {
+            items.retain(|row| row.updated_at.as_str() > since);
+        }
+        items.sort_by(|left, right| left.id.cmp(&right.id));
+        Ok(items)
+    }
+
+    pub(crate) async fn put_library_changes(
+        &self,
+        email: &str,
+        items: Vec<crate::library::LibraryChange>,
+    ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
+        if let Some(pg) = &self.db {
+            return pg.put_library_changes(email, &items).await;
+        }
+        {
+            let mut map = self
+                .library
+                .lock()
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let account = map.entry(email.to_string()).or_default();
+            for item in items {
+                account.insert(item.id.clone(), item);
+            }
+        }
+        self.list_library_changes(email, "").await
+    }
+
     pub(crate) async fn set_publication_status(
         &self,
         id: &str,

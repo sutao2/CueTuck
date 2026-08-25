@@ -44,6 +44,7 @@ impl Pg {
                 "publications",
                 "square_items",
                 "settings",
+                "library_changes",
                 "accounts",
             ] {
                 sqlx::query(&format!("DROP TABLE IF EXISTS {} CASCADE", self.t(table)))
@@ -142,6 +143,19 @@ impl Pg {
                 self.t("media_objects"),
                 self.t("accounts")
             ),
+            format!(
+                "CREATE TABLE IF NOT EXISTS {} (
+                  owner_email TEXT NOT NULL REFERENCES {}(email) ON DELETE CASCADE,
+                  id TEXT NOT NULL,
+                  kind TEXT NOT NULL,
+                  payload TEXT NOT NULL,
+                  updated_at TEXT NOT NULL,
+                  deleted_at TEXT,
+                  PRIMARY KEY (owner_email, id)
+                )",
+                self.t("library_changes"),
+                self.t("accounts")
+            ),
         ];
         for sql in statements {
             sqlx::query(&sql).execute(&self.pool).await?;
@@ -234,6 +248,66 @@ impl Pg {
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         self.get_profile(email).await
+    }
+
+    fn library_change_from_row(row: &sqlx::postgres::PgRow) -> Result<crate::library::LibraryChange, StatusCode> {
+        let payload: String = row.get("payload");
+        Ok(crate::library::LibraryChange {
+            id: row.get("id"),
+            kind: row.get("kind"),
+            payload: serde_json::from_str(&payload).unwrap_or(serde_json::Value::Null),
+            updated_at: row.get("updated_at"),
+            deleted_at: row.get("deleted_at"),
+        })
+    }
+
+    pub async fn list_library_changes(
+        &self,
+        email: &str,
+        since: &str,
+    ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
+        let rows = sqlx::query(&format!(
+            "SELECT id, kind, payload, updated_at, deleted_at FROM {}
+             WHERE owner_email = $1 AND ($2 = '' OR updated_at > $2)
+             ORDER BY id",
+            self.t("library_changes")
+        ))
+        .bind(email)
+        .bind(since)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        rows.iter().map(Self::library_change_from_row).collect()
+    }
+
+    pub async fn put_library_changes(
+        &self,
+        email: &str,
+        items: &[crate::library::LibraryChange],
+    ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
+        for item in items {
+            let payload = serde_json::to_string(&item.payload).unwrap_or_else(|_| "{}".into());
+            sqlx::query(&format!(
+                "INSERT INTO {} (owner_email, id, kind, payload, updated_at, deleted_at)
+                 VALUES ($1,$2,$3,$4,$5,$6)
+                 ON CONFLICT (owner_email, id) DO UPDATE SET
+                   kind = EXCLUDED.kind,
+                   payload = EXCLUDED.payload,
+                   updated_at = EXCLUDED.updated_at,
+                   deleted_at = EXCLUDED.deleted_at",
+                self.t("library_changes")
+            ))
+            .bind(email)
+            .bind(&item.id)
+            .bind(&item.kind)
+            .bind(payload)
+            .bind(&item.updated_at)
+            .bind(&item.deleted_at)
+            .execute(&self.pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+        self.list_library_changes(email, "").await
     }
 
     pub async fn verify_login(&self, email: &str, password: &str) -> Result<(), StatusCode> {

@@ -51,6 +51,13 @@ paths:
     put:
       operationId: putMe
       summary: 保存显示名与简介
+  /v1/library/changes:
+    get:
+      operationId: listLibraryChanges
+      summary: 拉取账号库变更
+    put:
+      operationId: putLibraryChanges
+      summary: 推送账号库变更
   /v1/favorites:
     get:
       operationId: listFavorites

@@ -54,7 +54,8 @@
 
 | 场景 | 测试 |
 |---|---|
-| 登录后立即同步 | 未开始（计划 library-sync） |
+| 登录后立即同步 | 未开始（计划 library-sync Task 2） |
 | 未登录不请求 | 未开始 |
 | 较新者胜 | 未开始 |
 | 浏览器登录后同一标题 | 未开始 |
+| 变更推拉 API | `backend` `put_then_get_library_changes_for_signed_in_account` |

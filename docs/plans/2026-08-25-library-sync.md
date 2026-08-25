@@ -22,11 +22,11 @@
 
 **Files:** `backend/src/` · `docs/reference/openapi/square.yaml` · `docs/specs/sync/spec.md`
 
-- [ ] **Step 1: Write the failing test**（PUT 一条 prompt 后 GET `since=` 能拉到同一 id 与正文）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 表 `library_changes`；`GET/PUT /v1/library/changes`；需登录**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（PUT 一条 prompt 后 GET `since=` 能拉到同一 id 与正文）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 表 `library_changes`；`GET/PUT /v1/library/changes`；需登录**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 桌面立即同步
 

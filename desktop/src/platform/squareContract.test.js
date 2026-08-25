@@ -18,6 +18,8 @@ const REQUIRED = [
   { method: "POST", path: "/v1/session/refresh", auth: "none" },
   { method: "GET", path: "/v1/me", auth: "user" },
   { method: "PUT", path: "/v1/me", auth: "user" },
+  { method: "GET", path: "/v1/library/changes", auth: "user" },
+  { method: "PUT", path: "/v1/library/changes", auth: "user" },
   { method: "GET", path: "/v1/favorites", auth: "user" },
   { method: "PUT", path: "/v1/favorites/{id}", auth: "user" },
   { method: "DELETE", path: "/v1/favorites/{id}", auth: "user" },

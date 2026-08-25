@@ -64,3 +64,13 @@ CREATE TABLE IF NOT EXISTS media_objects (
   content_type TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS library_changes (
+  owner_email TEXT NOT NULL REFERENCES accounts(email) ON DELETE CASCADE,
+  id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+  PRIMARY KEY (owner_email, id)
+);
