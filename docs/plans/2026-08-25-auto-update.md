@@ -30,8 +30,8 @@
 
 **Files:** `desktop/src/` · `desktop/src-tauri/` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（自动下载打开且通道有包时能排队安装；关闭本计划）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 本机开关控制自动下载；安装走 updater 而不是商店**
-- [ ] **Step 4: 测试 PASS；关闭本计划 done 记录**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（自动下载打开且通道有包时能排队安装；关闭本计划）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 本机开关控制自动下载；安装走 updater 而不是商店**
+- [x] **Step 4: 测试 PASS；关闭本计划 done 记录**
+- [x] **Step 5: `./scripts/docs-check` 并提交**

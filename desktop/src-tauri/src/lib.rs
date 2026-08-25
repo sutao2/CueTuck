@@ -10,6 +10,7 @@ use tauri::{Manager, WindowEvent};
 pub fn run() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(LocalDatabase::default())
         .manage(LauncherFocusGuard::default());
     #[cfg(target_os = "macos")]
@@ -68,6 +69,7 @@ pub fn run() {
             commands::session::put_library_changes,
             commands::session::list_library_changes,
             commands::updates::check_for_updates,
+            commands::updates::queue_update_install,
             commands::square::list_square_items,
             commands::square::download_square_item,
             commands::square::create_publication,

@@ -9,3 +9,5 @@ coverage/
 .env
 .env.*
 !.env.example
+*.key
+!*.key.pub

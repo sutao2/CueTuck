@@ -22,7 +22,7 @@ import {
   resetLibrarySync,
   setLibrarySyncTransport,
 } from "../platform/librarySync.js";
-import { resetUpdates, setUpdateTransport } from "../platform/updates.js";
+import { resetUpdates, setUpdateTransport, setInstallTransport } from "../platform/updates.js";
 import {
   resetSquare,
   setFavoriteTransport,
@@ -527,6 +527,33 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="update-note"]').text()).toContain("检查失败");
     expect(w.get('[data-testid="update-note"]').text()).not.toContain("没有可用更新");
     expect(w.get('[data-testid="settings-updates"]').text()).not.toMatch(/已从商店|已经连上更新服务器/);
+  });
+
+  it("queues an updater install when auto-download is on and the channel has a package", async () => {
+    setUpdateTransport(async ({ channel } = {}) => ({
+      available: true,
+      notes: "preview notes",
+      version: "0.2.0-beta",
+      channel: channel ?? "stable",
+    }));
+    setInstallTransport(async ({ channel }) => ({
+      queued: true,
+      via: "updater",
+      channel,
+    }));
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="updates"]').trigger("click");
+    await w.get('[data-testid="auto-download"]').setValue(true);
+    await w.get('[data-testid="update-channel"]').setValue("preview");
+    await flushPromises();
+    expect(await getLocalSetting("auto_download")).toBe("1");
+    expect(await getLocalSetting("update_channel")).toBe("preview");
+    await w.get('[data-testid="check-updates"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="update-note"]').text()).toContain("已排队安装");
+    expect(w.get('[data-testid="release-notes"]').text()).toContain("preview notes");
+    expect(w.get('[data-testid="settings-updates"]').text()).not.toMatch(/已从商店|Microsoft Store|Mac App Store/);
   });
 
   it("shows sync rows without requesting the backend", async () => {

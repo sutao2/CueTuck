@@ -215,7 +215,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 ### Requirement: 更新
 
-更新页 MUST 展示：当前版本、检查更新、自动下载更新、更新通道、发行说明。当前版本 MUST 为真实应用版本。检查更新 MUST 请求 GitHub Releases；无发行物或已是最新时 MUST 说明没有可用更新。读取失败时 MUST 说明检查失败，不得写成没有可用更新。MUST NOT 声称已从 Mac App Store 或 Microsoft Store 安装。自动下载与按通道安装见自动更新计划。
+更新页 MUST 展示：当前版本、检查更新、自动下载更新、更新通道、发行说明。当前版本 MUST 为真实应用版本。检查更新 MUST 请求 GitHub Releases；稳定通道只用正式发行，预览通道只用预发行。无对应发行物或已是最新时 MUST 说明没有可用更新。读取失败时 MUST 说明检查失败，不得写成没有可用更新。自动下载是本机开关；打开且当前通道有包时 MUST 通过 Tauri updater 排队安装，MUST NOT 走 Mac App Store 或 Microsoft Store。发行说明 MUST 来自 GitHub Releases 正文。
 
 #### Scenario: 版本真实、检查不假装
 
@@ -232,6 +232,14 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 - THEN 说明检查失败
 - AND 不说明没有可用更新
 - AND 不声称已经连上应用商店
+
+#### Scenario: 自动下载按通道排队安装
+
+- GIVEN 自动下载已打开且当前通道有包
+- WHEN 用户点检查更新
+- THEN 通过 updater 排队安装
+- AND 展示该通道发行说明
+- AND 不声称已经从应用商店安装
 
 ## 测试映射
 
@@ -259,3 +267,4 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |
 | 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check；`updates.test.js` asks GitHub Releases and reports none when the list is empty |
 | 检查失败不写成没有更新 | `WorkbenchShell.spec.js` does not treat a failed update check as no updates；`updates.test.js` does not treat a failed GitHub read as no updates |
+| 自动下载按通道排队安装 | `WorkbenchShell.spec.js` queues an updater install when auto-download is on and the channel has a package；`updates.test.js` queues an updater install when auto-download is on and the channel has a package |

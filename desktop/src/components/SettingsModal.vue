@@ -293,18 +293,27 @@
               <span class="setting-copy"><strong>当前版本</strong><small>桌面包 {{ appVersion }}，与本机构建一致。</small></span>
               <button type="button" class="button ghost-button" data-testid="check-updates" @click="runCheckUpdates">检查更新</button>
             </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>自动下载更新</strong><small>没有更新通道，不会后台安装。</small></span>
-              <span class="setting-control">尚未提供</span>
-            </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>更新通道</strong><small>稳定版 / 预览版尚未提供。</small></span>
-              <span class="setting-control">尚未提供</span>
-            </div>
+            <label class="setting-row">
+              <span class="setting-copy"><strong>自动下载更新</strong><small>打开后，检查到当前通道有包时通过 updater 排队安装，不走应用商店。</small></span>
+              <input
+                type="checkbox"
+                data-testid="auto-download"
+                :checked="autoDownload"
+                @change="toggleAutoDownload"
+              >
+            </label>
+            <label class="setting-row">
+              <span class="setting-copy"><strong>更新通道</strong><small>稳定版只用正式发行，预览版只用预发行。</small></span>
+              <select data-testid="update-channel" :value="updateChannel" @change="saveUpdateChannel">
+                <option value="stable">稳定版</option>
+                <option value="preview">预览版</option>
+              </select>
+            </label>
             <div class="setting-row">
               <span class="setting-copy"><strong>发行说明</strong><small>随检查更新展示，不来自应用商店。</small></span>
-              <span class="setting-control">尚未提供</span>
+              <span class="setting-control">GitHub Releases</span>
             </div>
+            <p v-if="releaseNotes" data-testid="release-notes">{{ releaseNotes }}</p>
             <p v-if="updateNote" data-testid="update-note">{{ updateNote }}</p>
           </section>
         </div>
@@ -333,7 +342,7 @@ import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/deskto
 import { listMyPublications } from "../platform/square.js";
 import { getMe, putMe } from "../platform/session.js";
 import { syncLocalLibraryNow } from "../platform/librarySync.js";
-import { checkForUpdates } from "../platform/updates.js";
+import { checkForUpdates, queueUpdateInstall } from "../platform/updates.js";
 
 const props = defineProps({
   theme: { type: String, default: "light" },
@@ -367,6 +376,9 @@ const backupPath = ref("");
 const dataError = ref("");
 const syncNote = ref("");
 const updateNote = ref("");
+const releaseNotes = ref("");
+const autoDownload = ref(false);
+const updateChannel = ref("stable");
 const appVersion = pkg.version;
 const prefError = ref("");
 const launchAtLogin = ref(false);
@@ -413,6 +425,8 @@ onMounted(async () => {
   variableHints.value = isPrefOn(await getLocalSetting("variable_hints"));
   customModels.value = (await getLocalSetting("custom_models")) || "";
   keepAuthorOnDownload.value = isPrefOn(await getLocalSetting("keep_author_on_download"));
+  autoDownload.value = isPrefOn(await getLocalSetting("auto_download"));
+  updateChannel.value = (await getLocalSetting("update_channel")) === "preview" ? "preview" : "stable";
   if (props.session.loggedIn) {
     const [mine, profile] = await Promise.all([
       listMyPublications().catch(() => []),
@@ -459,13 +473,37 @@ async function runSyncNow() {
   }
 }
 
+async function toggleAutoDownload(event) {
+  autoDownload.value = event.target.checked;
+  await setLocalSetting("auto_download", autoDownload.value ? "1" : "0");
+}
+
+async function saveUpdateChannel(event) {
+  updateChannel.value = event.target.value === "preview" ? "preview" : "stable";
+  await setLocalSetting("update_channel", updateChannel.value);
+}
+
 async function runCheckUpdates() {
   updateNote.value = "";
+  releaseNotes.value = "";
   try {
-    const result = await checkForUpdates();
+    const result = await checkForUpdates({ channel: updateChannel.value });
+    releaseNotes.value = result?.notes ?? "";
     if (result?.available) {
       const version = result.version ? ` ${result.version}` : "";
-      updateNote.value = `发现更新${version}`.trim();
+      if (autoDownload.value) {
+        try {
+          const queued = await queueUpdateInstall({
+            autoDownload: true,
+            channel: updateChannel.value,
+          });
+          updateNote.value = queued?.queued ? "已排队安装" : `发现更新${version}`.trim();
+        } catch {
+          updateNote.value = "安装失败";
+        }
+      } else {
+        updateNote.value = `发现更新${version}`.trim();
+      }
     } else {
       updateNote.value = "没有可用更新";
     }
