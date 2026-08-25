@@ -24,3 +24,5 @@ urlencoding = "2"
 [dev-dependencies]
 http-body-util = "0.1"
 tower = { version = "0.5", features = ["util"] }
+hmac = "0.12"
+sha2 = "0.10"

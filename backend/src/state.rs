@@ -435,6 +435,17 @@ impl AppState {
             .contains(email))
     }
 
+    pub(crate) async fn grant_pro(&self, email: &str) -> Result<(), StatusCode> {
+        if let Some(pg) = &self.db {
+            return pg.grant_pro(email).await;
+        }
+        self.pro_accounts
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .insert(email.to_string());
+        Ok(())
+    }
+
     pub(crate) async fn redeem_code(&self, email: &str, code: &str) -> Result<(), StatusCode> {
         let code = code.trim();
         if code.is_empty() {

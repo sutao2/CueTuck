@@ -43,6 +43,7 @@ pub struct AppState {
     pro_accounts: Arc<Mutex<HashSet<String>>>,
     stripe_secret: Option<String>,
     checkout_url: Option<String>,
+    webhook_secret: Option<String>,
 }
 
 impl Default for AppState {
@@ -67,6 +68,7 @@ impl Default for AppState {
             pro_accounts: Arc::new(Mutex::new(HashSet::new())),
             stripe_secret: None,
             checkout_url: None,
+            webhook_secret: None,
         }
     }
 }
@@ -202,6 +204,11 @@ impl AppState {
         self
     }
 
+    pub fn with_webhook_secret(mut self, secret: &str) -> Self {
+        self.webhook_secret = Some(secret.to_string());
+        self
+    }
+
     pub fn with_square_items(items: Vec<SquareItem>) -> Self {
         let state = Self::default();
         *state.items.lock().expect("items") = items;
@@ -255,6 +262,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/billing/status", get(billing::status))
         .route("/v1/billing/redeem", post(billing::redeem))
         .route("/v1/billing/checkout", post(billing::checkout))
+        .route("/v1/billing/webhook", post(billing::webhook))
         .route(
             "/v1/library/changes",
             get(library::list_changes).put(library::push_changes),

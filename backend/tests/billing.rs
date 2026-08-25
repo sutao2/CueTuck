@@ -325,3 +325,161 @@ async fn checkout_requires_test_secret_and_does_not_mark_pro() {
     assert_eq!(listed_payload["pro"], false);
     assert_eq!(listed_payload["payment_enabled"], true);
 }
+
+fn stripe_signature(secret: &str, payload: &str, timestamp: i64) -> String {
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).unwrap();
+    mac.update(format!("{timestamp}.{payload}").as_bytes());
+    let digest = mac.finalize().into_bytes();
+    let hex: String = digest.iter().map(|byte| format!("{byte:02x}")).collect();
+    format!("t={timestamp},v1={hex}")
+}
+
+#[tokio::test]
+async fn signed_checkout_webhook_marks_pro_and_rejects_invalid_signatures() {
+    std::env::remove_var("STRIPE_SECRET_KEY");
+    std::env::remove_var("PROMPTARK_STRIPE_SECRET");
+    std::env::remove_var("STRIPE_WEBHOOK_SECRET");
+    std::env::remove_var("PROMPTARK_STRIPE_WEBHOOK_SECRET");
+    let secret = "whsec_preview";
+    let payload = serde_json::json!({
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "client_reference_id": "dev@promptark.local",
+                "payment_status": "paid"
+            }
+        }
+    })
+    .to_string();
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    let (signed_app, session) = login(app(
+        AppState::with_user("dev@promptark.local", "devpass").with_webhook_secret(secret),
+    ))
+    .await;
+    let unsigned = signed_app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/billing/webhook")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(payload.clone()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(unsigned.status(), StatusCode::BAD_REQUEST);
+    let forged = signed_app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/billing/webhook")
+                .header(header::CONTENT_TYPE, "application/json")
+                .header(
+                    "Stripe-Signature",
+                    stripe_signature("whsec_other", &payload, timestamp),
+                )
+                .body(Body::from(payload.clone()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(forged.status(), StatusCode::BAD_REQUEST);
+    let listed = signed_app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/v1/billing/status")
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {}", session.access_token),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let listed_body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+    let listed_payload: serde_json::Value = serde_json::from_slice(&listed_body).unwrap();
+    assert_eq!(listed_payload["pro"], false);
+    let accepted = signed_app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/billing/webhook")
+                .header(header::CONTENT_TYPE, "application/json")
+                .header(
+                    "Stripe-Signature",
+                    stripe_signature(secret, &payload, timestamp),
+                )
+                .body(Body::from(payload.clone()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(accepted.status(), StatusCode::OK);
+    let after = signed_app
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/v1/billing/status")
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {}", session.access_token),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(after.status(), StatusCode::OK);
+    let after_body = to_bytes(after.into_body(), usize::MAX).await.unwrap();
+    let after_payload: serde_json::Value = serde_json::from_slice(&after_body).unwrap();
+    assert_eq!(after_payload["pro"], true);
+    let (unconfigured_app, unconfigured_session) =
+        login(app(AppState::with_user("dev@promptark.local", "devpass"))).await;
+    let skipped = unconfigured_app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/billing/webhook")
+                .header(header::CONTENT_TYPE, "application/json")
+                .header(
+                    "Stripe-Signature",
+                    stripe_signature(secret, &payload, timestamp),
+                )
+                .body(Body::from(payload))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(skipped.status(), StatusCode::CONFLICT);
+    let skipped_status = unconfigured_app
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/v1/billing/status")
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {}", unconfigured_session.access_token),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let skipped_body = to_bytes(skipped_status.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let skipped_payload: serde_json::Value = serde_json::from_slice(&skipped_body).unwrap();
+    assert_eq!(skipped_payload["pro"], false);
+}

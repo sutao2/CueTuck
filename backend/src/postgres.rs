@@ -816,4 +816,16 @@ impl Pg {
             Some(_) => Err(StatusCode::CONFLICT),
         }
     }
+
+    pub async fn grant_pro(&self, email: &str) -> Result<(), StatusCode> {
+        sqlx::query(&format!(
+            "UPDATE {} SET pro = TRUE WHERE email = $1",
+            self.t("accounts")
+        ))
+        .bind(email)
+        .execute(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(())
+    }
 }
