@@ -232,3 +232,39 @@ pub async fn put_me(
     }
     response.json().await.map_err(|error| error.to_string())
 }
+
+#[tauri::command]
+pub async fn put_library_changes(
+    access_token: String,
+    items: Vec<Value>,
+) -> Result<Value, String> {
+    let response = http_client(true)?
+        .put(format!("{}/v1/library/changes", api_base()))
+        .bearer_auth(&access_token)
+        .json(&serde_json::json!({ "items": items }))
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("同步失败".to_string());
+    }
+    response.json().await.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn list_library_changes(
+    access_token: String,
+    since: Option<String>,
+) -> Result<Value, String> {
+    let response = http_client(true)?
+        .get(format!("{}/v1/library/changes", api_base()))
+        .bearer_auth(&access_token)
+        .query(&[("since", since.unwrap_or_default())])
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("同步失败".to_string());
+    }
+    response.json().await.map_err(|error| error.to_string())
+}

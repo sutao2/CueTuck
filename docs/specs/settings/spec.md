@@ -169,14 +169,16 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 
 ### Requirement: 同步
 
-同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。未实现前行仍在且不得假装已同步；实现后立即同步 MUST 真正推拉。
+同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。立即同步在已登录时 MUST 推拉账号库；未登录时 MUST 打开已有登录且 MUST NOT 出现已同步。自动同步收藏、仅 Wi-Fi 同步图片在未实现前 MUST 标明尚未提供。
 
 #### Scenario: 同步行可见且不假装
 
-- GIVEN 云同步尚未提供
-- WHEN 用户打开同步页
+- GIVEN 用户未登录
+- WHEN 用户打开同步页并点立即同步
 - THEN 四行都在
-- AND 立即同步不向服务器发请求
+- AND 打开登录
+- AND 不出现已同步
+- AND 不调用同步接口
 
 ### Requirement: AI 与模型
 

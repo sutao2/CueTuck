@@ -8,7 +8,7 @@ use super::{
     list_prompts_in_dir,
     list_system_category_names, preview_import_json_in_dir, prompt_deleted_at, prompt_use_count,
     clear_prompt_use_in_dir, record_prompt_use_in_dir, restore_library_in_dir, set_setting_in_dir,
-    update_prompt_in_dir,
+    update_prompt_in_dir, upsert_synced_prompt_in_dir,
 };
 
 #[tokio::test]
@@ -92,6 +92,28 @@ async fn keeps_author_on_downloaded_prompt_without_rewriting_content() {
     .unwrap();
     assert_eq!(skipped.author, None);
     assert_eq!(skipped.content, "潮湿路面的霓虹倒影。");
+}
+
+#[tokio::test]
+async fn keeps_existing_local_prompt_when_upserting_a_synced_id() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let created = create_prompt_in_dir(dir.path(), "本地仍在", "正文", None).unwrap();
+    let kept = upsert_synced_prompt_in_dir(
+        dir.path(),
+        &created.id,
+        "远端标题",
+        "远端正文",
+        None,
+        "9",
+    )
+    .unwrap();
+    assert_eq!(kept.title, "本地仍在");
+    assert_eq!(kept.content, "正文");
+    upsert_synced_prompt_in_dir(dir.path(), "remote-1", "远端新增", "拉下来", None, "2").unwrap();
+    let rows = list_prompts_in_dir(dir.path(), "", None).unwrap();
+    assert_eq!(rows.len(), 2);
+    assert!(rows.iter().any(|row| row.title == "远端新增"));
 }
 
 #[tokio::test]

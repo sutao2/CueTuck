@@ -105,6 +105,43 @@ pub fn import_downloaded_prompt_in_dir(
     read_prompt(&connection, &id)
 }
 
+pub fn upsert_synced_prompt_in_dir(
+    dir: &Path,
+    id: &str,
+    title: &str,
+    content: &str,
+    category_id: Option<&str>,
+    updated_at: &str,
+) -> Result<PromptRecord, String> {
+    let title = title.trim();
+    if title.is_empty() {
+        return Err("标题不能为空".to_string());
+    }
+    let connection = open_db(dir)?;
+    let exists = connection
+        .query_row("SELECT id FROM prompts WHERE id = ?1", [id], |row| {
+            row.get::<_, String>(0)
+        })
+        .ok();
+    if exists.is_some() {
+        return read_prompt(&connection, id);
+    }
+    let stamp = if updated_at.trim().is_empty() {
+        now_iso()
+    } else {
+        updated_at.to_string()
+    };
+    connection
+        .execute(
+            "INSERT INTO prompts (
+                id, title, summary, content, category_id, source, version, use_count, created_at, updated_at
+            ) VALUES (?1, ?2, NULL, ?3, ?4, 'local', 1, 0, ?5, ?5)",
+            rusqlite::params![id, title, content, category_id, stamp],
+        )
+        .map_err(|error| error.to_string())?;
+    read_prompt(&connection, id)
+}
+
 pub fn update_prompt_in_dir(
     dir: &Path,
     id: &str,

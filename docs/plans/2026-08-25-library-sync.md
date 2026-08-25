@@ -32,11 +32,11 @@
 
 **Files:** `desktop/src/components/SettingsModal.vue` · `desktop/src/platform/` · `docs/specs/sync/spec.md`
 
-- [ ] **Step 1: Write the failing test**（已登录点立即同步后账号库出现「本地仍在」；未登录打开登录且不出现已同步）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 登录后推拉本机 SQLite；未登录打开已有登录弹窗**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（已登录点立即同步后账号库出现「本地仍在」；未登录打开登录且不出现已同步）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 登录后推拉本机 SQLite；未登录打开已有登录弹窗**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 3: 冲突与浏览器账号库
 

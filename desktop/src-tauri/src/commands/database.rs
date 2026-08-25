@@ -6,7 +6,8 @@ use crate::local_database::{
     get_setting_in_dir, list_categories_in_dir, list_collection_members_in_dir,
     list_collections_in_dir, list_prompts_in_dir, preview_import_json_in_dir,
     record_prompt_use_in_dir, restore_library_in_dir, set_setting_in_dir, update_prompt_in_dir,
-    CategoryRecord, CollectionRecord, ImportPreview, LocalDatabase, PromptRecord,
+    upsert_synced_prompt_in_dir, CategoryRecord, CollectionRecord, ImportPreview, LocalDatabase,
+    PromptRecord,
 };
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, State};
@@ -59,6 +60,25 @@ pub fn import_downloaded_prompt(
         &content,
         remote_id.as_deref(),
         author.as_deref(),
+    )
+}
+
+#[tauri::command]
+pub fn upsert_synced_local_prompt(
+    app: AppHandle,
+    id: String,
+    title: String,
+    content: String,
+    category_id: Option<String>,
+    updated_at: Option<String>,
+) -> Result<PromptRecord, String> {
+    upsert_synced_prompt_in_dir(
+        &data_dir(&app)?,
+        &id,
+        &title,
+        &content,
+        category_id.as_deref(),
+        updated_at.as_deref().unwrap_or("0"),
     )
 }
 

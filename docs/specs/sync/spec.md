@@ -54,8 +54,8 @@
 
 | 场景 | 测试 |
 |---|---|
-| 登录后立即同步 | 未开始（计划 library-sync Task 2） |
-| 未登录不请求 | 未开始 |
+| 登录后立即同步 | `WorkbenchShell.spec.js` pushes the local library to the account when signed in and syncing now；`librarySync.test.js` puts the local prompt onto the account library when signed in |
+| 未登录不请求 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend；`librarySync.test.js` does not call the library API when signed out |
 | 较新者胜 | 未开始 |
 | 浏览器登录后同一标题 | 未开始 |
 | 变更推拉 API | `backend` `put_then_get_library_changes_for_signed_in_account` |

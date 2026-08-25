@@ -137,7 +137,7 @@
           </section>
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
             <h3>同步</h3>
-            <p>云同步尚未提供。当前不会请求网络，也不会假装已接通。</p>
+            <p>已登录可立即同步个人库。启动器与 MCP 仍只读本机 SQLite。</p>
             <div class="setting-row">
               <span class="setting-copy"><strong>自动同步收藏与发布草稿</strong><small>联网队列尚未提供。</small></span>
               <span class="setting-control">尚未提供</span>
@@ -151,8 +151,8 @@
               <span class="setting-control">尚未提供</span>
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>立即同步</strong><small>不会向服务器发请求，也不会写入假的已同步状态。</small></span>
-              <button type="button" class="button ghost-button" data-testid="sync-now" @click="noteSync">立即同步</button>
+              <span class="setting-copy"><strong>立即同步</strong><small>已登录时推拉账号库。未登录打开登录，不会假装已同步。</small></span>
+              <button type="button" class="button ghost-button" data-testid="sync-now" @click="runSyncNow">立即同步</button>
             </div>
             <p v-if="syncNote" data-testid="sync-note">{{ syncNote }}</p>
           </section>
@@ -332,6 +332,7 @@ import pkg from "../../package.json";
 import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/desktopPrefs.js";
 import { listMyPublications } from "../platform/square.js";
 import { getMe, putMe } from "../platform/session.js";
+import { syncLocalLibraryNow } from "../platform/librarySync.js";
 
 const props = defineProps({
   theme: { type: String, default: "light" },
@@ -438,8 +439,23 @@ async function togglePref(key, event) {
   }
 }
 
-function noteSync() {
-  syncNote.value = "云同步尚未提供，没有向服务器发请求。";
+async function runSyncNow() {
+  syncNote.value = "";
+  if (!props.session.loggedIn) {
+    emit("login");
+    return;
+  }
+  try {
+    await syncLocalLibraryNow();
+    syncNote.value = "已同步";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("登录")) {
+      emit("login");
+      return;
+    }
+    syncNote.value = message;
+  }
 }
 
 function noteUpdates() {

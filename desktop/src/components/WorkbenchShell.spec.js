@@ -19,6 +19,10 @@ import {
   logoutSession,
 } from "../platform/session.js";
 import {
+  resetLibrarySync,
+  setLibrarySyncTransport,
+} from "../platform/librarySync.js";
+import {
   resetSquare,
   setFavoriteTransport,
   setMineTransport,
@@ -31,6 +35,7 @@ describe("WorkbenchShell", () => {
   beforeEach(() => {
     resetMemoryLibrary();
     resetMemorySession();
+    resetLibrarySync();
     resetSquare();
     setSquareTransport(async () => {
       throw new Error("广场暂时不可用");
@@ -470,7 +475,8 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="open-settings"]').trigger("click");
     expect(w.get('[data-testid="settings-modal"]').exists()).toBe(true);
     await w.get('[data-settings-page="sync"]').trigger("click");
-    expect(w.get('[data-testid="settings-unavailable"]').text()).toContain("不会请求网络");
+    expect(w.get('[data-testid="settings-unavailable"]').text()).toContain("启动器与 MCP 仍只读本机 SQLite");
+    expect(w.get('[data-testid="settings-unavailable"]').text()).toContain("尚未提供");
   });
 
   it("lists ten settings categories", async () => {
@@ -521,8 +527,34 @@ describe("WorkbenchShell", () => {
     expect(panel.text()).toContain("冲突处理");
     expect(panel.text()).toContain("立即同步");
     await w.get('[data-testid="sync-now"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="login-modal"]').exists()).toBe(true);
+    expect(w.find('[data-testid="sync-note"]').exists()).toBe(false);
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  it("pushes the local library to the account when signed in and syncing now", async () => {
+    const account = [];
+    setMineTransport(async () => []);
+    setLibrarySyncTransport({
+      put: async (items) => {
+        account.splice(0, account.length, ...items);
+        return { items: account };
+      },
+      get: async () => ({ items: account }),
+    });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    await createLocalPrompt({ title: "本地仍在", content: "正文" });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="sync"]').trigger("click");
+    await w.get('[data-testid="sync-now"]').trigger("click");
+    await flushPromises();
+    expect(account.some((row) => row.payload?.title === "本地仍在")).toBe(true);
+    expect(w.find('[data-testid="login-modal"]').exists()).toBe(false);
   });
 
   it("saves launch at login on macos", async () => {

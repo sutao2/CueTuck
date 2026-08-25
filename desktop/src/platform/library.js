@@ -118,6 +118,43 @@ export async function createLocalPrompt({ title, content, categoryId = null, sou
     collection_id: null,
     use_count: 0,
     source,
+    updated_at: String(Date.now()),
+  };
+  memoryPrompts.unshift(row);
+  return row;
+}
+
+export async function insertSyncedLocalPrompt({
+  id,
+  title,
+  content,
+  categoryId = null,
+  updatedAt = "0",
+} = {}) {
+  const promptId = String(id ?? "").trim();
+  const heading = String(title ?? "").trim();
+  if (!promptId || !heading) throw new Error("同步提示词缺少 id 或标题");
+  if (isTauri()) {
+    return tauriInvoke("upsert_synced_local_prompt", {
+      id: promptId,
+      title: heading,
+      content: content ?? "",
+      category_id: categoryId,
+      updated_at: String(updatedAt ?? "0"),
+    });
+  }
+  const existing = memoryPrompts.find((item) => item.id === promptId);
+  if (existing) return existing;
+  const row = {
+    id: promptId,
+    title: heading,
+    summary: null,
+    content: content ?? "",
+    category_id: categoryId,
+    collection_id: null,
+    use_count: 0,
+    source: "local",
+    updated_at: String(updatedAt ?? "0"),
   };
   memoryPrompts.unshift(row);
   return row;
