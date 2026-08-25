@@ -41,8 +41,8 @@
 
 **Files:** `admin-web/src/`
 
-- [ ] **Step 1: Write the failing test**（providers 含 google 时有按钮；OAuth 成功不把 Refresh 写入 Web Storage）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 与浏览器相同的轮询；邮箱密码仍可用**
-- [ ] **Step 4: 测试 PASS；关闭本计划 done 记录**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（providers 含 google 时有按钮；OAuth 成功不把 Refresh 写入 Web Storage）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 与浏览器相同的轮询；邮箱密码仍可用**
+- [x] **Step 4: 测试 PASS；关闭本计划 done 记录**
+- [x] **Step 5: `./scripts/docs-check` 并提交**

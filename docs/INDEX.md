@@ -104,7 +104,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-24-web-use-wizard.md](plans/2026-08-24-web-use-wizard.md) | 归档 | 查浏览器使用向导怎么做的 | 浏览器逐步填写 |
 | [plans/2026-08-24-web-square-preview.md](plans/2026-08-24-web-square-preview.md) | 归档 | 查浏览器接预发广场怎么做的 | 浏览器接预发广场 |
 | [plans/2026-08-24-postgres-backend.md](plans/2026-08-24-postgres-backend.md) | 归档 | 查预发后端怎么接到 Postgres | Argon2、OAuth API、Redis、MinIO |
-| [plans/2026-08-25-oauth-clients.md](plans/2026-08-25-oauth-clients.md) | 现行 | 把 Google / GitHub 接到登录弹窗 | 桌面钥匙串；web/admin 不写 Refresh |
+| [plans/2026-08-25-oauth-clients.md](plans/2026-08-25-oauth-clients.md) | 归档 | 查客户端 OAuth 怎么接到登录弹窗 | 桌面钥匙串；web/admin 不写 Refresh |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问云同步 / 账单 / 商店何时做 | 另立项，无逐步任务 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
@@ -141,6 +141,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-23-m8-settings-ia.md](plans/done/2026-08-23-m8-settings-ia.md) | 归档 | 查 M8 是否关闭 | M8 完成证据 |
 | [plans/done/2026-08-24-m9-web-and-mcp.md](plans/done/2026-08-24-m9-web-and-mcp.md) | 归档 | 查 M9 是否关闭 | M9 完成证据 |
 | [plans/done/2026-08-25-postgres-backend.md](plans/done/2026-08-25-postgres-backend.md) | 归档 | 查预发后端是否接到 Postgres | Argon2 与 `promptark` 库 |
+| [plans/done/2026-08-25-oauth-clients.md](plans/done/2026-08-25-oauth-clients.md) | 归档 | 查客户端 OAuth 是否接到登录弹窗 | Google / GitHub；Refresh 不进 Web Storage |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |

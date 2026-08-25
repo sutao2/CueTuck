@@ -16,7 +16,17 @@
         <input v-model="password" type="password" data-testid="admin-password" autocomplete="current-password">
       </label>
       <p v-if="error" data-testid="admin-error">{{ error }}</p>
-      <button type="button" data-testid="admin-login" @click="submitLogin">登录</button>
+      <button type="button" data-testid="admin-login" :disabled="busy" @click="submitLogin">登录</button>
+      <button
+        v-for="name in oauthProviders"
+        :key="name"
+        type="button"
+        :data-testid="`oauth-${name}`"
+        :disabled="busy"
+        @click="submitOAuth(name)"
+      >
+        {{ name === "google" ? "Google 登录" : "GitHub 登录" }}
+      </button>
     </form>
 
     <section v-else>
@@ -63,7 +73,7 @@ import {
   putAdminSettings,
   rejectPublication,
 } from "./adminApi.js";
-import { getAdminSession, loginAdmin } from "./session.js";
+import { getAdminSession, listOAuthProviders, loginAdmin, loginAdminOAuth } from "./session.js";
 
 const email = ref("");
 const password = ref("");
@@ -74,14 +84,30 @@ const items = ref([]);
 const users = ref([]);
 const page = ref("review");
 const squarePublic = ref(true);
+const oauthProviders = ref([]);
+const busy = ref(false);
+let loginAbort = new AbortController();
 
-onMounted(() => {
+onMounted(async () => {
   const session = getAdminSession();
   loggedIn.value = session.loggedIn;
   account.value = session.email ?? "";
+  if (!session.loggedIn) await loadProviders();
 });
 
+async function loadProviders() {
+  try {
+    const payload = await listOAuthProviders();
+    oauthProviders.value = (payload.items ?? []).filter(
+      (name) => name === "google" || name === "github",
+    );
+  } catch {
+    oauthProviders.value = [];
+  }
+}
+
 async function submitLogin() {
+  if (busy.value) return;
   error.value = "";
   try {
     const session = await loginAdmin({ email: email.value, password: password.value });
@@ -90,6 +116,25 @@ async function submitLogin() {
     await refreshList();
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : String(caught);
+  }
+}
+
+async function submitOAuth(provider) {
+  if (busy.value) return;
+  error.value = "";
+  busy.value = true;
+  loginAbort.abort();
+  loginAbort = new AbortController();
+  try {
+    const session = await loginAdminOAuth(provider, { signal: loginAbort.signal });
+    loggedIn.value = true;
+    account.value = session.email;
+    busy.value = false;
+    await refreshList();
+  } catch (caught) {
+    if (loginAbort.signal.aborted) return;
+    error.value = caught instanceof Error ? caught.message : String(caught);
+    busy.value = false;
   }
 }
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { loginAdmin, resetAdminSession, setAdminTransport } from "./session.js";
+import { loginAdmin, loginAdminOAuth, resetAdminSession, setAdminTransport } from "./session.js";
 
 describe("admin session", () => {
   beforeEach(() => {
@@ -26,5 +26,19 @@ describe("admin session", () => {
     expect(Object.keys(localStorage).some((key) => key.toLowerCase().includes("refresh"))).toBe(
       false,
     );
+  });
+
+  it("does not persist refresh in web storage after oauth", async () => {
+    localStorage.setItem("refresh_token", "leaked");
+    setAdminTransport(async () => ({
+      access_token: "acc.oauth",
+      refresh_token: "ref.oauth",
+      email: "oauth@promptark.local",
+    }));
+    const session = await loginAdminOAuth("google");
+    expect(session.accessToken).toBe("acc.oauth");
+    expect(localStorage.getItem("refresh_token")).toBeNull();
+    expect(sessionStorage.getItem("refresh_token")).toBeNull();
+    expect(JSON.stringify(session)).not.toContain("ref.");
   });
 });

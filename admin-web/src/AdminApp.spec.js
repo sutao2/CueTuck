@@ -1,7 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import AdminApp from "./AdminApp.vue";
-import { resetAdminSession, setAdminTransport } from "./session.js";
+import { resetAdminSession, setAdminTransport, setOAuthProviderList } from "./session.js";
 import { resetAdminApi, setAdminApiTransport } from "./adminApi.js";
 
 describe("AdminApp", () => {
@@ -10,6 +10,7 @@ describe("AdminApp", () => {
     sessionStorage.clear();
     resetAdminSession();
     resetAdminApi();
+    setOAuthProviderList([]);
     setAdminTransport(async () => ({
       access_token: "acc.admin",
       refresh_token: "ref.admin",
@@ -109,5 +110,16 @@ describe("AdminApp", () => {
     expect(calls.some((call) => call.kind === "putSettings" && call.square_public === false)).toBe(
       true,
     );
+  });
+
+  it("shows google on login when providers include google", async () => {
+    setOAuthProviderList(["google"]);
+    const w = mount(AdminApp);
+    await flushPromises();
+    expect(w.get('[data-testid="oauth-google"]').text()).toContain("Google");
+    expect(w.find('[data-testid="oauth-github"]').exists()).toBe(false);
+    expect(w.get('[data-testid="admin-email"]').exists()).toBe(true);
+    expect(w.get('[data-testid="admin-password"]').exists()).toBe(true);
+    expect(w.text()).not.toMatch(/QQ|LinuxDo/);
   });
 });

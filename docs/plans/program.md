@@ -30,8 +30,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 详细逐步任务仍一次只执行**队首**。后一份在 INDEX 标「目标」，队首标「现行」。关闭队首后把下一份改成现行。
 
 ```text
-1–5 已关闭（广场预发缺口 … 预发后端持久化）
-6. 客户端接 Google / GitHub（现行）
+1–6 已关闭（广场预发缺口 … 客户端接 Google / GitHub）
 之后：deferred.md（云同步 / 账单 / 商店等，无逐步任务）
 ```
 
@@ -41,8 +40,8 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 2 已关闭 | [2026-08-24-web-edit-prompt.md](2026-08-24-web-edit-prompt.md) | 归档 |
 | 3 已关闭 | [2026-08-24-web-use-wizard.md](2026-08-24-web-use-wizard.md) | 归档 |
 | 4 已关闭 | [2026-08-24-web-square-preview.md](2026-08-24-web-square-preview.md) | 归档 |
-| 现在 | [2026-08-25-oauth-clients.md](2026-08-25-oauth-clients.md) | 现行 |
-| 已关闭 | [2026-08-24-postgres-backend.md](2026-08-24-postgres-backend.md) | 归档 |
+| 5 已关闭 | [2026-08-24-postgres-backend.md](2026-08-24-postgres-backend.md) | 归档 |
+| 6 已关闭 | [2026-08-25-oauth-clients.md](2026-08-25-oauth-clients.md) | 归档 |
 | 之后 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
