@@ -115,7 +115,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-25-auto-update.md](plans/2026-08-25-auto-update.md) | 归档 | 查自动更新安装怎么做的 | GitHub Releases；不上架商店 |
 | [plans/2026-08-25-win-linux-prefs.md](plans/2026-08-25-win-linux-prefs.md) | 归档 | 查 Windows / Linux 开机启动与托盘怎么做的 | 未验证不得勾 QA |
 | [plans/2026-08-25-preview-billing.md](plans/2026-08-25-preview-billing.md) | 归档 | 查预发账单与兑换怎么做的 | 无密钥不得写成 Pro |
-| [plans/2026-08-25-stripe-webhook.md](plans/2026-08-25-stripe-webhook.md) | 现行 | 做 Checkout webhook 入账 | 无签名不得写成 Pro |
+| [plans/2026-08-25-stripe-webhook.md](plans/2026-08-25-stripe-webhook.md) | 归档 | 查 Checkout webhook 入账怎么做的 | 无签名不得写成 Pro |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问商店 / 生产托管 / NSIS 额度 | 没有证据就不能声称 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
@@ -158,6 +158,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-25-auto-update.md](plans/done/2026-08-25-auto-update.md) | 归档 | 查自动更新安装是否关闭 | GitHub Releases；updater 排队安装 |
 | [plans/done/2026-08-25-win-linux-prefs.md](plans/done/2026-08-25-win-linux-prefs.md) | 归档 | 查 Windows / Linux 开机启动与托盘是否关闭 | 已写出行为；发行 QA 仍跳过 |
 | [plans/done/2026-08-25-preview-billing.md](plans/done/2026-08-25-preview-billing.md) | 归档 | 查预发账单与兑换是否关闭 | status、兑换、测试 Checkout |
+| [plans/done/2026-08-25-stripe-webhook.md](plans/done/2026-08-25-stripe-webhook.md) | 归档 | 查 Checkout webhook 入账是否关闭 | 签名校验后才标 Pro |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |
