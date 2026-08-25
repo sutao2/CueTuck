@@ -67,6 +67,7 @@ pub fn run() {
             commands::session::put_me,
             commands::session::put_library_changes,
             commands::session::list_library_changes,
+            commands::updates::check_for_updates,
             commands::square::list_square_items,
             commands::square::download_square_item,
             commands::square::create_publication,

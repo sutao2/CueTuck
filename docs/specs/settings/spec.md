@@ -52,10 +52,10 @@ M8 起左侧 MUST 固定十类，顺序与原型一致：常规、账号与广�
 
 #### Scenario: 缺少的页不得消失
 
-- GIVEN 自动更新安装尚未实现
-- WHEN 用户打开「更新」
+- GIVEN 用户打开「更新」
+- WHEN 查看页面
 - THEN 页面仍显示当前版本、检查更新、自动下载、更新通道、发行说明各一行
-- AND 「检查更新」不假装已经从商店或更新服务器取得结果
+- AND 「检查更新」不声称已经从商店取得结果
 
 ### Requirement: 常规
 
@@ -215,14 +215,23 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 ### Requirement: 更新
 
-更新页 MUST 展示：当前版本、检查更新、自动下载更新、更新通道、发行说明。当前版本 MUST 为真实应用版本。其余行在无更新通道前 MUST 标明尚未提供，MUST NOT 假装已检查商店或已排队安装。
+更新页 MUST 展示：当前版本、检查更新、自动下载更新、更新通道、发行说明。当前版本 MUST 为真实应用版本。检查更新 MUST 请求 GitHub Releases；无发行物或已是最新时 MUST 说明没有可用更新。读取失败时 MUST 说明检查失败，不得写成没有可用更新。MUST NOT 声称已从 Mac App Store 或 Microsoft Store 安装。自动下载与按通道安装见自动更新计划。
 
 #### Scenario: 版本真实、检查不假装
 
 - GIVEN 用户打开更新页
-- WHEN 查看应用更新
+- WHEN 用户点检查更新且没有可用发行物
 - THEN 当前版本与本机构建一致
-- AND 检查更新不声称已经连上更新服务器
+- AND 说明没有可用更新
+- AND 不声称已经连上应用商店
+
+#### Scenario: 检查失败不写成没有更新
+
+- GIVEN 用户打开更新页
+- WHEN 检查请求失败
+- THEN 说明检查失败
+- AND 不说明没有可用更新
+- AND 不声称已经连上应用商店
 
 ## 测试映射
 
@@ -248,4 +257,5 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
 | 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |
-| 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |
+| 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check；`updates.test.js` asks GitHub Releases and reports none when the list is empty |
+| 检查失败不写成没有更新 | `WorkbenchShell.spec.js` does not treat a failed update check as no updates；`updates.test.js` does not treat a failed GitHub read as no updates |

@@ -22,6 +22,7 @@ import {
   resetLibrarySync,
   setLibrarySyncTransport,
 } from "../platform/librarySync.js";
+import { resetUpdates, setUpdateTransport } from "../platform/updates.js";
 import {
   resetSquare,
   setFavoriteTransport,
@@ -36,6 +37,7 @@ describe("WorkbenchShell", () => {
     resetMemoryLibrary();
     resetMemorySession();
     resetLibrarySync();
+    resetUpdates();
     resetSquare();
     setSquareTransport(async () => {
       throw new Error("广场暂时不可用");
@@ -497,8 +499,7 @@ describe("WorkbenchShell", () => {
   });
 
   it("keeps the updates page without claiming a store check", async () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+    setUpdateTransport(async () => ({ available: false, notes: "" }));
     const w = mount(WorkbenchShell);
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="updates"]').trigger("click");
@@ -509,9 +510,23 @@ describe("WorkbenchShell", () => {
     expect(panel.text()).toContain("更新通道");
     expect(panel.text()).toContain("发行说明");
     await w.get('[data-testid="check-updates"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="update-note"]').text()).toContain("没有可用更新");
     expect(panel.text()).not.toMatch(/已从商店|已经连上更新服务器/);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
+  });
+
+  it("does not treat a failed update check as no updates", async () => {
+    setUpdateTransport(async () => {
+      throw new Error("检查失败");
+    });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="updates"]').trigger("click");
+    await w.get('[data-testid="check-updates"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="update-note"]').text()).toContain("检查失败");
+    expect(w.get('[data-testid="update-note"]').text()).not.toContain("没有可用更新");
+    expect(w.get('[data-testid="settings-updates"]').text()).not.toMatch(/已从商店|已经连上更新服务器/);
   });
 
   it("shows sync rows without requesting the backend", async () => {

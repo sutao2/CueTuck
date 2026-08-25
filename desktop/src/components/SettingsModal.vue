@@ -291,7 +291,7 @@
             <h3>更新</h3>
             <div class="setting-row">
               <span class="setting-copy"><strong>当前版本</strong><small>桌面包 {{ appVersion }}，与本机构建一致。</small></span>
-              <button type="button" class="button ghost-button" data-testid="check-updates" @click="noteUpdates">检查更新</button>
+              <button type="button" class="button ghost-button" data-testid="check-updates" @click="runCheckUpdates">检查更新</button>
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>自动下载更新</strong><small>没有更新通道，不会后台安装。</small></span>
@@ -302,10 +302,10 @@
               <span class="setting-control">尚未提供</span>
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>发行说明</strong><small>没有商店或更新服务器可查。</small></span>
+              <span class="setting-copy"><strong>发行说明</strong><small>随检查更新展示，不来自应用商店。</small></span>
               <span class="setting-control">尚未提供</span>
             </div>
-            <p v-if="updateNote">{{ updateNote }}</p>
+            <p v-if="updateNote" data-testid="update-note">{{ updateNote }}</p>
           </section>
         </div>
       </div>
@@ -333,6 +333,7 @@ import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/deskto
 import { listMyPublications } from "../platform/square.js";
 import { getMe, putMe } from "../platform/session.js";
 import { syncLocalLibraryNow } from "../platform/librarySync.js";
+import { checkForUpdates } from "../platform/updates.js";
 
 const props = defineProps({
   theme: { type: String, default: "light" },
@@ -458,8 +459,19 @@ async function runSyncNow() {
   }
 }
 
-function noteUpdates() {
-  updateNote.value = "尚未配置更新通道，不会连接更新服务器或应用商店。";
+async function runCheckUpdates() {
+  updateNote.value = "";
+  try {
+    const result = await checkForUpdates();
+    if (result?.available) {
+      const version = result.version ? ` ${result.version}` : "";
+      updateNote.value = `发现更新${version}`.trim();
+    } else {
+      updateNote.value = "没有可用更新";
+    }
+  } catch {
+    updateNote.value = "检查失败";
+  }
 }
 
 async function saveShortcut() {

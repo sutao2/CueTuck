@@ -20,11 +20,11 @@
 
 **Files:** `desktop/src/components/SettingsModal.vue` · `desktop/src-tauri/` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（点检查更新后无发行物则说明没有可用更新；不出现已从商店）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 真请求 GitHub Releases；无发行物诚实说明**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（点检查更新后无发行物则说明没有可用更新；不出现已从商店）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 真请求 GitHub Releases；无发行物诚实说明**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 按通道下载安装
 
