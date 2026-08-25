@@ -177,9 +177,9 @@
               <span class="setting-copy"><strong>仅在 Wi-Fi 下同步图片</strong><small>没有云同步引擎，不会按网络类型上传。</small></span>
               <span class="setting-control">尚未提供</span>
             </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>冲突处理</strong><small>本地与远端同时修改时的策略尚未提供。</small></span>
-              <span class="setting-control">尚未提供</span>
+            <div class="setting-row" data-testid="sync-conflict">
+              <span class="setting-copy"><strong>冲突处理</strong><small>立即同步按较新的 updated_at 覆盖。本页不能选择保留本地。</small></span>
+              <span class="setting-control">较新者胜</span>
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>立即同步</strong><small>已登录时推拉账号库。未登录打开登录，不会假装已同步。</small></span>
