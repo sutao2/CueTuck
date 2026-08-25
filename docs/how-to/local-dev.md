@@ -147,7 +147,7 @@ npm install
 npm run tauri:nsis
 ```
 
-产物在 `desktop/src-tauri/target/release/bundle/nsis/`。包内是现行桌面功能；不含 `admin-web`。开机启动会写入当前用户的 `HKCU\\...\\Run`（UTF-16），关闭到托盘与 macOS 一样隐藏主窗口；未在 Windows 上手工作业验证前不得勾发行 QA，也不得声称 NSIS 已验证。广场要另开本仓库 `backend/` 预发，安装包不捆绑后端。
+产物在 `desktop/src-tauri/target/release/bundle/nsis/`。包内是现行桌面功能；不含 `admin-web`。Windows 开机启动写入当前用户 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`（UTF-16）；Linux 写入 `~/.config/autostart/promptark.desktop`。关闭到托盘在已接通系统上隐藏主窗口。未在该 OS 手工作业验证前不得勾发行 QA，也不得声称 NSIS 已验证。广场要另开本仓库 `backend/` 预发，安装包不捆绑后端。
 
 若仓库已推到 GitHub，可手动跑 `.github/workflows/desktop-windows.yml`（`workflow_dispatch`），下载 artifact `promptark-windows-nsis`。该工作流不是合并红灯，也不是商店包。
 

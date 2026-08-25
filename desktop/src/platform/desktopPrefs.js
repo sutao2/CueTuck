@@ -6,7 +6,7 @@ export const DESKTOP_PREF_KEYS = {
 
 export function canApplyPref(key, host) {
   if (key === DESKTOP_PREF_KEYS.launchAtLogin || key === DESKTOP_PREF_KEYS.minimizeToTray) {
-    return host === "macos" || host === "windows";
+    return host === "macos" || host === "windows" || host === "linux";
   }
   return true;
 }

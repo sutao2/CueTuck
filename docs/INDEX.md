@@ -113,8 +113,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-25-account-surface.md](plans/2026-08-25-account-surface.md) | 归档 | 查作者主页、我的发布、下载作者怎么接到设置 | 账号面剩余行 |
 | [plans/2026-08-25-library-sync.md](plans/2026-08-25-library-sync.md) | 归档 | 查个人库云同步怎么做的 | 登录后推拉账号库 |
 | [plans/2026-08-25-auto-update.md](plans/2026-08-25-auto-update.md) | 归档 | 查自动更新安装怎么做的 | GitHub Releases；不上架商店 |
-| [plans/2026-08-25-win-linux-prefs.md](plans/2026-08-25-win-linux-prefs.md) | 现行 | 做 Windows / Linux 开机启动与托盘 | 未验证不得勾 QA |
-| [plans/2026-08-25-preview-billing.md](plans/2026-08-25-preview-billing.md) | 目标 | 做预发账单与兑换 | 无密钥不得写成 Pro |
+| [plans/2026-08-25-win-linux-prefs.md](plans/2026-08-25-win-linux-prefs.md) | 归档 | 查 Windows / Linux 开机启动与托盘怎么做的 | 未验证不得勾 QA |
+| [plans/2026-08-25-preview-billing.md](plans/2026-08-25-preview-billing.md) | 现行 | 做预发账单与兑换 | 无密钥不得写成 Pro |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问商店 / 生产托管 / NSIS 额度 | 没有证据就不能声称 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
@@ -155,6 +155,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-25-account-surface.md](plans/done/2026-08-25-account-surface.md) | 归档 | 查账号面剩余行是否接到设置 | 作者主页、我的发布、下载保留作者 |
 | [plans/done/2026-08-25-library-sync.md](plans/done/2026-08-25-library-sync.md) | 归档 | 查个人库云同步是否关闭 | 立即同步、较新者胜、浏览器账号库 |
 | [plans/done/2026-08-25-auto-update.md](plans/done/2026-08-25-auto-update.md) | 归档 | 查自动更新安装是否关闭 | GitHub Releases；updater 排队安装 |
+| [plans/done/2026-08-25-win-linux-prefs.md](plans/done/2026-08-25-win-linux-prefs.md) | 归档 | 查 Windows / Linux 开机启动与托盘是否关闭 | 已写出行为；发行 QA 仍跳过 |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |

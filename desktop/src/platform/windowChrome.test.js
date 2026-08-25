@@ -15,6 +15,10 @@ describe("window chrome", () => {
     expect(formatShortcutLabel("Control+Space", "macos")).toBe("⌃Space");
   });
 
+  it("treats Linux as linux", () => {
+    expect(detectHost({ platform: "Linux x86_64", userAgent: "X11; Linux x86_64" })).toBe("linux");
+  });
+
   it("keeps Windows inset and Ctrl Space label", () => {
     expect(trafficLightInsetPx("windows")).toBe(0);
     expect(formatShortcutLabel("Control+Space", "windows")).toBe("Ctrl Space");

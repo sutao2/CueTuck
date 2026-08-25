@@ -31,8 +31,8 @@
 
 **Files:** `desktop/src-tauri/src/commands/desktop.rs` · `desktop/src/platform/desktopPrefs.js` · `docs/specs/settings/spec.md` · `docs/how-to/release-qa.md`
 
-- [ ] **Step 1: Write the failing test**（Linux 上打开开机启动与托盘能保存；失败时开关回退；未手工验证不勾发行 QA）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 按 Linux 实现现有偏好命令；关闭本计划 done 记录**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（Linux 上打开开机启动与托盘能保存；失败时开关回退；未手工验证不勾发行 QA）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 按 Linux 实现现有偏好命令；关闭本计划 done 记录**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**

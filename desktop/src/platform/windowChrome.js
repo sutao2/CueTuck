@@ -16,6 +16,7 @@ export function detectHost({ platform, userAgent } = {}) {
   const ua = userAgent ?? (typeof navigator !== "undefined" ? navigator.userAgent : "");
   if (/Mac|iPhone|iPad/i.test(plat) || /Mac OS X/i.test(ua)) return "macos";
   if (/Win/i.test(plat) || /Windows/i.test(ua)) return "windows";
+  if (/Linux/i.test(plat) || /Linux/i.test(ua)) return "linux";
   return "other";
 }
 

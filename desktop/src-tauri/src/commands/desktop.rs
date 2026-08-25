@@ -77,6 +77,26 @@ fn apply_windows_run_key(enabled: bool, program: &str) -> Result<(), String> {
     }
 }
 
+#[cfg(any(test, target_os = "linux"))]
+pub fn apply_linux_autostart(dir: &Path, enabled: bool, program: &str) -> Result<(), String> {
+    fs::create_dir_all(dir).map_err(|error| error.to_string())?;
+    let path = dir.join("promptark.desktop");
+    if enabled {
+        let exec = if program.chars().any(char::is_whitespace) {
+            format!("\"{}\"", program.replace('"', ""))
+        } else {
+            program.to_string()
+        };
+        let body = format!(
+            "[Desktop Entry]\nType=Application\nName=PromptArk\nExec={exec}\nX-GNOME-Autostart-enabled=true\n"
+        );
+        fs::write(&path, body).map_err(|error| error.to_string())?;
+    } else if path.exists() {
+        fs::remove_file(&path).map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn apply_launch_at_login(enabled: bool) -> Result<(), String> {
     #[cfg(target_os = "macos")]
@@ -97,7 +117,18 @@ pub fn apply_launch_at_login(enabled: bool) -> Result<(), String> {
             .into_owned();
         return apply_windows_run_key(enabled, &program);
     }
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    #[cfg(target_os = "linux")]
+    {
+        let home = std::env::var("HOME").map_err(|error| error.to_string())?;
+        let config = std::env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| format!("{home}/.config"));
+        let dir = Path::new(&config).join("autostart");
+        let program = std::env::current_exe()
+            .map_err(|error| error.to_string())?
+            .to_string_lossy()
+            .into_owned();
+        return apply_linux_autostart(&dir, enabled, &program);
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     {
         let _ = enabled;
         Err("当前系统尚未验证开机启动，不会声称已生效".into())
@@ -106,12 +137,12 @@ pub fn apply_launch_at_login(enabled: bool) -> Result<(), String> {
 
 #[tauri::command]
 pub fn apply_minimize_to_tray(_app: AppHandle, enabled: bool) -> Result<(), String> {
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     {
         let _ = enabled;
         return Err("当前系统尚未验证托盘，不会声称已生效".into());
     }
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
     {
         let _ = enabled;
         Ok(())
@@ -152,6 +183,19 @@ mod tests {
         assert!(body.contains("测试"));
         assert!(!body.contains("NSIS 已验证"));
         apply_windows_startup_record(dir.path(), false, program).unwrap();
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn writes_and_removes_linux_autostart_entry() {
+        let dir = tempdir().unwrap();
+        let program = "/home/测试/promptark";
+        apply_linux_autostart(dir.path(), true, program).unwrap();
+        let path = dir.path().join("promptark.desktop");
+        let body = fs::read_to_string(&path).unwrap();
+        assert!(body.contains(program));
+        assert!(body.contains("Type=Application"));
+        apply_linux_autostart(dir.path(), false, program).unwrap();
         assert!(!path.exists());
     }
 }

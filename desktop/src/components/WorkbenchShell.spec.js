@@ -620,14 +620,16 @@ describe("WorkbenchShell", () => {
     expect(w.text()).not.toMatch(/NSIS 已验证|Windows 已验证/);
   });
 
-  it("does not claim launch at login on linux", async () => {
+  it("saves launch at login and tray on linux without claiming release qa", async () => {
     const w = mount(WorkbenchShell, { props: { host: "linux" } });
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-testid="launch-at-login"]').setValue(true);
+    await w.get('[data-testid="minimize-to-tray"]').setValue(true);
     await flushPromises();
-    expect(w.get('[data-testid="pref-error"]').text()).toContain("尚未验证");
-    expect(await getLocalSetting("launch_at_login")).not.toBe("1");
-    expect(w.get('[data-testid="launch-at-login"]').element.checked).toBe(false);
+    expect(await getLocalSetting("launch_at_login")).toBe("1");
+    expect(await getLocalSetting("minimize_to_tray")).toBe("1");
+    expect(w.find('[data-testid="pref-error"]').exists()).toBe(false);
+    expect(w.text()).not.toMatch(/Linux 已验证|发行 QA 已通过|NSIS 已验证/);
   });
 
   it("shows new and paste shortcut rows", async () => {
