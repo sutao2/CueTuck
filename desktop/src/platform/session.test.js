@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { loginSession, refreshSession, resetMemorySession, setSessionTransport } from "./session.js";
+import {
+  loginOAuthSession,
+  loginSession,
+  refreshSession,
+  resetMemorySession,
+  setSessionTransport,
+} from "./session.js";
 
 describe("session tokens", () => {
   beforeEach(() => {
@@ -20,6 +26,21 @@ describe("session tokens", () => {
     expect(localStorage.getItem("refresh_token")).toBeNull();
     expect(sessionStorage.getItem("refresh_token")).toBeNull();
     expect(Object.keys(localStorage).some((key) => key.toLowerCase().includes("refresh"))).toBe(false);
+  });
+
+  it("does not persist refresh in web storage after oauth", async () => {
+    localStorage.setItem("refresh_token", "leaked");
+    setSessionTransport(async () => ({
+      access_token: "acc.oauth",
+      refresh_token: "ref.oauth",
+      email: "oauth@promptark.local",
+    }));
+    const session = await loginOAuthSession("google");
+    expect(session.accessToken).toBe("acc.oauth");
+    expect(session.email).toBe("oauth@promptark.local");
+    expect(localStorage.getItem("refresh_token")).toBeNull();
+    expect(sessionStorage.getItem("refresh_token")).toBeNull();
+    expect(JSON.stringify(session)).not.toContain("ref.");
   });
 
   it("rotates access without writing refresh to web storage", async () => {

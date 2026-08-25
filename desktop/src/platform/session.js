@@ -1,6 +1,7 @@
 let accessToken = null;
 let accountEmail = null;
 let testTransport = null;
+let oauthProviderList = [];
 
 function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -26,7 +27,12 @@ export function resetMemorySession() {
   accessToken = null;
   accountEmail = null;
   testTransport = null;
+  oauthProviderList = [];
   if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
+}
+
+export function setOAuthProviderList(items) {
+  oauthProviderList = Array.isArray(items) ? [...items] : [];
 }
 
 export function setSessionTransport(transport) {
@@ -41,6 +47,20 @@ export function getSession() {
   };
 }
 
+function applySession(result, fallbackEmail) {
+  if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
+  accessToken = result.access_token ?? result.accessToken ?? null;
+  accountEmail = result.email ?? fallbackEmail ?? null;
+  return { email: accountEmail, accessToken };
+}
+
+export async function listOAuthProviders() {
+  if (isTauri() && !testTransport) {
+    return tauriInvoke("list_oauth_providers");
+  }
+  return { items: oauthProviderList };
+}
+
 export async function loginSession({ email, password } = {}) {
   const title = String(email ?? "").trim();
   if (!title || !password) throw new Error("邮箱和密码不能为空");
@@ -52,10 +72,64 @@ export async function loginSession({ email, password } = {}) {
   } else {
     throw new Error("浏览器预览不持久化登录令牌");
   }
-  if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
-  accessToken = result.access_token ?? result.accessToken ?? null;
-  accountEmail = result.email ?? title;
-  return { email: accountEmail, accessToken };
+  return applySession(result, title);
+}
+
+export async function loginOAuthSession(provider, { signal } = {}) {
+  const name = String(provider ?? "").trim().toLowerCase();
+  if (name !== "google" && name !== "github") {
+    throw new Error("不支持的登录方式");
+  }
+  let result;
+  if (testTransport) {
+    result = await testTransport({ provider: name });
+  } else if (isTauri()) {
+    const flowId = await tauriInvoke("start_oauth_session", { provider: name });
+    const cancelFlow = () => tauriInvoke("cancel_oauth_session", { flowId }).catch(() => {});
+    if (signal) {
+      if (signal.aborted) {
+        await cancelFlow();
+        throw new Error("已取消");
+      }
+      signal.addEventListener("abort", () => {
+        cancelFlow();
+      }, { once: true });
+    }
+    const deadline = Date.now() + 180_000;
+    while (Date.now() < deadline) {
+      if (signal?.aborted) throw new Error("已取消");
+      const ready = await tauriInvoke("poll_oauth_session", { flowId });
+      if (signal?.aborted) throw new Error("已取消");
+      if (ready) {
+        result = await tauriInvoke("commit_oauth_session", { flowId });
+        break;
+      }
+      await wait(400, signal);
+    }
+    if (!result) throw new Error("登录超时");
+  } else {
+    throw new Error("浏览器预览不持久化登录令牌");
+  }
+  return applySession(result, null);
+}
+
+function wait(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error("已取消"));
+      return;
+    }
+    const timer = setTimeout(resolve, ms);
+    if (!signal) return;
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(new Error("已取消"));
+      },
+      { once: true },
+    );
+  });
 }
 
 export async function refreshSession() {
@@ -67,10 +141,7 @@ export async function refreshSession() {
   } else {
     throw new Error("浏览器预览不持久化登录令牌");
   }
-  if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
-  accessToken = result.access_token ?? result.accessToken ?? null;
-  if (result.email) accountEmail = result.email;
-  return { email: accountEmail, accessToken };
+  return applySession(result, accountEmail);
 }
 
 export async function logoutSession() {

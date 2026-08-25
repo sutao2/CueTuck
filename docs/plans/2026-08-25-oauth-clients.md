@@ -21,11 +21,11 @@
 
 **Files:** `desktop/src/components/LoginModal.vue` · `desktop/src/platform/session.js` · `desktop/src-tauri/src/commands/session.rs` · `docs/specs/auth/spec.md`
 
-- [ ] **Step 1: Write the failing test**（providers 含 google 时登录弹窗有 Google；空列表没有；设置账号页仍无 QQ/LinuxDo）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 列出提供商；OAuth 走 Tauri 打开授权 URL 并轮询；Refresh 进钥匙串**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（providers 含 google 时登录弹窗有 Google；空列表没有；设置账号页仍无 QQ/LinuxDo）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 列出提供商；OAuth 走 Tauri 打开授权 URL 并轮询；Refresh 进钥匙串**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 浏览器登录与收藏
 

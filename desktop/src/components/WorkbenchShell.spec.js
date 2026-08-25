@@ -10,7 +10,12 @@ import {
   setLocalSetting,
   recordLocalPromptUse,
 } from "../platform/library.js";
-import { resetMemorySession, setSessionTransport, loginSession } from "../platform/session.js";
+import {
+  resetMemorySession,
+  setSessionTransport,
+  setOAuthProviderList,
+  loginSession,
+} from "../platform/session.js";
 import {
   resetSquare,
   setFavoriteTransport,
@@ -206,6 +211,71 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="favorite-square"]').trigger("click");
     expect(w.get('[data-testid="login-reason"]').text()).toContain("收藏");
     expect(await listLocalPrompts({ query: "" })).toHaveLength(0);
+  });
+
+  it("shows google on login when providers include google", async () => {
+    setOAuthProviderList(["google"]);
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="favorite-square"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="oauth-google"]').text()).toContain("Google");
+    expect(w.find('[data-testid="oauth-github"]').exists()).toBe(false);
+    expect(w.get('[data-testid="login-modal"]').text()).not.toMatch(/QQ|LinuxDo/);
+  });
+
+  it("disables oauth while a provider login is in flight", async () => {
+    setOAuthProviderList(["google"]);
+    let release;
+    const pending = new Promise((resolve) => {
+      release = resolve;
+    });
+    setSessionTransport(async (request) => {
+      if (request.provider === "google") {
+        await pending;
+        return {
+          access_token: "acc.oauth",
+          refresh_token: "ref.oauth",
+          email: "oauth@promptark.local",
+        };
+      }
+      return {
+        access_token: "acc.1",
+        refresh_token: "ref.1",
+        email: "dev@promptark.local",
+      };
+    });
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="favorite-square"]').trigger("click");
+    await flushPromises();
+    const click = w.get('[data-testid="oauth-google"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="oauth-google"]').element.disabled).toBe(true);
+    expect(w.get('[data-testid="login-submit"]').element.disabled).toBe(true);
+    expect(w.get('[data-testid="oauth-wait"]').exists()).toBe(true);
+    release();
+    await click;
+    await flushPromises();
+    expect(w.find('[data-testid="login-modal"]').exists()).toBe(false);
+  });
+
+  it("hides oauth buttons when providers empty", async () => {
+    setOAuthProviderList([]);
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="favorite-square"]').trigger("click");
+    await flushPromises();
+    expect(w.find('[data-testid="oauth-google"]').exists()).toBe(false);
+    expect(w.find('[data-testid="oauth-github"]').exists()).toBe(false);
+    expect(w.get('[data-testid="login-email"]').exists()).toBe(true);
+    expect(w.get('[data-testid="login-password"]').exists()).toBe(true);
   });
 
   it("favorites a square item while logged in without writing a local copy", async () => {

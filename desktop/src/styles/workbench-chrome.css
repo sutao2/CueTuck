@@ -457,6 +457,7 @@
 .modal-header h2 { margin: 0; font: 600 20px/1.2 var(--font-display); }
 .modal-close { border: 0; background: transparent; color: var(--muted); font-size: 20px; }
 .create-body { display: grid; gap: 12px; padding: 18px 20px; }
+.oauth-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .field { display: grid; gap: 6px; color: var(--muted); font-size: 11px; }
 .field input, .field textarea, .field select {
   width: 100%;
