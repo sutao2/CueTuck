@@ -29,6 +29,7 @@
 | 收藏写路径、令牌轮换、admin me | [M7 提案](../changes/m7-contract-gaps/proposal.md) + [ADR 0010](../architecture/decisions/0010-m7-contract-gaps.md) |
 | 原型设置项为什么缺、何时补 | [设置规格](../specs/settings/spec.md) + [M8 完成记录](../plans/done/2026-08-23-m8-settings-ia.md) |
 | 浏览器工作台或 MCP 怎么做 | [ADR 0011](../architecture/decisions/0011-web-and-mcp.md) + [M9 完成记录](../plans/done/2026-08-24-m9-web-and-mcp.md) |
+| 是否还按第一期冻结、完整产品做什么 | [ADR 0014](../architecture/decisions/0014-full-product.md) + [status](../plans/status.md) |
 
 ## 进行中的工作
 

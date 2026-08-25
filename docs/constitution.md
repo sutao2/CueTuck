@@ -24,11 +24,11 @@
 9. 结构、行为或门禁变更必须与文档、测试在同一提交落地。
 10. 不宣传未构建、未验证的平台或能力。
 
-## 第一期边界
+## 产品边界
 
-11. 第一期（M1–M2）纯本地：SQLite、主窗口、启动器。不接旧 Spring Boot，不实现 QQ / LinuxDo / Stripe。
+11. 本地功能必须离线可用。云端是增强，不是使用前提。不接旧 Spring Boot。不实现 QQ / LinuxDo。
 12. 新仓库在 `IdeaProjects/PromptArk`，与旧 `PromptLauncher` 仓库分离。旧仓库只读参考。
-13. 管理后台已在 M6 以独立 `admin-web` 交付。原生移动端不做。完整云端同步个人库不做。M9 增加浏览器工作台与本机 MCP，见 [ADR 0011](architecture/decisions/0011-web-and-mcp.md)。
+13. 管理后台以独立 `admin-web` 交付。原生移动端不做。商店上架与生产托管在没有证据前不得声称已完成。个人库云同步、自动更新安装、预发账单按 [ADR 0014](architecture/decisions/0014-full-product.md) 排队实现，仍不得假装未接通的能力。
 
 ## 质量
 

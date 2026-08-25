@@ -17,7 +17,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [README.md](README.md) | 现行 | 问文档体系怎么运转 | 体系总说明 |
 | [INDEX.md](INDEX.md) | 现行 | 每次查文档 | 本表 |
 | [constitution.md](constitution.md) | 现行 | 改原则或开新模块前 | 非协商约束 |
-| [product/prd.md](product/prd.md) | 现行 | 问范围、做什么、不做什么 | 第一期产品需求 |
+| [product/prd.md](product/prd.md) | 现行 | 问范围、做什么、不做什么 | 完整产品需求 |
 | [product/roadmap.md](product/roadmap.md) | 现行 | 问进度或下一步里程碑 | 里程碑与完成标准 |
 | [product/glossary.md](product/glossary.md) | 现行 | 用词含糊时 | 术语唯一定义 |
 | [architecture/overview.md](architecture/overview.md) | 现行 | 问系统怎么拆 | 容器与窗口 |
@@ -35,6 +35,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0011-web-and-mcp.md](architecture/decisions/0011-web-and-mcp.md) | 现行 | 做浏览器工作台或 MCP 前 | Web 独立 SPA；Agent 入口是 MCP stdio |
 | [architecture/decisions/0012-postgres-backend.md](architecture/decisions/0012-postgres-backend.md) | 现行 | 接 Postgres、Redis、MinIO 或改口令存储时 | 预发存本机 `promptark` 库；Argon2id |
 | [architecture/decisions/0013-oauth-google-github.md](architecture/decisions/0013-oauth-google-github.md) | 现行 | 接 Google / GitHub 登录前 | 选定 Google 与 GitHub；仍不接 QQ/LinuxDo |
+| [architecture/decisions/0014-full-product.md](architecture/decisions/0014-full-product.md) | 现行 | 问是否还按第一期冻结 | 剩余工作按完整产品排队 |
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 独立窗口行为合同 |
 | [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
@@ -48,6 +49,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；不进桌面包 |
 | [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 流体桌面布局；不进桌面包 |
 | [specs/mcp/spec.md](specs/mcp/spec.md) | 目标 | 做本机 MCP | stdio 查询本地提示词 |
+| [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 登录后推拉账号库 |
+| [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 不得把未付费写成 Pro |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
 | [reference/test-gates.md](reference/test-gates.md) | 现行 | 加测试或 CI | 分阶段门禁 |
 | [reference/openapi/square.yaml](reference/openapi/square.yaml) | 现行 | 改广场 API 时 | M5 广场 / 登录 / 发布合同 |
@@ -79,6 +82,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/postgres-backend/proposal.md](changes/postgres-backend/proposal.md) | 现行 | 查预发后端持久化是否已接受 | 已接受；ADR 0012 / 0013 |
 | [changes/postgres-backend/design.md](changes/postgres-backend/design.md) | 目标 | 看预发后端怎么接到本机库 | 独立库 promptark；Argon2；OAuth；MinIO |
 | [changes/oauth-clients/proposal.md](changes/oauth-clients/proposal.md) | 现行 | 查客户端 OAuth 是否已接受 | 已接受；登录弹窗接 Google / GitHub |
+| [changes/full-product/proposal.md](changes/full-product/proposal.md) | 现行 | 查完整产品队列是否已接受 | 已接受；ADR 0014 |
+| [changes/full-product/design.md](changes/full-product/design.md) | 目标 | 看同步 / 更新 / 账单怎么落地 | 账号库推拉；updater；预发兑换 |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
@@ -105,7 +110,12 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-24-web-square-preview.md](plans/2026-08-24-web-square-preview.md) | 归档 | 查浏览器接预发广场怎么做的 | 浏览器接预发广场 |
 | [plans/2026-08-24-postgres-backend.md](plans/2026-08-24-postgres-backend.md) | 归档 | 查预发后端怎么接到 Postgres | Argon2、OAuth API、Redis、MinIO |
 | [plans/2026-08-25-oauth-clients.md](plans/2026-08-25-oauth-clients.md) | 归档 | 查客户端 OAuth 怎么接到登录弹窗 | 桌面钥匙串；web/admin 不写 Refresh |
-| [plans/deferred.md](plans/deferred.md) | 目标 | 问云同步 / 账单 / 商店何时做 | 另立项，无逐步任务 |
+| [plans/2026-08-25-account-surface.md](plans/2026-08-25-account-surface.md) | 现行 | 把作者主页、我的发布、下载作者接到设置 | 账号面剩余行 |
+| [plans/2026-08-25-library-sync.md](plans/2026-08-25-library-sync.md) | 目标 | 做个人库云同步 | 队首关闭后再写逐步任务 |
+| [plans/2026-08-25-auto-update.md](plans/2026-08-25-auto-update.md) | 目标 | 做自动更新安装 | GitHub Releases；不上架商店 |
+| [plans/2026-08-25-win-linux-prefs.md](plans/2026-08-25-win-linux-prefs.md) | 目标 | 做 Windows / Linux 开机启动与托盘 | 未验证不得勾 QA |
+| [plans/2026-08-25-preview-billing.md](plans/2026-08-25-preview-billing.md) | 目标 | 做预发账单与兑换 | 无密钥不得写成 Pro |
+| [plans/deferred.md](plans/deferred.md) | 目标 | 问商店 / 生产托管 / NSIS 额度 | 没有证据就不能声称 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
 | [plans/milestones/m2.md](plans/milestones/m2.md) | 现行 | 做本地工作台前 | M2 进出标准 |

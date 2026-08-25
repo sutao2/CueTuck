@@ -4,7 +4,7 @@
 |---|---|
 | 状态 | 现行 |
 | 阶段 | M9 已关闭 |
-| 关联 | [数据模型](data-model.md) · [ADR 0008](decisions/0008-m5-backend-contract.md) · [ADR 0009](decisions/0009-m6-admin-console.md) · [ADR 0010](decisions/0010-m7-contract-gaps.md) · [ADR 0011](decisions/0011-web-and-mcp.md) |
+| 关联 | [数据模型](data-model.md) · [ADR 0008](decisions/0008-m5-backend-contract.md) · [ADR 0011](decisions/0011-web-and-mcp.md) · [ADR 0014](decisions/0014-full-product.md) |
 
 ## 容器
 
@@ -34,17 +34,17 @@ flowchart TB
   adminWeb -->|/v1/admin| api
 ```
 
-主窗口与启动器共享本机 SQLite。MCP 只读同一文件。M5 起 Rust 访问本仓库广场 API；启动器与 MCP 不请求广场或管理接口。`admin-web` 与 `web/` 是独立浏览器应用，不进桌面安装包。`backend/` 预发状态存本机 Postgres 库 `promptark`（不是旧 Flyway 库 `pl`），不声称生产托管。浏览器工作台未做云同步前不声称与桌面库一致。
+主窗口与启动器共享本机 SQLite。MCP 只读同一文件。M5 起 Rust 访问本仓库广场 API；启动器与 MCP 不请求广场或管理接口。`admin-web` 与 `web/` 是独立浏览器应用，不进桌面安装包。`backend/` 预发状态存本机 Postgres 库 `promptark`（不是旧 Flyway 库 `pl`），不声称生产托管。浏览器工作台未登录前不声称与桌面 SQLite 文件一致；登录后的账号库见 [ADR 0014](decisions/0014-full-product.md)。
 
 ## 子系统
 
-| 子系统 | 职责 | 第一期 |
+| 子系统 | 职责 | 范围 |
 |---|---|---|
 | 主窗口工作台 | 分类树、卡片、编辑/使用/创建设置弹窗 | 按原型重建 |
 | 启动器 | 独立窗口搜索、填写、复制、粘贴 | 移植旧实现 |
 | 本地数据 | SQLite schema、工作区、FTS、备份 | 按本仓库数据模型新建 |
 | 桌面集成 | 快捷键、托盘、剪贴板、粘贴、权限 | 随启动器一起移植 |
-| 云与广场 | 认证、广场、发布 | M5：新合同，见 ADR 0008 |
+| 云与广场 | 认证、广场、发布、个人库同步、预发账单 | 见 ADR 0008 / 0014 |
 | 管理台 | 审核、用户只读、运行时开关 | M6：独立合同，见 ADR 0009 |
 | 浏览器工作台 | 独立 SPA，流体桌面布局 | M9：见 ADR 0011 |
 | 本机 MCP | stdio 查询本地提示词 | M9：见 ADR 0011 |

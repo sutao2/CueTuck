@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-08-24
 - 关联：[ADR 0008](0008-m5-backend-contract.md) · [ADR 0013](0013-oauth-google-github.md) · [认证](../../specs/auth/spec.md) · [提案](../../changes/postgres-backend/proposal.md)
+- 部分后果（不接个人库同步 / Stripe）由 [ADR 0014](0014-full-product.md) 取代。
 
 ## Context
 

@@ -15,3 +15,5 @@
 | 管理台 | M6 | [admin.md](admin.md) |
 | 浏览器工作台 | M9 | [web.md](web.md) |
 | 本机 MCP | M9 | [mcp.md](mcp.md) |
+| 个人库同步 | 完整产品 | [sync 规格](../../specs/sync/spec.md) |
+| 预发账单 | 完整产品 | [billing 规格](../../specs/billing/spec.md) |

@@ -31,7 +31,12 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 
 ```text
 1–6 已关闭（广场预发缺口 … 客户端接 Google / GitHub）
-之后：deferred.md（云同步 / 账单 / 商店等，无逐步任务）
+7. 账号与广场剩余行（现行）
+8. 个人库云同步
+9. 自动更新安装
+10. Windows / Linux 开机启动与托盘
+11. 预发账单
+不能诚实做完：deferred.md
 ```
 
 | 顺序 | 计划 | INDEX |
@@ -42,7 +47,12 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 4 已关闭 | [2026-08-24-web-square-preview.md](2026-08-24-web-square-preview.md) | 归档 |
 | 5 已关闭 | [2026-08-24-postgres-backend.md](2026-08-24-postgres-backend.md) | 归档 |
 | 6 已关闭 | [2026-08-25-oauth-clients.md](2026-08-25-oauth-clients.md) | 归档 |
-| 之后 | [deferred.md](deferred.md) | 目标 |
+| 现在 | [2026-08-25-account-surface.md](2026-08-25-account-surface.md) | 现行 |
+| 之后 | [2026-08-25-library-sync.md](2026-08-25-library-sync.md) | 目标 |
+| 之后 | [2026-08-25-auto-update.md](2026-08-25-auto-update.md) | 目标 |
+| 之后 | [2026-08-25-win-linux-prefs.md](2026-08-25-win-linux-prefs.md) | 目标 |
+| 之后 | [2026-08-25-preview-billing.md](2026-08-25-preview-billing.md) | 目标 |
+| 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
 
@@ -62,7 +72,9 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 设置对齐原型 | M8 | [settings](../specs/settings/spec.md) | [2026-08-23-m8-settings-ia.md](2026-08-23-m8-settings-ia.md) |
 | 浏览器工作台 | M9 | [web](../specs/web/spec.md) | [2026-08-24-m9-web-and-mcp.md](2026-08-24-m9-web-and-mcp.md) |
 | 本机 MCP | M9 | [mcp](../specs/mcp/spec.md) | 同上 |
-| 广场预发缺口 | M5 合同补丁 | [square](../specs/square/spec.md) / [publish](../specs/publish/spec.md) | [2026-08-24-square-preview-gaps.md](2026-08-24-square-preview-gaps.md) |
+| 账号与广场剩余行 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-25-account-surface.md](2026-08-25-account-surface.md) |
+| 个人库同步 | 完整产品 | [sync](../specs/sync/spec.md) | [2026-08-25-library-sync.md](2026-08-25-library-sync.md) |
+| 预发账单 | 完整产品 | [billing](../specs/billing/spec.md) | [2026-08-25-preview-billing.md](2026-08-25-preview-billing.md) |
 
 ## 通用完成定义（每个里程碑都要满足）
 

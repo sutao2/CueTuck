@@ -5,7 +5,7 @@
 | 状态 | 现行（目标模型） |
 | 关联 | [架构](overview.md) · [分类规格](../specs/categories/spec.md) · [合集规格](../specs/collections/spec.md) |
 
-第一期本地库由 Rust `rusqlite` 打开 `app_data_dir/promptark.sqlite`。初始化会建 `settings`、`categories`、`collections`、完整 `prompts`，并幂等写入十大系统分类及首包小分类。见 [ADR 0007](decisions/0007-sqlite-access.md)。
+本地库由 Rust `rusqlite` 打开 `app_data_dir/promptark.sqlite`。初始化会建 `settings`、`categories`、`collections`、完整 `prompts`，并幂等写入十大系统分类及首包小分类。见 [ADR 0007](decisions/0007-sqlite-access.md)。账号库同步见 [同步规格](../specs/sync/spec.md)。
 
 ## 本地表
 
@@ -83,7 +83,7 @@
 
 ### sync_jobs
 
-第一期不建。M5 再引入。
+账号库变更日志在预发 Postgres，不在本机再建同步队列表。合同见 [同步规格](../specs/sync/spec.md)。
 
 ## 预置大分类
 

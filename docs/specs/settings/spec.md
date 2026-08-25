@@ -138,7 +138,7 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 
 账号与广场页 MUST 展示：当前账号、作者主页、我的发布、下载时保留作者信息。
 
-当前账号 MUST 接到已有邮箱密码登录/登出。Google / GitHub 由后端提供，见 [ADR 0013](../../architecture/decisions/0013-oauth-google-github.md)；桌面设置页未接线前可以不展示绑定入口。MUST NOT 出现 QQ / LinuxDo 绑定入口。作者主页与我的发布在对应产品面未交付前 MUST 标明尚未提供，MUST NOT 假装已编辑资料或已列出远端发布。下载时保留作者信息是本机开关，接通后 MUST 影响本机副本展示，未接通时仍保留该行。
+当前账号 MUST 接到已有邮箱密码登录/登出。Google / GitHub 由登录弹窗按已配置提供商列出，见 [ADR 0013](../../architecture/decisions/0013-oauth-google-github.md)。MUST NOT 出现 QQ / LinuxDo 绑定入口。作者主页 MUST 能保存显示名与简介。我的发布 MUST 列出当前账号投稿。下载时保留作者信息接通后 MUST 影响本机副本展示。
 
 #### Scenario: 当前账号接已有登录
 
@@ -147,9 +147,29 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 - THEN 「当前账号」显示该邮箱或已登录态，并可登出
 - AND 不出现 QQ / LinuxDo 绑定入口
 
+#### Scenario: 下载保留作者
+
+- GIVEN 用户打开「下载时保留作者信息」
+- WHEN 下载一条带作者的广场提示词
+- THEN 本地副本展示该作者
+- AND 关闭开关后新下载不展示作者
+
+#### Scenario: 看到我的发布
+
+- GIVEN 用户已登录且有一条 pending 发布
+- WHEN 打开账号与广场页
+- THEN 可见该条标识与状态
+
+#### Scenario: 保存作者资料
+
+- GIVEN 用户已登录
+- WHEN 填写显示名并保存
+- THEN 再次打开仍是该显示名
+- AND 未登录不得写入
+
 ### Requirement: 同步
 
-同步页 MUST 展示原型四行：自动同步收藏与发布草稿、仅在 Wi-Fi 下同步图片、冲突处理、立即同步。云同步引擎未立项前，这些行 MUST 标明尚未提供，MUST NOT 调用后端或写入假的「已同步」。
+同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。未实现前行仍在且不得假装已同步；实现后立即同步 MUST 真正推拉。
 
 #### Scenario: 同步行可见且不假装
 
@@ -219,6 +239,9 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 切换主题 | `desktop/src-tauri` `theme_persists_as_dark` |
 | 外观增加项可见 | `WorkbenchShell.spec.js` shows appearance extras including follow-system theme |
 | 当前账号接已有登录 | `WorkbenchShell.spec.js` shows the current account from the existing login |
+| 下载保留作者 | 未开始（计划 account-surface） |
+| 看到我的发布 | 未开始 |
+| 保存作者资料 | 未开始 |
 | 同步行可见且不假装 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend |
 | 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
