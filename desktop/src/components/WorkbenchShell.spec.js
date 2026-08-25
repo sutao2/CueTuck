@@ -23,6 +23,7 @@ import {
   setLibrarySyncTransport,
 } from "../platform/librarySync.js";
 import { resetUpdates, setUpdateTransport, setInstallTransport } from "../platform/updates.js";
+import { resetBilling, setBillingTransport } from "../platform/billing.js";
 import {
   resetSquare,
   setFavoriteTransport,
@@ -38,6 +39,7 @@ describe("WorkbenchShell", () => {
     resetMemorySession();
     resetLibrarySync();
     resetUpdates();
+    resetBilling();
     resetSquare();
     setSquareTransport(async () => {
       throw new Error("广场暂时不可用");
@@ -802,5 +804,69 @@ describe("WorkbenchShell", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].content).toBe("中文 English");
     expect(rows[0].use_count).toBe(0);
+  });
+
+  it("shows unpaid billing as 支付未开通 and does not open checkout", async () => {
+    const opened = [];
+    vi.stubGlobal("open", (url) => {
+      opened.push(url);
+      return null;
+    });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    setMineTransport(async () => []);
+    setBillingTransport({
+      status: async () => ({ pro: false, payment_enabled: false, note: "支付未开通" }),
+      checkout: async () => ({
+        pro: false,
+        payment_enabled: false,
+        note: "支付未开通",
+        checkout_url: null,
+      }),
+    });
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="account"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="billing-note"]').text()).toContain("支付未开通");
+    expect(w.get('[data-testid="billing-pro"]').text()).toContain("未订阅");
+    await w.get('[data-testid="billing-checkout"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="billing-note"]').text()).toContain("支付未开通");
+    expect(opened).toEqual([]);
+    expect(w.get('[data-testid="settings-modal"]').text()).not.toMatch(/已从商店|已经上架/);
+    vi.unstubAllGlobals();
+  });
+
+  it("opens Stripe checkout only when a test checkout url is returned", async () => {
+    const opened = [];
+    vi.stubGlobal("open", (url) => {
+      opened.push(url);
+      return null;
+    });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    setMineTransport(async () => []);
+    setBillingTransport({
+      status: async () => ({ pro: false, payment_enabled: true, note: "" }),
+      checkout: async () => ({
+        pro: false,
+        payment_enabled: true,
+        note: "",
+        checkout_url: "https://checkout.stripe.com/c/pay/cs_test_preview",
+      }),
+    });
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="account"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="billing-checkout"]').trigger("click");
+    await flushPromises();
+    expect(opened).toEqual(["https://checkout.stripe.com/c/pay/cs_test_preview"]);
+    expect(w.get('[data-testid="billing-pro"]').text()).toContain("未订阅");
+    expect(w.get('[data-testid="settings-modal"]').text()).not.toMatch(/已从商店|已经上架/);
+    vi.unstubAllGlobals();
   });
 });
