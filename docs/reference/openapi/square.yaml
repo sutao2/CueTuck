@@ -63,6 +63,11 @@ paths:
     post:
       operationId: startBillingCheckout
       summary: 仅在 Stripe 测试密钥下给出 Checkout；无密钥说明支付未开通
+  /v1/billing/webhook:
+    post:
+      operationId: receiveBillingWebhook
+      security: []
+      summary: 校验 Stripe 签名后把已完成 Checkout 记成 Pro
   /v1/library/changes:
     get:
       operationId: listLibraryChanges

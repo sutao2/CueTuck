@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定；预发 status、兑换与测试 Checkout 已接通 |
+| 状态 | 已指定；预发 status、兑换、测试 Checkout 与 webhook 入账已接通 |
 | 关联 | [ADR 0014](../../architecture/decisions/0014-full-product.md) |
 
 ## Purpose
@@ -28,6 +28,10 @@
 
 `POST /v1/billing/checkout` MUST 仅在配置了 `sk_test_` 密钥时给出 Checkout 地址。未配置支付密钥时 MUST 说明支付未开通且 MUST NOT 给出结账地址。生产密钥 MUST NOT 在预发启动扣款。Checkout 本身 MUST NOT 把账号写成 Pro。
 
+### Requirement: Checkout 入账
+
+`POST /v1/billing/webhook` MUST 校验 Stripe 签名。`checkout.session.completed` 且 `payment_status` 为 paid、`client_reference_id` 为账号时 MUST 标为 Pro。签名无效或未配置 webhook 密钥时 MUST 失败且 MUST NOT 改状态。
+
 #### Scenario: 兑换成功
 
 - GIVEN 预发生成一条未使用兑换码
@@ -43,6 +47,13 @@
 - AND 不给出结账地址
 - AND 账号仍不是 Pro
 
+#### Scenario: 签名通过才入账
+
+- GIVEN 预发配置了 webhook 密钥
+- WHEN Stripe 送达有效签名的 `checkout.session.completed`
+- THEN 该账号为 Pro
+- AND 无签名或错签名失败且状态不变
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -50,3 +61,4 @@
 | 未开通不得写成 Pro | `backend/tests/billing.rs` unsigned_status_is_not_pro_when_payment_is_unconfigured |
 | 兑换成功 | `backend/tests/billing.rs` valid_redeem_code_marks_account_pro_and_cannot_be_reused |
 | 无测试密钥不得结账 | `backend/tests/billing.rs` checkout_requires_test_secret_and_does_not_mark_pro |
+| 签名通过才入账 | `backend/tests/billing.rs` signed_checkout_webhook_marks_pro_and_rejects_invalid_signatures |

@@ -21,6 +21,7 @@ const REQUIRED = [
   { method: "GET", path: "/v1/billing/status", auth: "user" },
   { method: "POST", path: "/v1/billing/redeem", auth: "user" },
   { method: "POST", path: "/v1/billing/checkout", auth: "user" },
+  { method: "POST", path: "/v1/billing/webhook", auth: "none" },
   { method: "GET", path: "/v1/library/changes", auth: "user" },
   { method: "PUT", path: "/v1/library/changes", auth: "user" },
   { method: "GET", path: "/v1/favorites", auth: "user" },

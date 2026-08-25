@@ -274,3 +274,79 @@ async fn redeem_survives_new_appstate_on_postgres() {
     assert_eq!(payload["pro"], true);
 }
 
+fn stripe_signature(secret: &str, payload: &str, timestamp: i64) -> String {
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).unwrap();
+    mac.update(format!("{timestamp}.{payload}").as_bytes());
+    let digest = mac.finalize().into_bytes();
+    let hex: String = digest.iter().map(|byte| format!("{byte:02x}")).collect();
+    format!("t={timestamp},v1={hex}")
+}
+
+#[tokio::test]
+async fn webhook_survives_new_appstate_on_postgres() {
+    let Some(state) = postgres_state().await else {
+        panic!("expected local Postgres at postgres://pl:pl@127.0.0.1:5432/promptark");
+    };
+    let state = state.with_webhook_secret("whsec_preview");
+    let pg = state.db.as_ref().unwrap();
+    pg.upsert_account("dev@promptark.local", Some("devpass"), "user")
+        .await
+        .unwrap();
+    let payload = serde_json::json!({
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "client_reference_id": "dev@promptark.local",
+                "payment_status": "paid"
+            }
+        }
+    })
+    .to_string();
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    let router = app(state.clone());
+    let session = login_json(&router, "dev@promptark.local", "devpass").await;
+    let accepted = router
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/billing/webhook")
+                .header(header::CONTENT_TYPE, "application/json")
+                .header(
+                    "Stripe-Signature",
+                    stripe_signature("whsec_preview", &payload, timestamp),
+                )
+                .body(Body::from(payload))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(accepted.status(), StatusCode::OK);
+    let fresh = AppState {
+        db: state.db.clone(),
+        ..AppState::default()
+    };
+    let listed = app(fresh)
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/v1/billing/status")
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {}", session.access_token),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(listed.status(), StatusCode::OK);
+    let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+    let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(payload["pro"], true);
+}
+
