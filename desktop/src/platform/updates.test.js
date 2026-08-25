@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkForUpdates,
@@ -6,6 +9,13 @@ import {
   setInstallTransport,
   setUpdateTransport,
 } from "./updates.js";
+
+const tauriVersion = JSON.parse(
+  readFileSync(
+    resolve(dirname(fileURLToPath(import.meta.url)), "../../src-tauri/tauri.conf.json"),
+    "utf8",
+  ),
+).version;
 
 describe("updates", () => {
   beforeEach(() => {
@@ -59,6 +69,18 @@ describe("updates", () => {
     const stable = await checkForUpdates({ channel: "stable" });
     expect(stable.version).toBe("0.1.0");
     expect(stable.notes).toBe("stable notes");
+  });
+
+  it("reports no update when the latest stable tag matches the tauri build", async () => {
+    vi.stubGlobal("fetch", async () => ({
+      ok: true,
+      json: async () => [
+        { tag_name: `v${tauriVersion}`, prerelease: false, body: "same build" },
+      ],
+    }));
+    const result = await checkForUpdates({ channel: "stable" });
+    expect(result.version).toBe(tauriVersion);
+    expect(result.available).toBe(false);
   });
 
   it("does not queue an install when auto-download is off", async () => {

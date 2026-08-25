@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import WorkbenchShell from "./WorkbenchShell.vue";
@@ -32,6 +35,13 @@ import {
   setSquareContentTransport,
   setSquareTransport,
 } from "../platform/square.js";
+
+const tauriVersion = JSON.parse(
+  readFileSync(
+    resolve(dirname(fileURLToPath(import.meta.url)), "../../src-tauri/tauri.conf.json"),
+    "utf8",
+  ),
+).version;
 
 describe("WorkbenchShell", () => {
   beforeEach(() => {
@@ -507,6 +517,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-settings-page="updates"]').trigger("click");
     const panel = w.get('[data-testid="settings-updates"]');
     expect(panel.text()).toContain("当前版本");
+    expect(panel.text()).toContain(`桌面包 ${tauriVersion}`);
     expect(panel.text()).toContain("检查更新");
     expect(panel.text()).toContain("自动下载");
     expect(panel.text()).toContain("更新通道");

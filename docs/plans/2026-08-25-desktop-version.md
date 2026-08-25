@@ -20,11 +20,11 @@
 
 **Files:** `desktop/package.json` · `desktop/package-lock.json` · `desktop/src/components/` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（`package.json` 与 Cargo / `tauri.conf.json` 同号；更新页展示该号；稳定通道 tag 与包版本相同时 `available` 为 false）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 把桌面包版本改成与 Tauri 构建相同**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（`package.json` 与 Cargo / `tauri.conf.json` 同号；更新页展示该号；稳定通道 tag 与包版本相同时 `available` 为 false）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 把桌面包版本改成与 Tauri 构建相同**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 关闭本计划
 
