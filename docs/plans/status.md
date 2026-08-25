@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-24（预发后端接到本机 `promptark` 库） |
+| 更新日期 | 2026-08-25（预发后端已关闭；下一步客户端 OAuth） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,9 +24,10 @@
 
 ## 当前可执行的下一步
 
-1. 当前计划：[2026-08-24-postgres-backend.md](2026-08-24-postgres-backend.md)（Postgres / Argon2 / Google·GitHub / Redis / MinIO）。
-2. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
-3. 启动器仍不请求广场或管理接口。
+1. 当前计划：[2026-08-25-oauth-clients.md](2026-08-25-oauth-clients.md)（登录弹窗接 Google / GitHub；浏览器真正收藏）。
+2. 预发后端已接到本机 `promptark` 库。证据：[done/2026-08-25-postgres-backend.md](done/2026-08-25-postgres-backend.md)。
+3. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
+4. 启动器仍不请求广场或管理接口。
 
 ## 仓库事实
 

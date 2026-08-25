@@ -82,6 +82,21 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 - WHEN 请求回调
 - THEN 返回 Access 与 Refresh
 
+#### Scenario: 登录弹窗列出已配置提供商
+
+- GIVEN `GET /v1/session/oauth/providers` 返回 `google`
+- WHEN 用户打开登录
+- THEN 可见 Google 登录
+- AND 不出现未返回的提供商
+- AND 不出现 QQ / LinuxDo
+
+#### Scenario: 未配置则只留邮箱密码
+
+- GIVEN 提供商列表为空
+- WHEN 用户打开登录
+- THEN 仍可用邮箱密码
+- AND 不出现 Google / GitHub 按钮
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -95,3 +110,5 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 | 进程重启后会话 | `backend` `session_survives_new_appstate_on_postgres` |
 | 已配置则跳转授权 | `backend` `oauth_google_redirects_when_configured` |
 | 回调签发会话 | `backend` `oauth_callback_with_mock_code_issues_session` |
+| 登录弹窗列出已配置提供商 | `WorkbenchShell.spec.js` shows google on login when providers include google |
+| 未配置则只留邮箱密码 | `WorkbenchShell.spec.js` hides oauth buttons when providers empty |

@@ -48,6 +48,19 @@
 - THEN 不出现 Refresh
 - AND 关闭标签后须重新登录
 
+#### Scenario: 管理端列出已配置提供商
+
+- GIVEN `GET /v1/session/oauth/providers` 返回 `google`
+- WHEN 管理员打开登录页
+- THEN 可见 Google 登录
+- AND 不出现 QQ / LinuxDo
+
+#### Scenario: 管理端 OAuth 不写 Refresh
+
+- GIVEN 管理端用 Google 登录成功
+- WHEN 检查 Web Storage
+- THEN 不出现 Refresh
+
 #### Scenario: 查询管理员身份
 
 - GIVEN 调用方持有管理员 Access
@@ -113,6 +126,8 @@
 | 启动器不请求管理 | `LauncherApp.spec.js` does not request admin APIs while searching locally |
 | 普通令牌不能审核 | `backend` `regular_token_cannot_review_publication` |
 | 管理端不持久化 Refresh | `admin-web` `session.test.js` does not persist refresh in web storage |
+| 管理端列出已配置提供商 | `admin-web` `AdminApp.spec.js` shows google on login when providers include google |
+| 管理端 OAuth 不写 Refresh | `admin-web` `session.test.js` does not persist refresh in web storage after oauth |
 | 查询管理员身份 | `backend` `admin_me_returns_email_and_role`、`admin_me_rejects_regular_access` |
 | 列出待审 | `backend` `admin_lists_pending_and_can_approve`；`admin-web` `AdminApp.spec.js` lists pending after login |
 | 通过不改本地 | `backend` `admin_lists_pending_and_can_approve` 将远端标为 approved；本切片不写桌面库 |

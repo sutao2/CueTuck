@@ -78,6 +78,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/m9-web-and-mcp/design.md](changes/m9-web-and-mcp/design.md) | 目标 | 看 M9 怎么落地 | 独立 web/；mcp stdio 读 SQLite |
 | [changes/postgres-backend/proposal.md](changes/postgres-backend/proposal.md) | 现行 | 查预发后端持久化是否已接受 | 已接受；ADR 0012 / 0013 |
 | [changes/postgres-backend/design.md](changes/postgres-backend/design.md) | 目标 | 看预发后端怎么接到本机库 | 独立库 promptark；Argon2；OAuth；MinIO |
+| [changes/oauth-clients/proposal.md](changes/oauth-clients/proposal.md) | 现行 | 查客户端 OAuth 是否已接受 | 已接受；登录弹窗接 Google / GitHub |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
@@ -102,7 +103,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-24-web-edit-prompt.md](plans/2026-08-24-web-edit-prompt.md) | 归档 | 查浏览器内存库编辑怎么做的 | 浏览器内存库编辑 |
 | [plans/2026-08-24-web-use-wizard.md](plans/2026-08-24-web-use-wizard.md) | 归档 | 查浏览器使用向导怎么做的 | 浏览器逐步填写 |
 | [plans/2026-08-24-web-square-preview.md](plans/2026-08-24-web-square-preview.md) | 归档 | 查浏览器接预发广场怎么做的 | 浏览器接预发广场 |
-| [plans/2026-08-24-postgres-backend.md](plans/2026-08-24-postgres-backend.md) | 现行 | 把预发后端接到本机 Postgres | Argon2、OAuth、Redis、MinIO |
+| [plans/2026-08-24-postgres-backend.md](plans/2026-08-24-postgres-backend.md) | 归档 | 查预发后端怎么接到 Postgres | Argon2、OAuth API、Redis、MinIO |
+| [plans/2026-08-25-oauth-clients.md](plans/2026-08-25-oauth-clients.md) | 现行 | 把 Google / GitHub 接到登录弹窗 | 桌面钥匙串；web/admin 不写 Refresh |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问云同步 / 账单 / 商店何时做 | 另立项，无逐步任务 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
@@ -138,6 +140,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-23-m7-contract-gaps.md](plans/done/2026-08-23-m7-contract-gaps.md) | 归档 | 查 M7 是否关闭 | M7 完成证据 |
 | [plans/done/2026-08-23-m8-settings-ia.md](plans/done/2026-08-23-m8-settings-ia.md) | 归档 | 查 M8 是否关闭 | M8 完成证据 |
 | [plans/done/2026-08-24-m9-web-and-mcp.md](plans/done/2026-08-24-m9-web-and-mcp.md) | 归档 | 查 M9 是否关闭 | M9 完成证据 |
+| [plans/done/2026-08-25-postgres-backend.md](plans/done/2026-08-25-postgres-backend.md) | 归档 | 查预发后端是否接到 Postgres | Argon2 与 `promptark` 库 |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |

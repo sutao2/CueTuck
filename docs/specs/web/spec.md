@@ -118,6 +118,32 @@
 - AND 说明仍写尚未与桌面 SQLite 同步
 - AND 不出现「已写入本机 SQLite」
 
+#### Scenario: 未登录收藏不新增内存
+
+- GIVEN 用户未登录
+- WHEN 点收藏
+- THEN 说明需要登录
+- AND 内存库条数不变
+
+#### Scenario: 已登录收藏不新增内存
+
+- GIVEN 用户已登录
+- WHEN 点收藏
+- THEN 不因此新增内存副本
+
+#### Scenario: 浏览器 OAuth 不写 Refresh
+
+- GIVEN 浏览器用 Google 登录成功
+- WHEN 检查 Web Storage
+- THEN 不出现 Refresh
+
+#### Scenario: 浏览器登录列出已配置提供商
+
+- GIVEN `GET /v1/session/oauth/providers` 返回 `google`
+- WHEN 用户因收藏打开登录
+- THEN 可见 Google 登录
+- AND 不出现 QQ / LinuxDo
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -133,3 +159,7 @@
 | 漏填保留占位 | `web/src/renderPrompt.spec.js` keeps unfilled placeholders |
 | 浏览器广场离线 | `web/src/WebApp.spec.js` shows a square offline notice and can return to local |
 | 浏览器匿名下载 | `web/src/WebApp.spec.js` downloads a square prompt into the memory library without claiming sqlite |
+| 未登录收藏不新增内存 | `web/src/WebApp.spec.js` does not add a memory copy when favoriting while signed out |
+| 已登录收藏不新增内存 | `web/src/WebApp.spec.js` favorites on the server without adding a memory copy |
+| 浏览器 OAuth 不写 Refresh | `web/src/WebApp.spec.js` does not write refresh to web storage after oauth |
+| 浏览器登录列出已配置提供商 | `web/src/WebApp.spec.js` shows google on login when providers include google |
