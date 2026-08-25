@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定，尚未实现 |
+| 状态 | 已指定；预发 status 已接通 |
 | 关联 | [ADR 0014](../../architecture/decisions/0014-full-product.md) |
 
 ## Purpose
@@ -37,5 +37,5 @@
 
 | 场景 | 测试 |
 |---|---|
-| 未开通不得写成 Pro | 未开始（计划 preview-billing） |
+| 未开通不得写成 Pro | `backend/tests/billing.rs` unsigned_status_is_not_pro_when_payment_is_unconfigured |
 | 兑换成功 | 未开始 |

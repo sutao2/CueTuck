@@ -21,11 +21,11 @@
 
 **Files:** `backend/src/` · `docs/reference/openapi/` · `docs/specs/billing/spec.md`
 
-- [ ] **Step 1: Write the failing test**（未配置支付密钥时 `GET /v1/billing/status` 的 `pro` 为 false 且说明支付未开通）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 需登录的 status 接口；无密钥不得写成 Pro**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（未配置支付密钥时 `GET /v1/billing/status` 的 `pro` 为 false 且说明支付未开通）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 需登录的 status 接口；无密钥不得写成 Pro**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 兑换码
 

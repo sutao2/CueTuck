@@ -1,6 +1,7 @@
 mod media;
 mod me;
 mod library;
+mod billing;
 mod oauth;
 mod password;
 mod postgres;
@@ -222,6 +223,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/publications", post(create_publication))
         .route("/v1/publications/mine", get(list_my_publications))
         .route("/v1/me", get(me::get_me).put(me::put_me))
+        .route("/v1/billing/status", get(billing::status))
         .route(
             "/v1/library/changes",
             get(library::list_changes).put(library::push_changes),

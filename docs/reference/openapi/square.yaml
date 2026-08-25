@@ -51,6 +51,10 @@ paths:
     put:
       operationId: putMe
       summary: 保存显示名与简介
+  /v1/billing/status:
+    get:
+      operationId: getBillingStatus
+      summary: 当前账号是否 Pro；无支付密钥时说明支付未开通
   /v1/library/changes:
     get:
       operationId: listLibraryChanges
