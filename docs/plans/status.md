@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-25（队首：桌面包版本对齐） |
+| 更新日期 | 2026-08-25（完整产品队列已空；剩余见 deferred） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,8 +24,8 @@
 
 ## 当前可执行的下一步
 
-1. 队首：桌面包版本对齐。计划：[2026-08-25-desktop-version.md](2026-08-25-desktop-version.md)。
-2. 不能诚实做完的项仍在 [deferred.md](deferred.md)。
+1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
+2. 桌面包版本已与 Tauri 构建对齐。证据：[done/2026-08-25-desktop-version.md](done/2026-08-25-desktop-version.md)。
 3. Checkout webhook 入账已关闭。证据：[done/2026-08-25-stripe-webhook.md](done/2026-08-25-stripe-webhook.md)。
 4. 预发账单已关闭。证据：[done/2026-08-25-preview-billing.md](done/2026-08-25-preview-billing.md)。
 5. Windows / Linux 开机启动与托盘已关闭。证据：[done/2026-08-25-win-linux-prefs.md](done/2026-08-25-win-linux-prefs.md)。
