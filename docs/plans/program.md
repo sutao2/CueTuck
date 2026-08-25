@@ -30,8 +30,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 详细逐步任务仍一次只执行**队首**。后一份在 INDEX 标「目标」，队首标「现行」。关闭队首后把下一份改成现行。
 
 ```text
-1–10 已关闭（广场预发缺口 … Windows / Linux 偏好）
-11. 预发账单（现行）
+1–11 已关闭（广场预发缺口 … 预发账单）
 不能诚实做完：deferred.md
 ```
 
@@ -47,7 +46,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 8 已关闭 | [2026-08-25-library-sync.md](2026-08-25-library-sync.md) | 归档 |
 | 9 已关闭 | [2026-08-25-auto-update.md](2026-08-25-auto-update.md) | 归档 |
 | 10 已关闭 | [2026-08-25-win-linux-prefs.md](2026-08-25-win-linux-prefs.md) | 归档 |
-| 现在 | [2026-08-25-preview-billing.md](2026-08-25-preview-billing.md) | 现行 |
+| 11 已关闭 | [2026-08-25-preview-billing.md](2026-08-25-preview-billing.md) | 归档 |
 | 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属

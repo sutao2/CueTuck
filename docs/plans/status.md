@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-25（完整产品队列；队首预发账单） |
+| 更新日期 | 2026-08-25（完整产品队列已空；剩余见 deferred） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,8 +24,8 @@
 
 ## 当前可执行的下一步
 
-1. 当前计划：[2026-08-25-preview-billing.md](2026-08-25-preview-billing.md)（预发账单与兑换）。
-2. 完整产品队列见 [program.md](program.md)。不能诚实做完的项仍在 [deferred.md](deferred.md)。
+1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
+2. 预发账单已关闭。证据：[done/2026-08-25-preview-billing.md](done/2026-08-25-preview-billing.md)。
 3. Windows / Linux 开机启动与托盘已关闭。证据：[done/2026-08-25-win-linux-prefs.md](done/2026-08-25-win-linux-prefs.md)。
 4. 自动更新安装已关闭。证据：[done/2026-08-25-auto-update.md](done/2026-08-25-auto-update.md)。
 5. 个人库云同步已关闭。证据：[done/2026-08-25-library-sync.md](done/2026-08-25-library-sync.md)。

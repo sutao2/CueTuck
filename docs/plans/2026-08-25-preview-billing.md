@@ -41,8 +41,8 @@
 
 **Files:** `backend/src/` · 设置或 web 账单入口 · `docs/specs/billing/spec.md`
 
-- [ ] **Step 1: Write the failing test**（有测试密钥才给出 Checkout；无密钥说明未开通；关闭本计划）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 仅在测试密钥存在时跳转；关闭 done 记录**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（有测试密钥才给出 Checkout；无密钥说明未开通；关闭本计划）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 仅在测试密钥存在时跳转；关闭 done 记录**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**

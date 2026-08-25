@@ -268,3 +268,47 @@ pub async fn list_library_changes(
     }
     response.json().await.map_err(|error| error.to_string())
 }
+
+#[tauri::command]
+pub async fn get_billing_status(access_token: String) -> Result<Value, String> {
+    let response = http_client(true)?
+        .get(format!("{}/v1/billing/status", api_base()))
+        .bearer_auth(&access_token)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("账单暂时不可用".to_string());
+    }
+    response.json().await.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn start_billing_checkout(access_token: String) -> Result<Value, String> {
+    let response = http_client(true)?
+        .post(format!("{}/v1/billing/checkout", api_base()))
+        .bearer_auth(&access_token)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+        return Err("账单需要登录".to_string());
+    }
+    response.json().await.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn redeem_billing_code(access_token: String, code: String) -> Result<Value, String> {
+    let response = http_client(true)?
+        .post(format!("{}/v1/billing/redeem", api_base()))
+        .bearer_auth(&access_token)
+        .json(&serde_json::json!({ "code": code }))
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("兑换失败".to_string());
+    }
+    response.json().await.map_err(|error| error.to_string())
+}
+

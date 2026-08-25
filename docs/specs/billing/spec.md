@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定；预发 status 与兑换已接通 |
+| 状态 | 已指定；预发 status、兑换与测试 Checkout 已接通 |
 | 关联 | [ADR 0014](../../architecture/decisions/0014-full-product.md) |
 
 ## Purpose
@@ -26,6 +26,8 @@
 
 有效兑换码 MUST 把该账号标为 Pro。作废码 MUST 失败且不改状态。预发可用 `PROMPTARK_REDEEM_CODES`（逗号分隔）写入未使用码。
 
+`POST /v1/billing/checkout` MUST 仅在配置了 `sk_test_` 密钥时给出 Checkout 地址。未配置支付密钥时 MUST 说明支付未开通且 MUST NOT 给出结账地址。生产密钥 MUST NOT 在预发启动扣款。Checkout 本身 MUST NOT 把账号写成 Pro。
+
 #### Scenario: 兑换成功
 
 - GIVEN 预发生成一条未使用兑换码
@@ -33,9 +35,18 @@
 - THEN 状态为 Pro
 - AND 再次提交同一码失败
 
+#### Scenario: 无测试密钥不得结账
+
+- GIVEN 预发未配置 Stripe 测试密钥
+- WHEN 已登录用户请求 Checkout
+- THEN 说明支付未开通
+- AND 不给出结账地址
+- AND 账号仍不是 Pro
+
 ## 测试映射
 
 | 场景 | 测试 |
 |---|---|
 | 未开通不得写成 Pro | `backend/tests/billing.rs` unsigned_status_is_not_pro_when_payment_is_unconfigured |
 | 兑换成功 | `backend/tests/billing.rs` valid_redeem_code_marks_account_pro_and_cannot_be_reused |
+| 无测试密钥不得结账 | `backend/tests/billing.rs` checkout_requires_test_secret_and_does_not_mark_pro |

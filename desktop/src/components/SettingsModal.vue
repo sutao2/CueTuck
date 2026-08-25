@@ -105,6 +105,37 @@
                 </ul>
               </span>
             </div>
+            <div class="setting-row">
+              <span class="setting-copy"><strong>账单</strong><small>预发可查状态、兑换码；只有测试密钥才跳转 Checkout。不是公开售卖。</small></span>
+              <span class="setting-control author-profile">
+                <span data-testid="billing-pro">{{ session.loggedIn ? (billingPro ? "Pro" : "未订阅") : "未登录" }}</span>
+                <small v-if="billingNote" data-testid="billing-note">{{ billingNote }}</small>
+                <input
+                  data-testid="billing-redeem-code"
+                  :disabled="!session.loggedIn"
+                  v-model="redeemCode"
+                  placeholder="兑换码"
+                >
+                <button
+                  type="button"
+                  class="button ghost-button"
+                  data-testid="billing-redeem"
+                  :disabled="!session.loggedIn"
+                  @click="runRedeem"
+                >
+                  兑换
+                </button>
+                <button
+                  type="button"
+                  class="button primary-button"
+                  data-testid="billing-checkout"
+                  :disabled="!session.loggedIn"
+                  @click="runCheckout"
+                >
+                  前往支付
+                </button>
+              </span>
+            </div>
             <label class="setting-row">
               <span class="setting-copy"><strong>下载时保留作者信息</strong><small>打开后，新下载的本地副本展示作者，不改正文。</small></span>
               <input
@@ -341,6 +372,11 @@ import pkg from "../../package.json";
 import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/desktopPrefs.js";
 import { listMyPublications } from "../platform/square.js";
 import { getMe, putMe } from "../platform/session.js";
+import {
+  getBillingStatus,
+  redeemBillingCode,
+  startBillingCheckout,
+} from "../platform/billing.js";
 import { syncLocalLibraryNow } from "../platform/librarySync.js";
 import { checkForUpdates, queueUpdateInstall } from "../platform/updates.js";
 
@@ -397,6 +433,9 @@ const variableHints = ref(false);
 const customModels = ref("");
 const keepAuthorOnDownload = ref(false);
 const myPublications = ref([]);
+const billingPro = ref(false);
+const billingNote = ref("");
+const redeemCode = ref("");
 const displayName = ref("");
 const bio = ref("");
 const profileNote = ref("");
@@ -428,13 +467,15 @@ onMounted(async () => {
   autoDownload.value = isPrefOn(await getLocalSetting("auto_download"));
   updateChannel.value = (await getLocalSetting("update_channel")) === "preview" ? "preview" : "stable";
   if (props.session.loggedIn) {
-    const [mine, profile] = await Promise.all([
+    const [mine, profile, billing] = await Promise.all([
       listMyPublications().catch(() => []),
       getMe().catch(() => null),
+      getBillingStatus().catch(() => null),
     ]);
     myPublications.value = mine;
     displayName.value = profile?.display_name ?? profile?.displayName ?? "";
     bio.value = profile?.bio ?? "";
+    applyBilling(billing);
   }
 });
 
@@ -630,6 +671,41 @@ async function saveAuthorProfile() {
     bio.value = saved.bio ?? bio.value;
   } catch (error) {
     profileNote.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+function applyBilling(payload) {
+  billingPro.value = Boolean(payload?.pro);
+  billingNote.value = payload?.note ?? "";
+}
+
+async function runCheckout() {
+  if (!props.session.loggedIn) {
+    emit("login");
+    return;
+  }
+  try {
+    const payload = await startBillingCheckout();
+    applyBilling(payload);
+    const url = payload?.checkout_url;
+    if (typeof url === "string" && url.startsWith("https://checkout.stripe.com/")) {
+      window.open(url, "_blank", "noopener");
+    }
+  } catch (error) {
+    billingNote.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+async function runRedeem() {
+  if (!props.session.loggedIn) {
+    emit("login");
+    return;
+  }
+  try {
+    const payload = await redeemBillingCode(redeemCode.value);
+    applyBilling(payload);
+  } catch (error) {
+    billingNote.value = error instanceof Error ? error.message : String(error);
   }
 }
 

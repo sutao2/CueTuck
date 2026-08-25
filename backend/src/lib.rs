@@ -41,6 +41,8 @@ pub struct AppState {
     library: Arc<Mutex<HashMap<String, HashMap<String, crate::library::LibraryChange>>>>,
     redeem_codes: Arc<Mutex<HashMap<String, Option<String>>>>,
     pro_accounts: Arc<Mutex<HashSet<String>>>,
+    stripe_secret: Option<String>,
+    checkout_url: Option<String>,
 }
 
 impl Default for AppState {
@@ -63,6 +65,8 @@ impl Default for AppState {
             library: Arc::new(Mutex::new(HashMap::new())),
             redeem_codes: Arc::new(Mutex::new(HashMap::new())),
             pro_accounts: Arc::new(Mutex::new(HashSet::new())),
+            stripe_secret: None,
+            checkout_url: None,
         }
     }
 }
@@ -188,6 +192,16 @@ impl AppState {
         self
     }
 
+    pub fn with_stripe_secret(mut self, secret: &str) -> Self {
+        self.stripe_secret = Some(secret.to_string());
+        self
+    }
+
+    pub fn with_checkout_url(mut self, url: &str) -> Self {
+        self.checkout_url = Some(url.to_string());
+        self
+    }
+
     pub fn with_square_items(items: Vec<SquareItem>) -> Self {
         let state = Self::default();
         *state.items.lock().expect("items") = items;
@@ -240,6 +254,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/me", get(me::get_me).put(me::put_me))
         .route("/v1/billing/status", get(billing::status))
         .route("/v1/billing/redeem", post(billing::redeem))
+        .route("/v1/billing/checkout", post(billing::checkout))
         .route(
             "/v1/library/changes",
             get(library::list_changes).put(library::push_changes),

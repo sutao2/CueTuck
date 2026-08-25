@@ -59,6 +59,10 @@ paths:
     post:
       operationId: redeemBillingCode
       summary: 提交兑换码升 Pro；作废码失败且不改状态
+  /v1/billing/checkout:
+    post:
+      operationId: startBillingCheckout
+      summary: 仅在 Stripe 测试密钥下给出 Checkout；无密钥说明支付未开通
   /v1/library/changes:
     get:
       operationId: listLibraryChanges
