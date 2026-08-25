@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-25（完整产品队列已空；剩余见 deferred） |
+| 更新日期 | 2026-08-25（队首：设置冲突策略诚实标明） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,18 +24,19 @@
 
 ## 当前可执行的下一步
 
-1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
-2. 桌面包版本已与 Tauri 构建对齐。证据：[done/2026-08-25-desktop-version.md](done/2026-08-25-desktop-version.md)。
-3. Checkout webhook 入账已关闭。证据：[done/2026-08-25-stripe-webhook.md](done/2026-08-25-stripe-webhook.md)。
-4. 预发账单已关闭。证据：[done/2026-08-25-preview-billing.md](done/2026-08-25-preview-billing.md)。
-5. Windows / Linux 开机启动与托盘已关闭。证据：[done/2026-08-25-win-linux-prefs.md](done/2026-08-25-win-linux-prefs.md)。
-6. 自动更新安装已关闭。证据：[done/2026-08-25-auto-update.md](done/2026-08-25-auto-update.md)。
-7. 个人库云同步已关闭。证据：[done/2026-08-25-library-sync.md](done/2026-08-25-library-sync.md)。
-8. 账号与广场剩余行已关闭。证据：[done/2026-08-25-account-surface.md](done/2026-08-25-account-surface.md)。
-9. 客户端 Google / GitHub 登录已接到桌面、浏览器工作台与管理台。证据：[done/2026-08-25-oauth-clients.md](done/2026-08-25-oauth-clients.md)。
-10. 预发后端已接到本机 `promptark` 库。证据：[done/2026-08-25-postgres-backend.md](done/2026-08-25-postgres-backend.md)。
-11. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
-12. 启动器仍不请求广场或管理接口。
+1. 队首：设置冲突策略诚实标明。计划：[2026-08-25-sync-conflict-copy.md](2026-08-25-sync-conflict-copy.md)。
+2. 不能诚实做完的项仍在 [deferred.md](deferred.md)。
+3. 桌面包版本已与 Tauri 构建对齐。证据：[done/2026-08-25-desktop-version.md](done/2026-08-25-desktop-version.md)。
+4. Checkout webhook 入账已关闭。证据：[done/2026-08-25-stripe-webhook.md](done/2026-08-25-stripe-webhook.md)。
+5. 预发账单已关闭。证据：[done/2026-08-25-preview-billing.md](done/2026-08-25-preview-billing.md)。
+6. Windows / Linux 开机启动与托盘已关闭。证据：[done/2026-08-25-win-linux-prefs.md](done/2026-08-25-win-linux-prefs.md)。
+7. 自动更新安装已关闭。证据：[done/2026-08-25-auto-update.md](done/2026-08-25-auto-update.md)。
+8. 个人库云同步已关闭。证据：[done/2026-08-25-library-sync.md](done/2026-08-25-library-sync.md)。
+9. 账号与广场剩余行已关闭。证据：[done/2026-08-25-account-surface.md](done/2026-08-25-account-surface.md)。
+10. 客户端 Google / GitHub 登录已接到桌面、浏览器工作台与管理台。证据：[done/2026-08-25-oauth-clients.md](done/2026-08-25-oauth-clients.md)。
+11. 预发后端已接到本机 `promptark` 库。证据：[done/2026-08-25-postgres-backend.md](done/2026-08-25-postgres-backend.md)。
+12. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
+13. 启动器仍不请求广场或管理接口。
 
 ## 仓库事实
 

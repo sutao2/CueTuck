@@ -31,6 +31,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 
 ```text
 1–13 已关闭（广场预发缺口 … 桌面包版本）
+14 现行：sync-conflict-copy
 不能诚实做完：deferred.md
 ```
 
@@ -49,6 +50,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 11 已关闭 | [2026-08-25-preview-billing.md](2026-08-25-preview-billing.md) | 归档 |
 | 12 已关闭 | [2026-08-25-stripe-webhook.md](2026-08-25-stripe-webhook.md) | 归档 |
 | 13 已关闭 | [2026-08-25-desktop-version.md](2026-08-25-desktop-version.md) | 归档 |
+| 14 现行 | [2026-08-25-sync-conflict-copy.md](2026-08-25-sync-conflict-copy.md) | 现行 |
 | 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
@@ -76,6 +78,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 预发账单 | 完整产品 | [billing](../specs/billing/spec.md) | [2026-08-25-preview-billing.md](2026-08-25-preview-billing.md) |
 | Checkout 入账 | 完整产品 | [billing](../specs/billing/spec.md) | [2026-08-25-stripe-webhook.md](2026-08-25-stripe-webhook.md) |
 | 桌面包版本 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-25-desktop-version.md](2026-08-25-desktop-version.md) |
+| 冲突策略文案 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-25-sync-conflict-copy.md](2026-08-25-sync-conflict-copy.md) |
 
 ## 通用完成定义（每个里程碑都要满足）
 
