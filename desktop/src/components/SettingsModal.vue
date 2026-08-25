@@ -67,8 +67,31 @@
               <button v-else type="button" class="button ghost-button" data-testid="settings-logout" @click="$emit('logout')">退出</button>
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>作者主页</strong><small>资料编辑尚未提供，不会假装已保存。</small></span>
-              <span class="setting-control">尚未提供</span>
+              <span class="setting-copy"><strong>作者主页</strong><small>已登录可保存显示名与简介。</small></span>
+              <span class="setting-control author-profile">
+                <input
+                  data-testid="author-display-name"
+                  :disabled="!session.loggedIn"
+                  v-model="displayName"
+                  placeholder="显示名"
+                >
+                <textarea
+                  data-testid="author-bio"
+                  :disabled="!session.loggedIn"
+                  v-model="bio"
+                  placeholder="简介"
+                ></textarea>
+                <button
+                  type="button"
+                  class="button primary-button"
+                  data-testid="save-author-profile"
+                  :disabled="!session.loggedIn"
+                  @click="saveAuthorProfile"
+                >
+                  保存
+                </button>
+                <small v-if="profileNote" data-testid="author-profile-note">{{ profileNote }}</small>
+              </span>
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>我的发布</strong><small>当前账号提交到广场的审核状态。</small></span>
@@ -308,6 +331,7 @@ import { DEFAULT_LAUNCHER_SHORTCUT, DEFAULT_NEW_PROMPT_SHORTCUT, DEFAULT_PASTE_R
 import pkg from "../../package.json";
 import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/desktopPrefs.js";
 import { listMyPublications } from "../platform/square.js";
+import { getMe, putMe } from "../platform/session.js";
 
 const props = defineProps({
   theme: { type: String, default: "light" },
@@ -359,6 +383,9 @@ const variableHints = ref(false);
 const customModels = ref("");
 const keepAuthorOnDownload = ref(false);
 const myPublications = ref([]);
+const displayName = ref("");
+const bio = ref("");
+const profileNote = ref("");
 
 onMounted(async () => {
   const stored = await getLocalSetting("launcher_shortcut");
@@ -385,11 +412,13 @@ onMounted(async () => {
   customModels.value = (await getLocalSetting("custom_models")) || "";
   keepAuthorOnDownload.value = isPrefOn(await getLocalSetting("keep_author_on_download"));
   if (props.session.loggedIn) {
-    try {
-      myPublications.value = await listMyPublications();
-    } catch {
-      myPublications.value = [];
-    }
+    const [mine, profile] = await Promise.all([
+      listMyPublications().catch(() => []),
+      getMe().catch(() => null),
+    ]);
+    myPublications.value = mine;
+    displayName.value = profile?.display_name ?? profile?.displayName ?? "";
+    bio.value = profile?.bio ?? "";
   }
 });
 
@@ -521,6 +550,21 @@ async function toggleSquareAccess(event) {
 async function toggleKeepAuthorOnDownload(event) {
   keepAuthorOnDownload.value = event.target.checked;
   await setLocalSetting("keep_author_on_download", keepAuthorOnDownload.value ? "1" : "0");
+}
+
+async function saveAuthorProfile() {
+  profileNote.value = "";
+  if (!props.session.loggedIn) {
+    profileNote.value = "未登录不得写入";
+    return;
+  }
+  try {
+    const saved = await putMe({ displayName: displayName.value, bio: bio.value });
+    displayName.value = saved.display_name ?? saved.displayName ?? displayName.value;
+    bio.value = saved.bio ?? bio.value;
+  } catch (error) {
+    profileNote.value = error instanceof Error ? error.message : String(error);
+  }
 }
 
 async function saveUiLanguage(value) {

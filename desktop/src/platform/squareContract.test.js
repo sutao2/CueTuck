@@ -16,6 +16,8 @@ const REQUIRED = [
   { method: "POST", path: "/v1/session", auth: "none" },
   { method: "DELETE", path: "/v1/session", auth: "user" },
   { method: "POST", path: "/v1/session/refresh", auth: "none" },
+  { method: "GET", path: "/v1/me", auth: "user" },
+  { method: "PUT", path: "/v1/me", auth: "user" },
   { method: "GET", path: "/v1/favorites", auth: "user" },
   { method: "PUT", path: "/v1/favorites/{id}", auth: "user" },
   { method: "DELETE", path: "/v1/favorites/{id}", auth: "user" },

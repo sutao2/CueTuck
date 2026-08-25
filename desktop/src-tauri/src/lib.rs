@@ -62,6 +62,8 @@ pub fn run() {
             commands::session::list_oauth_providers,
             commands::session::logout_local_session,
             commands::session::refresh_local_session,
+            commands::session::get_me,
+            commands::session::put_me,
             commands::square::list_square_items,
             commands::square::download_square_item,
             commands::square::create_publication,

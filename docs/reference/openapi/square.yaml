@@ -44,6 +44,13 @@ paths:
       operationId: refreshSession
       security: []
       summary: 用 Refresh 轮换 Access 与 Refresh；旧对失效
+  /v1/me:
+    get:
+      operationId: getMe
+      summary: 当前账号显示名与简介
+    put:
+      operationId: putMe
+      summary: 保存显示名与简介
   /v1/favorites:
     get:
       operationId: listFavorites

@@ -318,6 +318,52 @@ impl AppState {
             .collect())
     }
 
+    pub(crate) async fn get_profile(&self, email: &str) -> Result<crate::me::MeProfile, StatusCode> {
+        if let Some(pg) = &self.db {
+            return pg.get_profile(email).await;
+        }
+        let stored = self
+            .profiles
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .get(email)
+            .cloned();
+        Ok(match stored {
+            Some((display_name, bio)) => crate::me::MeProfile {
+                email: email.into(),
+                display_name,
+                bio,
+            },
+            None => crate::me::MeProfile {
+                email: email.into(),
+                display_name: None,
+                bio: None,
+            },
+        })
+    }
+
+    pub(crate) async fn put_profile(
+        &self,
+        email: &str,
+        display_name: Option<String>,
+        bio: Option<String>,
+    ) -> Result<crate::me::MeProfile, StatusCode> {
+        if let Some(pg) = &self.db {
+            return pg
+                .put_profile(email, display_name.as_deref(), bio.as_deref())
+                .await;
+        }
+        self.profiles
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .insert(email.to_string(), (display_name.clone(), bio.clone()));
+        Ok(crate::me::MeProfile {
+            email: email.into(),
+            display_name,
+            bio,
+        })
+    }
+
     pub(crate) async fn set_publication_status(
         &self,
         id: &str,

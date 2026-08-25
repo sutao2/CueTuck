@@ -14,7 +14,9 @@ import {
   resetMemorySession,
   setSessionTransport,
   setOAuthProviderList,
+  setMeTransport,
   loginSession,
+  logoutSession,
 } from "../platform/session.js";
 import {
   resetSquare,
@@ -637,6 +639,56 @@ describe("WorkbenchShell", () => {
     expect(mine.text()).toContain("新稿");
     expect(mine.text()).toContain("pending");
     expect(w.text()).not.toMatch(/QQ|LinuxDo|Google/);
+  });
+
+  it("saves author display name after login and refuses when signed out", async () => {
+    const stored = { display_name: "", bio: "" };
+    const puts = [];
+    setMeTransport({
+      get: async () => ({
+        email: "dev@promptark.local",
+        display_name: stored.display_name,
+        bio: stored.bio,
+      }),
+      put: async (body) => {
+        puts.push(body);
+        stored.display_name = body.display_name;
+        stored.bio = body.bio;
+        return { email: "dev@promptark.local", ...stored };
+      },
+    });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    setMineTransport(async () => []);
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    let w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="account"]').trigger("click");
+    await w.get('[data-testid="author-display-name"]').setValue("林晚");
+    await w.get('[data-testid="save-author-profile"]').trigger("click");
+    await flushPromises();
+    expect(puts[0].display_name).toBe("林晚");
+    w.unmount();
+
+    w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="account"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="author-display-name"]').element.value).toBe("林晚");
+    expect(w.text()).not.toMatch(/QQ|LinuxDo|Google/);
+    w.unmount();
+
+    await logoutSession();
+    puts.length = 0;
+    w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="account"]').trigger("click");
+    expect(w.get('[data-testid="save-author-profile"]').element.disabled).toBe(true);
+    await w.get('[data-testid="save-author-profile"]').trigger("click");
+    await flushPromises();
+    expect(puts).toHaveLength(0);
   });
 
   it("does not request square when access is off", async () => {

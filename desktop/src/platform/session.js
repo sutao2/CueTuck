@@ -1,6 +1,7 @@
 let accessToken = null;
 let accountEmail = null;
 let testTransport = null;
+let testMeTransport = null;
 let oauthProviderList = [];
 
 function isTauri() {
@@ -27,6 +28,7 @@ export function resetMemorySession() {
   accessToken = null;
   accountEmail = null;
   testTransport = null;
+  testMeTransport = null;
   oauthProviderList = [];
   if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
 }
@@ -37,6 +39,10 @@ export function setOAuthProviderList(items) {
 
 export function setSessionTransport(transport) {
   testTransport = transport;
+}
+
+export function setMeTransport(transport) {
+  testMeTransport = transport;
 }
 
 export function getSession() {
@@ -156,4 +162,30 @@ export async function logoutSession() {
       /* 本地已清会话 */
     }
   }
+}
+
+export async function getMe() {
+  if (testMeTransport?.get) return testMeTransport.get();
+  const token = accessToken;
+  if (!token) throw new Error("查看资料需要登录");
+  if (isTauri()) {
+    return tauriInvoke("get_me", { access_token: token });
+  }
+  throw new Error("查看资料需要登录");
+}
+
+export async function putMe({ displayName = "", bio = "" } = {}) {
+  if (testMeTransport?.put) {
+    return testMeTransport.put({ display_name: displayName, bio });
+  }
+  const token = accessToken;
+  if (!token) throw new Error("保存资料需要登录");
+  if (isTauri()) {
+    return tauriInvoke("put_me", {
+      access_token: token,
+      display_name: displayName,
+      bio,
+    });
+  }
+  throw new Error("保存资料需要登录");
 }

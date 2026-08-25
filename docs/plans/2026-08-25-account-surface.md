@@ -41,8 +41,8 @@
 
 **Files:** `backend/src/` · `desktop/src/components/SettingsModal.vue`
 
-- [ ] **Step 1: Write the failing test**（登录后保存显示名，再打开仍在；未登录不能保存）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: `GET/PUT /v1/me` 显示名与简介**
-- [ ] **Step 4: 测试 PASS；关闭本计划 done 记录**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（登录后保存显示名，再打开仍在；未登录不能保存）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: `GET/PUT /v1/me` 显示名与简介**
+- [x] **Step 4: 测试 PASS；关闭本计划 done 记录**
+- [x] **Step 5: `./scripts/docs-check` 并提交**

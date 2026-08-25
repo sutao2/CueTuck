@@ -199,3 +199,36 @@ pub async fn refresh_local_session() -> Result<SessionView, String> {
     let pair: TokenPair = response.json().await.map_err(|error| error.to_string())?;
     persist_pair(pair)
 }
+
+#[tauri::command]
+pub async fn get_me(access_token: String) -> Result<Value, String> {
+    let response = http_client(true)?
+        .get(format!("{}/v1/me", api_base()))
+        .bearer_auth(&access_token)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("查看资料失败".to_string());
+    }
+    response.json().await.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn put_me(
+    access_token: String,
+    display_name: Option<String>,
+    bio: Option<String>,
+) -> Result<Value, String> {
+    let response = http_client(true)?
+        .put(format!("{}/v1/me", api_base()))
+        .bearer_auth(&access_token)
+        .json(&serde_json::json!({ "display_name": display_name, "bio": bio }))
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("保存资料失败".to_string());
+    }
+    response.json().await.map_err(|error| error.to_string())
+}

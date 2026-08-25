@@ -1,4 +1,5 @@
 mod media;
+mod me;
 mod oauth;
 mod password;
 mod postgres;
@@ -34,6 +35,7 @@ pub struct AppState {
     pub oauth: OAuthSettings,
     pub media: Option<media::MediaConfig>,
     oauth_flows: Arc<Mutex<HashMap<String, String>>>,
+    profiles: Arc<Mutex<HashMap<String, (Option<String>, Option<String>)>>>,
 }
 
 impl Default for AppState {
@@ -52,6 +54,7 @@ impl Default for AppState {
             oauth: OAuthSettings::default(),
             media: None,
             oauth_flows: Arc::new(Mutex::new(HashMap::new())),
+            profiles: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -215,6 +218,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/square/items/:id", get(get_square_item))
         .route("/v1/publications", post(create_publication))
         .route("/v1/publications/mine", get(list_my_publications))
+        .route("/v1/me", get(me::get_me).put(me::put_me))
         .route("/v1/favorites", get(list_favorites))
         .route("/v1/favorites/:id", put(put_favorite).delete(delete_favorite))
         .route("/v1/admin/me", get(get_admin_me))

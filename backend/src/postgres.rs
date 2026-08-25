@@ -56,7 +56,9 @@ impl Pg {
                 "CREATE TABLE IF NOT EXISTS {} (
                   email TEXT PRIMARY KEY,
                   password_hash TEXT,
-                  role TEXT NOT NULL DEFAULT 'user'
+                  role TEXT NOT NULL DEFAULT 'user',
+                  display_name TEXT,
+                  bio TEXT
                 )",
                 self.t("accounts")
             ),
@@ -150,6 +152,18 @@ impl Pg {
         ))
         .execute(&self.pool)
         .await?;
+        sqlx::query(&format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS display_name TEXT",
+            self.t("accounts")
+        ))
+        .execute(&self.pool)
+        .await?;
+        sqlx::query(&format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS bio TEXT",
+            self.t("accounts")
+        ))
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -175,6 +189,51 @@ impl Pg {
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         Ok(())
+    }
+
+    pub async fn get_profile(&self, email: &str) -> Result<crate::me::MeProfile, StatusCode> {
+        let row = sqlx::query(&format!(
+            "SELECT email, display_name, bio FROM {} WHERE email = $1",
+            self.t("accounts")
+        ))
+        .bind(email)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(match row {
+            Some(row) => crate::me::MeProfile {
+                email: row.get("email"),
+                display_name: row.get("display_name"),
+                bio: row.get("bio"),
+            },
+            None => crate::me::MeProfile {
+                email: email.into(),
+                display_name: None,
+                bio: None,
+            },
+        })
+    }
+
+    pub async fn put_profile(
+        &self,
+        email: &str,
+        display_name: Option<&str>,
+        bio: Option<&str>,
+    ) -> Result<crate::me::MeProfile, StatusCode> {
+        sqlx::query(&format!(
+            "INSERT INTO {} (email, role, display_name, bio) VALUES ($1, 'user', $2, $3)
+             ON CONFLICT (email) DO UPDATE SET
+               display_name = EXCLUDED.display_name,
+               bio = EXCLUDED.bio",
+            self.t("accounts")
+        ))
+        .bind(email)
+        .bind(display_name)
+        .bind(bio)
+        .execute(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        self.get_profile(email).await
     }
 
     pub async fn verify_login(&self, email: &str, password: &str) -> Result<(), StatusCode> {

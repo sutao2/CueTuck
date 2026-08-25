@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-25（完整产品队列；队首账号与广场剩余行） |
+| 更新日期 | 2026-08-25（完整产品队列；队首个人库云同步） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,12 +24,13 @@
 
 ## 当前可执行的下一步
 
-1. 当前计划：[2026-08-25-account-surface.md](2026-08-25-account-surface.md)（作者主页、我的发布、下载保留作者）。
+1. 当前计划：[2026-08-25-library-sync.md](2026-08-25-library-sync.md)（登录后推拉账号库）。
 2. 完整产品队列见 [program.md](program.md)。不能诚实做完的项仍在 [deferred.md](deferred.md)。
-3. 客户端 Google / GitHub 登录已接到桌面、浏览器工作台与管理台。证据：[done/2026-08-25-oauth-clients.md](done/2026-08-25-oauth-clients.md)。
-4. 预发后端已接到本机 `promptark` 库。证据：[done/2026-08-25-postgres-backend.md](done/2026-08-25-postgres-backend.md)。
-5. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
-6. 启动器仍不请求广场或管理接口。
+3. 账号与广场剩余行已关闭。证据：[done/2026-08-25-account-surface.md](done/2026-08-25-account-surface.md)。
+4. 客户端 Google / GitHub 登录已接到桌面、浏览器工作台与管理台。证据：[done/2026-08-25-oauth-clients.md](done/2026-08-25-oauth-clients.md)。
+5. 预发后端已接到本机 `promptark` 库。证据：[done/2026-08-25-postgres-backend.md](done/2026-08-25-postgres-backend.md)。
+6. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
+7. 启动器仍不请求广场或管理接口。
 
 ## 仓库事实
 

@@ -2,7 +2,9 @@
 CREATE TABLE IF NOT EXISTS accounts (
   email TEXT PRIMARY KEY,
   password_hash TEXT,
-  role TEXT NOT NULL DEFAULT 'user'
+  role TEXT NOT NULL DEFAULT 'user',
+  display_name TEXT,
+  bio TEXT
 );
 
 CREATE TABLE IF NOT EXISTS oauth_accounts (
