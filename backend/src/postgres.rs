@@ -45,6 +45,7 @@ impl Pg {
                 "square_items",
                 "settings",
                 "library_changes",
+                "redeem_codes",
                 "accounts",
             ] {
                 sqlx::query(&format!("DROP TABLE IF EXISTS {} CASCADE", self.t(table)))
@@ -59,7 +60,8 @@ impl Pg {
                   password_hash TEXT,
                   role TEXT NOT NULL DEFAULT 'user',
                   display_name TEXT,
-                  bio TEXT
+                  bio TEXT,
+                  pro BOOLEAN NOT NULL DEFAULT FALSE
                 )",
                 self.t("accounts")
             ),
@@ -156,6 +158,14 @@ impl Pg {
                 self.t("library_changes"),
                 self.t("accounts")
             ),
+            format!(
+                "CREATE TABLE IF NOT EXISTS {} (
+                  code TEXT PRIMARY KEY,
+                  used_by TEXT REFERENCES {}(email) ON DELETE SET NULL
+                )",
+                self.t("redeem_codes"),
+                self.t("accounts")
+            ),
         ];
         for sql in statements {
             sqlx::query(&sql).execute(&self.pool).await?;
@@ -174,6 +184,12 @@ impl Pg {
         .await?;
         sqlx::query(&format!(
             "ALTER TABLE {} ADD COLUMN IF NOT EXISTS bio TEXT",
+            self.t("accounts")
+        ))
+        .execute(&self.pool)
+        .await?;
+        sqlx::query(&format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS pro BOOLEAN NOT NULL DEFAULT FALSE",
             self.t("accounts")
         ))
         .execute(&self.pool)
@@ -731,5 +747,73 @@ impl Pg {
 
     pub async fn ping(&self) -> bool {
         sqlx::query("SELECT 1").fetch_one(&self.pool).await.is_ok()
+    }
+
+    pub async fn seed_unused_redeem_code(&self, code: &str) -> Result<(), StatusCode> {
+        sqlx::query(&format!(
+            "INSERT INTO {} (code) VALUES ($1) ON CONFLICT (code) DO NOTHING",
+            self.t("redeem_codes")
+        ))
+        .bind(code)
+        .execute(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(())
+    }
+
+    pub async fn account_is_pro(&self, email: &str) -> Result<bool, StatusCode> {
+        let row = sqlx::query(&format!(
+            "SELECT pro FROM {} WHERE email = $1",
+            self.t("accounts")
+        ))
+        .bind(email)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(row.map(|row| row.get::<bool, _>("pro")).unwrap_or(false))
+    }
+
+    pub async fn redeem_code(&self, email: &str, code: &str) -> Result<(), StatusCode> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let updated = sqlx::query(&format!(
+            "UPDATE {} SET used_by = $2 WHERE code = $1 AND used_by IS NULL",
+            self.t("redeem_codes")
+        ))
+        .bind(code)
+        .bind(email)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if updated.rows_affected() == 1 {
+            sqlx::query(&format!(
+                "UPDATE {} SET pro = TRUE WHERE email = $1",
+                self.t("accounts")
+            ))
+            .bind(email)
+            .execute(&mut *tx)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            tx.commit()
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            return Ok(());
+        }
+        let _ = tx.rollback().await;
+        let row = sqlx::query(&format!(
+            "SELECT used_by FROM {} WHERE code = $1",
+            self.t("redeem_codes")
+        ))
+        .bind(code)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        match row {
+            None => Err(StatusCode::NOT_FOUND),
+            Some(_) => Err(StatusCode::CONFLICT),
+        }
     }
 }

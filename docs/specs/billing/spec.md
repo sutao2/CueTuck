@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定；预发 status 已接通 |
+| 状态 | 已指定；预发 status 与兑换已接通 |
 | 关联 | [ADR 0014](../../architecture/decisions/0014-full-product.md) |
 
 ## Purpose
@@ -24,7 +24,7 @@
 
 ### Requirement: 兑换
 
-有效兑换码 MUST 把该账号标为 Pro。作废码 MUST 失败且不改状态。
+有效兑换码 MUST 把该账号标为 Pro。作废码 MUST 失败且不改状态。预发可用 `PROMPTARK_REDEEM_CODES`（逗号分隔）写入未使用码。
 
 #### Scenario: 兑换成功
 
@@ -38,4 +38,4 @@
 | 场景 | 测试 |
 |---|---|
 | 未开通不得写成 Pro | `backend/tests/billing.rs` unsigned_status_is_not_pro_when_payment_is_unconfigured |
-| 兑换成功 | 未开始 |
+| 兑换成功 | `backend/tests/billing.rs` valid_redeem_code_marks_account_pro_and_cannot_be_reused |

@@ -221,3 +221,56 @@ async fn login_json(router: &Router, email: &str, password: &str) -> SessionResp
     let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
     serde_json::from_slice(&body).unwrap()
 }
+
+#[tokio::test]
+async fn redeem_survives_new_appstate_on_postgres() {
+    let Some(state) = postgres_state().await else {
+        panic!("expected local Postgres at postgres://pl:pl@127.0.0.1:5432/promptark");
+    };
+    let pg = state.db.as_ref().unwrap();
+    pg.upsert_account("dev@promptark.local", Some("devpass"), "user")
+        .await
+        .unwrap();
+    pg.seed_unused_redeem_code("PREVIEW-PRO").await.unwrap();
+    let router = app(state.clone());
+    let session = login_json(&router, "dev@promptark.local", "devpass").await;
+    let redeemed = router
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/billing/redeem")
+                .header(header::CONTENT_TYPE, "application/json")
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {}", session.access_token),
+                )
+                .body(Body::from(r#"{"code":"PREVIEW-PRO"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(redeemed.status(), StatusCode::OK);
+    let fresh = AppState {
+        db: state.db.clone(),
+        ..AppState::default()
+    };
+    let listed = app(fresh)
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/v1/billing/status")
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {}", session.access_token),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(listed.status(), StatusCode::OK);
+    let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+    let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(payload["pro"], true);
+}
+

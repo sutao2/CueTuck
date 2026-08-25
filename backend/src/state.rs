@@ -57,6 +57,16 @@ impl AppState {
                     .await
                     .map_err(|_| "seed square".to_string())?;
             }
+            if let Ok(raw) = std::env::var("PROMPTARK_REDEEM_CODES") {
+                for code in raw.split(',') {
+                    let code = code.trim();
+                    if !code.is_empty() {
+                        pg.seed_unused_redeem_code(code)
+                            .await
+                            .map_err(|_| "seed redeem".to_string())?;
+                    }
+                }
+            }
         }
         Ok(state)
     }
@@ -412,6 +422,44 @@ impl AppState {
             }
         }
         self.list_library_changes(email, "").await
+    }
+
+    pub(crate) async fn account_is_pro(&self, email: &str) -> Result<bool, StatusCode> {
+        if let Some(pg) = &self.db {
+            return pg.account_is_pro(email).await;
+        }
+        Ok(self
+            .pro_accounts
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .contains(email))
+    }
+
+    pub(crate) async fn redeem_code(&self, email: &str, code: &str) -> Result<(), StatusCode> {
+        let code = code.trim();
+        if code.is_empty() {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+        if let Some(pg) = &self.db {
+            return pg.redeem_code(email, code).await;
+        }
+        let mut codes = self
+            .redeem_codes
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        match codes.get(code).cloned() {
+            None => Err(StatusCode::NOT_FOUND),
+            Some(Some(_)) => Err(StatusCode::CONFLICT),
+            Some(None) => {
+                codes.insert(code.to_string(), Some(email.to_string()));
+                drop(codes);
+                self.pro_accounts
+                    .lock()
+                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+                    .insert(email.to_string());
+                Ok(())
+            }
+        }
     }
 
     pub(crate) async fn set_publication_status(
