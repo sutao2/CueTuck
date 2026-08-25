@@ -20,11 +20,11 @@
 
 **Files:** `desktop/src/components/` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（冲突处理行含较新者胜，该行不含尚未提供）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 改冲突行文案；同步规格场景与测试映射**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（冲突处理行含较新者胜，该行不含尚未提供）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 改冲突行文案；同步规格场景与测试映射**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 关闭本计划
 

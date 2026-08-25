@@ -33,10 +33,10 @@ M2 已落地且 MUST 保留：常规入口、启动器全局快捷键、JSON 导
 
 #### Scenario: 未实现页
 
-- GIVEN 云同步尚未提供
+- GIVEN 自动同步收藏与仅 Wi-Fi 同步图片尚未提供
 - WHEN 用户打开「同步」
-- THEN 页面说明尚未提供云同步
-- AND 不调用后端
+- THEN 这两行标明尚未提供
+- AND 启动器与 MCP 仍只读本机 SQLite
 
 ### Requirement: 导航十类
 
@@ -169,7 +169,7 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 
 ### Requirement: 同步
 
-同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。立即同步在已登录时 MUST 推拉账号库；未登录时 MUST 打开已有登录且 MUST NOT 出现已同步。自动同步收藏、仅 Wi-Fi 同步图片在未实现前 MUST 标明尚未提供。
+同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。立即同步在已登录时 MUST 推拉账号库；未登录时 MUST 打开已有登录且 MUST NOT 出现已同步。冲突处理 MUST 标明较新者胜，MUST NOT 写成尚未提供，MUST NOT 假装用户已能选择保留本地。自动同步收藏、仅 Wi-Fi 同步图片在未实现前 MUST 标明尚未提供。
 
 #### Scenario: 同步行可见且不假装
 
@@ -179,6 +179,13 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 - AND 打开登录
 - AND 不出现已同步
 - AND 不调用同步接口
+
+#### Scenario: 冲突处理标明较新者胜
+
+- GIVEN 立即同步已接通且默认较新 `updated_at`
+- WHEN 用户打开同步页
+- THEN 冲突处理行标明较新者胜
+- AND 该行不标明尚未提供
 
 ### Requirement: AI 与模型
 
@@ -246,7 +253,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 场景 | 测试 |
 |---|---|
 | 打开设置 | `WorkbenchShell.spec.js` opens settings from the sidebar |
-| 未实现页 | 同上，打开「同步」见 `settings-unavailable` |
+| 未实现页 | 同上，打开「同步」见自动同步收藏与仅 Wi-Fi 仍标明尚未提供 |
 | 十类都在 | `WorkbenchShell.spec.js` lists ten settings categories |
 | 缺少的页不得消失 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |
 | 开机启动 | `desktopPrefs.test.js` persists launch at login on macos / windows / linux；`WorkbenchShell.spec.js` saves launch at login on macos / windows without claiming nsis / linux without claiming release qa；`windowChrome.test.js` treats Linux as linux |
@@ -262,6 +269,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 看到我的发布 | `WorkbenchShell.spec.js` lists my pending publications on the account page；`backend` `lists_own_publications_and_hides_other_accounts` |
 | 保存作者资料 | `WorkbenchShell.spec.js` saves author display name after login and refuses when signed out；`backend` `saves_display_name_for_signed_in_user_and_rejects_anonymous` |
 | 同步行可见且不假装 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend |
+| 冲突处理标明较新者胜 | `WorkbenchShell.spec.js` labels conflict handling as newer-wins instead of unavailable |
 | 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
 | 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |

@@ -589,6 +589,16 @@ describe("WorkbenchShell", () => {
     vi.unstubAllGlobals();
   });
 
+  it("labels conflict handling as newer-wins instead of unavailable", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="sync"]').trigger("click");
+    const row = w.get('[data-testid="sync-conflict"]');
+    expect(row.text()).toContain("冲突处理");
+    expect(row.text()).toContain("较新者胜");
+    expect(row.text()).not.toContain("尚未提供");
+  });
+
   it("pushes the local library to the account when signed in and syncing now", async () => {
     const account = [];
     setMineTransport(async () => []);
