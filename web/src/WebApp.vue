@@ -95,11 +95,35 @@
           </p>
           <button v-if="squareOffline" type="button" class="primary-button" data-testid="go-local" @click="openLocal">前往本地</button>
           <p v-if="favoriteNote" data-testid="favorite-note">{{ favoriteNote }}</p>
+          <section v-if="loginOpen" data-testid="login-modal" class="editor">
+            <label>
+              <span>邮箱</span>
+              <input v-model="loginEmail" type="email" data-testid="login-email" autocomplete="username">
+            </label>
+            <label>
+              <span>密码</span>
+              <input v-model="loginPassword" type="password" data-testid="login-password" autocomplete="current-password">
+            </label>
+            <p v-if="loginError" data-testid="login-error">{{ loginError }}</p>
+            <button type="button" class="primary-button" data-testid="login-submit" :disabled="loginBusy" @click="submitLogin">
+              登录
+            </button>
+            <button
+              v-for="name in oauthProviders"
+              :key="name"
+              type="button"
+              :data-testid="`oauth-${name}`"
+              :disabled="loginBusy"
+              @click="submitOAuth(name)"
+            >
+              {{ name === "google" ? "Google 登录" : "GitHub 登录" }}
+            </button>
+          </section>
           <ul v-if="!squareOffline && squareItems.length" data-testid="square-list" class="prompt-list">
             <li v-for="item in squareItems" :key="item.id">
               <span>{{ item.title }}</span>
               <button type="button" data-testid="square-download" @click="downloadItem(item.id)">下载</button>
-              <button type="button" data-testid="square-favorite" @click="favoriteNeedLogin">收藏</button>
+              <button type="button" data-testid="square-favorite" @click="favoriteItem(item.id)">收藏</button>
             </li>
           </ul>
           <p v-else-if="!squareOffline" class="empty">广场仍走本仓库预发 API。未开后端时列表为空。</p>
@@ -113,7 +137,13 @@
 import { computed, onMounted, ref } from "vue";
 import { createLocalPrompt, getLocalPrompt, listLocalPrompts, updateLocalPrompt } from "./memoryLibrary.js";
 import { extractVariables, renderPrompt } from "./renderPrompt.js";
-import { downloadSquareItem, listSquareItems } from "./square.js";
+import { downloadSquareItem, listSquareItems, putFavorite } from "./square.js";
+import {
+  getSession,
+  listOAuthProviders,
+  loginOAuthSession,
+  loginSession,
+} from "./session.js";
 
 const sidebarCollapsed = ref(false);
 const space = ref("local");
@@ -132,6 +162,14 @@ const draftVar = ref("");
 const squareItems = ref([]);
 const squareOffline = ref(false);
 const favoriteNote = ref("");
+const loginOpen = ref(false);
+const loginEmail = ref("");
+const loginPassword = ref("");
+const loginError = ref("");
+const loginBusy = ref(false);
+const oauthProviders = ref([]);
+const pendingFavorite = ref("");
+let loginAbort = new AbortController();
 
 function reload() {
   prompts.value = listLocalPrompts();
@@ -216,6 +254,7 @@ function openLocal() {
 async function openSquare() {
   space.value = "square";
   favoriteNote.value = "";
+  loginOpen.value = false;
   squareOffline.value = false;
   try {
     squareItems.value = await listSquareItems();
@@ -231,8 +270,67 @@ async function downloadItem(id) {
   space.value = "local";
 }
 
-function favoriteNeedLogin() {
-  favoriteNote.value = "收藏需要登录";
+async function favoriteItem(id) {
+  if (!getSession().loggedIn) {
+    favoriteNote.value = "收藏需要登录";
+    pendingFavorite.value = id;
+    loginOpen.value = true;
+    loginError.value = "";
+    await loadProviders();
+    return;
+  }
+  try {
+    await putFavorite(id, getSession().accessToken);
+    favoriteNote.value = "已收藏";
+  } catch {
+    favoriteNote.value = "收藏失败";
+  }
+}
+
+async function loadProviders() {
+  try {
+    const payload = await listOAuthProviders();
+    oauthProviders.value = (payload.items ?? []).filter(
+      (name) => name === "google" || name === "github",
+    );
+  } catch {
+    oauthProviders.value = [];
+  }
+}
+
+async function afterLogin() {
+  loginOpen.value = false;
+  loginBusy.value = false;
+  const id = pendingFavorite.value;
+  pendingFavorite.value = "";
+  if (id) await favoriteItem(id);
+}
+
+async function submitLogin() {
+  if (loginBusy.value) return;
+  loginError.value = "";
+  try {
+    await loginSession({ email: loginEmail.value, password: loginPassword.value });
+    await afterLogin();
+  } catch (caught) {
+    loginError.value = caught instanceof Error ? caught.message : String(caught);
+  }
+}
+
+async function submitOAuth(provider) {
+  if (loginBusy.value) return;
+  loginError.value = "";
+  loginBusy.value = true;
+  loginAbort.abort();
+  loginAbort = new AbortController();
+  try {
+    await loginOAuthSession(provider, { signal: loginAbort.signal });
+    await afterLogin();
+  } catch (caught) {
+    if (loginAbort.signal.aborted) return;
+    loginError.value = caught instanceof Error ? caught.message : String(caught);
+    loginBusy.value = false;
+  }
 }
 
 onMounted(reload);

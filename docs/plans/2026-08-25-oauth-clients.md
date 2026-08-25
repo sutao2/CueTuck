@@ -31,11 +31,11 @@
 
 **Files:** `web/src/` · `docs/specs/web/spec.md`
 
-- [ ] **Step 1: Write the failing test**（未登录收藏仍不新增内存条；登录后收藏不新增内存条；Refresh 不进 Web Storage；有 google 时显示按钮）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 内存会话；OAuth 轮询；`PUT /v1/favorites/{id}`**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（未登录收藏仍不新增内存条；登录后收藏不新增内存条；Refresh 不进 Web Storage；有 google 时显示按钮）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 内存会话；OAuth 轮询；`PUT /v1/favorites/{id}`**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 3: 管理台 OAuth 按钮
 

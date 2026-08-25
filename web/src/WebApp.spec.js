@@ -1,13 +1,24 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resetMemoryLibrary } from "./memoryLibrary.js";
-import { resetSquare, setSquareContentTransport, setSquareTransport } from "./square.js";
+import { listLocalPrompts, resetMemoryLibrary } from "./memoryLibrary.js";
+import { resetSquare, setSquareContentTransport, setSquareTransport, setFavoriteTransport } from "./square.js";
+import {
+  loginOAuthSession,
+  loginSession,
+  resetMemorySession,
+  setOAuthProviderList,
+  setSessionTransport,
+} from "./session.js";
 import WebApp from "./WebApp.vue";
 
 describe("WebApp", () => {
   beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
     resetMemoryLibrary();
+    resetMemorySession();
     resetSquare();
+    setOAuthProviderList([]);
   });
 
   it("keeps local space when the sidebar is collapsed", async () => {
@@ -126,5 +137,67 @@ describe("WebApp", () => {
     expect(w.get('[data-testid="prompt-list"]').text()).toContain("自然光群像");
     expect(w.get('[data-testid="library-note"]').text()).toContain("尚未与桌面");
     expect(w.text()).not.toContain("已写入本机 SQLite");
+  });
+
+  it("does not add a memory copy when favoriting while signed out", async () => {
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    const w = mount(WebApp);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    expect(listLocalPrompts()).toHaveLength(0);
+    await w.get('[data-testid="square-favorite"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="favorite-note"]').text()).toContain("收藏需要登录");
+    expect(listLocalPrompts()).toHaveLength(0);
+  });
+
+  it("favorites on the server without adding a memory copy", async () => {
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    setSessionTransport(async () => ({
+      access_token: "acc.web",
+      refresh_token: "ref.web",
+      email: "dev@promptark.local",
+    }));
+    const favoriteCalls = [];
+    setFavoriteTransport(async (request) => {
+      favoriteCalls.push(request);
+      return { id: request.id };
+    });
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WebApp);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="square-favorite"]').trigger("click");
+    await flushPromises();
+    expect(favoriteCalls.some((call) => call.method === "PUT" && call.id === "sq-1")).toBe(true);
+    expect(listLocalPrompts()).toHaveLength(0);
+  });
+
+  it("does not write refresh to web storage after oauth", async () => {
+    localStorage.setItem("refresh_token", "leaked");
+    setSessionTransport(async () => ({
+      access_token: "acc.oauth",
+      refresh_token: "ref.oauth",
+      email: "oauth@promptark.local",
+    }));
+    const session = await loginOAuthSession("google");
+    expect(session.accessToken).toBe("acc.oauth");
+    expect(localStorage.getItem("refresh_token")).toBeNull();
+    expect(sessionStorage.getItem("refresh_token")).toBeNull();
+    expect(JSON.stringify(session)).not.toContain("ref.");
+  });
+
+  it("shows google on login when providers include google", async () => {
+    setOAuthProviderList(["google"]);
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    const w = mount(WebApp);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="square-favorite"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="oauth-google"]').text()).toContain("Google");
+    expect(w.find('[data-testid="oauth-github"]').exists()).toBe(false);
+    expect(w.get('[data-testid="login-email"]').exists()).toBe(true);
+    expect(w.text()).not.toMatch(/QQ|LinuxDo/);
   });
 });
