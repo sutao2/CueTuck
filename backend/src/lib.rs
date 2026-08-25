@@ -39,6 +39,8 @@ pub struct AppState {
     oauth_flows: Arc<Mutex<HashMap<String, String>>>,
     profiles: Arc<Mutex<HashMap<String, (Option<String>, Option<String>)>>>,
     library: Arc<Mutex<HashMap<String, HashMap<String, crate::library::LibraryChange>>>>,
+    redeem_codes: Arc<Mutex<HashMap<String, Option<String>>>>,
+    pro_accounts: Arc<Mutex<HashSet<String>>>,
 }
 
 impl Default for AppState {
@@ -59,6 +61,8 @@ impl Default for AppState {
             oauth_flows: Arc::new(Mutex::new(HashMap::new())),
             profiles: Arc::new(Mutex::new(HashMap::new())),
             library: Arc::new(Mutex::new(HashMap::new())),
+            redeem_codes: Arc::new(Mutex::new(HashMap::new())),
+            pro_accounts: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 }
@@ -173,6 +177,17 @@ impl AppState {
         state
     }
 
+    pub fn with_redeem_code(self, code: &str) -> Self {
+        let trimmed = code.trim();
+        if !trimmed.is_empty() {
+            self.redeem_codes
+                .lock()
+                .expect("redeem_codes")
+                .insert(trimmed.to_string(), None);
+        }
+        self
+    }
+
     pub fn with_square_items(items: Vec<SquareItem>) -> Self {
         let state = Self::default();
         *state.items.lock().expect("items") = items;
@@ -224,6 +239,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/publications/mine", get(list_my_publications))
         .route("/v1/me", get(me::get_me).put(me::put_me))
         .route("/v1/billing/status", get(billing::status))
+        .route("/v1/billing/redeem", post(billing::redeem))
         .route(
             "/v1/library/changes",
             get(library::list_changes).put(library::push_changes),
