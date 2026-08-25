@@ -1,4 +1,4 @@
-use crate::local_database::{import_downloaded_prompt_in_dir, PromptRecord};
+use crate::local_database::{get_setting_in_dir, import_downloaded_prompt_in_dir, PromptRecord};
 use serde::Deserialize;
 use tauri::{AppHandle, Manager};
 
@@ -12,6 +12,8 @@ struct SquareContentResponse {
     id: String,
     title: String,
     content: String,
+    #[serde(default)]
+    author: Option<String>,
 }
 
 fn api_base() -> String {
@@ -55,11 +57,25 @@ pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRe
         return Err("广场暂时不可用".to_string());
     }
     let payload: SquareContentResponse = response.json().await.map_err(|error| error.to_string())?;
+    let dir = data_dir(&app)?;
+    let keep = get_setting_in_dir(&dir, "keep_author_on_download")
+        .map(|value| value == "1")
+        .unwrap_or(false);
+    let author = if keep {
+        payload
+            .author
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+    } else {
+        None
+    };
     import_downloaded_prompt_in_dir(
-        &data_dir(&app)?,
+        &dir,
         &payload.title,
         &payload.content,
         Some(&payload.id),
+        author,
     )
 }
 

@@ -74,10 +74,15 @@
               <span class="setting-copy"><strong>我的发布</strong><small>远端发布列表尚未提供。</small></span>
               <span class="setting-control">尚未提供</span>
             </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>下载时保留作者信息</strong><small>本机开关，未接通前只展示该行。</small></span>
-              <span class="setting-control">尚未接通</span>
-            </div>
+            <label class="setting-row">
+              <span class="setting-copy"><strong>下载时保留作者信息</strong><small>打开后，新下载的本地副本展示作者，不改正文。</small></span>
+              <input
+                type="checkbox"
+                data-testid="keep-author-on-download"
+                :checked="keepAuthorOnDownload"
+                @change="toggleKeepAuthorOnDownload"
+              >
+            </label>
           </section>
           <section v-else-if="current === 'shortcuts'">
             <h3>快捷键</h3>
@@ -343,6 +348,7 @@ const modelCatalog = ref("");
 const showModelTags = ref(true);
 const variableHints = ref(false);
 const customModels = ref("");
+const keepAuthorOnDownload = ref(false);
 
 onMounted(async () => {
   const stored = await getLocalSetting("launcher_shortcut");
@@ -367,6 +373,7 @@ onMounted(async () => {
   showModelTags.value = isPrefOn(await getLocalSetting("show_model_tags"), true);
   variableHints.value = isPrefOn(await getLocalSetting("variable_hints"));
   customModels.value = (await getLocalSetting("custom_models")) || "";
+  keepAuthorOnDownload.value = isPrefOn(await getLocalSetting("keep_author_on_download"));
 });
 
 async function togglePref(key, event) {
@@ -492,6 +499,11 @@ async function toggleAutoBackup(event) {
 async function toggleSquareAccess(event) {
   squareAccess.value = event.target.checked;
   await setLocalSetting("square_access", squareAccess.value ? "1" : "0");
+}
+
+async function toggleKeepAuthorOnDownload(event) {
+  keepAuthorOnDownload.value = event.target.checked;
+  await setLocalSetting("keep_author_on_download", keepAuthorOnDownload.value ? "1" : "0");
 }
 
 async function saveUiLanguage(value) {

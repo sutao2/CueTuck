@@ -420,6 +420,11 @@
   background: var(--surface);
 }
 .prompt-card h3 { margin: 13px 0 7px; font: 600 17px/1.3 var(--font-display); }
+.prompt-author {
+  margin: -2px 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
 .prompt-excerpt {
   margin: 0;
   display: -webkit-box;

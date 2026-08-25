@@ -21,7 +21,8 @@
 | collection_id | 所属合集，可空 |
 | model | 适用模型标签，本地可空 |
 | source | `local` / `downloaded` |
-| remote_id | 后期用，第一期空 |
+| author | 展示用作者；下载时按 `keep_author_on_download` 写入，不改正文 |
+| remote_id | 广场来源 id；本机新建为空 |
 | version | 本地版本号 |
 | use_count | 使用次数 |
 | last_used_at | 最近使用 |

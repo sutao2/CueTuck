@@ -13,6 +13,8 @@ pub struct PromptRecord {
     pub collection_id: Option<String>,
     pub use_count: i64,
     pub source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
 }
 
 fn open_db(dir: &Path) -> Result<Connection, String> {
@@ -27,25 +29,28 @@ fn now_iso() -> String {
         .unwrap_or_else(|_| "0".to_string())
 }
 
+pub(crate) fn map_prompt_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<PromptRecord> {
+    Ok(PromptRecord {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        summary: row.get(2)?,
+        content: row.get(3)?,
+        category_id: row.get(4)?,
+        collection_id: row.get(5)?,
+        use_count: row.get(6)?,
+        source: row.get(7)?,
+        author: row.get(8)?,
+    })
+}
+
 fn read_prompt(connection: &Connection, id: &str) -> Result<PromptRecord, String> {
     connection
         .query_row(
             "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0),
-                    COALESCE(source, 'local')
+                    COALESCE(source, 'local'), author
              FROM prompts WHERE id = ?1",
             [id],
-            |row| {
-                Ok(PromptRecord {
-                    id: row.get(0)?,
-                    title: row.get(1)?,
-                    summary: row.get(2)?,
-                    content: row.get(3)?,
-                    category_id: row.get(4)?,
-                    collection_id: row.get(5)?,
-                    use_count: row.get(6)?,
-                    source: row.get(7)?,
-                })
-            },
+            map_prompt_row,
         )
         .map_err(|error| error.to_string())
 }
@@ -79,6 +84,7 @@ pub fn import_downloaded_prompt_in_dir(
     title: &str,
     content: &str,
     remote_id: Option<&str>,
+    author: Option<&str>,
 ) -> Result<PromptRecord, String> {
     let title = title.trim();
     if title.is_empty() {
@@ -86,13 +92,14 @@ pub fn import_downloaded_prompt_in_dir(
     }
     let now = now_iso();
     let id = Uuid::new_v4().to_string();
+    let author = author.map(str::trim).filter(|value| !value.is_empty());
     let connection = open_db(dir)?;
     connection
         .execute(
             "INSERT INTO prompts (
-                id, title, summary, content, category_id, source, remote_id, version, use_count, created_at, updated_at
-            ) VALUES (?1, ?2, NULL, ?3, NULL, 'downloaded', ?4, 1, 0, ?5, ?5)",
-            rusqlite::params![id, title, content, remote_id, now],
+                id, title, summary, content, category_id, source, remote_id, version, use_count, created_at, updated_at, author
+            ) VALUES (?1, ?2, NULL, ?3, NULL, 'downloaded', ?4, 1, 0, ?5, ?5, ?6)",
+            rusqlite::params![id, title, content, remote_id, now, author],
         )
         .map_err(|error| error.to_string())?;
     read_prompt(&connection, &id)
@@ -185,7 +192,7 @@ pub fn list_prompts_in_dir(
     let mut statement = connection
         .prepare(
             "SELECT p.id, p.title, p.summary, p.content, p.category_id, p.collection_id, COALESCE(p.use_count, 0),
-                    COALESCE(p.source, 'local')
+                    COALESCE(p.source, 'local'), p.author
              FROM prompts p
              LEFT JOIN categories c ON c.id = p.category_id
              LEFT JOIN categories parent ON parent.id = c.parent_id
@@ -200,18 +207,7 @@ pub fn list_prompts_in_dir(
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map(rusqlite::params![query.trim(), pattern, category_id], |row| {
-            Ok(PromptRecord {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                summary: row.get(2)?,
-                content: row.get(3)?,
-                category_id: row.get(4)?,
-                collection_id: row.get(5)?,
-                use_count: row.get(6)?,
-                source: row.get(7)?,
-            })
-        })
+        .query_map(rusqlite::params![query.trim(), pattern, category_id], map_prompt_row)
         .map_err(|error| error.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;

@@ -123,12 +123,21 @@ export async function createLocalPrompt({ title, content, categoryId = null, sou
   return row;
 }
 
-export async function importDownloadedPrompt({ title, content, remoteId = null } = {}) {
+async function authorForDownload(author) {
+  const keep = (await getLocalSetting("keep_author_on_download")) === "1";
+  if (!keep) return null;
+  const value = String(author ?? "").trim();
+  return value || null;
+}
+
+export async function importDownloadedPrompt({ title, content, remoteId = null, author = null } = {}) {
+  const keptAuthor = await authorForDownload(author);
   if (isTauri()) {
     return tauriInvoke("import_downloaded_prompt", {
       title,
       content,
       remote_id: remoteId,
+      author: keptAuthor,
     });
   }
   const row = {
@@ -141,6 +150,7 @@ export async function importDownloadedPrompt({ title, content, remoteId = null }
     use_count: 0,
     source: "downloaded",
     remote_id: remoteId,
+    author: keptAuthor,
   };
   memoryPrompts.unshift(row);
   return row;

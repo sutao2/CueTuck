@@ -135,7 +135,8 @@ pub fn initialize_in_dir(dir: &Path) -> Result<String, String> {
                 last_used_at TEXT,
                 created_at TEXT,
                 updated_at TEXT,
-                deleted_at TEXT
+                deleted_at TEXT,
+                author TEXT
             );
             ",
         )
@@ -158,6 +159,7 @@ fn ensure_prompt_columns(connection: &Connection) -> Result<(), String> {
         ("last_used_at", "TEXT"),
         ("created_at", "TEXT"),
         ("updated_at", "TEXT"),
+        ("author", "TEXT"),
     ];
     for (name, ddl) in needed {
         if !existing.iter().any(|column| column == name) {

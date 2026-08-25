@@ -21,11 +21,11 @@
 
 **Files:** `desktop/src/components/SettingsModal.vue` · `desktop/src/platform/library.js` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（开关打开时下载副本含作者；关闭时新下载不含）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 本机键 `keep_author_on_download`；下载写入展示用作者字段，不改正文**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（开关打开时下载副本含作者；关闭时新下载不含）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 本机键 `keep_author_on_download`；下载写入展示用作者字段，不改正文**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 我的发布
 

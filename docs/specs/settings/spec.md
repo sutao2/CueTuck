@@ -239,7 +239,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 切换主题 | `desktop/src-tauri` `theme_persists_as_dark` |
 | 外观增加项可见 | `WorkbenchShell.spec.js` shows appearance extras including follow-system theme |
 | 当前账号接已有登录 | `WorkbenchShell.spec.js` shows the current account from the existing login |
-| 下载保留作者 | 未开始（计划 account-surface） |
+| 下载保留作者 | `WorkbenchShell.spec.js` keeps author on download when the setting is on；`square.test.js` copies author onto the local row only when keep_author_on_download is on；`desktop/src-tauri` `keeps_author_on_downloaded_prompt_without_rewriting_content` |
 | 看到我的发布 | 未开始 |
 | 保存作者资料 | 未开始 |
 | 同步行可见且不假装 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend |

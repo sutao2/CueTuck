@@ -157,25 +157,14 @@ pub fn list_collection_members_in_dir(
     let mut statement = connection
         .prepare(
             "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0),
-                    COALESCE(source, 'local')
+                    COALESCE(source, 'local'), author
              FROM prompts
              WHERE deleted_at IS NULL AND collection_id = ?1
              ORDER BY title",
         )
         .map_err(|error| error.to_string())?;
     let rows = statement
-        .query_map([collection_id], |row| {
-            Ok(PromptRecord {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                summary: row.get(2)?,
-                content: row.get(3)?,
-                category_id: row.get(4)?,
-                collection_id: row.get(5)?,
-                use_count: row.get(6)?,
-                source: row.get(7)?,
-            })
-        })
+        .query_map([collection_id], super::prompts::map_prompt_row)
         .map_err(|error| error.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;

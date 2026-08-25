@@ -257,6 +257,7 @@
                 <span class="type-badge">{{ item.kind === "collection" ? "合集" : space === "square" ? "广场" : "本地" }}</span>
               </div>
               <h3>{{ item.title }}</h3>
+              <p v-if="item.author" class="prompt-author" data-testid="prompt-author">{{ item.author }}</p>
               <p class="prompt-excerpt">
                 {{
                   item.kind === "collection"

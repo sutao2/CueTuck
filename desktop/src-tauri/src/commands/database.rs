@@ -51,8 +51,15 @@ pub fn import_downloaded_prompt(
     title: String,
     content: String,
     remote_id: Option<String>,
+    author: Option<String>,
 ) -> Result<PromptRecord, String> {
-    import_downloaded_prompt_in_dir(&data_dir(&app)?, &title, &content, remote_id.as_deref())
+    import_downloaded_prompt_in_dir(
+        &data_dir(&app)?,
+        &title,
+        &content,
+        remote_id.as_deref(),
+        author.as_deref(),
+    )
 }
 
 #[tauri::command]

@@ -81,6 +81,7 @@ export async function downloadSquareItem(id) {
     title: payload.title,
     content: payload.content ?? "",
     remoteId: payload.id ?? id,
+    author: payload.author,
   });
 }
 

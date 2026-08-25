@@ -61,11 +61,37 @@ async fn creates_prompt_and_lists_it() {
 async fn imports_downloaded_prompt_with_source() {
     let dir = tempfile::tempdir().unwrap();
     initialize_in_dir(dir.path()).unwrap();
-    let created = import_downloaded_prompt_in_dir(dir.path(), "自然光群像", "正文", Some("sq-1")).unwrap();
+    let created = import_downloaded_prompt_in_dir(dir.path(), "自然光群像", "正文", Some("sq-1"), None).unwrap();
     assert_eq!(created.source, "downloaded");
     let rows = list_prompts_in_dir(dir.path(), "自然光群像", None).unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].source, "downloaded");
+}
+
+#[tokio::test]
+async fn keeps_author_on_downloaded_prompt_without_rewriting_content() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let created = import_downloaded_prompt_in_dir(
+        dir.path(),
+        "自然光群像",
+        "清透蓝天下的多元人物群像。",
+        Some("sq-1"),
+        Some("林晚"),
+    )
+    .unwrap();
+    assert_eq!(created.author.as_deref(), Some("林晚"));
+    assert_eq!(created.content, "清透蓝天下的多元人物群像。");
+    let skipped = import_downloaded_prompt_in_dir(
+        dir.path(),
+        "夜景街拍",
+        "潮湿路面的霓虹倒影。",
+        Some("sq-2"),
+        None,
+    )
+    .unwrap();
+    assert_eq!(skipped.author, None);
+    assert_eq!(skipped.content, "潮湿路面的霓虹倒影。");
 }
 
 #[tokio::test]

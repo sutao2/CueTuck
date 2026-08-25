@@ -203,6 +203,66 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="library-view"]').text()).toContain("自然光群像");
   });
 
+  it("keeps author on download when the setting is on", async () => {
+    setSquareTransport(async () => [
+      { id: "sq-keep", title: "自然光群像", kind: "prompt", author: "林晚" },
+    ]);
+    setSquareContentTransport(async (id) => ({
+      id,
+      title: "自然光群像",
+      content: "清透蓝天下的多元人物群像。",
+      author: "林晚",
+    }));
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="account"]').trigger("click");
+    await w.get('[data-testid="keep-author-on-download"]').setValue(true);
+    await flushPromises();
+    expect(await getLocalSetting("keep_author_on_download")).toBe("1");
+    await w.get(".modal-close").trigger("click");
+
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="download-square"]').trigger("click");
+    await flushPromises();
+    const kept = await listLocalPrompts({ query: "自然光群像" });
+    expect(kept[0].author).toBe("林晚");
+    expect(kept[0].content).toBe("清透蓝天下的多元人物群像。");
+    await w.get('[data-space="local"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="library-view"]').text()).toContain("林晚");
+
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="account"]').trigger("click");
+    await w.get('[data-testid="keep-author-on-download"]').setValue(false);
+    await flushPromises();
+    expect(await getLocalSetting("keep_author_on_download")).toBe("0");
+    await w.get(".modal-close").trigger("click");
+
+    setSquareTransport(async () => [
+      { id: "sq-plain", title: "夜景街拍", kind: "prompt", author: "林晚" },
+    ]);
+    setSquareContentTransport(async (id) => ({
+      id,
+      title: "夜景街拍",
+      content: "潮湿路面的霓虹倒影。",
+      author: "林晚",
+    }));
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="download-square"]').trigger("click");
+    await flushPromises();
+    const skipped = await listLocalPrompts({ query: "夜景街拍" });
+    expect(skipped[0].author).toBeFalsy();
+    expect(skipped[0].content).toBe("潮湿路面的霓虹倒影。");
+    await w.get('[data-space="local"]').trigger("click");
+    await flushPromises();
+    const nightCard = w.findAll(".prompt-card").find((card) => card.text().includes("夜景街拍"));
+    expect(nightCard.text()).not.toContain("林晚");
+  });
+
   it("opens login from favorite without writing a local copy", async () => {
     setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
     const w = mount(WorkbenchShell);
