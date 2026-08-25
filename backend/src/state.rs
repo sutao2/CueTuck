@@ -402,6 +402,12 @@ impl AppState {
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let account = map.entry(email.to_string()).or_default();
             for item in items {
+                let keep_existing = account
+                    .get(&item.id)
+                    .is_some_and(|existing| existing.updated_at.as_str() >= item.updated_at.as_str());
+                if keep_existing {
+                    continue;
+                }
                 account.insert(item.id.clone(), item);
             }
         }

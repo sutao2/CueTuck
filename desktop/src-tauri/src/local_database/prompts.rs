@@ -118,19 +118,31 @@ pub fn upsert_synced_prompt_in_dir(
         return Err("标题不能为空".to_string());
     }
     let connection = open_db(dir)?;
-    let exists = connection
-        .query_row("SELECT id FROM prompts WHERE id = ?1", [id], |row| {
-            row.get::<_, String>(0)
-        })
-        .ok();
-    if exists.is_some() {
-        return read_prompt(&connection, id);
-    }
     let stamp = if updated_at.trim().is_empty() {
         now_iso()
     } else {
         updated_at.to_string()
     };
+    let local_updated: Option<String> = connection
+        .query_row(
+            "SELECT COALESCE(updated_at, '0') FROM prompts WHERE id = ?1",
+            [id],
+            |row| row.get(0),
+        )
+        .ok();
+    if let Some(local_updated) = local_updated {
+        if stamp.as_str() <= local_updated.as_str() {
+            return read_prompt(&connection, id);
+        }
+        connection
+            .execute(
+                "UPDATE prompts SET title = ?1, content = ?2, category_id = ?3, updated_at = ?4
+                 WHERE id = ?5",
+                rusqlite::params![title, content, category_id, stamp, id],
+            )
+            .map_err(|error| error.to_string())?;
+        return read_prompt(&connection, id);
+    }
     connection
         .execute(
             "INSERT INTO prompts (

@@ -288,13 +288,14 @@ impl Pg {
         for item in items {
             let payload = serde_json::to_string(&item.payload).unwrap_or_else(|_| "{}".into());
             sqlx::query(&format!(
-                "INSERT INTO {} (owner_email, id, kind, payload, updated_at, deleted_at)
+                "INSERT INTO {0} (owner_email, id, kind, payload, updated_at, deleted_at)
                  VALUES ($1,$2,$3,$4,$5,$6)
                  ON CONFLICT (owner_email, id) DO UPDATE SET
                    kind = EXCLUDED.kind,
                    payload = EXCLUDED.payload,
                    updated_at = EXCLUDED.updated_at,
-                   deleted_at = EXCLUDED.deleted_at",
+                   deleted_at = EXCLUDED.deleted_at
+                 WHERE {0}.updated_at < EXCLUDED.updated_at",
                 self.t("library_changes")
             ))
             .bind(email)

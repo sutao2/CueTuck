@@ -6,7 +6,7 @@
 | [status.md](status.md) | 问现在做到哪 |
 | [milestones/](milestones/m0.md) | 问某里程碑进出标准 |
 | [modules/](modules/README.md) | 问某能力完成时必须为真 |
-| `YYYY-MM-DD-*.md` | 真正动手实现（当前：[2026-08-25-library-sync.md](2026-08-25-library-sync.md)） |
+| `YYYY-MM-DD-*.md` | 真正动手实现（当前：[2026-08-25-auto-update.md](2026-08-25-auto-update.md)） |
 | [done/](done/README.md) | 做完后写证据，禁止预填 |
 
 ## 规则

@@ -144,7 +144,16 @@ export async function insertSyncedLocalPrompt({
     });
   }
   const existing = memoryPrompts.find((item) => item.id === promptId);
-  if (existing) return existing;
+  if (existing) {
+    if (!(String(updatedAt ?? "") > String(existing.updated_at ?? "0"))) {
+      return existing;
+    }
+    existing.title = heading;
+    existing.content = content ?? "";
+    existing.category_id = categoryId;
+    existing.updated_at = String(updatedAt ?? "0");
+    return existing;
+  }
   const row = {
     id: promptId,
     title: heading,

@@ -42,8 +42,8 @@
 
 **Files:** `backend/src/` · `web/src/` · `docs/specs/sync/spec.md`
 
-- [ ] **Step 1: Write the failing test**（远端较新则本机正文为远端；浏览器登录后可见同一标题且不出现「已写入本机 SQLite」）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 默认 `updated_at` 较新者胜；浏览器已登录读写账号库**
-- [ ] **Step 4: 测试 PASS；关闭本计划 done 记录**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（远端较新则本机正文为远端；浏览器登录后可见同一标题且不出现「已写入本机 SQLite」）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 默认 `updated_at` 较新者胜；浏览器已登录读写账号库**
+- [x] **Step 4: 测试 PASS；关闭本计划 done 记录**
+- [x] **Step 5: `./scripts/docs-check` 并提交**

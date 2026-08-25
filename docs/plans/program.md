@@ -30,9 +30,8 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 详细逐步任务仍一次只执行**队首**。后一份在 INDEX 标「目标」，队首标「现行」。关闭队首后把下一份改成现行。
 
 ```text
-1–7 已关闭（广场预发缺口 … 账号与广场剩余行）
-8. 个人库云同步（现行）
-9. 自动更新安装
+1–8 已关闭（广场预发缺口 … 个人库云同步）
+9. 自动更新安装（现行）
 10. Windows / Linux 开机启动与托盘
 11. 预发账单
 不能诚实做完：deferred.md
@@ -47,7 +46,8 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 5 已关闭 | [2026-08-24-postgres-backend.md](2026-08-24-postgres-backend.md) | 归档 |
 | 6 已关闭 | [2026-08-25-oauth-clients.md](2026-08-25-oauth-clients.md) | 归档 |
 | 7 已关闭 | [2026-08-25-account-surface.md](2026-08-25-account-surface.md) | 归档 |
-| 现在 | [2026-08-25-library-sync.md](2026-08-25-library-sync.md) | 现行 |
+| 8 已关闭 | [2026-08-25-library-sync.md](2026-08-25-library-sync.md) | 归档 |
+| 现在 | [2026-08-25-auto-update.md](2026-08-25-auto-update.md) | 现行 |
 | 之后 | [2026-08-25-auto-update.md](2026-08-25-auto-update.md) | 目标 |
 | 之后 | [2026-08-25-win-linux-prefs.md](2026-08-25-win-linux-prefs.md) | 目标 |
 | 之后 | [2026-08-25-preview-billing.md](2026-08-25-preview-billing.md) | 目标 |

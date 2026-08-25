@@ -34,13 +34,13 @@
 
 ### Requirement: 不假装本机库已同步
 
-浏览器工作台 MUST NOT 声称正在读写桌面那份 SQLite。云同步未接通前，浏览器库与桌面库可以不同。
+浏览器工作台 MUST NOT 声称正在读写桌面那份 SQLite。已登录后读写账号库，仍 MUST NOT 出现「已写入本机 SQLite」。
 
 #### Scenario: 不声称已同步
 
-- GIVEN 云同步尚未提供
-- WHEN 用户在浏览器工作台查看数据说明
-- THEN 不出现「已与桌面库同步」或等价假状态
+- GIVEN 用户打开浏览器工作台
+- WHEN 用户查看数据说明
+- THEN 不出现「已与桌面库同步」或「已写入本机 SQLite」
 
 ### Requirement: 标签页内存库
 
@@ -151,6 +151,7 @@
 | 桌面包不含 Web 工作台 | `desktop/src/platform/packageIsolation.test.js` does not depend on or bundle web workbench |
 | 窄桌面可收起侧栏 | `web/src/WebApp.spec.js` keeps local space when the sidebar is collapsed |
 | 不声称已同步 | `web/src/WebApp.spec.js` does not claim the browser library is synced to desktop sqlite |
+| 浏览器登录后同一标题 | `web/src/WebApp.spec.js` shows the account library title after login without claiming sqlite |
 | 新建出现在列表 | `web/src/WebApp.spec.js` creates a memory prompt and lists it without claiming desktop sync |
 | 点开看到正文 | `web/src/WebApp.spec.js` opens a memory prompt and shows its body |
 | 编辑后列表更新 | `web/src/WebApp.spec.js` updates a memory prompt title in the list after edit |

@@ -9,6 +9,7 @@ import {
   setOAuthProviderList,
   setSessionTransport,
 } from "./session.js";
+import { resetAccountLibrary, setAccountLibraryTransport } from "./accountLibrary.js";
 import WebApp from "./WebApp.vue";
 
 describe("WebApp", () => {
@@ -17,6 +18,7 @@ describe("WebApp", () => {
     sessionStorage.clear();
     resetMemoryLibrary();
     resetMemorySession();
+    resetAccountLibrary();
     resetSquare();
     setOAuthProviderList([]);
   });
@@ -199,5 +201,32 @@ describe("WebApp", () => {
     expect(w.find('[data-testid="oauth-github"]').exists()).toBe(false);
     expect(w.get('[data-testid="login-email"]').exists()).toBe(true);
     expect(w.text()).not.toMatch(/QQ|LinuxDo/);
+  });
+
+  it("shows the account library title after login without claiming sqlite", async () => {
+    setAccountLibraryTransport({
+      get: async () => ({
+        items: [
+          {
+            id: "p-1",
+            kind: "prompt",
+            payload: { title: "本地仍在", content: "远端正文" },
+            updated_at: "2",
+          },
+        ],
+      }),
+      put: async (items) => ({ items }),
+    });
+    setSessionTransport(async () => ({
+      access_token: "acc.web",
+      refresh_token: "ref.web",
+      email: "dev@promptark.local",
+    }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WebApp);
+    await flushPromises();
+    expect(w.get('[data-testid="prompt-list"]').text()).toContain("本地仍在");
+    expect(w.get('[data-testid="library-note"]').text()).toContain("尚未与桌面");
+    expect(w.text()).not.toContain("已写入本机 SQLite");
   });
 });

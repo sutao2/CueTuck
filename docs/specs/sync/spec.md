@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定，尚未实现 |
+| 状态 | 已指定，立即同步与默认冲突已实现 |
 | 关联 | [设置](../settings/spec.md) · [web](../web/spec.md) · [ADR 0014](../../architecture/decisions/0014-full-product.md) |
 
 ## Purpose
@@ -56,6 +56,6 @@
 |---|---|
 | 登录后立即同步 | `WorkbenchShell.spec.js` pushes the local library to the account when signed in and syncing now；`librarySync.test.js` puts the local prompt onto the account library when signed in |
 | 未登录不请求 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend；`librarySync.test.js` does not call the library API when signed out |
-| 较新者胜 | 未开始 |
-| 浏览器登录后同一标题 | 未开始 |
+| 较新者胜 | `librarySync.test.js` applies the remote body when the remote updated_at is newer；`backend` `newer_updated_at_wins_when_putting_library_changes`；`desktop/src-tauri` `newer_remote_body_replaces_older_local_prompt` |
+| 浏览器登录后同一标题 | `web/src/WebApp.spec.js` shows the account library title after login without claiming sqlite |
 | 变更推拉 API | `backend` `put_then_get_library_changes_for_signed_in_account` |

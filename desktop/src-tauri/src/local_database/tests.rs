@@ -98,14 +98,14 @@ async fn keeps_author_on_downloaded_prompt_without_rewriting_content() {
 async fn keeps_existing_local_prompt_when_upserting_a_synced_id() {
     let dir = tempfile::tempdir().unwrap();
     initialize_in_dir(dir.path()).unwrap();
-    let created = create_prompt_in_dir(dir.path(), "本地仍在", "正文", None).unwrap();
+    upsert_synced_prompt_in_dir(dir.path(), "p-keep", "本地仍在", "正文", None, "2").unwrap();
     let kept = upsert_synced_prompt_in_dir(
         dir.path(),
-        &created.id,
+        "p-keep",
         "远端标题",
         "远端正文",
         None,
-        "9",
+        "1",
     )
     .unwrap();
     assert_eq!(kept.title, "本地仍在");
@@ -114,6 +114,23 @@ async fn keeps_existing_local_prompt_when_upserting_a_synced_id() {
     let rows = list_prompts_in_dir(dir.path(), "", None).unwrap();
     assert_eq!(rows.len(), 2);
     assert!(rows.iter().any(|row| row.title == "远端新增"));
+}
+
+#[tokio::test]
+async fn newer_remote_body_replaces_older_local_prompt() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    upsert_synced_prompt_in_dir(dir.path(), "p-1", "本地仍在", "本机正文", None, "1").unwrap();
+    let updated = upsert_synced_prompt_in_dir(
+        dir.path(),
+        "p-1",
+        "本地仍在",
+        "远端正文",
+        None,
+        "2",
+    )
+    .unwrap();
+    assert_eq!(updated.content, "远端正文");
 }
 
 #[tokio::test]

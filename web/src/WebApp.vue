@@ -29,7 +29,7 @@
       </aside>
       <main data-region="content" class="content">
         <p data-testid="library-note" class="library-note">
-          浏览器使用内存库，尚未与桌面 SQLite 同步。云同步未接通，不会假装已同步。
+          浏览器使用账号库或标签页内存库，尚未与桌面 SQLite 同步，不会写入本机 SQLite。
         </p>
         <section class="content-head">
           <h1>{{ space === "local" ? "本地提示词" : "提示词广场" }}</h1>
@@ -138,6 +138,7 @@ import { computed, onMounted, ref } from "vue";
 import { createLocalPrompt, getLocalPrompt, listLocalPrompts, updateLocalPrompt } from "./memoryLibrary.js";
 import { extractVariables, renderPrompt } from "./renderPrompt.js";
 import { downloadSquareItem, listSquareItems, putFavorite } from "./square.js";
+import { loadAccountLibrary, pushAccountPrompt } from "./accountLibrary.js";
 import {
   getSession,
   listOAuthProviders,
@@ -229,16 +230,20 @@ async function copyPreview() {
 
 function savePrompt() {
   if (!draftTitle.value.trim()) return;
+  let saved;
   if (editingId.value) {
-    updateLocalPrompt({
+    saved = updateLocalPrompt({
       id: editingId.value,
       title: draftTitle.value,
       content: draftContent.value,
     });
   } else {
-    createLocalPrompt({ title: draftTitle.value, content: draftContent.value });
+    saved = createLocalPrompt({ title: draftTitle.value, content: draftContent.value });
   }
-  const keepId = editingId.value;
+  if (getSession().loggedIn) {
+    pushAccountPrompt(saved).catch(() => {});
+  }
+  const keepId = editingId.value || saved?.id;
   editing.value = false;
   editingId.value = null;
   draftTitle.value = "";
@@ -301,6 +306,8 @@ async function loadProviders() {
 async function afterLogin() {
   loginOpen.value = false;
   loginBusy.value = false;
+  await loadAccountLibrary();
+  reload();
   const id = pendingFavorite.value;
   pendingFavorite.value = "";
   if (id) await favoriteItem(id);
@@ -333,5 +340,8 @@ async function submitOAuth(provider) {
   }
 }
 
-onMounted(reload);
+onMounted(async () => {
+  if (getSession().loggedIn) await loadAccountLibrary();
+  reload();
+});
 </script>

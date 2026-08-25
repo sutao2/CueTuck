@@ -44,4 +44,35 @@ describe("library sync", () => {
     await expect(syncLocalLibraryNow()).rejects.toThrow(/登录/);
     expect(called).toBe(false);
   });
+
+  it("applies the remote body when the remote updated_at is newer", async () => {
+    const { insertSyncedLocalPrompt, listLocalPrompts } = await import("./library.js");
+    setLibrarySyncTransport({
+      put: async (items) => ({ items }),
+      get: async () => ({
+        items: [
+          {
+            id: "p-1",
+            kind: "prompt",
+            payload: { title: "本地仍在", content: "远端正文" },
+            updated_at: "2",
+          },
+        ],
+      }),
+    });
+    setSessionTransport(async () => ({
+      email: "dev@promptark.local",
+      access_token: "tok",
+    }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    await insertSyncedLocalPrompt({
+      id: "p-1",
+      title: "本地仍在",
+      content: "本机正文",
+      updatedAt: "1",
+    });
+    await syncLocalLibraryNow();
+    const rows = await listLocalPrompts({ query: "本地仍在" });
+    expect(rows[0].content).toBe("远端正文");
+  });
 });

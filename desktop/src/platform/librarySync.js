@@ -77,10 +77,8 @@ export async function listLibraryChanges({ since = "" } = {}) {
 }
 
 async function applyRemotePromptChanges(items) {
-  const local = await listLocalPrompts({ query: "" });
-  const ids = new Set(local.map((row) => row.id));
   for (const item of items) {
-    if (item.kind !== "prompt" || item.deleted_at || ids.has(item.id)) continue;
+    if (item.kind !== "prompt" || item.deleted_at) continue;
     await insertSyncedLocalPrompt({
       id: item.id,
       title: item.payload?.title ?? "",
