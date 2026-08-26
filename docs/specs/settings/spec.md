@@ -219,7 +219,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 ### Requirement: 隐私与安全
 
-隐私与安全页 MUST 展示：本地提示词默认不上传、匿名下载统计、清除使用历史、系统钥匙串。默认不上传 MUST 与宪法一致：未点发布不得把本地正文送出。匿名下载统计未接通前 MUST 标明尚未提供，不得静默上报。清除使用历史接通后 MUST 只删最近使用记录，不得删提示词正文。钥匙串行 MUST 反映 Refresh 是否在系统密钥库，不得把 Refresh 改存 Web Storage。
+隐私与安全页 MUST 展示：本地提示词默认不上传、匿名下载统计、清除使用历史、系统钥匙串。默认不上传 MUST 与宪法一致：未点发布不得把本地正文送出。匿名下载统计未接通前 MUST 标明尚未提供，不得静默上报。清除使用历史接通后 MUST 只删最近使用记录，不得删提示词正文。钥匙串行 MUST 反映 Refresh 是否在系统密钥库：Tauri 下标明本机钥匙串；浏览器预览 MUST NOT 写成本机钥匙串，MUST 说明 Refresh 不进 Web Storage。不得把 Refresh 改存 Web Storage。
 
 #### Scenario: 清除使用历史不删正文
 
@@ -227,6 +227,20 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 - WHEN 用户确认清除使用历史且该动作已接通
 - THEN 使用记录被清除
 - AND 提示词 A 仍在
+
+#### Scenario: 浏览器预览不写本机钥匙串
+
+- GIVEN 工作台在无 Tauri 的浏览器预览
+- WHEN 用户打开隐私与安全或登录弹窗
+- THEN 钥匙串行与登录脚注不标明本机钥匙串或只写入系统钥匙串
+- AND 说明 Refresh 不进 Web Storage
+
+#### Scenario: Tauri 标明本机钥匙串
+
+- GIVEN 工作台在 Tauri
+- WHEN 用户打开隐私与安全
+- THEN 钥匙串行标明本机钥匙串
+- AND 说明 Refresh 不进 Web Storage
 
 ### Requirement: 更新
 
@@ -282,6 +296,8 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
 | 同步状态不写没有云同步 | `WorkbenchShell.spec.js` does not claim the network page has no cloud sync；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |
 | 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |
+| 浏览器预览不写本机钥匙串 | `WorkbenchShell.spec.js` does not claim the keychain row uses the local keychain in browser preview；`WorkbenchShell.spec.js` does not claim login writes refresh to the system keychain in browser preview |
+| Tauri 标明本机钥匙串 | `WorkbenchShell.spec.js` labels the keychain row as local keychain inside Tauri |
 | 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check；`packageIsolation.test.js` keeps package version aligned with tauri and cargo；`updates.test.js` reports no update when the latest stable tag matches the tauri build；`updates.test.js` asks GitHub Releases and reports none when the list is empty |
 | 检查失败不写成没有更新 | `WorkbenchShell.spec.js` does not treat a failed update check as no updates；`updates.test.js` does not treat a failed GitHub read as no updates |
 | 自动下载按通道排队安装 | `WorkbenchShell.spec.js` queues an updater install when auto-download is on and the channel has a package；`updates.test.js` queues an updater install when auto-download is on and the channel has a package |

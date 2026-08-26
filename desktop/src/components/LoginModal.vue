@@ -36,7 +36,7 @@
         </div>
       </div>
       <footer class="modal-footer">
-        <span class="create-location">Refresh 只写入系统钥匙串，不会进浏览器存储。</span>
+        <span class="create-location" data-testid="login-token-note">{{ tokenNote }}</span>
         <div class="modal-actions">
           <button type="button" class="button ghost-button" @click="$emit('cancel')">取消</button>
           <button type="button" class="button primary-button" data-testid="login-submit" :disabled="busy" @click="submit">
@@ -62,6 +62,14 @@ const error = ref("");
 const providers = ref([]);
 const busy = ref(false);
 const abort = new AbortController();
+
+function usesSystemKeychain() {
+  return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
+}
+
+const tokenNote = usesSystemKeychain()
+  ? "Refresh 只写入系统钥匙串，不会进浏览器存储。"
+  : "Refresh 不进 Web Storage。浏览器预览不写入系统钥匙串。";
 
 onMounted(async () => {
   try {

@@ -313,9 +313,13 @@
               <span class="setting-copy"><strong>清除使用历史</strong><small>只删最近使用记录，不删提示词正文。</small></span>
               <button type="button" class="button ghost-button" data-testid="clear-use-history" @click="clearHistory">清除</button>
             </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>系统钥匙串</strong><small>Refresh 只在系统密钥库，不进 Web Storage。</small></span>
-              <span class="setting-control">本机钥匙串</span>
+            <div class="setting-row" data-testid="keychain-row">
+              <span class="setting-copy">
+                <strong>系统钥匙串</strong>
+                <small v-if="usesSystemKeychain()">Refresh 只在系统密钥库，不进 Web Storage。</small>
+                <small v-else>浏览器预览没有系统密钥库。Refresh 不进 Web Storage。</small>
+              </span>
+              <span class="setting-control">{{ usesSystemKeychain() ? "本机钥匙串" : "浏览器内存" }}</span>
             </div>
           </section>
           <section v-else-if="current === 'updates'" data-testid="settings-updates">
@@ -386,6 +390,10 @@ const props = defineProps({
   session: { type: Object, default: () => ({ loggedIn: false, email: "" }) },
 });
 const emit = defineEmits(["cancel", "theme", "imported", "login", "logout"]);
+
+function usesSystemKeychain() {
+  return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
+}
 
 const pages = [
   { id: "general", label: "常规" },

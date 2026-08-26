@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import WorkbenchShell from "./WorkbenchShell.vue";
+import SettingsModal from "./SettingsModal.vue";
 import {
   createLocalCollection,
   createLocalPrompt,
@@ -847,6 +848,39 @@ describe("WorkbenchShell", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].content).toBe("中文 English");
     expect(rows[0].use_count).toBe(0);
+  });
+
+  it("does not claim the keychain row uses the local keychain in browser preview", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="privacy"]').trigger("click");
+    const row = w.get('[data-testid="keychain-row"]');
+    expect(row.text()).toContain("系统钥匙串");
+    expect(row.text()).toContain("不进 Web Storage");
+    expect(row.text()).not.toContain("本机钥匙串");
+  });
+
+  it("does not claim login writes refresh to the system keychain in browser preview", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="account"]').trigger("click");
+    await w.get('[data-testid="settings-login"]').trigger("click");
+    expect(w.get('[data-testid="login-token-note"]').text()).not.toContain("只写入系统钥匙串");
+    expect(w.get('[data-testid="login-token-note"]').text()).toContain("不进 Web Storage");
+  });
+
+  it("labels the keychain row as local keychain inside Tauri", async () => {
+    const w = mount(SettingsModal, {
+      props: { session: { loggedIn: false, email: "" }, host: "macos", theme: "light" },
+    });
+    window.__TAURI_INTERNALS__ = {};
+    try {
+      await w.get('[data-settings-page="privacy"]').trigger("click");
+      expect(w.get('[data-testid="keychain-row"]').text()).toContain("本机钥匙串");
+      expect(w.get('[data-testid="keychain-row"]').text()).toContain("不进 Web Storage");
+    } finally {
+      delete window.__TAURI_INTERNALS__;
+    }
   });
 
   it("shows unpaid billing as 支付未开通 and does not open checkout", async () => {

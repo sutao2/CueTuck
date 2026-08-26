@@ -20,11 +20,11 @@
 
 **Files:** `desktop/src/components/` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（无 Tauri 时钥匙串行与登录脚注不含本机钥匙串 / 只写入系统钥匙串；含不进 Web Storage）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 按是否 Tauri 切换文案；更新规格场景与测试映射**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（无 Tauri 时钥匙串行与登录脚注不含本机钥匙串 / 只写入系统钥匙串；含不进 Web Storage）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 按是否 Tauri 切换文案；更新规格场景与测试映射**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 关闭本计划
 
