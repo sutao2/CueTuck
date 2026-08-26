@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-26（队首：冲突时保留本地） |
+| 更新日期 | 2026-08-26（完整产品队列已空；剩余见 deferred） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,8 +24,8 @@
 
 ## 当前可执行的下一步
 
-1. 队首：冲突时保留本地。计划：[2026-08-26-keep-local-conflict.md](2026-08-26-keep-local-conflict.md)。
-2. 不能诚实做完的项仍在 [deferred.md](deferred.md)。
+1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
+2. 冲突时保留本地已关闭。证据：[done/2026-08-26-keep-local-conflict.md](done/2026-08-26-keep-local-conflict.md)。
 3. 钥匙串文案已在浏览器预览标明不进本机钥匙串。证据：[done/2026-08-26-keychain-copy.md](done/2026-08-26-keychain-copy.md)。
 4. 网络页同步状态已标明手动立即同步。证据：[done/2026-08-26-sync-status-copy.md](done/2026-08-26-sync-status-copy.md)。
 5. 设置冲突处理已标明较新者胜。证据：[done/2026-08-25-sync-conflict-copy.md](done/2026-08-25-sync-conflict-copy.md)。

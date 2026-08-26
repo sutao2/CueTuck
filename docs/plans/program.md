@@ -30,8 +30,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 详细逐步任务仍一次只执行**队首**。后一份在 INDEX 标「目标」，队首标「现行」。关闭队首后把下一份改成现行。
 
 ```text
-1–16 已关闭（广场预发缺口 … 钥匙串文案）
-17 现行：keep-local-conflict
+1–17 已关闭（广场预发缺口 … 保留本地冲突）
 不能诚实做完：deferred.md
 ```
 
@@ -53,7 +52,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 14 已关闭 | [2026-08-25-sync-conflict-copy.md](2026-08-25-sync-conflict-copy.md) | 归档 |
 | 15 已关闭 | [2026-08-26-sync-status-copy.md](2026-08-26-sync-status-copy.md) | 归档 |
 | 16 已关闭 | [2026-08-26-keychain-copy.md](2026-08-26-keychain-copy.md) | 归档 |
-| 17 现行 | [2026-08-26-keep-local-conflict.md](2026-08-26-keep-local-conflict.md) | 现行 |
+| 17 已关闭 | [2026-08-26-keep-local-conflict.md](2026-08-26-keep-local-conflict.md) | 归档 |
 | 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
