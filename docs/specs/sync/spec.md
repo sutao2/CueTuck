@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定，立即同步与默认冲突已实现 |
+| 状态 | 已指定，立即同步、较新者胜与保留本地已实现 |
 | 关联 | [设置](../settings/spec.md) · [web](../web/spec.md) · [ADR 0014](../../architecture/decisions/0014-full-product.md) |
 
 ## Purpose
@@ -31,13 +31,20 @@
 
 ### Requirement: 冲突
 
-默认 MUST 采用较新 `updated_at`。用户选择保留本地时 MUST 不覆盖该条本机正文。
+默认 MUST 采用较新 `updated_at`。用户选择保留本地时 MUST 不覆盖该条本机正文。MUST NOT 把尚未存在于本机的远端条目拦掉。
 
 #### Scenario: 较新者胜
 
 - GIVEN 本机与远端同一 id 且远端 `updated_at` 更晚
 - WHEN 立即同步
 - THEN 本机正文为远端版本
+
+#### Scenario: 保留本地
+
+- GIVEN 本机与远端同一 id 且远端 `updated_at` 更晚，且用户选择保留本地
+- WHEN 立即同步
+- THEN 该条本机正文仍是本机版本
+- AND 远端独有条目仍写入本机
 
 ### Requirement: 浏览器账号库
 
@@ -57,5 +64,6 @@
 | 登录后立即同步 | `WorkbenchShell.spec.js` pushes the local library to the account when signed in and syncing now；`librarySync.test.js` puts the local prompt onto the account library when signed in |
 | 未登录不请求 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend；`librarySync.test.js` does not call the library API when signed out |
 | 较新者胜 | `librarySync.test.js` applies the remote body when the remote updated_at is newer；`backend` `newer_updated_at_wins_when_putting_library_changes`；`desktop/src-tauri` `newer_remote_body_replaces_older_local_prompt` |
+| 保留本地 | `librarySync.test.js` keeps the local body when keep-local is chosen and remote updated_at is newer；`WorkbenchShell.spec.js` keeps the local body when keep-local is selected before syncing |
 | 浏览器登录后同一标题 | `web/src/WebApp.spec.js` shows the account library title after login without claiming sqlite |
 | 变更推拉 API | `backend` `put_then_get_library_changes_for_signed_in_account` |

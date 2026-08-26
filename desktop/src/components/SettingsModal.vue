@@ -178,8 +178,11 @@
               <span class="setting-control">尚未提供</span>
             </div>
             <div class="setting-row" data-testid="sync-conflict">
-              <span class="setting-copy"><strong>冲突处理</strong><small>立即同步按较新的 updated_at 覆盖。本页不能选择保留本地。</small></span>
-              <span class="setting-control">较新者胜</span>
+              <span class="setting-copy"><strong>冲突处理</strong><small>立即同步默认按较新的 updated_at 覆盖。选择保留本地时不覆盖已有本机正文，远端独有条目仍写入。</small></span>
+              <select data-testid="sync-conflict-strategy" :value="syncConflict" @change="saveSyncConflict">
+                <option value="newer">较新者胜</option>
+                <option value="keep_local">保留本地</option>
+              </select>
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>立即同步</strong><small>已登录时推拉账号库。未登录打开登录，不会假装已同步。</small></span>
@@ -423,6 +426,7 @@ const updateNote = ref("");
 const releaseNotes = ref("");
 const autoDownload = ref(false);
 const updateChannel = ref("stable");
+const syncConflict = ref("newer");
 const appVersion = pkg.version;
 const prefError = ref("");
 const launchAtLogin = ref(false);
@@ -474,6 +478,7 @@ onMounted(async () => {
   keepAuthorOnDownload.value = isPrefOn(await getLocalSetting("keep_author_on_download"));
   autoDownload.value = isPrefOn(await getLocalSetting("auto_download"));
   updateChannel.value = (await getLocalSetting("update_channel")) === "preview" ? "preview" : "stable";
+  syncConflict.value = (await getLocalSetting("sync_conflict")) === "keep_local" ? "keep_local" : "newer";
   if (props.session.loggedIn) {
     const [mine, profile, billing] = await Promise.all([
       listMyPublications().catch(() => []),
@@ -530,6 +535,11 @@ async function toggleAutoDownload(event) {
 async function saveUpdateChannel(event) {
   updateChannel.value = event.target.value === "preview" ? "preview" : "stable";
   await setLocalSetting("update_channel", updateChannel.value);
+}
+
+async function saveSyncConflict(event) {
+  syncConflict.value = event.target.value === "keep_local" ? "keep_local" : "newer";
+  await setLocalSetting("sync_conflict", syncConflict.value);
 }
 
 async function runCheckUpdates() {

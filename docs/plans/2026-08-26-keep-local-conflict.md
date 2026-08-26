@@ -20,11 +20,11 @@
 
 **Files:** `desktop/src/platform/` · `desktop/src/components/` · `docs/specs/sync/spec.md` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（选保留本地后远端更新更晚也不覆盖本机正文；设置可切换）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 本机设置与拉变更跳过；设置页提供选择**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（选保留本地后远端更新更晚也不覆盖本机正文；设置可切换）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 本机设置与拉变更跳过；设置页提供选择**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 关闭本计划
 

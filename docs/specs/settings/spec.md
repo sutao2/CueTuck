@@ -169,7 +169,7 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 
 ### Requirement: 同步
 
-同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。立即同步在已登录时 MUST 推拉账号库；未登录时 MUST 打开已有登录且 MUST NOT 出现已同步。冲突处理 MUST 标明较新者胜，MUST NOT 写成尚未提供，MUST NOT 假装用户已能选择保留本地。自动同步收藏、仅 Wi-Fi 同步图片在未实现前 MUST 标明尚未提供，MUST NOT 把原因写成没有云同步。
+同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。立即同步在已登录时 MUST 推拉账号库；未登录时 MUST 打开已有登录且 MUST NOT 出现已同步。冲突处理 MUST 提供较新者胜与保留本地，默认 MUST 为较新者胜，MUST NOT 写成尚未提供。自动同步收藏、仅 Wi-Fi 同步图片在未实现前 MUST 标明尚未提供，MUST NOT 把原因写成没有云同步。
 
 #### Scenario: 同步行可见且不假装
 
@@ -186,6 +186,14 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 - WHEN 用户打开同步页
 - THEN 冲突处理行标明较新者胜
 - AND 该行不标明尚未提供
+- AND 默认选项为较新者胜
+
+#### Scenario: 冲突处理可选保留本地
+
+- GIVEN 用户打开同步页
+- WHEN 选择保留本地并立即同步，且远端同一 id 的 `updated_at` 更晚
+- THEN 该条本机正文不被覆盖
+- AND 设置再次打开仍是保留本地
 
 ### Requirement: AI 与模型
 
@@ -292,6 +300,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 保存作者资料 | `WorkbenchShell.spec.js` saves author display name after login and refuses when signed out；`backend` `saves_display_name_for_signed_in_user_and_rejects_anonymous` |
 | 同步行可见且不假装 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend |
 | 冲突处理标明较新者胜 | `WorkbenchShell.spec.js` labels conflict handling as newer-wins instead of unavailable |
+| 冲突处理可选保留本地 | `WorkbenchShell.spec.js` keeps the local body when keep-local is selected before syncing；`librarySync.test.js` keeps the local body when keep-local is chosen and remote updated_at is newer |
 | 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
 | 同步状态不写没有云同步 | `WorkbenchShell.spec.js` does not claim the network page has no cloud sync；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |

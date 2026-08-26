@@ -1,4 +1,5 @@
 import {
+  getLocalSetting,
   insertSyncedLocalPrompt,
   listLocalCategories,
   listLocalCollections,
@@ -77,8 +78,13 @@ export async function listLibraryChanges({ since = "" } = {}) {
 }
 
 async function applyRemotePromptChanges(items) {
+  const keepLocal = (await getLocalSetting("sync_conflict")) === "keep_local";
+  const existingIds = keepLocal
+    ? new Set((await listLocalPrompts({ query: "" })).map((row) => row.id))
+    : null;
   for (const item of items) {
     if (item.kind !== "prompt" || item.deleted_at) continue;
+    if (keepLocal && existingIds.has(item.id)) continue;
     await insertSyncedLocalPrompt({
       id: item.id,
       title: item.payload?.title ?? "",

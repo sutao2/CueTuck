@@ -598,6 +598,50 @@ describe("WorkbenchShell", () => {
     expect(row.text()).toContain("冲突处理");
     expect(row.text()).toContain("较新者胜");
     expect(row.text()).not.toContain("尚未提供");
+    expect(w.get('[data-testid="sync-conflict-strategy"]').element.value).toBe("newer");
+  });
+
+  it("keeps the local body when keep-local is selected before syncing", async () => {
+    const { insertSyncedLocalPrompt } = await import("../platform/library.js");
+    setMineTransport(async () => []);
+    setLibrarySyncTransport({
+      put: async (items) => ({ items }),
+      get: async () => ({
+        items: [
+          {
+            id: "p-1",
+            kind: "prompt",
+            payload: { title: "本地仍在", content: "远端正文" },
+            updated_at: "2",
+          },
+        ],
+      }),
+    });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    await insertSyncedLocalPrompt({
+      id: "p-1",
+      title: "本地仍在",
+      content: "本机正文",
+      updatedAt: "1",
+    });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="sync"]').trigger("click");
+    await w.get('[data-testid="sync-conflict-strategy"]').setValue("keep_local");
+    await flushPromises();
+    expect(await getLocalSetting("sync_conflict")).toBe("keep_local");
+    await w.get('[data-testid="sync-now"]').trigger("click");
+    await flushPromises();
+    const rows = await listLocalPrompts({ query: "本地仍在" });
+    expect(rows[0].content).toBe("本机正文");
+    w.unmount();
+    const again = mount(WorkbenchShell);
+    await again.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await again.get('[data-settings-page="sync"]').trigger("click");
+    expect(again.get('[data-testid="sync-conflict-strategy"]').element.value).toBe("keep_local");
   });
 
   it("does not claim the network page has no cloud sync", async () => {
