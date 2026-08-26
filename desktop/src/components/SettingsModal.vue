@@ -174,7 +174,7 @@
               <span class="setting-control">尚未提供</span>
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>仅在 Wi-Fi 下同步图片</strong><small>没有云同步引擎，不会按网络类型上传。</small></span>
+              <span class="setting-copy"><strong>仅在 Wi-Fi 下同步图片</strong><small>立即同步不看网络类型。按 Wi-Fi 上传图片尚未提供。</small></span>
               <span class="setting-control">尚未提供</span>
             </div>
             <div class="setting-row" data-testid="sync-conflict">
@@ -265,9 +265,9 @@
               <span class="setting-copy"><strong>代理</strong><small>跟随系统。未提供手动配置前不假装自建代理。</small></span>
               <span class="setting-control">跟随系统</span>
             </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>同步状态</strong><small>没有云同步，不会显示假的已同步。</small></span>
-              <span class="setting-control">尚未提供</span>
+            <div class="setting-row" data-testid="sync-status">
+              <span class="setting-copy"><strong>同步状态</strong><small>个人库可立即同步。没有后台自动同步，不会显示假进度。</small></span>
+              <span class="setting-control">手动立即同步</span>
             </div>
           </section>
           <section v-else-if="current === 'appearance'">

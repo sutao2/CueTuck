@@ -169,7 +169,7 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 
 ### Requirement: 同步
 
-同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。立即同步在已登录时 MUST 推拉账号库；未登录时 MUST 打开已有登录且 MUST NOT 出现已同步。冲突处理 MUST 标明较新者胜，MUST NOT 写成尚未提供，MUST NOT 假装用户已能选择保留本地。自动同步收藏、仅 Wi-Fi 同步图片在未实现前 MUST 标明尚未提供。
+同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。立即同步在已登录时 MUST 推拉账号库；未登录时 MUST 打开已有登录且 MUST NOT 出现已同步。冲突处理 MUST 标明较新者胜，MUST NOT 写成尚未提供，MUST NOT 假装用户已能选择保留本地。自动同步收藏、仅 Wi-Fi 同步图片在未实现前 MUST 标明尚未提供，MUST NOT 把原因写成没有云同步。
 
 #### Scenario: 同步行可见且不假装
 
@@ -200,7 +200,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 ### Requirement: 网络与代理
 
-网络与代理页 MUST 展示：允许访问提示词广场、代理、同步状态。「允许访问提示词广场」接通后 MUST 成为本机开关：关闭时工作台 MUST 不请求广场，启动器仍 MUST 只搜本地。代理与同步状态在未实现手动配置或云同步前 MUST 标明现状（例如跟随系统 / 尚未提供），MUST NOT 假装正在同步。
+网络与代理页 MUST 展示：允许访问提示词广场、代理、同步状态。「允许访问提示词广场」接通后 MUST 成为本机开关：关闭时工作台 MUST 不请求广场，启动器仍 MUST 只搜本地。代理在未实现手动配置前 MUST 标明跟随系统。同步状态 MUST 标明个人库可立即同步，MUST NOT 写成没有云同步或尚未提供，MUST NOT 假装正在同步或已同步。
 
 #### Scenario: 关闭广场访问
 
@@ -208,6 +208,14 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 - WHEN 在工作台打开广场
 - THEN 不请求广场 API
 - AND 启动器搜索仍只走本地库
+
+#### Scenario: 同步状态不写没有云同步
+
+- GIVEN 立即同步已接通且无后台自动同步
+- WHEN 用户打开网络与代理
+- THEN 同步状态标明手动立即同步
+- AND 不出现没有云同步
+- AND 不出现已同步或正在同步
 
 ### Requirement: 隐私与安全
 
@@ -272,6 +280,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 冲突处理标明较新者胜 | `WorkbenchShell.spec.js` labels conflict handling as newer-wins instead of unavailable |
 | 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
+| 同步状态不写没有云同步 | `WorkbenchShell.spec.js` does not claim the network page has no cloud sync；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |
 | 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |
 | 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check；`packageIsolation.test.js` keeps package version aligned with tauri and cargo；`updates.test.js` reports no update when the latest stable tag matches the tauri build；`updates.test.js` asks GitHub Releases and reports none when the list is empty |
 | 检查失败不写成没有更新 | `WorkbenchShell.spec.js` does not treat a failed update check as no updates；`updates.test.js` does not treat a failed GitHub read as no updates |
