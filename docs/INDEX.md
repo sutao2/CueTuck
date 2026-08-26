@@ -120,6 +120,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-25-sync-conflict-copy.md](plans/2026-08-25-sync-conflict-copy.md) | 归档 | 查设置冲突行怎么标明较新者胜 | 不得把已接通策略写成尚未提供 |
 | [plans/2026-08-26-sync-status-copy.md](plans/2026-08-26-sync-status-copy.md) | 归档 | 查网络页同步状态怎么标明立即同步 | 不得写成没有云同步 |
 | [plans/2026-08-26-keychain-copy.md](plans/2026-08-26-keychain-copy.md) | 归档 | 查钥匙串行怎么在浏览器预览标明现状 | 无 Tauri 不得写本机钥匙串 |
+| [plans/2026-08-26-keep-local-conflict.md](plans/2026-08-26-keep-local-conflict.md) | 现行 | 查冲突时保留本地怎么接到立即同步 | 不得覆盖该条本机正文 |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问商店 / 生产托管 / NSIS 额度 | 没有证据就不能声称 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
