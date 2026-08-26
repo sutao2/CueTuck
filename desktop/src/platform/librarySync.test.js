@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { createLocalPrompt, resetMemoryLibrary } from "./library.js";
+import { createLocalPrompt, resetMemoryLibrary, setLocalSetting } from "./library.js";
 import { loginSession, resetMemorySession, setSessionTransport } from "./session.js";
 import { resetLibrarySync, setLibrarySyncTransport, syncLocalLibraryNow } from "./librarySync.js";
 
@@ -74,5 +74,45 @@ describe("library sync", () => {
     await syncLocalLibraryNow();
     const rows = await listLocalPrompts({ query: "本地仍在" });
     expect(rows[0].content).toBe("远端正文");
+  });
+
+  it("keeps the local body when keep-local is chosen and remote updated_at is newer", async () => {
+    const { insertSyncedLocalPrompt, listLocalPrompts } = await import("./library.js");
+    await setLocalSetting("sync_conflict", "keep_local");
+    setLibrarySyncTransport({
+      put: async (items) => ({ items }),
+      get: async () => ({
+        items: [
+          {
+            id: "p-1",
+            kind: "prompt",
+            payload: { title: "本地仍在", content: "远端正文" },
+            updated_at: "2",
+          },
+          {
+            id: "p-2",
+            kind: "prompt",
+            payload: { title: "远端独有", content: "新条目" },
+            updated_at: "3",
+          },
+        ],
+      }),
+    });
+    setSessionTransport(async () => ({
+      email: "dev@promptark.local",
+      access_token: "tok",
+    }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    await insertSyncedLocalPrompt({
+      id: "p-1",
+      title: "本地仍在",
+      content: "本机正文",
+      updatedAt: "1",
+    });
+    await syncLocalLibraryNow();
+    const local = await listLocalPrompts({ query: "本地仍在" });
+    expect(local[0].content).toBe("本机正文");
+    const remoteOnly = await listLocalPrompts({ query: "远端独有" });
+    expect(remoteOnly[0].content).toBe("新条目");
   });
 });
