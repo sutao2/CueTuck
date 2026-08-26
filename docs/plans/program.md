@@ -31,6 +31,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 
 ```text
 1–15 已关闭（广场预发缺口 … 同步状态文案）
+16 现行：keychain-copy
 不能诚实做完：deferred.md
 ```
 
@@ -51,6 +52,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 13 已关闭 | [2026-08-25-desktop-version.md](2026-08-25-desktop-version.md) | 归档 |
 | 14 已关闭 | [2026-08-25-sync-conflict-copy.md](2026-08-25-sync-conflict-copy.md) | 归档 |
 | 15 已关闭 | [2026-08-26-sync-status-copy.md](2026-08-26-sync-status-copy.md) | 归档 |
+| 16 现行 | [2026-08-26-keychain-copy.md](2026-08-26-keychain-copy.md) | 现行 |
 | 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
@@ -80,6 +82,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 桌面包版本 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-25-desktop-version.md](2026-08-25-desktop-version.md) |
 | 冲突策略文案 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-25-sync-conflict-copy.md](2026-08-25-sync-conflict-copy.md) |
 | 同步状态文案 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-26-sync-status-copy.md](2026-08-26-sync-status-copy.md) |
+| 钥匙串文案 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-26-keychain-copy.md](2026-08-26-keychain-copy.md) |
 
 ## 通用完成定义（每个里程碑都要满足）
 
