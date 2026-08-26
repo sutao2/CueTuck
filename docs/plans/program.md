@@ -30,8 +30,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 详细逐步任务仍一次只执行**队首**。后一份在 INDEX 标「目标」，队首标「现行」。关闭队首后把下一份改成现行。
 
 ```text
-1–14 已关闭（广场预发缺口 … 冲突策略文案）
-15 现行：sync-status-copy
+1–15 已关闭（广场预发缺口 … 同步状态文案）
 不能诚实做完：deferred.md
 ```
 
@@ -51,7 +50,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 12 已关闭 | [2026-08-25-stripe-webhook.md](2026-08-25-stripe-webhook.md) | 归档 |
 | 13 已关闭 | [2026-08-25-desktop-version.md](2026-08-25-desktop-version.md) | 归档 |
 | 14 已关闭 | [2026-08-25-sync-conflict-copy.md](2026-08-25-sync-conflict-copy.md) | 归档 |
-| 15 现行 | [2026-08-26-sync-status-copy.md](2026-08-26-sync-status-copy.md) | 现行 |
+| 15 已关闭 | [2026-08-26-sync-status-copy.md](2026-08-26-sync-status-copy.md) | 归档 |
 | 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
