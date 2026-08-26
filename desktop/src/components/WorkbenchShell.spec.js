@@ -599,6 +599,28 @@ describe("WorkbenchShell", () => {
     expect(row.text()).not.toContain("尚未提供");
   });
 
+  it("does not claim the network page has no cloud sync", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="network"]').trigger("click");
+    const row = w.get('[data-testid="sync-status"]');
+    expect(row.text()).toContain("同步状态");
+    expect(row.text()).toContain("手动立即同步");
+    expect(row.text()).not.toContain("没有云同步");
+    expect(row.text()).not.toContain("尚未提供");
+    expect(row.text()).not.toMatch(/已同步|正在同步/);
+  });
+
+  it("does not claim Wi-Fi image sync is missing because there is no cloud engine", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="sync"]').trigger("click");
+    const row = w.findAll(".setting-row").find((node) => node.text().includes("仅在 Wi-Fi"));
+    expect(row).toBeTruthy();
+    expect(row.text()).toContain("尚未提供");
+    expect(row.text()).not.toContain("没有云同步");
+  });
+
   it("pushes the local library to the account when signed in and syncing now", async () => {
     const account = [];
     setMineTransport(async () => []);
