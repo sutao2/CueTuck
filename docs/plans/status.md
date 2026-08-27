@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-26（完整产品队列已空；剩余见 deferred） |
+| 更新日期 | 2026-08-27（队首：浏览器账单入口） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,22 +24,23 @@
 
 ## 当前可执行的下一步
 
-1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
-2. 冲突时保留本地已关闭。证据：[done/2026-08-26-keep-local-conflict.md](done/2026-08-26-keep-local-conflict.md)。
-3. 钥匙串文案已在浏览器预览标明不进本机钥匙串。证据：[done/2026-08-26-keychain-copy.md](done/2026-08-26-keychain-copy.md)。
-4. 网络页同步状态已标明手动立即同步。证据：[done/2026-08-26-sync-status-copy.md](done/2026-08-26-sync-status-copy.md)。
-5. 设置冲突处理已标明较新者胜。证据：[done/2026-08-25-sync-conflict-copy.md](done/2026-08-25-sync-conflict-copy.md)。
-6. 桌面包版本已与 Tauri 构建对齐。证据：[done/2026-08-25-desktop-version.md](done/2026-08-25-desktop-version.md)。
-7. Checkout webhook 入账已关闭。证据：[done/2026-08-25-stripe-webhook.md](done/2026-08-25-stripe-webhook.md)。
-8. 预发账单已关闭。证据：[done/2026-08-25-preview-billing.md](done/2026-08-25-preview-billing.md)。
-9. Windows / Linux 开机启动与托盘已关闭。证据：[done/2026-08-25-win-linux-prefs.md](done/2026-08-25-win-linux-prefs.md)。
-10. 自动更新安装已关闭。证据：[done/2026-08-25-auto-update.md](done/2026-08-25-auto-update.md)。
-11. 个人库云同步已关闭。证据：[done/2026-08-25-library-sync.md](done/2026-08-25-library-sync.md)。
-12. 账号与广场剩余行已关闭。证据：[done/2026-08-25-account-surface.md](done/2026-08-25-account-surface.md)。
-13. 客户端 Google / GitHub 登录已接到桌面、浏览器工作台与管理台。证据：[done/2026-08-25-oauth-clients.md](done/2026-08-25-oauth-clients.md)。
-14. 预发后端已接到本机 `promptark` 库。证据：[done/2026-08-25-postgres-backend.md](done/2026-08-25-postgres-backend.md)。
-15. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
-16. 启动器仍不请求广场或管理接口。
+1. 队首：浏览器账单入口。计划：[2026-08-27-web-billing.md](2026-08-27-web-billing.md)。
+2. 不能诚实做完的项仍在 [deferred.md](deferred.md)。
+3. 冲突时保留本地已关闭。证据：[done/2026-08-26-keep-local-conflict.md](done/2026-08-26-keep-local-conflict.md)。
+4. 钥匙串文案已在浏览器预览标明不进本机钥匙串。证据：[done/2026-08-26-keychain-copy.md](done/2026-08-26-keychain-copy.md)。
+5. 网络页同步状态已标明手动立即同步。证据：[done/2026-08-26-sync-status-copy.md](done/2026-08-26-sync-status-copy.md)。
+6. 设置冲突处理已标明较新者胜。证据：[done/2026-08-25-sync-conflict-copy.md](done/2026-08-25-sync-conflict-copy.md)。
+7. 桌面包版本已与 Tauri 构建对齐。证据：[done/2026-08-25-desktop-version.md](done/2026-08-25-desktop-version.md)。
+8. Checkout webhook 入账已关闭。证据：[done/2026-08-25-stripe-webhook.md](done/2026-08-25-stripe-webhook.md)。
+9. 预发账单已关闭。证据：[done/2026-08-25-preview-billing.md](done/2026-08-25-preview-billing.md)。
+10. Windows / Linux 开机启动与托盘已关闭。证据：[done/2026-08-25-win-linux-prefs.md](done/2026-08-25-win-linux-prefs.md)。
+11. 自动更新安装已关闭。证据：[done/2026-08-25-auto-update.md](done/2026-08-25-auto-update.md)。
+12. 个人库云同步已关闭。证据：[done/2026-08-25-library-sync.md](done/2026-08-25-library-sync.md)。
+13. 账号与广场剩余行已关闭。证据：[done/2026-08-25-account-surface.md](done/2026-08-25-account-surface.md)。
+14. 客户端 Google / GitHub 登录已接到桌面、浏览器工作台与管理台。证据：[done/2026-08-25-oauth-clients.md](done/2026-08-25-oauth-clients.md)。
+15. 预发后端已接到本机 `promptark` 库。证据：[done/2026-08-25-postgres-backend.md](done/2026-08-25-postgres-backend.md)。
+16. 本仓库 `backend/` 是预发，不是生产。不要声称公开下载或上架商店。
+17. 启动器仍不请求广场或管理接口。
 
 ## 仓库事实
 
