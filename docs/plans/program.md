@@ -30,8 +30,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 详细逐步任务仍一次只执行**队首**。后一份在 INDEX 标「目标」，队首标「现行」。关闭队首后把下一份改成现行。
 
 ```text
-1–18 已关闭（广场预发缺口 … 浏览器账单入口）
-19 现行：readme-status
+1–19 已关闭（广场预发缺口 … 仓库入口阶段）
 不能诚实做完：deferred.md
 ```
 
@@ -55,7 +54,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 16 已关闭 | [2026-08-26-keychain-copy.md](2026-08-26-keychain-copy.md) | 归档 |
 | 17 已关闭 | [2026-08-26-keep-local-conflict.md](2026-08-26-keep-local-conflict.md) | 归档 |
 | 18 已关闭 | [2026-08-27-web-billing.md](2026-08-27-web-billing.md) | 归档 |
-| 19 现行 | [2026-08-27-readme-status.md](2026-08-27-readme-status.md) | 现行 |
+| 19 已关闭 | [2026-08-27-readme-status.md](2026-08-27-readme-status.md) | 归档 |
 | 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
