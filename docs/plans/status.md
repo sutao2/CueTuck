@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-27（队首：自动同步收藏与发布草稿） |
+| 更新日期 | 2026-08-27（完整产品队列已空；剩余见 deferred） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,8 +24,8 @@
 
 ## 当前可执行的下一步
 
-1. 队首：[2026-08-27-auto-sync-queue.md](2026-08-27-auto-sync-queue.md)（自动同步收藏与发布草稿）。
-2. 不能诚实做完的项仍在 [deferred.md](deferred.md)。
+1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
+2. 自动同步收藏与发布草稿已关闭。证据：[done/2026-08-27-auto-sync-queue.md](done/2026-08-27-auto-sync-queue.md)。
 3. 仅 Wi-Fi 下同步图片已关闭。证据：[done/2026-08-27-wifi-image-sync.md](done/2026-08-27-wifi-image-sync.md)。
 4. 仓库入口阶段已标明 M9 与已接通能力。证据：[done/2026-08-27-readme-status.md](done/2026-08-27-readme-status.md)。
 5. 浏览器账单入口已关闭。证据：[done/2026-08-27-web-billing.md](done/2026-08-27-web-billing.md)。
