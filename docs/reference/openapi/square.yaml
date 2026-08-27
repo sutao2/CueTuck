@@ -31,6 +31,17 @@ paths:
           required: true
           schema:
             type: string
+  /v1/square/items/{id}/downloads:
+    post:
+      operationId: recordSquareDownload
+      security: []
+      summary: 匿名下载计数（不要求登录；不记录账号）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /v1/session:
     post:
       operationId: createSession

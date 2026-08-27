@@ -33,6 +33,7 @@ import {
   setFavoriteTransport,
   setMineTransport,
   setPublishTransport,
+  setDownloadStatsTransport,
   setSquareContentTransport,
   setSquareTransport,
 } from "../platform/square.js";
@@ -225,6 +226,54 @@ describe("WorkbenchShell", () => {
     await w.get('[data-space="local"]').trigger("click");
     await flushPromises();
     expect(w.get('[data-testid="library-view"]').text()).toContain("自然光群像");
+  });
+
+  it("does not record anonymous download stats when the setting is off", async () => {
+    const calls = [];
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    setSquareContentTransport(async (id) => ({
+      id,
+      title: "自然光群像",
+      content: "清透蓝天下的多元人物群像。",
+    }));
+    setDownloadStatsTransport(async (request) => {
+      calls.push(request);
+    });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="download-square"]').trigger("click");
+    await flushPromises();
+    expect(calls).toEqual([]);
+    const rows = await listLocalPrompts({ query: "自然光群像" });
+    expect(rows).toHaveLength(1);
+  });
+
+  it("records anonymous download stats after a successful download when the setting is on", async () => {
+    const calls = [];
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    setSquareContentTransport(async (id) => ({
+      id,
+      title: "自然光群像",
+      content: "清透蓝天下的多元人物群像。",
+    }));
+    setDownloadStatsTransport(async (request) => {
+      calls.push(request);
+    });
+    await setLocalSetting("anonymous_download_stats", "1");
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="download-square"]').trigger("click");
+    await flushPromises();
+    expect(calls).toEqual([
+      {
+        id: "sq-1",
+        method: "POST",
+        path: "/v1/square/items/sq-1/downloads",
+        headers: {},
+      },
+    ]);
   });
 
   it("keeps author on download when the setting is on", async () => {
@@ -701,6 +750,43 @@ describe("WorkbenchShell", () => {
     expect(again.get('[data-testid="auto-sync-queue"]').element.checked).toBe(true);
   });
 
+  it("does not claim anonymous download stats is unavailable", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="privacy"]').trigger("click");
+    const row = w.get('[data-testid="anonymous-download-stats-row"]');
+    expect(row.text()).toContain("匿名下载统计");
+    expect(row.text()).toContain("条目 id");
+    expect(row.text()).not.toContain("尚未提供");
+    expect(w.get('[data-testid="anonymous-download-stats"]').element.checked).toBe(false);
+  });
+
+  it("persists anonymous download stats from the settings row", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="privacy"]').trigger("click");
+    await w.get('[data-testid="anonymous-download-stats"]').setValue(true);
+    await flushPromises();
+    expect(await getLocalSetting("anonymous_download_stats")).toBe("1");
+    w.unmount();
+    const again = mount(WorkbenchShell);
+    await again.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await again.get('[data-settings-page="privacy"]').trigger("click");
+    expect(again.get('[data-testid="anonymous-download-stats"]').element.checked).toBe(true);
+  });
+
+  it("labels the proxy row as follow-system instead of available", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await w.get('[data-settings-page="network"]').trigger("click");
+    const row = w.get('[data-testid="proxy-row"]');
+    expect(row.text()).toContain("代理");
+    expect(row.text()).toContain("跟随系统");
+    expect(row.text()).not.toContain("尚未提供");
+  });
+
   it("queues a favorite while offline when auto-sync is on and flushes on sync now", async () => {
     setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
     setSessionTransport(async () => ({
@@ -982,7 +1068,7 @@ describe("WorkbenchShell", () => {
     expect(row.text()).toContain("不进 Web Storage");
     expect(row.text()).not.toContain("本机钥匙串");
     expect(w.text()).toContain("匿名下载统计");
-    expect(w.text()).toContain("尚未提供");
+    expect(w.get('[data-testid="anonymous-download-stats-row"]').text()).not.toContain("尚未提供");
   });
 
   it("does not claim login writes refresh to the system keychain in browser preview", async () => {

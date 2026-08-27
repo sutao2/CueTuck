@@ -7,6 +7,7 @@ import {
   listSquareItems,
   putFavorite,
   resetSquare,
+  setDownloadStatsTransport,
   setFavoriteTransport,
   setMineTransport,
   setPublishTransport,
@@ -72,6 +73,64 @@ describe("square client", () => {
     const skipped = await downloadSquareItem("sq-2");
     expect(skipped.author).toBeFalsy();
     expect(skipped.content).toBe("潮湿路面的霓虹倒影。");
+  });
+
+  it("posts anonymous download stats without auth after a successful download when the setting is on", async () => {
+    setSquareContentTransport(async (id) => ({
+      id,
+      title: "自然光群像",
+      content: "清透蓝天下的多元人物群像。",
+    }));
+    const calls = [];
+    setDownloadStatsTransport(async (request) => {
+      calls.push(request);
+    });
+    await setLocalSetting("anonymous_download_stats", "1");
+    setSessionTransport(async () => ({
+      access_token: "acc.1",
+      refresh_token: "ref.1",
+      email: "dev@promptark.local",
+    }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const row = await downloadSquareItem("sq-1");
+    expect(row.source).toBe("downloaded");
+    expect(calls).toHaveLength(1);
+    expect(calls[0].id).toBe("sq-1");
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].path).toBe("/v1/square/items/sq-1/downloads");
+    expect(calls[0].headers).toEqual({});
+    expect(JSON.stringify(calls[0])).not.toMatch(/dev@promptark|自然光群像|清透蓝天|Authorization|authorization/);
+  });
+
+  it("does not post download stats when the setting is off", async () => {
+    setSquareContentTransport(async (id) => ({
+      id,
+      title: "自然光群像",
+      content: "清透蓝天下的多元人物群像。",
+    }));
+    const calls = [];
+    setDownloadStatsTransport(async (request) => {
+      calls.push(request);
+    });
+    const row = await downloadSquareItem("sq-1");
+    expect(row.source).toBe("downloaded");
+    expect(calls).toEqual([]);
+  });
+
+  it("keeps the local download when stats post fails", async () => {
+    setSquareContentTransport(async (id) => ({
+      id,
+      title: "自然光群像",
+      content: "清透蓝天下的多元人物群像。",
+    }));
+    setDownloadStatsTransport(async () => {
+      throw new Error("stats down");
+    });
+    await setLocalSetting("anonymous_download_stats", "1");
+    const row = await downloadSquareItem("sq-1");
+    expect(row.source).toBe("downloaded");
+    const listed = await listLocalPrompts({ query: "自然光群像" });
+    expect(listed).toHaveLength(1);
   });
 
   it("submits a publication without changing the local copy", async () => {

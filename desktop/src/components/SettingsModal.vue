@@ -274,7 +274,7 @@
               <span class="setting-copy"><strong>允许访问提示词广场</strong><small>关闭后工作台不请求广场；启动器仍只搜本地。</small></span>
               <input type="checkbox" data-testid="square-access" :checked="squareAccess" @change="toggleSquareAccess">
             </label>
-            <div class="setting-row">
+            <div class="setting-row" data-testid="proxy-row">
               <span class="setting-copy"><strong>代理</strong><small>跟随系统。未提供手动配置前不假装自建代理。</small></span>
               <span class="setting-control">跟随系统</span>
             </div>
@@ -318,10 +318,15 @@
               <span class="setting-copy"><strong>本地提示词默认不上传</strong><small>未点发布不得把本地正文送出。</small></span>
               <span class="setting-control">始终生效</span>
             </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>匿名下载统计</strong><small>未接通前不会静默上报。</small></span>
-              <span class="setting-control">尚未提供</span>
-            </div>
+            <label class="setting-row" data-testid="anonymous-download-stats-row">
+              <span class="setting-copy"><strong>匿名下载统计</strong><small>打开后，成功下载只上报条目 id，不含账号、正文或标题。关闭时不请求。统计失败不影响下载。</small></span>
+              <input
+                type="checkbox"
+                data-testid="anonymous-download-stats"
+                :checked="anonymousDownloadStats"
+                @change="toggleAnonymousDownloadStats"
+              >
+            </label>
             <div class="setting-row">
               <span class="setting-copy"><strong>清除使用历史</strong><small>只删最近使用记录，不删提示词正文。</small></span>
               <button type="button" class="button ghost-button" data-testid="clear-use-history" @click="clearHistory">清除</button>
@@ -440,6 +445,7 @@ const updateChannel = ref("stable");
 const syncConflict = ref("newer");
 const syncWifiImages = ref(false);
 const autoSyncQueue = ref(false);
+const anonymousDownloadStats = ref(false);
 const appVersion = pkg.version;
 const prefError = ref("");
 const launchAtLogin = ref(false);
@@ -494,6 +500,7 @@ onMounted(async () => {
   syncConflict.value = (await getLocalSetting("sync_conflict")) === "keep_local" ? "keep_local" : "newer";
   syncWifiImages.value = isPrefOn(await getLocalSetting("sync_wifi_images"));
   autoSyncQueue.value = isPrefOn(await getLocalSetting("auto_sync_queue"));
+  anonymousDownloadStats.value = isPrefOn(await getLocalSetting("anonymous_download_stats"));
   if (props.session.loggedIn) {
     const [mine, profile, billing] = await Promise.all([
       listMyPublications().catch(() => []),
@@ -566,6 +573,11 @@ async function toggleSyncWifiImages(event) {
 async function toggleAutoSyncQueue(event) {
   autoSyncQueue.value = event.target.checked;
   await setLocalSetting("auto_sync_queue", autoSyncQueue.value ? "1" : "0");
+}
+
+async function toggleAnonymousDownloadStats(event) {
+  anonymousDownloadStats.value = event.target.checked;
+  await setLocalSetting("anonymous_download_stats", anonymousDownloadStats.value ? "1" : "0");
 }
 
 async function runCheckUpdates() {

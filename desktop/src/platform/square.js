@@ -1,4 +1,4 @@
-import { importDownloadedPrompt } from "./library.js";
+import { importDownloadedPrompt, getLocalSetting } from "./library.js";
 import { getSession } from "./session.js";
 
 let testTransport = null;
@@ -6,6 +6,7 @@ let testContentTransport = null;
 let testPublishTransport = null;
 let testFavoriteTransport = null;
 let testMineTransport = null;
+let testStatsTransport = null;
 
 function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -26,6 +27,7 @@ export function resetSquare() {
   testPublishTransport = null;
   testFavoriteTransport = null;
   testMineTransport = null;
+  testStatsTransport = null;
 }
 
 export function setSquareTransport(transport) {
@@ -46,6 +48,10 @@ export function setFavoriteTransport(transport) {
 
 export function setMineTransport(transport) {
   testMineTransport = transport;
+}
+
+export function setDownloadStatsTransport(transport) {
+  testStatsTransport = transport;
 }
 
 export async function listSquareItems({ sort = "推荐", query = "" } = {}) {
@@ -79,16 +85,44 @@ async function fetchSquareContent(id) {
 }
 
 export async function downloadSquareItem(id) {
+  let row;
   if (isTauri() && !testContentTransport) {
-    return tauriInvoke("download_square_item", { id });
+    row = await tauriInvoke("download_square_item", { id });
+  } else {
+    const payload = await fetchSquareContent(id);
+    row = await importDownloadedPrompt({
+      title: payload.title,
+      content: payload.content ?? "",
+      remoteId: payload.id ?? id,
+      author: payload.author,
+    });
   }
-  const payload = await fetchSquareContent(id);
-  return importDownloadedPrompt({
-    title: payload.title,
-    content: payload.content ?? "",
-    remoteId: payload.id ?? id,
-    author: payload.author,
-  });
+  await recordAnonymousDownload(id);
+  return row;
+}
+
+async function recordAnonymousDownload(id) {
+  if ((await getLocalSetting("anonymous_download_stats")) !== "1") return;
+  try {
+    if (testStatsTransport) {
+      await testStatsTransport({
+        id,
+        method: "POST",
+        path: `/v1/square/items/${id}/downloads`,
+        headers: {},
+      });
+      return;
+    }
+    if (isTauri()) {
+      await tauriInvoke("record_square_download", { id });
+      return;
+    }
+    await fetch(`${apiBase()}/v1/square/items/${encodeURIComponent(id)}/downloads`, {
+      method: "POST",
+    });
+  } catch {
+    /* 统计失败不得阻断下载 */
+  }
 }
 
 export async function createPublication({ sourceId, title, content } = {}) {

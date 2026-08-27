@@ -80,6 +80,20 @@ pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRe
 }
 
 #[tauri::command]
+pub async fn record_square_download(id: String) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{}/v1/square/items/{}/downloads", api_base(), id))
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err("download stats failed".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn create_publication(
     source_id: String,
     access_token: String,

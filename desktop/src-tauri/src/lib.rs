@@ -75,6 +75,7 @@ pub fn run() {
             commands::updates::queue_update_install,
             commands::square::list_square_items,
             commands::square::download_square_item,
+            commands::square::record_square_download,
             commands::square::create_publication,
             commands::square::list_my_publications,
             commands::square::put_favorite,
