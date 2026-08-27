@@ -31,6 +31,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 
 ```text
 1–21 已关闭（广场预发缺口 … 自动同步收藏队列）
+22 匿名下载统计
 不能诚实做完：deferred.md
 ```
 
@@ -57,6 +58,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 19 已关闭 | [2026-08-27-readme-status.md](2026-08-27-readme-status.md) | 归档 |
 | 20 已关闭 | [2026-08-27-wifi-image-sync.md](2026-08-27-wifi-image-sync.md) | 归档 |
 | 21 已关闭 | [2026-08-27-auto-sync-queue.md](2026-08-27-auto-sync-queue.md) | 归档 |
+| 22 队首 | [2026-08-27-anonymous-download-stats.md](2026-08-27-anonymous-download-stats.md) | 现行 |
 | 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
@@ -92,6 +94,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 仓库入口阶段 | 完整产品 | [documentation](../specs/documentation/spec.md) | [2026-08-27-readme-status.md](2026-08-27-readme-status.md) |
 | 仅 Wi-Fi 同步图片 | 完整产品 | [sync](../specs/sync/spec.md) | [2026-08-27-wifi-image-sync.md](2026-08-27-wifi-image-sync.md) |
 | 自动同步收藏队列 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-27-auto-sync-queue.md](2026-08-27-auto-sync-queue.md) |
+| 匿名下载统计 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-27-anonymous-download-stats.md](2026-08-27-anonymous-download-stats.md) |
 
 ## 通用完成定义（每个里程碑都要满足）
 

@@ -45,6 +45,7 @@
 - GIVEN 预发种子含不同标题与模型
 - WHEN 分别请求 `sort=recommended`、`latest`、`hot`
 - THEN 三种顺序可区分
+- AND `hot` 按匿名下载次数降序，次数相同则按标题升序
 - AND `model` 查询只返回该模型
 - AND 不得声称这是生产热度算法
 
@@ -87,6 +88,30 @@
 - THEN 账号收藏关系删除
 - AND 本地已下载副本仍在
 
+### Requirement: 匿名下载统计
+
+开启「匿名下载统计」且本地下载成功后，客户端 MUST `POST /v1/square/items/{id}/downloads`，MUST NOT 带 Authorization，MUST NOT 发送账号、正文或标题。关闭时 MUST NOT 请求。统计失败 MUST NOT 阻断下载。服务端 MUST 接受匿名 POST，未知 id MUST 404，MUST NOT 把 GET 正文当成一次统计，MUST NOT 记录谁下载。
+
+#### Scenario: 打开后上报条目 id
+
+- GIVEN 开关已打开且下载成功
+- WHEN 客户端上报
+- THEN 该 id 计数加一
+- AND 请求无 Authorization
+
+#### Scenario: 关闭不静默上报
+
+- GIVEN 开关关闭
+- WHEN 用户下载
+- THEN 服务端计数不变
+
+#### Scenario: GET 正文不加次数
+
+- GIVEN 某条计数为零
+- WHEN 匿名 GET `/content`
+- THEN 计数仍为零
+- AND 热门顺序不因此改变
+
 ### Requirement: 自动同步收藏队列
 
 开启「自动同步收藏与发布草稿」且已登录时，收藏或取消收藏失败 MUST 写入本机队列，MUST NOT 因此新增本地 `source=downloaded` 副本，MUST NOT 假装已经到达服务器。立即同步 MUST 把本账号队列送出。开关关闭时失败 MUST 不入队。同一收藏 id 后写 MUST 覆盖先写。
@@ -124,6 +149,9 @@
 | M2 构建无广场请求 | 已由 M5 浏览替代；离线不阻断本地 |
 | 离线 | `WorkbenchShell.spec.js` shows a non-blocking offline notice and can return to local；`LauncherApp.spec.js` does not request square while searching locally |
 | 未登录下载 | `WorkbenchShell.spec.js` downloads a square prompt without login as source=downloaded；`square.test.js` writes a local copy with source=downloaded；`imports_downloaded_prompt_with_source`；`serves_square_item_content_without_login` |
+| 打开后上报条目 id | `square.test.js` posts anonymous download stats without auth after a successful download when the setting is on；`backend` `record_anonymous_download_increments_count_without_auth` |
+| 关闭不静默上报 | `square.test.js` does not post download stats when the setting is off；`WorkbenchShell.spec.js` does not record anonymous download stats when the setting is off |
+| GET 正文不加次数 | `backend` `get_content_does_not_count_as_anonymous_stats`；`backend` `missing_item_download_stat_is_404` |
 | 未登录收藏 | `WorkbenchShell.spec.js` opens login from favorite without writing a local copy |
 | 已登录收藏 | `WorkbenchShell.spec.js` favorites a square item while logged in without writing a local copy；`square.test.js` puts a favorite without writing a local copy；`backend` `put_favorite_lists_for_account` |
 | 取消收藏 | `WorkbenchShell.spec.js` keeps a downloaded copy after unfavorite；`backend` `delete_favorite_removes_account_relation` |
@@ -134,6 +162,6 @@
 | 合同 path 与匿名下载 | `squareContract.test.js` lists every contract path |
 | 浏览混排 | `WorkbenchShell.spec.js` shows square items in the content grid not the category tree；`backend` `lists_square_items_without_login` |
 | 条目详情 | `backend` `serves_square_item_without_login` |
-| 浏览排序与模型筛选 | `backend` `sorts_recommended_latest_and_hot_apart` |
+| 浏览排序与模型筛选 | `backend` `sorts_recommended_latest_and_hot_apart`；`backend` `record_anonymous_download_increments_count_without_auth`；`backend` `anonymous_download_count_survives_new_appstate_on_postgres` |
 | 已登录收藏排序 | `backend` `favorites_sort_requires_login` |
 | 进程重启后列表仍在 | `backend` `publication_favorite_and_settings_survive_postgres` |

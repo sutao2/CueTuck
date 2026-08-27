@@ -350,3 +350,62 @@ async fn webhook_survives_new_appstate_on_postgres() {
     assert_eq!(payload["pro"], true);
 }
 
+#[tokio::test]
+async fn anonymous_download_count_survives_new_appstate_on_postgres() {
+    let Some(state) = postgres_state().await else {
+        panic!("expected local Postgres at postgres://pl:pl@127.0.0.1:5432/promptark");
+    };
+    let pg = state.db.as_ref().unwrap();
+    pg.insert_item(&SquareItem {
+        id: "sq-hot".into(),
+        title: "Zed".into(),
+        kind: "prompt".into(),
+        excerpt: None,
+        model: None,
+        member_count: None,
+        content: Some("body".into()),
+    })
+    .await
+    .unwrap();
+    pg.insert_item(&SquareItem {
+        id: "sq-cold".into(),
+        title: "Alpha".into(),
+        kind: "prompt".into(),
+        excerpt: None,
+        model: None,
+        member_count: None,
+        content: Some("body".into()),
+    })
+    .await
+    .unwrap();
+    let counted = app(state.clone())
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/square/items/sq-hot/downloads")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(counted.status(), StatusCode::NO_CONTENT);
+    let fresh = AppState {
+        db: state.db.clone(),
+        ..AppState::default()
+    };
+    let listed = app(fresh)
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/v1/square/items?sort=hot")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(listed.status(), StatusCode::OK);
+    let body = to_bytes(listed.into_body(), usize::MAX).await.unwrap();
+    let payload: SquareListResponse = serde_json::from_slice(&body).unwrap();
+    let titles: Vec<String> = payload.items.into_iter().map(|item| item.title).collect();
+    assert_eq!(titles, vec!["Zed", "Alpha"]);
+}

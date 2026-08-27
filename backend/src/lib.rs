@@ -6,6 +6,7 @@ mod oauth;
 mod password;
 mod postgres;
 mod state;
+mod square_downloads;
 
 use axum::extract::{Path, Query, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, Method, StatusCode};
@@ -41,6 +42,7 @@ pub struct AppState {
     library: Arc<Mutex<HashMap<String, HashMap<String, crate::library::LibraryChange>>>>,
     redeem_codes: Arc<Mutex<HashMap<String, Option<String>>>>,
     pro_accounts: Arc<Mutex<HashSet<String>>>,
+    download_counts: Arc<Mutex<HashMap<String, i64>>>,
     stripe_secret: Option<String>,
     checkout_url: Option<String>,
     webhook_secret: Option<String>,
@@ -66,6 +68,7 @@ impl Default for AppState {
             library: Arc::new(Mutex::new(HashMap::new())),
             redeem_codes: Arc::new(Mutex::new(HashMap::new())),
             pro_accounts: Arc::new(Mutex::new(HashSet::new())),
+            download_counts: Arc::new(Mutex::new(HashMap::new())),
             stripe_secret: None,
             checkout_url: None,
             webhook_secret: None,
@@ -254,6 +257,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/media/upload", post(media::upload))
         .route("/v1/media/:id/url", get(media::signed_url))
         .route("/v1/square/items", get(list_square_items))
+        .route("/v1/square/items/:id/downloads", post(square_downloads::record))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/square/items/:id", get(get_square_item))
         .route("/v1/publications", post(create_publication))
@@ -413,14 +417,21 @@ async fn list_square_items(
         items.retain(|item| ids.iter().any(|id| id == &item.id));
         return Json(SquareListResponse { items });
     }
-    apply_preview_sort(&mut items, &sort);
+    let counts = state.download_counts().await.unwrap_or_default();
+    apply_preview_sort(&mut items, &sort, &counts);
     Json(SquareListResponse { items })
 }
 
-fn apply_preview_sort(items: &mut [SquareItem], sort: &str) {
+fn apply_preview_sort(items: &mut [SquareItem], sort: &str, counts: &HashMap<String, i64>) {
     match sort {
         "latest" | "最新" => items.reverse(),
-        "hot" | "热门" => items.sort_by(|left, right| left.title.cmp(&right.title)),
+        "hot" | "热门" => items.sort_by(|left, right| {
+            let left_count = counts.get(&left.id).copied().unwrap_or(0);
+            let right_count = counts.get(&right.id).copied().unwrap_or(0);
+            right_count
+                .cmp(&left_count)
+                .then_with(|| left.title.cmp(&right.title))
+        }),
         _ => {}
     }
 }

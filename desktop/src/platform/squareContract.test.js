@@ -13,6 +13,7 @@ const REQUIRED = [
   { method: "GET", path: "/v1/square/items", auth: "none" },
   { method: "GET", path: "/v1/square/items/{id}", auth: "none" },
   { method: "GET", path: "/v1/square/items/{id}/content", auth: "none" },
+  { method: "POST", path: "/v1/square/items/{id}/downloads", auth: "none" },
   { method: "POST", path: "/v1/session", auth: "none" },
   { method: "DELETE", path: "/v1/session", auth: "user" },
   { method: "POST", path: "/v1/session/refresh", auth: "none" },

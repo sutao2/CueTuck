@@ -33,9 +33,9 @@ M2 已落地且 MUST 保留：常规入口、启动器全局快捷键、JSON 导
 
 #### Scenario: 未实现页
 
-- GIVEN 匿名下载统计尚未提供
-- WHEN 用户打开「隐私与安全」
-- THEN 该行标明尚未提供
+- GIVEN 手动配置代理尚未提供
+- WHEN 用户打开「网络与代理」
+- THEN 代理行标明跟随系统
 - AND 启动器与 MCP 仍只读本机 SQLite
 
 ### Requirement: 导航十类
@@ -242,7 +242,27 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 ### Requirement: 隐私与安全
 
-隐私与安全页 MUST 展示：本地提示词默认不上传、匿名下载统计、清除使用历史、系统钥匙串。默认不上传 MUST 与宪法一致：未点发布不得把本地正文送出。匿名下载统计未接通前 MUST 标明尚未提供，不得静默上报。清除使用历史接通后 MUST 只删最近使用记录，不得删提示词正文。钥匙串行 MUST 反映 Refresh 是否在系统密钥库：Tauri 下标明本机钥匙串；浏览器预览 MUST NOT 写成本机钥匙串，MUST 说明 Refresh 不进 Web Storage。不得把 Refresh 改存 Web Storage。
+隐私与安全页 MUST 展示：本地提示词默认不上传、匿名下载统计、清除使用历史、系统钥匙串。默认不上传 MUST 与宪法一致：未点发布不得把本地正文送出。匿名下载统计接通后 MUST 为本机开关，默认 MUST 关闭。打开且本地下载成功后 MUST `POST /v1/square/items/{id}/downloads`，MUST NOT 带 Authorization，MUST NOT 发送账号、正文或标题。关闭时 MUST NOT 请求该接口。统计失败 MUST NOT 阻断下载。GET 正文 MUST NOT 当成统计。该行 MUST NOT 标明尚未提供，MUST NOT 静默上报。清除使用历史接通后 MUST 只删最近使用记录，不得删提示词正文。钥匙串行 MUST 反映 Refresh 是否在系统密钥库：Tauri 下标明本机钥匙串；浏览器预览 MUST NOT 写成本机钥匙串，MUST 说明 Refresh 不进 Web Storage。不得把 Refresh 改存 Web Storage。
+
+#### Scenario: 匿名下载统计默关且可打开
+
+- GIVEN 用户打开隐私与安全
+- WHEN 查看匿名下载统计
+- THEN 该行是关闭的开关
+- AND 不标明尚未提供
+
+#### Scenario: 打开后成功下载只上报条目 id
+
+- GIVEN 匿名下载统计已打开
+- WHEN 用户成功下载一条广场提示词
+- THEN 客户端对该 id 发出匿名 POST
+- AND 请求不含 Authorization、账号或正文
+
+#### Scenario: 关闭时不请求统计
+
+- GIVEN 匿名下载统计关闭
+- WHEN 用户成功下载一条广场提示词
+- THEN 不请求下载统计接口
 
 #### Scenario: 清除使用历史不删正文
 
@@ -298,7 +318,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 场景 | 测试 |
 |---|---|
 | 打开设置 | `WorkbenchShell.spec.js` opens settings from the sidebar |
-| 未实现页 | `WorkbenchShell.spec.js` does not claim the keychain row uses the local keychain in browser preview（隐私页匿名下载统计仍标明尚未提供） |
+| 未实现页 | `WorkbenchShell.spec.js` labels the proxy row as follow-system instead of available |
 | 十类都在 | `WorkbenchShell.spec.js` lists ten settings categories |
 | 缺少的页不得消失 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |
 | 开机启动 | `desktopPrefs.test.js` persists launch at login on macos / windows / linux；`WorkbenchShell.spec.js` saves launch at login on macos / windows without claiming nsis / linux without claiming release qa；`windowChrome.test.js` treats Linux as linux |
@@ -322,6 +342,9 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
 | 同步状态不写没有云同步 | `WorkbenchShell.spec.js` does not claim the network page has no cloud sync；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |
 | 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |
+| 匿名下载统计默关且可打开 | `WorkbenchShell.spec.js` does not claim anonymous download stats is unavailable；`WorkbenchShell.spec.js` persists anonymous download stats from the settings row |
+| 打开后成功下载只上报条目 id | `square.test.js` posts anonymous download stats without auth after a successful download when the setting is on；`WorkbenchShell.spec.js` records anonymous download stats after a successful download when the setting is on |
+| 关闭时不请求统计 | `square.test.js` does not post download stats when the setting is off；`WorkbenchShell.spec.js` does not record anonymous download stats when the setting is off；`square.test.js` keeps the local download when stats post fails |
 | 浏览器预览不写本机钥匙串 | `WorkbenchShell.spec.js` does not claim the keychain row uses the local keychain in browser preview；`WorkbenchShell.spec.js` does not claim login writes refresh to the system keychain in browser preview |
 | Tauri 标明本机钥匙串 | `WorkbenchShell.spec.js` labels the keychain row as local keychain inside Tauri |
 | 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check；`packageIsolation.test.js` keeps package version aligned with tauri and cargo；`updates.test.js` reports no update when the latest stable tag matches the tauri build；`updates.test.js` asks GitHub Releases and reports none when the list is empty |

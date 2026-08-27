@@ -2,6 +2,7 @@ use crate::password::{hash_password, verify_password};
 use crate::{AdminUser, Publication, SquareItem};
 use axum::http::StatusCode;
 use sqlx::{PgPool, Row};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -102,6 +103,7 @@ impl Pg {
                   model TEXT,
                   member_count BIGINT,
                   content TEXT,
+                  download_count BIGINT NOT NULL DEFAULT 0,
                   sort_index INT NOT NULL DEFAULT 0
                 )",
                 self.t("square_items")
@@ -191,6 +193,12 @@ impl Pg {
         sqlx::query(&format!(
             "ALTER TABLE {} ADD COLUMN IF NOT EXISTS pro BOOLEAN NOT NULL DEFAULT FALSE",
             self.t("accounts")
+        ))
+        .execute(&self.pool)
+        .await?;
+        sqlx::query(&format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS download_count BIGINT NOT NULL DEFAULT 0",
+            self.t("square_items")
         ))
         .execute(&self.pool)
         .await?;
@@ -485,6 +493,40 @@ impl Pg {
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         Ok(row.as_ref().map(Self::item_from_row))
+    }
+
+    pub async fn increment_download_count(&self, id: &str) -> Result<(), StatusCode> {
+        let result = sqlx::query(&format!(
+            "UPDATE {} SET download_count = download_count + 1 WHERE id = $1",
+            self.t("square_items")
+        ))
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if result.rows_affected() == 0 {
+            return Err(StatusCode::NOT_FOUND);
+        }
+        Ok(())
+    }
+
+    pub async fn download_counts(&self) -> Result<HashMap<String, i64>, StatusCode> {
+        let rows = sqlx::query(&format!(
+            "SELECT id, download_count FROM {}",
+            self.t("square_items")
+        ))
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(rows
+            .iter()
+            .map(|row| {
+                (
+                    row.get::<String, _>("id"),
+                    row.get::<i64, _>("download_count"),
+                )
+            })
+            .collect())
     }
 
     pub async fn insert_item(&self, item: &SquareItem) -> Result<(), StatusCode> {

@@ -4,6 +4,7 @@ use crate::password::verify_password;
 use crate::postgres::Pg;
 use crate::{SessionResponse, SquareItem, AppState};
 use axum::http::StatusCode;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 impl AppState {
@@ -220,6 +221,38 @@ impl AppState {
             .lock()
             .ok()
             .and_then(|rows| rows.iter().find(|item| item.id == id).cloned()))
+    }
+
+    pub(crate) async fn increment_download(&self, id: &str) -> Result<(), StatusCode> {
+        if let Some(pg) = &self.db {
+            return pg.increment_download_count(id).await;
+        }
+        let exists = self
+            .items
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .iter()
+            .any(|item| item.id == id);
+        if !exists {
+            return Err(StatusCode::NOT_FOUND);
+        }
+        let mut counts = self
+            .download_counts
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        *counts.entry(id.to_string()).or_insert(0) += 1;
+        Ok(())
+    }
+
+    pub(crate) async fn download_counts(&self) -> Result<HashMap<String, i64>, StatusCode> {
+        if let Some(pg) = &self.db {
+            return pg.download_counts().await;
+        }
+        Ok(self
+            .download_counts
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .clone())
     }
 
     pub async fn oauth_login(&self, user: &OAuthUser) -> Result<SessionResponse, StatusCode> {
