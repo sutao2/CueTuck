@@ -123,7 +123,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-26-keep-local-conflict.md](plans/2026-08-26-keep-local-conflict.md) | 归档 | 查冲突时保留本地怎么接到立即同步 | 不得覆盖该条本机正文 |
 | [plans/2026-08-27-web-billing.md](plans/2026-08-27-web-billing.md) | 归档 | 查浏览器账单入口怎么接到预发 API | 不得声称商店上架 |
 | [plans/2026-08-27-readme-status.md](plans/2026-08-27-readme-status.md) | 归档 | 查仓库入口怎么标明 M9 与已接通能力 | 不得把已接通写成未接通 |
-| [plans/2026-08-27-wifi-image-sync.md](plans/2026-08-27-wifi-image-sync.md) | 现行 | 查仅 Wi-Fi 同步图片怎么接到立即同步 | 非 Wi-Fi 跳过封面仍同步正文 |
+| [plans/2026-08-27-wifi-image-sync.md](plans/2026-08-27-wifi-image-sync.md) | 归档 | 查仅 Wi-Fi 同步图片怎么接到立即同步 | 非 Wi-Fi 跳过封面仍同步正文 |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问商店 / 生产托管 / NSIS 额度 | 没有证据就不能声称 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
@@ -174,6 +174,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-26-keep-local-conflict.md](plans/done/2026-08-26-keep-local-conflict.md) | 归档 | 查冲突时保留本地是否接到立即同步 | 不得覆盖该条本机正文 |
 | [plans/done/2026-08-27-web-billing.md](plans/done/2026-08-27-web-billing.md) | 归档 | 查浏览器账单入口是否接到预发 API | 不得声称商店上架 |
 | [plans/done/2026-08-27-readme-status.md](plans/done/2026-08-27-readme-status.md) | 归档 | 查仓库入口是否标明 M9 与已接通能力 | 不得把已接通写成未接通 |
+| [plans/done/2026-08-27-wifi-image-sync.md](plans/done/2026-08-27-wifi-image-sync.md) | 归档 | 查仅 Wi-Fi 同步图片是否接到立即同步 | 非 Wi-Fi 跳过封面仍同步正文 |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |
