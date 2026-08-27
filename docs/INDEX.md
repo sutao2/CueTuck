@@ -126,6 +126,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-27-wifi-image-sync.md](plans/2026-08-27-wifi-image-sync.md) | 归档 | 查仅 Wi-Fi 同步图片怎么接到立即同步 | 非 Wi-Fi 跳过封面仍同步正文 |
 | [plans/2026-08-27-auto-sync-queue.md](plans/2026-08-27-auto-sync-queue.md) | 归档 | 查自动同步收藏与发布草稿怎么入队 | 断网入队，不得假装已到达服务器 |
 | [plans/2026-08-27-anonymous-download-stats.md](plans/2026-08-27-anonymous-download-stats.md) | 归档 | 查匿名下载统计怎么按开关上报 | 默认关；只发条目 id；不得静默上报 |
+| [plans/2026-08-27-manual-proxy.md](plans/2026-08-27-manual-proxy.md) | 现行 | 查手动代理怎么接到本机请求 | 空则跟随系统；浏览器预览不走该代理 |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问商店 / 生产托管 / NSIS 额度 | 没有证据就不能声称 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |

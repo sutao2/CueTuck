@@ -33,9 +33,9 @@ M2 已落地且 MUST 保留：常规入口、启动器全局快捷键、JSON 导
 
 #### Scenario: 未实现页
 
-- GIVEN 手动配置代理尚未提供
+- GIVEN 本机设置已打开
 - WHEN 用户打开「网络与代理」
-- THEN 代理行标明跟随系统
+- THEN 代理行可填写地址且空则跟随系统
 - AND 启动器与 MCP 仍只读本机 SQLite
 
 ### Requirement: 导航十类
@@ -223,7 +223,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 ### Requirement: 网络与代理
 
-网络与代理页 MUST 展示：允许访问提示词广场、代理、同步状态。「允许访问提示词广场」接通后 MUST 成为本机开关：关闭时工作台 MUST 不请求广场，启动器仍 MUST 只搜本地。代理在未实现手动配置前 MUST 标明跟随系统。同步状态 MUST 标明个人库可立即同步，MUST NOT 写成没有云同步或尚未提供，MUST NOT 假装正在同步或已同步。
+网络与代理页 MUST 展示：允许访问提示词广场、代理、同步状态。「允许访问提示词广场」接通后 MUST 成为本机开关：关闭时工作台 MUST 不请求广场，启动器仍 MUST 只搜本地。代理接通后 MUST 可填写 http 或 https 地址：空 MUST 跟随系统；填写后本机 Tauri 请求 MUST 走该代理。非法地址 MUST NOT 保存。浏览器预览 MUST NOT 声称走该代理。MUST NOT 把 SOCKS 写成已支持。同步状态 MUST 标明个人库可立即同步，MUST NOT 写成没有云同步或尚未提供，MUST NOT 假装正在同步或已同步。
 
 #### Scenario: 关闭广场访问
 
@@ -231,6 +231,27 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 - WHEN 在工作台打开广场
 - THEN 不请求广场 API
 - AND 启动器搜索仍只走本地库
+
+#### Scenario: 空代理跟随系统
+
+- GIVEN 代理地址为空
+- WHEN 用户打开网络与代理
+- THEN 该行标明跟随系统
+- AND 不标明尚未提供
+
+#### Scenario: 填写后本机走代理
+
+- GIVEN 用户输入合法 http 代理地址
+- WHEN 保存
+- THEN 本机设置记下该地址
+- AND 说明浏览器预览不走该代理
+
+#### Scenario: 非法代理不保存
+
+- GIVEN 用户输入不是 http 或 https 的地址
+- WHEN 保存
+- THEN 本机设置仍为空
+- AND 说明地址无效
 
 #### Scenario: 同步状态不写没有云同步
 
@@ -319,6 +340,9 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 |---|---|
 | 打开设置 | `WorkbenchShell.spec.js` opens settings from the sidebar |
 | 未实现页 | `WorkbenchShell.spec.js` labels the proxy row as follow-system instead of available |
+| 空代理跟随系统 | `WorkbenchShell.spec.js` labels the proxy row as follow-system instead of available；`httpProxy.test.js` treats a blank value as follow-system；`desktop/src-tauri` `empty_setting_follows_system` |
+| 填写后本机走代理 | `WorkbenchShell.spec.js` persists a manual http proxy from the settings row；`httpProxy.test.js` accepts http and https proxy urls；`desktop/src-tauri` `http_and_https_urls_are_accepted` |
+| 非法代理不保存 | `WorkbenchShell.spec.js` rejects an invalid proxy url without saving；`httpProxy.test.js` rejects socks, other schemes, and garbage；`desktop/src-tauri` `other_schemes_and_garbage_are_rejected` |
 | 十类都在 | `WorkbenchShell.spec.js` lists ten settings categories |
 | 缺少的页不得消失 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |
 | 开机启动 | `desktopPrefs.test.js` persists launch at login on macos / windows / linux；`WorkbenchShell.spec.js` saves launch at login on macos / windows without claiming nsis / linux without claiming release qa；`windowChrome.test.js` treats Linux as linux |

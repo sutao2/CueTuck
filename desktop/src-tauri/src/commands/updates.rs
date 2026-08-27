@@ -13,11 +13,13 @@ fn http_client() -> Result<reqwest::Client, String> {
         USER_AGENT,
         HeaderValue::from_static("promptark-desktop"),
     );
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .default_headers(headers)
-        .build()
-        .map_err(|_| "检查失败".to_string())
+    crate::http::apply_runtime_proxy(
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(10))
+            .default_headers(headers),
+    )?
+    .build()
+    .map_err(|_| "检查失败".to_string())
 }
 
 fn want_preview(channel: Option<&str>) -> bool {

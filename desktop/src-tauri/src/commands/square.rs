@@ -28,7 +28,7 @@ fn data_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
 
 #[tauri::command]
 pub async fn list_square_items(sort: Option<String>, query: Option<String>) -> Result<Vec<serde_json::Value>, String> {
-    let client = reqwest::Client::new();
+    let client = crate::http::client()?;
     let response = client
         .get(format!("{}/v1/square/items", api_base()))
         .query(&[
@@ -47,7 +47,7 @@ pub async fn list_square_items(sort: Option<String>, query: Option<String>) -> R
 
 #[tauri::command]
 pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRecord, String> {
-    let client = reqwest::Client::new();
+    let client = crate::http::client()?;
     let response = client
         .get(format!("{}/v1/square/items/{}/content", api_base(), id))
         .send()
@@ -81,7 +81,7 @@ pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRe
 
 #[tauri::command]
 pub async fn record_square_download(id: String) -> Result<(), String> {
-    let client = reqwest::Client::new();
+    let client = crate::http::client()?;
     let response = client
         .post(format!("{}/v1/square/items/{}/downloads", api_base(), id))
         .send()
@@ -103,7 +103,7 @@ pub async fn create_publication(
     if source_id.trim().is_empty() {
         return Err("未选择本地内容".to_string());
     }
-    let client = reqwest::Client::new();
+    let client = crate::http::client()?;
     let response = client
         .post(format!("{}/v1/publications", api_base()))
         .bearer_auth(&access_token)
@@ -123,7 +123,7 @@ pub async fn create_publication(
 
 #[tauri::command]
 pub async fn list_my_publications(access_token: String) -> Result<serde_json::Value, String> {
-    let client = reqwest::Client::new();
+    let client = crate::http::client()?;
     let response = client
         .get(format!("{}/v1/publications/mine", api_base()))
         .bearer_auth(&access_token)
@@ -152,7 +152,7 @@ pub async fn list_favorites(access_token: String) -> Result<serde_json::Value, S
 }
 
 async fn favorite_request(method: &str, id: Option<&str>, access_token: &str) -> Result<serde_json::Value, String> {
-    let client = reqwest::Client::new();
+    let client = crate::http::client()?;
     let url = match id {
         Some(id) => format!("{}/v1/favorites/{id}", api_base()),
         None => format!("{}/v1/favorites", api_base()),

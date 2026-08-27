@@ -24,7 +24,7 @@ fn api_base() -> String {
 }
 
 fn http_client(follow_redirects: bool) -> Result<reqwest::Client, String> {
-    let mut builder = reqwest::Client::builder().timeout(Duration::from_secs(10));
+    let mut builder = crate::http::client_builder()?.timeout(Duration::from_secs(10));
     if !follow_redirects {
         builder = builder.redirect(Policy::none());
     }
