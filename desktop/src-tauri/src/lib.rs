@@ -1,4 +1,5 @@
 mod commands;
+mod http;
 mod local_database;
 mod session;
 
@@ -86,6 +87,7 @@ pub fn run() {
             let database = app.state::<LocalDatabase>();
             if let Ok(dir) = app.path().app_data_dir() {
                 let _ = database.initialize(&dir);
+                crate::http::load_from_dir(&dir);
             }
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();

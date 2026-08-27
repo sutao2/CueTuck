@@ -785,6 +785,39 @@ describe("WorkbenchShell", () => {
     expect(row.text()).toContain("代理");
     expect(row.text()).toContain("跟随系统");
     expect(row.text()).not.toContain("尚未提供");
+    expect(row.text()).toContain("浏览器预览不走该代理");
+    expect(w.get('[data-testid="http-proxy"]').element.value).toBe("");
+  });
+
+  it("persists a manual http proxy from the settings row", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="network"]').trigger("click");
+    const input = w.get('[data-testid="http-proxy"]');
+    await input.setValue("http://127.0.0.1:7890");
+    await input.trigger("change");
+    await flushPromises();
+    expect(await getLocalSetting("http_proxy")).toBe("http://127.0.0.1:7890");
+    w.unmount();
+    const again = mount(WorkbenchShell);
+    await again.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await again.get('[data-settings-page="network"]').trigger("click");
+    expect(again.get('[data-testid="http-proxy"]').element.value).toBe("http://127.0.0.1:7890");
+  });
+
+  it("rejects an invalid proxy url without saving", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="network"]').trigger("click");
+    const input = w.get('[data-testid="http-proxy"]');
+    await input.setValue("not-a-url");
+    await input.trigger("change");
+    await flushPromises();
+    expect(w.get('[data-testid="proxy-error"]').text()).toContain("代理地址无效");
+    expect(await getLocalSetting("http_proxy")).toBe("");
   });
 
   it("queues a favorite while offline when auto-sync is on and flushes on sync now", async () => {

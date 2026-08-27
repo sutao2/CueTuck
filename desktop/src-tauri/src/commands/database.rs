@@ -28,7 +28,9 @@ pub fn initialize_local_database(
     app: AppHandle,
     database: State<'_, LocalDatabase>,
 ) -> Result<String, String> {
-    database.initialize(&data_dir(&app)?)
+    database.initialize(&data_dir(&app)?)?;
+    crate::http::load_from_dir(&data_dir(&app)?);
+    Ok(database.status().as_str().to_string())
 }
 
 #[tauri::command]
@@ -184,6 +186,9 @@ pub fn get_local_setting(app: AppHandle, key: String) -> Result<String, String> 
 
 #[tauri::command]
 pub fn set_local_setting(app: AppHandle, key: String, value: String) -> Result<(), String> {
+    if key == "http_proxy" {
+        crate::http::set_runtime_proxy(&value)?;
+    }
     set_setting_in_dir(&data_dir(&app)?, &key, &value)
 }
 

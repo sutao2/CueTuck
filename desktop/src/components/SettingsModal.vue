@@ -274,10 +274,16 @@
               <span class="setting-copy"><strong>允许访问提示词广场</strong><small>关闭后工作台不请求广场；启动器仍只搜本地。</small></span>
               <input type="checkbox" data-testid="square-access" :checked="squareAccess" @change="toggleSquareAccess">
             </label>
-            <div class="setting-row" data-testid="proxy-row">
-              <span class="setting-copy"><strong>代理</strong><small>跟随系统。未提供手动配置前不假装自建代理。</small></span>
-              <span class="setting-control">跟随系统</span>
-            </div>
+            <label class="setting-row" data-testid="proxy-row">
+              <span class="setting-copy"><strong>代理</strong><small>空则跟随系统。填写 http 或 https 地址后，本机请求走该代理。浏览器预览不走该代理。</small></span>
+              <input
+                data-testid="http-proxy"
+                v-model="httpProxy"
+                placeholder="跟随系统"
+                @change="saveHttpProxy"
+              >
+            </label>
+            <p v-if="proxyError" data-testid="proxy-error">{{ proxyError }}</p>
             <div class="setting-row" data-testid="sync-status">
               <span class="setting-copy"><strong>同步状态</strong><small>个人库可立即同步。没有后台自动同步，不会显示假进度。</small></span>
               <span class="setting-control">手动立即同步</span>
@@ -400,6 +406,7 @@ import {
   startBillingCheckout,
 } from "../platform/billing.js";
 import { syncLocalLibraryNow } from "../platform/librarySync.js";
+import { parseHttpProxy } from "../platform/httpProxy.js";
 import { flushSyncQueue } from "../platform/syncQueue.js";
 import { checkForUpdates, queueUpdateInstall } from "../platform/updates.js";
 
@@ -446,6 +453,8 @@ const syncConflict = ref("newer");
 const syncWifiImages = ref(false);
 const autoSyncQueue = ref(false);
 const anonymousDownloadStats = ref(false);
+const httpProxy = ref("");
+const proxyError = ref("");
 const appVersion = pkg.version;
 const prefError = ref("");
 const launchAtLogin = ref(false);
@@ -501,6 +510,7 @@ onMounted(async () => {
   syncWifiImages.value = isPrefOn(await getLocalSetting("sync_wifi_images"));
   autoSyncQueue.value = isPrefOn(await getLocalSetting("auto_sync_queue"));
   anonymousDownloadStats.value = isPrefOn(await getLocalSetting("anonymous_download_stats"));
+  httpProxy.value = (await getLocalSetting("http_proxy")) || "";
   if (props.session.loggedIn) {
     const [mine, profile, billing] = await Promise.all([
       listMyPublications().catch(() => []),
@@ -578,6 +588,21 @@ async function toggleAutoSyncQueue(event) {
 async function toggleAnonymousDownloadStats(event) {
   anonymousDownloadStats.value = event.target.checked;
   await setLocalSetting("anonymous_download_stats", anonymousDownloadStats.value ? "1" : "0");
+}
+
+async function saveHttpProxy() {
+  const parsed = parseHttpProxy(httpProxy.value);
+  if (!parsed.ok) {
+    proxyError.value = parsed.error;
+    return;
+  }
+  proxyError.value = "";
+  httpProxy.value = parsed.value;
+  try {
+    await setLocalSetting("http_proxy", parsed.value);
+  } catch (error) {
+    proxyError.value = error instanceof Error ? error.message : String(error);
+  }
 }
 
 async function runCheckUpdates() {
