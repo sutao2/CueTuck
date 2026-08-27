@@ -87,6 +87,36 @@
 - THEN 账号收藏关系删除
 - AND 本地已下载副本仍在
 
+### Requirement: 自动同步收藏队列
+
+开启「自动同步收藏与发布草稿」且已登录时，收藏或取消收藏失败 MUST 写入本机队列，MUST NOT 因此新增本地 `source=downloaded` 副本，MUST NOT 假装已经到达服务器。立即同步 MUST 把本账号队列送出。开关关闭时失败 MUST 不入队。同一收藏 id 后写 MUST 覆盖先写。
+
+#### Scenario: 断网收藏入队
+
+- GIVEN 用户已登录且开关已打开，收藏请求失败
+- WHEN 用户收藏一条广场条目
+- THEN 本机队列含该收藏
+- AND 本地库不新增副本
+
+#### Scenario: 关闭开关不入队
+
+- GIVEN 用户已登录且开关关闭
+- WHEN 收藏请求失败
+- THEN 队列仍为空
+
+#### Scenario: 冲刷后到达服务端
+
+- GIVEN 队列中有一条收藏且网络已恢复
+- WHEN 立即同步
+- THEN 账号收藏关系被写入
+- AND 队列清空
+
+#### Scenario: 同一收藏后写覆盖
+
+- GIVEN 开关已打开且同一 id 先入队收藏再入队取消
+- WHEN 查看队列
+- THEN 只保留取消收藏
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -97,6 +127,10 @@
 | 未登录收藏 | `WorkbenchShell.spec.js` opens login from favorite without writing a local copy |
 | 已登录收藏 | `WorkbenchShell.spec.js` favorites a square item while logged in without writing a local copy；`square.test.js` puts a favorite without writing a local copy；`backend` `put_favorite_lists_for_account` |
 | 取消收藏 | `WorkbenchShell.spec.js` keeps a downloaded copy after unfavorite；`backend` `delete_favorite_removes_account_relation` |
+| 断网收藏入队 | `syncQueue.test.js` queues a favorite when auto-sync is on and the request fails；`WorkbenchShell.spec.js` queues a favorite while offline when auto-sync is on and flushes on sync now |
+| 关闭开关不入队 | `syncQueue.test.js` does not queue a favorite when auto-sync is off |
+| 冲刷后到达服务端 | `syncQueue.test.js` flushes a queued favorite when the transport recovers；`WorkbenchShell.spec.js` queues a favorite while offline when auto-sync is on and flushes on sync now |
+| 同一收藏后写覆盖 | `syncQueue.test.js` keeps the later favorite write for the same id |
 | 合同 path 与匿名下载 | `squareContract.test.js` lists every contract path |
 | 浏览混排 | `WorkbenchShell.spec.js` shows square items in the content grid not the category tree；`backend` `lists_square_items_without_login` |
 | 条目详情 | `backend` `serves_square_item_without_login` |

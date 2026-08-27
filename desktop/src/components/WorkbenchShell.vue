@@ -394,7 +394,8 @@ import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import UsePromptModal from "./UsePromptModal.vue";
 import { getSession, logoutSession } from "../platform/session.js";
-import { createPublication, deleteFavorite, downloadSquareItem, listFavorites, listSquareItems, putFavorite } from "../platform/square.js";
+import { downloadSquareItem, listFavorites, listSquareItems } from "../platform/square.js";
+import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
 import { parseCoverUrls } from "../lib/cover.js";
 import { DEFAULT_LAUNCHER_SHORTCUT } from "../platform/shortcut.js";
 import { applyHostChrome, detectHost, formatShortcutLabel, trafficLightInsetPx } from "../platform/windowChrome.js";
@@ -553,14 +554,12 @@ async function favoriteSquare(item) {
     openLogin("收藏需要登录");
     return;
   }
+  const removing = favoriteIds.value.includes(item.id);
   try {
-    if (favoriteIds.value.includes(item.id)) {
-      await deleteFavorite(item.id);
-      favoriteIds.value = favoriteIds.value.filter((id) => id !== item.id);
-    } else {
-      await putFavorite(item.id);
-      favoriteIds.value = [...favoriteIds.value, item.id];
-    }
+    await favoriteWithQueue(item.id, removing ? "DELETE" : "PUT");
+    favoriteIds.value = removing
+      ? favoriteIds.value.filter((id) => id !== item.id)
+      : [...favoriteIds.value, item.id];
   } catch {
     squareOffline.value = true;
   }
@@ -606,7 +605,7 @@ async function submitPublish() {
   if (!publishSourceId.value) return;
   const source = publishSources.value.find((item) => item.id === publishSourceId.value);
   try {
-    await createPublication({
+    await publishWithQueue({
       sourceId: publishSourceId.value,
       title: source?.title,
       content: source?.content ?? "",
@@ -624,7 +623,7 @@ async function refreshFavorites() {
   }
   try {
     const rows = await listFavorites();
-    favoriteIds.value = rows.map((row) => row.id);
+    favoriteIds.value = await applyQueuedFavorites(rows.map((row) => row.id));
   } catch {
     favoriteIds.value = [];
   }

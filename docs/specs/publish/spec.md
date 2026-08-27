@@ -36,6 +36,24 @@ M0–M4 MUST NOT 出现可成功提交审核的发布动作。M5 起以「选择
 - THEN 本地列表显示新正文
 - AND 编辑器不被禁用
 
+### Requirement: 发布草稿队列
+
+开启「自动同步收藏与发布草稿」且已登录时，发布提交失败 MUST 把标题与正文快照写入本机队列，MUST NOT 改写本地正文，MUST NOT 假装已经到达审核。立即同步 MUST 把本账号队列送出。
+
+#### Scenario: 断网发布入队
+
+- GIVEN 用户已登录且开关已打开，发布请求失败
+- WHEN 用户提交一条本地提示词
+- THEN 本机队列含该快照
+- AND 本地正文不变
+
+#### Scenario: 冲刷发布到达服务端
+
+- GIVEN 队列中有一条发布快照且网络已恢复
+- WHEN 冲刷队列
+- THEN 审核记录被创建
+- AND 队列清空
+
 ### Requirement: 提交快照与通过后上架
 
 `POST /v1/publications` MUST 能带上标题与正文快照。管理员通过后，该快照 MUST 出现在广场列表。MUST NOT 用审核结果覆盖本地正文。缺快照时 MUST NOT 把该条假装已上架。
@@ -54,5 +72,7 @@ M0–M4 MUST NOT 出现可成功提交审核的发布动作。M5 起以「选择
 | 点击发布 | M0–M4 无提交；M5 见「未选源」「审核与本地并行」 |
 | 未选源 | `WorkbenchShell.spec.js` disables publish submit until a local source is selected |
 | 审核与本地并行 | `WorkbenchShell.spec.js` keeps the local prompt editable after publish；`square.test.js` submits a publication without changing the local copy |
+| 断网发布入队 | `syncQueue.test.js` queues a publication snapshot when auto-sync is on and the request fails |
+| 冲刷发布到达服务端 | `syncQueue.test.js` flushes a queued publication when the transport recovers |
 | 合同提交 | `squareContract.test.js` `POST /v1/publications`；`backend` `create_publication_requires_access_and_keeps_pending` |
 | 通过后进广场列表 | `backend` `approve_with_snapshot_lists_on_square`；`approve_without_snapshot_does_not_list_on_square`；`square.test.js` submits a publication without changing the local copy |

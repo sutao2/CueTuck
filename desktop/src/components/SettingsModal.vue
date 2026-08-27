@@ -169,10 +169,15 @@
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
             <h3>同步</h3>
             <p>已登录可立即同步个人库。启动器与 MCP 仍只读本机 SQLite。</p>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>自动同步收藏与发布草稿</strong><small>联网队列尚未提供。</small></span>
-              <span class="setting-control">尚未提供</span>
-            </div>
+            <label class="setting-row" data-testid="auto-sync-queue-row">
+              <span class="setting-copy"><strong>自动同步收藏与发布草稿</strong><small>打开后，收藏或发布在断网时写入本机队列，联网后随立即同步送出。不会假装已经到达服务器。</small></span>
+              <input
+                type="checkbox"
+                data-testid="auto-sync-queue"
+                :checked="autoSyncQueue"
+                @change="toggleAutoSyncQueue"
+              >
+            </label>
             <label class="setting-row" data-testid="sync-wifi-images-row">
               <span class="setting-copy"><strong>仅在 Wi-Fi 下同步图片</strong><small>打开后，立即同步只在判定为 Wi-Fi 时推送封面。无法判定或非 Wi-Fi 时跳过封面，仍同步标题与正文。本机封面仍在。</small></span>
               <input
@@ -390,6 +395,7 @@ import {
   startBillingCheckout,
 } from "../platform/billing.js";
 import { syncLocalLibraryNow } from "../platform/librarySync.js";
+import { flushSyncQueue } from "../platform/syncQueue.js";
 import { checkForUpdates, queueUpdateInstall } from "../platform/updates.js";
 
 const props = defineProps({
@@ -433,6 +439,7 @@ const autoDownload = ref(false);
 const updateChannel = ref("stable");
 const syncConflict = ref("newer");
 const syncWifiImages = ref(false);
+const autoSyncQueue = ref(false);
 const appVersion = pkg.version;
 const prefError = ref("");
 const launchAtLogin = ref(false);
@@ -486,6 +493,7 @@ onMounted(async () => {
   updateChannel.value = (await getLocalSetting("update_channel")) === "preview" ? "preview" : "stable";
   syncConflict.value = (await getLocalSetting("sync_conflict")) === "keep_local" ? "keep_local" : "newer";
   syncWifiImages.value = isPrefOn(await getLocalSetting("sync_wifi_images"));
+  autoSyncQueue.value = isPrefOn(await getLocalSetting("auto_sync_queue"));
   if (props.session.loggedIn) {
     const [mine, profile, billing] = await Promise.all([
       listMyPublications().catch(() => []),
@@ -523,6 +531,7 @@ async function runSyncNow() {
   }
   try {
     await syncLocalLibraryNow();
+    await flushSyncQueue();
     syncNote.value = "已同步";
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -552,6 +561,11 @@ async function saveSyncConflict(event) {
 async function toggleSyncWifiImages(event) {
   syncWifiImages.value = event.target.checked;
   await setLocalSetting("sync_wifi_images", syncWifiImages.value ? "1" : "0");
+}
+
+async function toggleAutoSyncQueue(event) {
+  autoSyncQueue.value = event.target.checked;
+  await setLocalSetting("auto_sync_queue", autoSyncQueue.value ? "1" : "0");
 }
 
 async function runCheckUpdates() {
