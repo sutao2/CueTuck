@@ -20,11 +20,11 @@
 
 **Files:** `web/src/` · `docs/specs/billing/spec.md`
 
-- [ ] **Step 1: Write the failing test**（已登录未开通不得打开结账；有测试 Checkout 才打开；不声称上架）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: web 账单入口接到已有 API**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（已登录未开通不得打开结账；有测试 Checkout 才打开；不声称上架）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: web 账单入口接到已有 API**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 关闭本计划
 
