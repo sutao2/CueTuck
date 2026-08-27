@@ -67,6 +67,39 @@ body { font: 14px/1.45 "IBM Plex Sans", "Noto Sans SC", sans-serif; color: var(-
   color: var(--muted);
   font-size: 13px;
 }
+.billing {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.billing-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+.billing-copy, .billing-head small {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.billing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.billing-actions input {
+  flex: 1;
+  min-width: 140px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font: inherit;
+  background: var(--bg);
+}
 .content-head {
   display: flex;
   align-items: center;

@@ -10,6 +10,7 @@ import {
   setSessionTransport,
 } from "./session.js";
 import { resetAccountLibrary, setAccountLibraryTransport } from "./accountLibrary.js";
+import { resetBilling, setBillingTransport } from "./billing.js";
 import WebApp from "./WebApp.vue";
 
 describe("WebApp", () => {
@@ -19,6 +20,16 @@ describe("WebApp", () => {
     resetMemoryLibrary();
     resetMemorySession();
     resetAccountLibrary();
+    resetBilling();
+    setBillingTransport({
+      status: async () => ({ pro: false, payment_enabled: false, note: "支付未开通" }),
+      checkout: async () => ({
+        pro: false,
+        payment_enabled: false,
+        note: "支付未开通",
+        checkout_url: null,
+      }),
+    });
     resetSquare();
     setOAuthProviderList([]);
   });
@@ -228,5 +239,104 @@ describe("WebApp", () => {
     expect(w.get('[data-testid="prompt-list"]').text()).toContain("本地仍在");
     expect(w.get('[data-testid="library-note"]').text()).toContain("尚未与桌面");
     expect(w.text()).not.toContain("已写入本机 SQLite");
+  });
+
+  it("shows unpaid billing as 支付未开通 and does not open checkout", async () => {
+    const opened = [];
+    vi.stubGlobal("open", (url) => {
+      opened.push(url);
+      return null;
+    });
+    setAccountLibraryTransport({
+      get: async () => ({ items: [] }),
+      put: async (items) => ({ items }),
+    });
+    setSessionTransport(async () => ({
+      access_token: "acc.web",
+      refresh_token: "ref.web",
+      email: "dev@promptark.local",
+    }));
+    setBillingTransport({
+      status: async () => ({ pro: false, payment_enabled: false, note: "支付未开通" }),
+      checkout: async () => ({
+        pro: false,
+        payment_enabled: false,
+        note: "支付未开通",
+        checkout_url: null,
+      }),
+    });
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WebApp);
+    await flushPromises();
+    expect(w.get('[data-testid="billing-note"]').text()).toContain("支付未开通");
+    expect(w.get('[data-testid="billing-pro"]').text()).toContain("未订阅");
+    await w.get('[data-testid="billing-checkout"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="billing-note"]').text()).toContain("支付未开通");
+    expect(opened).toEqual([]);
+    expect(w.text()).not.toMatch(/已从商店|已经上架/);
+    vi.unstubAllGlobals();
+  });
+
+  it("opens Stripe checkout only when a test checkout url is returned", async () => {
+    const opened = [];
+    vi.stubGlobal("open", (url) => {
+      opened.push(url);
+      return null;
+    });
+    setAccountLibraryTransport({
+      get: async () => ({ items: [] }),
+      put: async (items) => ({ items }),
+    });
+    setSessionTransport(async () => ({
+      access_token: "acc.web",
+      refresh_token: "ref.web",
+      email: "dev@promptark.local",
+    }));
+    setBillingTransport({
+      status: async () => ({ pro: false, payment_enabled: true, note: "" }),
+      checkout: async () => ({
+        pro: false,
+        payment_enabled: true,
+        note: "",
+        checkout_url: "https://checkout.stripe.com/c/pay/cs_test_preview",
+      }),
+    });
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WebApp);
+    await flushPromises();
+    await w.get('[data-testid="billing-checkout"]').trigger("click");
+    await flushPromises();
+    expect(opened).toEqual(["https://checkout.stripe.com/c/pay/cs_test_preview"]);
+    expect(w.get('[data-testid="billing-pro"]').text()).toContain("未订阅");
+    expect(w.text()).not.toMatch(/已从商店|已经上架/);
+    vi.unstubAllGlobals();
+  });
+
+  it("redeems a code without claiming a store listing", async () => {
+    setAccountLibraryTransport({
+      get: async () => ({ items: [] }),
+      put: async (items) => ({ items }),
+    });
+    setSessionTransport(async () => ({
+      access_token: "acc.web",
+      refresh_token: "ref.web",
+      email: "dev@promptark.local",
+    }));
+    setBillingTransport({
+      status: async () => ({ pro: false, payment_enabled: false, note: "支付未开通" }),
+      redeem: async (code) => {
+        expect(code).toBe("PREVIEW-1");
+        return { pro: true, payment_enabled: false, note: "" };
+      },
+    });
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WebApp);
+    await flushPromises();
+    await w.get('[data-testid="billing-redeem-code"]').setValue("PREVIEW-1");
+    await w.get('[data-testid="billing-redeem"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="billing-pro"]').text()).toBe("Pro");
+    expect(w.text()).not.toMatch(/已从商店|已经上架/);
   });
 });

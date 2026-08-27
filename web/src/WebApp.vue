@@ -31,6 +31,40 @@
         <p data-testid="library-note" class="library-note">
           浏览器使用账号库或标签页内存库，尚未与桌面 SQLite 同步，不会写入本机 SQLite。
         </p>
+        <section v-if="space === 'local'" class="billing" data-testid="billing">
+          <p class="billing-head">
+            <strong>账单</strong>
+            <span data-testid="billing-pro">{{ session.loggedIn ? (billingPro ? "Pro" : "未订阅") : "未登录" }}</span>
+            <small v-if="billingNote" data-testid="billing-note">{{ billingNote }}</small>
+          </p>
+          <p class="billing-copy">预发可查状态、兑换码；只有测试密钥才跳转 Checkout。不是公开售卖。</p>
+          <div class="billing-actions">
+            <input
+              data-testid="billing-redeem-code"
+              :disabled="!session.loggedIn"
+              v-model="redeemCode"
+              placeholder="兑换码"
+            >
+            <button
+              type="button"
+              class="primary-button"
+              data-testid="billing-redeem"
+              :disabled="!session.loggedIn"
+              @click="runRedeem"
+            >
+              兑换
+            </button>
+            <button
+              type="button"
+              class="primary-button"
+              data-testid="billing-checkout"
+              :disabled="!session.loggedIn"
+              @click="runCheckout"
+            >
+              前往支付
+            </button>
+          </div>
+        </section>
         <section class="content-head">
           <h1>{{ space === "local" ? "本地提示词" : "提示词广场" }}</h1>
           <button
@@ -140,6 +174,11 @@ import { extractVariables, renderPrompt } from "./renderPrompt.js";
 import { downloadSquareItem, listSquareItems, putFavorite } from "./square.js";
 import { loadAccountLibrary, pushAccountPrompt } from "./accountLibrary.js";
 import {
+  getBillingStatus,
+  redeemBillingCode,
+  startBillingCheckout,
+} from "./billing.js";
+import {
   getSession,
   listOAuthProviders,
   loginOAuthSession,
@@ -170,6 +209,10 @@ const loginError = ref("");
 const loginBusy = ref(false);
 const oauthProviders = ref([]);
 const pendingFavorite = ref("");
+const session = ref(getSession());
+const billingPro = ref(false);
+const billingNote = ref("");
+const redeemCode = ref("");
 let loginAbort = new AbortController();
 
 function reload() {
@@ -306,8 +349,10 @@ async function loadProviders() {
 async function afterLogin() {
   loginOpen.value = false;
   loginBusy.value = false;
+  session.value = getSession();
   await loadAccountLibrary();
   reload();
+  await loadBilling();
   const id = pendingFavorite.value;
   pendingFavorite.value = "";
   if (id) await favoriteItem(id);
@@ -341,7 +386,54 @@ async function submitOAuth(provider) {
 }
 
 onMounted(async () => {
-  if (getSession().loggedIn) await loadAccountLibrary();
+  session.value = getSession();
+  if (session.value.loggedIn) {
+    await loadAccountLibrary();
+    reload();
+    await loadBilling();
+    return;
+  }
   reload();
 });
+
+function applyBilling(payload) {
+  billingPro.value = Boolean(payload?.pro);
+  billingNote.value = payload?.note ?? "";
+}
+
+async function loadBilling() {
+  if (!getSession().loggedIn) {
+    billingPro.value = false;
+    billingNote.value = "";
+    return;
+  }
+  try {
+    applyBilling(await getBillingStatus());
+  } catch (error) {
+    billingNote.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+async function runCheckout() {
+  if (!getSession().loggedIn) return;
+  try {
+    const payload = await startBillingCheckout();
+    applyBilling(payload);
+    const url = payload?.checkout_url;
+    if (typeof url === "string" && url.startsWith("https://checkout.stripe.com/")) {
+      window.open(url, "_blank", "noopener");
+    }
+  } catch (error) {
+    billingNote.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+async function runRedeem() {
+  if (!getSession().loggedIn) return;
+  try {
+    applyBilling(await redeemBillingCode(redeemCode.value));
+  } catch (error) {
+    billingNote.value = error instanceof Error ? error.message : String(error);
+  }
+}
 </script>

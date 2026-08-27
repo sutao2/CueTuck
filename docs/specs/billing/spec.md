@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定；预发 status、兑换、测试 Checkout 与 webhook 入账已接通 |
+| 状态 | 已指定；预发 status、兑换、测试 Checkout、webhook 入账与浏览器入口已接通 |
 | 关联 | [ADR 0014](../../architecture/decisions/0014-full-product.md) |
 
 ## Purpose
@@ -54,6 +54,33 @@
 - THEN 该账号为 Pro
 - AND 无签名或错签名失败且状态不变
 
+### Requirement: 浏览器入口
+
+浏览器工作台已登录后 MUST 能查询账单状态并兑换。未开通时 MUST 标明支付未开通且 MUST NOT 打开结账。仅当返回 `https://checkout.stripe.com/` 测试地址时 MUST 打开该地址。MUST NOT 声称商店上架或公开售卖。
+
+#### Scenario: 浏览器未开通不得打开结账
+
+- GIVEN 用户已登录且支付未开通
+- WHEN 打开浏览器工作台并点前往支付
+- THEN 标明支付未开通
+- AND 不打开结账
+- AND 不声称已从商店上架
+
+#### Scenario: 浏览器兑换成功
+
+- GIVEN 用户已登录且提交有效兑换码
+- WHEN 在浏览器工作台兑换
+- THEN 状态为 Pro
+- AND 不声称已从商店上架
+
+#### Scenario: 浏览器有测试 Checkout 才打开
+
+- GIVEN 用户已登录且返回 Stripe 测试 Checkout 地址
+- WHEN 点前往支付
+- THEN 打开该地址
+- AND 账号仍不是 Pro
+- AND 不声称已从商店上架
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -62,3 +89,6 @@
 | 兑换成功 | `backend/tests/billing.rs` valid_redeem_code_marks_account_pro_and_cannot_be_reused |
 | 无测试密钥不得结账 | `backend/tests/billing.rs` checkout_requires_test_secret_and_does_not_mark_pro |
 | 签名通过才入账 | `backend/tests/billing.rs` signed_checkout_webhook_marks_pro_and_rejects_invalid_signatures |
+| 浏览器未开通不得打开结账 | `web/src/WebApp.spec.js` shows unpaid billing as 支付未开通 and does not open checkout |
+| 浏览器有测试 Checkout 才打开 | `web/src/WebApp.spec.js` opens Stripe checkout only when a test checkout url is returned |
+| 浏览器兑换成功 | `web/src/WebApp.spec.js` redeems a code without claiming a store listing |
