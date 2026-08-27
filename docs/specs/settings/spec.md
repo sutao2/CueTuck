@@ -33,9 +33,9 @@ M2 已落地且 MUST 保留：常规入口、启动器全局快捷键、JSON 导
 
 #### Scenario: 未实现页
 
-- GIVEN 自动同步收藏与仅 Wi-Fi 同步图片尚未提供
+- GIVEN 自动同步收藏尚未提供
 - WHEN 用户打开「同步」
-- THEN 这两行标明尚未提供
+- THEN 该行标明尚未提供
 - AND 启动器与 MCP 仍只读本机 SQLite
 
 ### Requirement: 导航十类
@@ -169,7 +169,7 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 
 ### Requirement: 同步
 
-同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。立即同步在已登录时 MUST 推拉账号库；未登录时 MUST 打开已有登录且 MUST NOT 出现已同步。冲突处理 MUST 提供较新者胜与保留本地，默认 MUST 为较新者胜，MUST NOT 写成尚未提供。自动同步收藏、仅 Wi-Fi 同步图片在未实现前 MUST 标明尚未提供，MUST NOT 把原因写成没有云同步。
+同步页 MUST 展示原型四行。个人库同步见 [同步规格](../sync/spec.md)。立即同步在已登录时 MUST 推拉账号库；未登录时 MUST 打开已有登录且 MUST NOT 出现已同步。冲突处理 MUST 提供较新者胜与保留本地，默认 MUST 为较新者胜，MUST NOT 写成尚未提供。仅 Wi-Fi 同步图片接通后 MUST 为本机开关：打开且网络不是 Wi-Fi（含无法判定）时 MUST 跳过合集封面，仍同步标题与提示词正文；MUST NOT 用空封面覆盖远端已有封面。该行 MUST NOT 标明尚未提供，MUST NOT 把原因写成没有云同步。自动同步收藏在未实现前 MUST 标明尚未提供，MUST NOT 把原因写成没有云同步。
 
 #### Scenario: 同步行可见且不假装
 
@@ -194,6 +194,14 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 - WHEN 选择保留本地并立即同步，且远端同一 id 的 `updated_at` 更晚
 - THEN 该条本机正文不被覆盖
 - AND 设置再次打开仍是保留本地
+
+#### Scenario: 仅 Wi-Fi 同步图片可开关
+
+- GIVEN 用户打开同步页
+- WHEN 打开仅 Wi-Fi 下同步图片
+- THEN 该行不标明尚未提供
+- AND 不出现没有云同步
+- AND 再次打开仍是打开状态
 
 ### Requirement: AI 与模型
 
@@ -283,7 +291,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 场景 | 测试 |
 |---|---|
 | 打开设置 | `WorkbenchShell.spec.js` opens settings from the sidebar |
-| 未实现页 | 同上，打开「同步」见自动同步收藏与仅 Wi-Fi 仍标明尚未提供 |
+| 未实现页 | 同上，打开「同步」见自动同步收藏仍标明尚未提供 |
 | 十类都在 | `WorkbenchShell.spec.js` lists ten settings categories |
 | 缺少的页不得消失 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |
 | 开机启动 | `desktopPrefs.test.js` persists launch at login on macos / windows / linux；`WorkbenchShell.spec.js` saves launch at login on macos / windows without claiming nsis / linux without claiming release qa；`windowChrome.test.js` treats Linux as linux |
@@ -301,6 +309,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 同步行可见且不假装 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend |
 | 冲突处理标明较新者胜 | `WorkbenchShell.spec.js` labels conflict handling as newer-wins instead of unavailable |
 | 冲突处理可选保留本地 | `WorkbenchShell.spec.js` keeps the local body when keep-local is selected before syncing；`librarySync.test.js` keeps the local body when keep-local is chosen and remote updated_at is newer |
+| 仅 Wi-Fi 同步图片可开关 | `WorkbenchShell.spec.js` persists wifi-only image sync from the settings row；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |
 | 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
 | 同步状态不写没有云同步 | `WorkbenchShell.spec.js` does not claim the network page has no cloud sync；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |

@@ -173,10 +173,15 @@
               <span class="setting-copy"><strong>自动同步收藏与发布草稿</strong><small>联网队列尚未提供。</small></span>
               <span class="setting-control">尚未提供</span>
             </div>
-            <div class="setting-row">
-              <span class="setting-copy"><strong>仅在 Wi-Fi 下同步图片</strong><small>立即同步不看网络类型。按 Wi-Fi 上传图片尚未提供。</small></span>
-              <span class="setting-control">尚未提供</span>
-            </div>
+            <label class="setting-row" data-testid="sync-wifi-images-row">
+              <span class="setting-copy"><strong>仅在 Wi-Fi 下同步图片</strong><small>打开后，立即同步只在判定为 Wi-Fi 时推送封面。无法判定或非 Wi-Fi 时跳过封面，仍同步标题与正文。本机封面仍在。</small></span>
+              <input
+                type="checkbox"
+                data-testid="sync-wifi-images"
+                :checked="syncWifiImages"
+                @change="toggleSyncWifiImages"
+              >
+            </label>
             <div class="setting-row" data-testid="sync-conflict">
               <span class="setting-copy"><strong>冲突处理</strong><small>立即同步默认按较新的 updated_at 覆盖。选择保留本地时不覆盖已有本机正文，远端独有条目仍写入。</small></span>
               <select data-testid="sync-conflict-strategy" :value="syncConflict" @change="saveSyncConflict">
@@ -427,6 +432,7 @@ const releaseNotes = ref("");
 const autoDownload = ref(false);
 const updateChannel = ref("stable");
 const syncConflict = ref("newer");
+const syncWifiImages = ref(false);
 const appVersion = pkg.version;
 const prefError = ref("");
 const launchAtLogin = ref(false);
@@ -479,6 +485,7 @@ onMounted(async () => {
   autoDownload.value = isPrefOn(await getLocalSetting("auto_download"));
   updateChannel.value = (await getLocalSetting("update_channel")) === "preview" ? "preview" : "stable";
   syncConflict.value = (await getLocalSetting("sync_conflict")) === "keep_local" ? "keep_local" : "newer";
+  syncWifiImages.value = isPrefOn(await getLocalSetting("sync_wifi_images"));
   if (props.session.loggedIn) {
     const [mine, profile, billing] = await Promise.all([
       listMyPublications().catch(() => []),
@@ -540,6 +547,11 @@ async function saveUpdateChannel(event) {
 async function saveSyncConflict(event) {
   syncConflict.value = event.target.value === "keep_local" ? "keep_local" : "newer";
   await setLocalSetting("sync_conflict", syncConflict.value);
+}
+
+async function toggleSyncWifiImages(event) {
+  syncWifiImages.value = event.target.checked;
+  await setLocalSetting("sync_wifi_images", syncWifiImages.value ? "1" : "0");
 }
 
 async function runCheckUpdates() {
