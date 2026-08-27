@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 已指定，立即同步、较新者胜与保留本地已实现 |
+| 状态 | 已指定，立即同步、较新者胜、保留本地与仅 Wi-Fi 跳过封面已实现 |
 | 关联 | [设置](../settings/spec.md) · [web](../web/spec.md) · [ADR 0014](../../architecture/decisions/0014-full-product.md) |
 
 ## Purpose
@@ -46,6 +46,36 @@
 - THEN 该条本机正文仍是本机版本
 - AND 远端独有条目仍写入本机
 
+### Requirement: 仅 Wi-Fi 同步图片
+
+开启「仅 Wi-Fi 下同步图片」且网络不是 Wi-Fi（含无法判定）时，立即同步 MUST 跳过合集封面，MUST 仍推送提示词正文与合集标题。MUST NOT 用空封面覆盖远端已有封面。开关关闭或网络判定为 Wi-Fi 时 MUST 仍推送本机封面。
+
+#### Scenario: 非 Wi-Fi 跳过封面仍同步正文
+
+- GIVEN 开关已打开、网络不是 Wi-Fi，本机合集有封面且本机有提示词正文
+- WHEN 立即同步
+- THEN 推送不含该本机封面
+- AND 合集标题与提示词正文仍被推送
+
+#### Scenario: 跳过时保留远端封面
+
+- GIVEN 开关已打开、网络不是 Wi-Fi，远端同一合集已有封面
+- WHEN 立即同步
+- THEN 推送的封面仍是远端已有封面
+- AND 合集标题为本机标题
+
+#### Scenario: Wi-Fi 下仍推送封面
+
+- GIVEN 开关已打开且网络判定为 Wi-Fi
+- WHEN 立即同步
+- THEN 本机合集封面被推送
+
+#### Scenario: 关闭开关时未知网络仍推送封面
+
+- GIVEN 开关关闭且网络无法判定
+- WHEN 立即同步
+- THEN 本机合集封面被推送
+
 ### Requirement: 浏览器账号库
 
 浏览器已登录后 MUST 读写账号库。MUST NOT 声称打开了桌面 SQLite 文件。
@@ -65,5 +95,9 @@
 | 未登录不请求 | `WorkbenchShell.spec.js` shows sync rows without requesting the backend；`librarySync.test.js` does not call the library API when signed out |
 | 较新者胜 | `librarySync.test.js` applies the remote body when the remote updated_at is newer；`backend` `newer_updated_at_wins_when_putting_library_changes`；`desktop/src-tauri` `newer_remote_body_replaces_older_local_prompt` |
 | 保留本地 | `librarySync.test.js` keeps the local body when keep-local is chosen and remote updated_at is newer；`WorkbenchShell.spec.js` keeps the local body when keep-local is selected before syncing |
+| 非 Wi-Fi 跳过封面仍同步正文 | `librarySync.test.js` skips collection covers when wifi-only is on and the network is not wifi |
+| 跳过时保留远端封面 | `librarySync.test.js` keeps remote covers when wifi-only skip would otherwise wipe them |
+| Wi-Fi 下仍推送封面 | `librarySync.test.js` sends collection covers when wifi-only is on and the network is wifi |
+| 关闭开关时未知网络仍推送封面 | `librarySync.test.js` sends collection covers when wifi-only is off even if the network is unknown |
 | 浏览器登录后同一标题 | `web/src/WebApp.spec.js` shows the account library title after login without claiming sqlite |
 | 变更推拉 API | `backend` `put_then_get_library_changes_for_signed_in_account` |

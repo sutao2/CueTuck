@@ -660,10 +660,27 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell);
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="sync"]').trigger("click");
-    const row = w.findAll(".setting-row").find((node) => node.text().includes("仅在 Wi-Fi"));
-    expect(row).toBeTruthy();
-    expect(row.text()).toContain("尚未提供");
+    const row = w.get('[data-testid="sync-wifi-images-row"]');
+    expect(row.text()).toContain("仅在 Wi-Fi");
+    expect(row.text()).not.toContain("尚未提供");
     expect(row.text()).not.toContain("没有云同步");
+    expect(w.get('[data-testid="sync-wifi-images"]').element.checked).toBe(false);
+  });
+
+  it("persists wifi-only image sync from the settings row", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="sync"]').trigger("click");
+    await w.get('[data-testid="sync-wifi-images"]').setValue(true);
+    await flushPromises();
+    expect(await getLocalSetting("sync_wifi_images")).toBe("1");
+    w.unmount();
+    const again = mount(WorkbenchShell);
+    await again.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await again.get('[data-settings-page="sync"]').trigger("click");
+    expect(again.get('[data-testid="sync-wifi-images"]').element.checked).toBe(true);
   });
 
   it("pushes the local library to the account when signed in and syncing now", async () => {

@@ -8,6 +8,7 @@ import {
 import { getSession } from "./session.js";
 
 let testTransport = null;
+let testNetworkType = null;
 
 function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -39,10 +40,41 @@ function asChange(kind, row) {
 
 export function resetLibrarySync() {
   testTransport = null;
+  testNetworkType = null;
 }
 
 export function setLibrarySyncTransport(transport) {
   testTransport = transport;
+}
+
+export function setNetworkType(type) {
+  testNetworkType = type;
+}
+
+export function detectNetworkType() {
+  if (testNetworkType != null) return testNetworkType;
+  const connection =
+    typeof navigator !== "undefined"
+      ? navigator.connection || navigator.mozConnection || navigator.webkitConnection
+      : null;
+  const type = connection?.type;
+  if (typeof type === "string" && type.trim()) return type.trim().toLowerCase();
+  return "unknown";
+}
+
+function collectionPayloadForPush(row, skipImages, remoteById) {
+  if (!skipImages) return row;
+  const remotePayload = remoteById.get(row.id)?.payload ?? {};
+  return {
+    ...row,
+    cover_json: remotePayload.cover_json ?? "[]",
+    cover_type: remotePayload.cover_type ?? "none",
+  };
+}
+
+async function shouldSkipImageAssets() {
+  if ((await getLocalSetting("sync_wifi_images")) !== "1") return false;
+  return detectNetworkType() !== "wifi";
 }
 
 export async function putLibraryChanges(items) {
@@ -102,9 +134,17 @@ export async function syncLocalLibraryNow() {
     listLocalCollections({ query: "" }),
     listLocalCategories(),
   ]);
+  const skipImages = await shouldSkipImageAssets();
+  const remoteById = new Map();
+  if (skipImages) {
+    const existing = await listLibraryChanges({ since: "" });
+    for (const item of existing.items ?? []) {
+      if (item.kind === "collection") remoteById.set(item.id, item);
+    }
+  }
   const items = [
     ...prompts.map((row) => asChange("prompt", row)),
-    ...collections.map((row) => asChange("collection", row)),
+    ...collections.map((row) => asChange("collection", collectionPayloadForPush(row, skipImages, remoteById))),
     ...categories.map((row) => asChange("category", row)),
   ];
   await putLibraryChanges(items);
