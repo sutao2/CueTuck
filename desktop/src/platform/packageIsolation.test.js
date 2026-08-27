@@ -49,4 +49,15 @@ describe("desktop package isolation", () => {
     expect(tauri).not.toContain("../mcp");
     expect(JSON.parse(tauri).build.frontendDist).toBe("../dist");
   });
+
+  it("does not claim the repo entry still stops at M8 or unconnected sync", () => {
+    const readme = readFileSync(resolve(desktopRoot, "../README.md"), "utf8");
+    const claude = readFileSync(resolve(desktopRoot, "../CLAUDE.md"), "utf8");
+    expect(readme).toContain("M0–M9 已关闭");
+    expect(readme).not.toContain("M0–M8 已关闭");
+    expect(readme).not.toContain("云同步、OAuth、自动更新安装不得假装接通");
+    expect(readme).toContain("无商店包");
+    expect(claude).not.toContain("未接通的同步 / 更新 / 账单 / 商店不得假装接通");
+    expect(claude).toContain("商店上架");
+  });
 });
