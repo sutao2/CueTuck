@@ -31,6 +31,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 
 ```text
 1–17 已关闭（广场预发缺口 … 保留本地冲突）
+18 现行：web-billing
 不能诚实做完：deferred.md
 ```
 
@@ -53,6 +54,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 15 已关闭 | [2026-08-26-sync-status-copy.md](2026-08-26-sync-status-copy.md) | 归档 |
 | 16 已关闭 | [2026-08-26-keychain-copy.md](2026-08-26-keychain-copy.md) | 归档 |
 | 17 已关闭 | [2026-08-26-keep-local-conflict.md](2026-08-26-keep-local-conflict.md) | 归档 |
+| 18 现行 | [2026-08-27-web-billing.md](2026-08-27-web-billing.md) | 现行 |
 | 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
@@ -84,6 +86,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 同步状态文案 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-26-sync-status-copy.md](2026-08-26-sync-status-copy.md) |
 | 钥匙串文案 | 完整产品 | [settings](../specs/settings/spec.md) | [2026-08-26-keychain-copy.md](2026-08-26-keychain-copy.md) |
 | 保留本地冲突 | 完整产品 | [sync](../specs/sync/spec.md) | [2026-08-26-keep-local-conflict.md](2026-08-26-keep-local-conflict.md) |
+| 浏览器账单入口 | 完整产品 | [billing](../specs/billing/spec.md) | [2026-08-27-web-billing.md](2026-08-27-web-billing.md) |
 
 ## 通用完成定义（每个里程碑都要满足）
 
