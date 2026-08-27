@@ -20,11 +20,11 @@
 
 **Files:** `README.md` · `CLAUDE.md` · `desktop/src/platform/` · `docs/specs/documentation/spec.md`
 
-- [ ] **Step 1: Write the failing test**（README 含 M9 已关闭，不含把云同步、OAuth、自动更新写成不得假装接通；仍无商店包）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 改 README 与 CLAUDE；更新规格场景与测试映射**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（README 含 M9 已关闭，不含把云同步、OAuth、自动更新写成不得假装接通；仍无商店包）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 改 README 与 CLAUDE；更新规格场景与测试映射**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 2: 关闭本计划
 

@@ -74,6 +74,19 @@
 - THEN `alwaysApply` 为 true
 - AND 正文禁止无计划创建 `src/`
 
+### Requirement: 仓库入口阶段诚实
+
+仓库根 `README.md` MUST 标明 M9 已关闭。MUST NOT 把已接通的个人库同步、OAuth、自动更新写成尚未接通。MUST 仍标明无商店包。`CLAUDE.md` MUST NOT 把已接通的同步、更新、账单列为未接通示例。
+
+#### Scenario: 入口不把已接通写成未接通
+
+- GIVEN 打开仓库根 README 与 CLAUDE
+- WHEN 阅读阶段与能力说明
+- THEN README 标明 M9 已关闭
+- AND 不把云同步、OAuth、自动更新安装写成不得假装接通
+- AND 仍标明无商店包
+- AND CLAUDE 不把同步、更新、账单列为未接通示例
+
 ## 测试映射
 
 | 场景 | 测试 |
@@ -84,3 +97,4 @@
 | 当前仓库 | 目录约定，M1 前目视 |
 | 工作流存在 | `.github/workflows/docs.yml` |
 | 规则文件 | `.cursor/rules/docs-first.mdc` |
+| 入口不把已接通写成未接通 | `packageIsolation.test.js` does not claim the repo entry still stops at M8 or unconnected sync |
