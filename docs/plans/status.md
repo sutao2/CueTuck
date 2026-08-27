@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-27（队首：匿名下载统计） |
+| 更新日期 | 2026-08-27（完整产品队列已空；剩余见 deferred） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,8 +24,8 @@
 
 ## 当前可执行的下一步
 
-1. 匿名下载统计是队首。计划：[2026-08-27-anonymous-download-stats.md](2026-08-27-anonymous-download-stats.md)。
-2. 不能诚实做完的项仍在 [deferred.md](deferred.md)。
+1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
+2. 匿名下载统计已关闭。证据：[done/2026-08-27-anonymous-download-stats.md](done/2026-08-27-anonymous-download-stats.md)。
 3. 自动同步收藏与发布草稿已关闭。证据：[done/2026-08-27-auto-sync-queue.md](done/2026-08-27-auto-sync-queue.md)。
 4. 仅 Wi-Fi 下同步图片已关闭。证据：[done/2026-08-27-wifi-image-sync.md](done/2026-08-27-wifi-image-sync.md)。
 5. 仓库入口阶段已标明 M9 与已接通能力。证据：[done/2026-08-27-readme-status.md](done/2026-08-27-readme-status.md)。
