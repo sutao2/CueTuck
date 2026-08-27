@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-27（队首：浏览器账单入口） |
+| 更新日期 | 2026-08-27（完整产品队列已空；剩余见 deferred） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,8 +24,8 @@
 
 ## 当前可执行的下一步
 
-1. 队首：浏览器账单入口。计划：[2026-08-27-web-billing.md](2026-08-27-web-billing.md)。
-2. 不能诚实做完的项仍在 [deferred.md](deferred.md)。
+1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
+2. 浏览器账单入口已关闭。证据：[done/2026-08-27-web-billing.md](done/2026-08-27-web-billing.md)。
 3. 冲突时保留本地已关闭。证据：[done/2026-08-26-keep-local-conflict.md](done/2026-08-26-keep-local-conflict.md)。
 4. 钥匙串文案已在浏览器预览标明不进本机钥匙串。证据：[done/2026-08-26-keychain-copy.md](done/2026-08-26-keychain-copy.md)。
 5. 网络页同步状态已标明手动立即同步。证据：[done/2026-08-26-sync-status-copy.md](done/2026-08-26-sync-status-copy.md)。
