@@ -36,6 +36,7 @@ import {
   setSquareContentTransport,
   setSquareTransport,
 } from "../platform/square.js";
+import { listSyncQueue } from "../platform/syncQueue.js";
 
 const tauriVersion = JSON.parse(
   readFileSync(
@@ -491,7 +492,7 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="settings-modal"]').exists()).toBe(true);
     await w.get('[data-settings-page="sync"]').trigger("click");
     expect(w.get('[data-testid="settings-unavailable"]').text()).toContain("启动器与 MCP 仍只读本机 SQLite");
-    expect(w.get('[data-testid="settings-unavailable"]').text()).toContain("尚未提供");
+    expect(w.get('[data-testid="auto-sync-queue-row"]').text()).not.toContain("尚未提供");
   });
 
   it("lists ten settings categories", async () => {
@@ -577,8 +578,9 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="sync"]').trigger("click");
     const panel = w.get('[data-testid="settings-unavailable"]');
-    expect(panel.text()).toContain("尚未提供");
+    expect(panel.text()).not.toContain("尚未提供");
     expect(panel.text()).toContain("自动同步收藏");
+    expect(w.get('[data-testid="auto-sync-queue"]').element.checked).toBe(false);
     expect(panel.text()).toContain("仅在 Wi-Fi");
     expect(panel.text()).toContain("冲突处理");
     expect(panel.text()).toContain("立即同步");
@@ -681,6 +683,66 @@ describe("WorkbenchShell", () => {
     await flushPromises();
     await again.get('[data-settings-page="sync"]').trigger("click");
     expect(again.get('[data-testid="sync-wifi-images"]').element.checked).toBe(true);
+  });
+
+  it("persists auto-sync queue from the settings row", async () => {
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="sync"]').trigger("click");
+    await w.get('[data-testid="auto-sync-queue"]').setValue(true);
+    await flushPromises();
+    expect(await getLocalSetting("auto_sync_queue")).toBe("1");
+    w.unmount();
+    const again = mount(WorkbenchShell);
+    await again.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await again.get('[data-settings-page="sync"]').trigger("click");
+    expect(again.get('[data-testid="auto-sync-queue"]').element.checked).toBe(true);
+  });
+
+  it("queues a favorite while offline when auto-sync is on and flushes on sync now", async () => {
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    setSessionTransport(async () => ({
+      access_token: "acc.1",
+      refresh_token: "ref.1",
+      email: "dev@promptark.local",
+    }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    await setLocalSetting("auto_sync_queue", "1");
+    setFavoriteTransport(async (request) => {
+      if (request.method === "GET") return { items: [] };
+      throw new Error("收藏失败");
+    });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="favorite-square"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="favorite-square"]').text()).toBe("已收藏");
+    expect(await listSyncQueue()).toEqual([
+      { kind: "favorite", method: "PUT", id: "sq-1", email: "dev@promptark.local" },
+    ]);
+    expect(await listLocalPrompts({ query: "" })).toHaveLength(0);
+    expect(w.find('[data-testid="square-offline"]').exists()).toBe(false);
+    const flushed = [];
+    setFavoriteTransport(async (request) => {
+      flushed.push(request);
+      if (request.method === "GET") return { items: flushed.some((call) => call.method === "PUT") ? [{ id: "sq-1" }] : [] };
+      return { id: request.id };
+    });
+    setLibrarySyncTransport({
+      put: async (items) => ({ items }),
+      get: async () => ({ items: [] }),
+    });
+    setMineTransport(async () => []);
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-settings-page="sync"]').trigger("click");
+    await w.get('[data-testid="sync-now"]').trigger("click");
+    await flushPromises();
+    expect(flushed.some((call) => call.method === "PUT" && call.id === "sq-1")).toBe(true);
+    expect(await listSyncQueue()).toEqual([]);
   });
 
   it("pushes the local library to the account when signed in and syncing now", async () => {
@@ -919,6 +981,8 @@ describe("WorkbenchShell", () => {
     expect(row.text()).toContain("系统钥匙串");
     expect(row.text()).toContain("不进 Web Storage");
     expect(row.text()).not.toContain("本机钥匙串");
+    expect(w.text()).toContain("匿名下载统计");
+    expect(w.text()).toContain("尚未提供");
   });
 
   it("does not claim login writes refresh to the system keychain in browser preview", async () => {
