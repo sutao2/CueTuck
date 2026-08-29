@@ -134,6 +134,13 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 - THEN 可见浅色、深色、跟随系统
 - AND 可见界面语言、提示词双语版本、内容密度
 
+#### Scenario: 界面语言切换壳层文案
+
+- GIVEN 当前为中文
+- WHEN 用户把界面语言改为 English 或点顶栏 EN
+- THEN 工作台壳层与设置导航改为英文
+- AND 再选中文后恢复
+
 ### Requirement: 账号与广场
 
 账号与广场页 MUST 展示：当前账号、作者主页、我的发布、下载时保留作者信息。
@@ -367,6 +374,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 打开目录与 ZIP 行可见 | `WorkbenchShell.spec.js` shows open directory and zip rows with existing backup actions；`library.test.js` exports a zip payload without dropping memory prompts；`desktop/src-tauri` `export_zip_does_not_remove_sqlite`、`auto_backup_leaves_existing_backup` |
 | 切换主题 | `desktop/src-tauri` `theme_persists_as_dark` |
 | 外观增加项可见 | `WorkbenchShell.spec.js` shows appearance extras including follow-system theme |
+| 界面语言切换壳层文案 | `WorkbenchShell.spec.js` switches chrome copy to English and back；`uiStrings.test.js` switches chrome labels between Chinese and English |
 | 当前账号接已有登录 | `WorkbenchShell.spec.js` shows the current account from the existing login |
 | 下载保留作者 | `WorkbenchShell.spec.js` keeps author on download when the setting is on；`square.test.js` copies author onto the local row only when keep_author_on_download is on；`desktop/src-tauri` `keeps_author_on_downloaded_prompt_without_rewriting_content` |
 | 看到我的发布 | `WorkbenchShell.spec.js` lists my pending publications on the account page；`backend` `lists_own_publications_and_hides_other_accounts` |
