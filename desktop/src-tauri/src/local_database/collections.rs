@@ -157,7 +157,7 @@ pub fn list_collection_members_in_dir(
     let mut statement = connection
         .prepare(
             "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0),
-                    COALESCE(source, 'local'), author
+                    COALESCE(source, 'local'), author, model, last_used_at
              FROM prompts
              WHERE deleted_at IS NULL AND collection_id = ?1
              ORDER BY title",

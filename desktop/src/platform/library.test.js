@@ -94,6 +94,14 @@ describe("memory library", () => {
     expect(await listLocalPrompts({ query: "" })).toHaveLength(1);
   });
 
+  it("records last_used_at when a prompt is used", async () => {
+    const created = await createLocalPrompt({ title: "刚用过", content: "x" });
+    expect(created.last_used_at).toBeFalsy();
+    const used = await recordLocalPromptUse(created.id);
+    expect(used.use_count).toBe(1);
+    expect(used.last_used_at).toBeTruthy();
+  });
+
   it("clears use counts without deleting prompt content", async () => {
     const created = await createLocalPrompt({ title: "条目A", content: "中文 English" });
     await recordLocalPromptUse(created.id);

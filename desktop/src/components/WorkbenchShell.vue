@@ -182,10 +182,11 @@
               v-for="tab in filterTabs"
               :key="tab"
               type="button"
+              :data-sort="tab"
               :class="{ active: sortTab === tab }"
               @click="setSort(tab)"
             >
-              {{ tab }} <small>0</small>
+              {{ tab }} <small>{{ tabCount(tab) }}</small>
             </button>
           </div>
           <div class="filter-spacer"></div>
@@ -248,6 +249,7 @@
               class="prompt-card"
               :class="{ collection: item.kind === 'collection', 'as-row': view === 'list' }"
               @click="openItem(item)"
+              @contextmenu.prevent="openContextMenu($event, item)"
             >
               <div
                 v-if="item.kind === 'collection' && coverPreview(item).length"
@@ -293,8 +295,8 @@
           </div>
           <div v-else class="empty-state">
             <span class="empty-glyph">{{ space === "square" ? "◎" : "▣" }}</span>
-            <h3>{{ space === "square" ? (squareOffline ? "暂时看不到广场列表" : "广场还没有内容") : "本地库是空的" }}</h3>
-            <p>{{ space === "square" ? "本地提示词仍然可用。" : "点右上角「新建提示词」即可写入本机。" }}</p>
+            <h3>{{ emptyHeading }}</h3>
+            <p>{{ emptyCopy }}</p>
           </div>
         </section>
       </main>
@@ -325,6 +327,7 @@
       @cancel="closeSettings"
       @theme="applyTheme"
       @imported="reloadPrompts"
+      @history-cleared="reloadPrompts"
       @login="openLogin('登录账号')"
       @logout="logoutFromSettings"
     />
@@ -371,6 +374,30 @@
       </section>
     </div>
 
+    <div
+      v-if="contextMenu"
+      class="context-menu-layer"
+      data-testid="context-menu-layer"
+      @click="contextMenu = null"
+      @contextmenu.prevent="contextMenu = null"
+    >
+      <div
+        class="context-menu"
+        data-testid="context-menu"
+        :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
+        @click.stop
+      >
+        <button
+          v-for="action in contextActions(contextMenu.item)"
+          :key="action.id"
+          type="button"
+          :data-action="action.id"
+          @click="runContextAction(action.id)"
+        >
+          {{ action.label }}
+        </button>
+      </div>
+    </div>
     <footer data-region="statusbar" class="statusbar">
       <span class="status-item">
         <span class="connection-dot" :class="databaseStatus === 'ready' ? 'online' : 'offline'"></span>
@@ -397,6 +424,7 @@ import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import UsePromptModal from "./UsePromptModal.vue";
 import { getSession, logoutSession } from "../platform/session.js";
+import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
 import { parseModelNames } from "../platform/modelCatalog.js";
 import { downloadSquareItem, listFavorites, listSquareItems } from "../platform/square.js";
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
@@ -460,6 +488,8 @@ const squareItems = ref([]);
 const squareOffline = ref(false);
 const squareBlocked = ref(false);
 const favoriteIds = ref([]);
+const localFavoriteIds = ref([]);
+const contextMenu = ref(null);
 const modelFilter = ref("");
 const modelCatalogText = ref("");
 const customModelsText = ref("");
@@ -468,7 +498,13 @@ const libraryItems = computed(() => [
   ...collections.value.map((item) => ({ ...item, kind: "collection" })),
   ...prompts.value.map((item) => ({ ...item, kind: "prompt" })),
 ]);
-const displayedItems = computed(() => (space.value === "square" ? squareItems.value : libraryItems.value));
+const displayedItems = computed(() => {
+  if (space.value === "square") return squareItems.value;
+  return filterLocalItems(libraryItems.value, {
+    tab: sortTab.value,
+    favoriteIds: localFavoriteIds.value,
+  });
+});
 const filterTabs = computed(() => (space.value === "square" ? ["推荐", "最新", "热门", "收藏"] : ["全部", "最近", "收藏"]));
 const selectedLabel = computed(() => {
   if (!selectedId.value) return "全部提示词";
@@ -482,6 +518,15 @@ const selectedLabel = computed(() => {
 
 const modelOptions = computed(() =>
   parseModelNames(modelCatalogText.value, customModelsText.value, seenModels.value),
+);
+const emptyHeading = computed(() => {
+  if (space.value === "square") return squareOffline.value ? "暂时看不到广场列表" : "广场还没有内容";
+  if (sortTab.value === "最近") return "还没有最近使用";
+  if (sortTab.value === "收藏") return "还没有本地收藏";
+  return "本地库是空的";
+});
+const emptyCopy = computed(() =>
+  space.value === "square" ? "本地提示词仍然可用。" : "点右上角「新建提示词」即可写入本机。",
 );
 const locationLabel = computed(() => (space.value === "square" ? "提示词广场" : "本地提示词"));
 const databaseLabel = computed(() => {
@@ -688,9 +733,74 @@ function onModelFilter() {
   if (space.value === "square") loadSquare();
 }
 
+function tabCount(tab) {
+  if (space.value === "square") {
+    return tab === sortTab.value ? displayedItems.value.length : 0;
+  }
+  return filterLocalItems(libraryItems.value, {
+    tab,
+    favoriteIds: localFavoriteIds.value,
+  }).length;
+}
+
+function openContextMenu(event, item) {
+  contextMenu.value = { x: event.clientX, y: event.clientY, item };
+}
+
+function contextActions(item) {
+  if (space.value === "square") {
+    return [
+      { id: "download", label: "下载" },
+      { id: "favorite", label: favoriteIds.value.includes(item.id) ? "取消收藏" : "收藏" },
+    ];
+  }
+  if (item.kind === "collection") {
+    return [{ id: "open", label: "打开" }];
+  }
+  return [
+    { id: "edit", label: "编辑" },
+    { id: "use", label: "使用" },
+    {
+      id: "favorite",
+      label: localFavoriteIds.value.includes(item.id) ? "取消收藏" : "收藏",
+    },
+    { id: "delete", label: "删除" },
+  ];
+}
+
+async function runContextAction(action) {
+  const item = contextMenu.value?.item;
+  contextMenu.value = null;
+  if (!item) return;
+  if (action === "edit" || action === "open") {
+    openItem(item);
+    return;
+  }
+  if (action === "use") {
+    using.value = item;
+    return;
+  }
+  if (action === "delete") {
+    await removePrompt(item.id);
+    return;
+  }
+  if (action === "download") {
+    await downloadSquare(item);
+    return;
+  }
+  if (action === "favorite") {
+    if (space.value === "square") {
+      await favoriteSquare(item);
+      return;
+    }
+    localFavoriteIds.value = await toggleLocalFavorite(item.id);
+  }
+}
+
 async function closeSettings() {
   settingsOpen.value = false;
   await loadModelPrefs();
+  await reloadPrompts();
 }
 
 function setSort(tab) {
@@ -804,6 +914,7 @@ onMounted(async () => {
   }
   categoryGroups.value = buildCategoryTree(await listLocalCategories());
   await loadModelPrefs();
+  localFavoriteIds.value = await listLocalFavoriteIds();
   await reloadPrompts();
   await refreshFavorites();
   if (window.__TAURI_INTERNALS__) {

@@ -31,11 +31,11 @@
 
 **Files:** `desktop/src/platform/` · `desktop/src/components/` · `docs/specs/workbench/spec.md`
 
-- [ ] **Step 1: Write the failing test**（最近只含已使用；收藏只含本机星标；右键能编辑/删除/使用已有动作）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: last_used_at、local_favorite_ids、context menu**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（最近只含已使用；收藏只含本机星标；右键能编辑/删除/使用已有动作）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: last_used_at、local_favorite_ids、context menu**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 3: 模型标签与本机模型目录
 

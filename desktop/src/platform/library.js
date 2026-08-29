@@ -30,12 +30,19 @@ let memoryPrompts = [];
 let memoryCollections = [];
 let memorySettings = { theme: "light" };
 let memoryCategories = seedCategories();
+let memorySeq = 0;
+
+function nextMemoryId(prefix) {
+  memorySeq += 1;
+  return `${prefix}-${memorySeq}`;
+}
 
 export function resetMemoryLibrary() {
   memoryPrompts = [];
   memoryCollections = [];
   memorySettings = { theme: "light" };
   memoryCategories = seedCategories();
+  memorySeq = 0;
 }
 
 function seedCategories() {
@@ -101,16 +108,17 @@ async function tauriInvoke(command, args) {
   return invoke(command, args);
 }
 
-export async function createLocalPrompt({ title, content, categoryId = null, source = "local" } = {}) {
+export async function createLocalPrompt({ title, content, categoryId = null, source = "local", model = null } = {}) {
   if (isTauri()) {
     return tauriInvoke("create_local_prompt", {
       title,
       content,
       category_id: categoryId,
+      model,
     });
   }
   const row = {
-    id: `mem-${Date.now()}`,
+    id: nextMemoryId("mem"),
     title: title.trim(),
     summary: null,
     content,
@@ -118,6 +126,8 @@ export async function createLocalPrompt({ title, content, categoryId = null, sou
     collection_id: null,
     use_count: 0,
     source,
+    model,
+    last_used_at: null,
     updated_at: String(Date.now()),
   };
   memoryPrompts.unshift(row);
@@ -187,7 +197,7 @@ export async function importDownloadedPrompt({ title, content, remoteId = null, 
     });
   }
   const row = {
-    id: `dl-${Date.now()}`,
+    id: nextMemoryId("dl"),
     title: String(title ?? "").trim(),
     summary: null,
     content: content ?? "",
@@ -202,13 +212,14 @@ export async function importDownloadedPrompt({ title, content, remoteId = null, 
   return row;
 }
 
-export async function updateLocalPrompt({ id, title, content, categoryId = null } = {}) {
+export async function updateLocalPrompt({ id, title, content, categoryId = null, model } = {}) {
   if (isTauri()) {
     return tauriInvoke("update_local_prompt", {
       id,
       title,
       content,
       category_id: categoryId,
+      model,
     });
   }
   const row = memoryPrompts.find((item) => item.id === id);
@@ -216,6 +227,7 @@ export async function updateLocalPrompt({ id, title, content, categoryId = null 
   row.title = title.trim();
   row.content = content;
   row.category_id = categoryId;
+  if (model !== undefined) row.model = model;
   return row;
 }
 
@@ -416,6 +428,7 @@ export async function recordLocalPromptUse(id) {
   const row = memoryPrompts.find((item) => item.id === id);
   if (!row) throw new Error("提示词不存在");
   row.use_count = (row.use_count ?? 0) + 1;
+  row.last_used_at = String(Date.now());
   return row;
 }
 
@@ -443,5 +456,6 @@ export async function clearLocalPromptUse() {
   }
   memoryPrompts.forEach((row) => {
     row.use_count = 0;
+    row.last_used_at = null;
   });
 }

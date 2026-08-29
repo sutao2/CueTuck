@@ -1082,6 +1082,10 @@ describe("WorkbenchShell", () => {
     const created = await createLocalPrompt({ title: "条目A", content: "中文 English" });
     await recordLocalPromptUse(created.id);
     const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-sort="最近"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="library-view"]').text()).toContain("条目A");
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="privacy"]').trigger("click");
     await w.get('[data-testid="clear-use-history"]').trigger("click");
@@ -1090,6 +1094,11 @@ describe("WorkbenchShell", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].content).toBe("中文 English");
     expect(rows[0].use_count).toBe(0);
+    expect(rows[0].last_used_at).toBeFalsy();
+    await w.get(".modal-close").trigger("click");
+    await flushPromises();
+    expect(w.find('[data-testid="library-view"]').exists()).toBe(false);
+    expect(w.text()).toContain("还没有最近使用");
   });
 
   it("does not claim the keychain row uses the local keychain in browser preview", async () => {
@@ -1189,6 +1198,49 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="billing-pro"]').text()).toContain("未订阅");
     expect(w.get('[data-testid="settings-modal"]').text()).not.toMatch(/已从商店|已经上架/);
     vi.unstubAllGlobals();
+  });
+
+  it("shows recently used local prompts on the recent tab", async () => {
+    await createLocalPrompt({ title: "未用过", content: "a" });
+    const used = await createLocalPrompt({ title: "刚用过", content: "b" });
+    await recordLocalPromptUse(used.id);
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-sort="最近"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="library-view"]').text()).toContain("刚用过");
+    expect(w.get('[data-testid="library-view"]').text()).not.toContain("未用过");
+  });
+
+  it("shows only starred local prompts on the favorite tab", async () => {
+    await createLocalPrompt({ title: "星标条目", content: "a" });
+    await createLocalPrompt({ title: "普通条目", content: "b" });
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    const card = w.findAll(".prompt-card").find((row) => row.text().includes("星标条目"));
+    await card.trigger("contextmenu", { clientX: 20, clientY: 20 });
+    await w.get('[data-testid="context-menu"] [data-action="favorite"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-sort="收藏"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="library-view"]').text()).toContain("星标条目");
+    expect(w.get('[data-testid="library-view"]').text()).not.toContain("普通条目");
+  });
+
+  it("opens a context menu with existing local actions", async () => {
+    await createLocalPrompt({ title: "可编辑", content: "x" });
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get(".prompt-card").trigger("contextmenu", { clientX: 40, clientY: 80 });
+    const menu = w.get('[data-testid="context-menu"]');
+    expect(menu.text()).toContain("编辑");
+    expect(menu.text()).toContain("使用");
+    expect(menu.text()).toContain("收藏");
+    expect(menu.text()).toContain("删除");
+    expect(menu.text()).not.toContain("举报");
+    expect(menu.text()).not.toContain("分享");
+    await menu.get('[data-action="edit"]').trigger("click");
+    expect(w.get('[data-testid="prompt-editor"]').exists()).toBe(true);
   });
 
   it("filters square items by the selected model", async () => {
