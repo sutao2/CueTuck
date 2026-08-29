@@ -127,7 +127,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-08-27-auto-sync-queue.md](plans/2026-08-27-auto-sync-queue.md) | 归档 | 查自动同步收藏与发布草稿怎么入队 | 断网入队，不得假装已到达服务器 |
 | [plans/2026-08-27-anonymous-download-stats.md](plans/2026-08-27-anonymous-download-stats.md) | 归档 | 查匿名下载统计怎么按开关上报 | 默认关；只发条目 id；不得静默上报 |
 | [plans/2026-08-27-manual-proxy.md](plans/2026-08-27-manual-proxy.md) | 归档 | 查手动代理怎么接到本机请求 | 空则跟随系统；浏览器预览不走该代理 |
-| [plans/2026-08-29-workbench-shell-wiring.md](plans/2026-08-29-workbench-shell-wiring.md) | 现行 | 查工作台已画出控件怎么接到行为 | 模型筛选、最近收藏、右键、语言、建议 |
+| [plans/2026-08-29-workbench-shell-wiring.md](plans/2026-08-29-workbench-shell-wiring.md) | 归档 | 查工作台已画出控件怎么接到行为 | 模型筛选、最近收藏、右键、语言、建议 |
 | [plans/deferred.md](plans/deferred.md) | 目标 | 问商店 / 生产托管 / NSIS 额度 | 没有证据就不能声称 |
 | [plans/milestones/m0.md](plans/milestones/m0.md) | 现行 | 关闭或检查 M0 | M0 进出标准 |
 | [plans/milestones/m1.md](plans/milestones/m1.md) | 现行 | 做桌面骨架 | M1 进出标准 |
@@ -182,6 +182,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/done/2026-08-27-auto-sync-queue.md](plans/done/2026-08-27-auto-sync-queue.md) | 归档 | 查自动同步收藏与发布草稿是否入队 | 断网入队，不得假装已到达服务器 |
 | [plans/done/2026-08-27-anonymous-download-stats.md](plans/done/2026-08-27-anonymous-download-stats.md) | 归档 | 查匿名下载统计是否按开关上报 | 默认关；只发条目 id；不得静默上报 |
 | [plans/done/2026-08-27-manual-proxy.md](plans/done/2026-08-27-manual-proxy.md) | 归档 | 查手动代理是否接到本机请求 | 空则跟随系统；浏览器预览不走该代理 |
+| [plans/done/2026-08-29-workbench-shell-wiring.md](plans/done/2026-08-29-workbench-shell-wiring.md) | 归档 | 查工作台已画出控件是否接到行为 | 模型筛选、最近收藏、右键、语言、建议 |
 | [templates/adr.md](templates/adr.md) | 模板 | 写 ADR | ADR 模板 |
 | [templates/capability-spec.md](templates/capability-spec.md) | 模板 | 写新能力规格 | 规格模板 |
 | [templates/implementation-plan.md](templates/implementation-plan.md) | 模板 | 写模块计划 | 计划模板 |

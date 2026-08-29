@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-29（队首：工作台壳层接线） |
+| 更新日期 | 2026-08-29（完整产品队列已空；剩余见 deferred） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,8 +24,8 @@
 
 ## 当前可执行的下一步
 
-1. 工作台壳层接线是队首。计划：[2026-08-29-workbench-shell-wiring.md](2026-08-29-workbench-shell-wiring.md)。
-2. 不能诚实做完的项仍在 [deferred.md](deferred.md)。
+1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
+2. 工作台壳层接线已关闭。证据：[done/2026-08-29-workbench-shell-wiring.md](done/2026-08-29-workbench-shell-wiring.md)。
 3. 手动配置代理已关闭。证据：[done/2026-08-27-manual-proxy.md](done/2026-08-27-manual-proxy.md)。
 4. 匿名下载统计已关闭。证据：[done/2026-08-27-anonymous-download-stats.md](done/2026-08-27-anonymous-download-stats.md)。
 5. 自动同步收藏与发布草稿已关闭。证据：[done/2026-08-27-auto-sync-queue.md](done/2026-08-27-auto-sync-queue.md)。

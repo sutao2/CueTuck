@@ -30,8 +30,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 详细逐步任务仍一次只执行**队首**。后一份在 INDEX 标「目标」，队首标「现行」。关闭队首后把下一份改成现行。
 
 ```text
-1–23 已关闭（广场预发缺口 … 手动配置代理）
-24 工作台壳层接线
+1–24 已关闭（广场预发缺口 … 工作台壳层接线）
 不能诚实做完：deferred.md
 ```
 
@@ -60,7 +59,7 @@ M3 可以与 M2 后期并行调研，但不得在新库未稳定时整份移植�
 | 21 已关闭 | [2026-08-27-auto-sync-queue.md](2026-08-27-auto-sync-queue.md) | 归档 |
 | 22 已关闭 | [2026-08-27-anonymous-download-stats.md](2026-08-27-anonymous-download-stats.md) | 归档 |
 | 23 已关闭 | [2026-08-27-manual-proxy.md](2026-08-27-manual-proxy.md) | 归档 |
-| 24 队首 | [2026-08-29-workbench-shell-wiring.md](2026-08-29-workbench-shell-wiring.md) | 现行 |
+| 24 已关闭 | [2026-08-29-workbench-shell-wiring.md](2026-08-29-workbench-shell-wiring.md) | 归档 |
 | 不能做完 | [deferred.md](deferred.md) | 目标 |
 
 ## 模块归属
