@@ -51,11 +51,11 @@
 
 **Files:** `desktop/src/platform/` · `desktop/src/components/` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（打开后向导出现本机建议；关闭不出现；不发网络）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 本机词典，不读正文出站**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（打开后向导出现本机建议；关闭不出现；不发网络）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 本机词典，不读正文出站**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 5: 界面语言 English
 
