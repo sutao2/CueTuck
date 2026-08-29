@@ -5,7 +5,7 @@
       <header class="modal-header">
         <div>
           <p class="modal-kicker">LOCAL SETTINGS</p>
-          <h2>设置</h2>
+          <h2>{{ uiText(uiLanguage, "settings") }}</h2>
         </div>
         <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
       </header>
@@ -382,7 +382,8 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { uiText } from "../platform/uiStrings.js";
 import {
   applyLocalImport,
   backupLocalLibrary,
@@ -414,25 +415,27 @@ const props = defineProps({
   theme: { type: String, default: "light" },
   host: { type: String, default: "macos" },
   session: { type: Object, default: () => ({ loggedIn: false, email: "" }) },
+  language: { type: String, default: "zh" },
 });
-const emit = defineEmits(["cancel", "theme", "imported", "login", "logout", "history-cleared"]);
+const emit = defineEmits(["cancel", "theme", "imported", "login", "logout", "history-cleared", "language"]);
 
 function usesSystemKeychain() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
 }
 
-const pages = [
-  { id: "general", label: "常规" },
-  { id: "account", label: "账号与广场" },
-  { id: "shortcuts", label: "快捷键" },
-  { id: "sync", label: "同步" },
-  { id: "models", label: "AI 与模型" },
-  { id: "data", label: "数据与备份" },
-  { id: "network", label: "网络与代理" },
-  { id: "appearance", label: "外观" },
-  { id: "privacy", label: "隐私与安全" },
-  { id: "updates", label: "更新" },
-];
+const uiLanguage = ref(props.language);
+const pages = computed(() => [
+  { id: "general", label: uiText(uiLanguage.value, "settingsGeneral") },
+  { id: "account", label: uiText(uiLanguage.value, "settingsAccount") },
+  { id: "shortcuts", label: uiText(uiLanguage.value, "settingsShortcuts") },
+  { id: "sync", label: uiText(uiLanguage.value, "settingsSync") },
+  { id: "models", label: uiText(uiLanguage.value, "settingsModels") },
+  { id: "data", label: uiText(uiLanguage.value, "settingsData") },
+  { id: "network", label: uiText(uiLanguage.value, "settingsNetwork") },
+  { id: "appearance", label: uiText(uiLanguage.value, "settingsAppearance") },
+  { id: "privacy", label: uiText(uiLanguage.value, "settingsPrivacy") },
+  { id: "updates", label: uiText(uiLanguage.value, "settingsUpdates") },
+]);
 const current = ref("general");
 const exportText = ref("");
 const importText = ref("");
@@ -463,7 +466,6 @@ const closeLauncherAfterUse = ref(true);
 const autoBackup = ref(false);
 const zipPath = ref("");
 const squareAccess = ref(true);
-const uiLanguage = ref("zh");
 const promptBilingual = ref(true);
 const density = ref("comfortable");
 const defaultModel = ref("");
@@ -794,6 +796,7 @@ async function saveUiLanguage(value) {
   uiLanguage.value = value;
   await setLocalSetting("ui_language", value);
   document.documentElement.lang = value === "en" ? "en" : "zh-CN";
+  emit("language", value);
 }
 
 async function toggleBilingual(event) {

@@ -8,35 +8,42 @@
       data-tauri-drag-region
     >
       <div class="titlebar-left">
-        <button type="button" class="app-mark" aria-label="提示方舟">P</button>
+        <button type="button" class="app-mark" :aria-label="t('brand')">P</button>
       </div>
       <div class="titlebar-center" data-tauri-drag-region>
-        <span class="brand-name">提示方舟</span>
+        <span class="brand-name">{{ t("brand") }}</span>
         <span class="title-dot">·</span>
         <span>{{ locationLabel }}</span>
       </div>
       <div class="titlebar-right">
-        <button type="button" class="title-tool" title="快捷搜索" @click="$emit('open-launcher')">
-          <span>⌕</span><span>搜索</span><kbd>{{ shortcutLabel }}</kbd>
+        <button type="button" class="title-tool" :title="t('search')" @click="$emit('open-launcher')">
+          <span>⌕</span><span>{{ t("search") }}</span><kbd>{{ shortcutLabel }}</kbd>
         </button>
         <button
           type="button"
           class="preference-toggle"
-          :title="dark ? '切换浅色主题' : '切换深色主题'"
+          :title="dark ? t('switchLight') : t('switchDark')"
           @click="toggleTheme"
         >
           ◐
         </button>
-        <button type="button" class="preference-toggle language-toggle" title="第一期仅中文">EN</button>
+        <button
+          type="button"
+          class="preference-toggle language-toggle"
+          :title="t('languageToggle')"
+          @click="toggleLanguage"
+        >
+          {{ uiLanguage === "en" ? "中" : "EN" }}
+        </button>
         <button
           type="button"
           class="account-button"
           data-testid="open-login"
-          :title="session.loggedIn ? session.email : '登录'"
-          @click="openLogin('登录账号')"
+          :title="session.loggedIn ? session.email : t('login')"
+          @click="openLogin(t('login'))"
         >
           <span class="avatar">{{ session.loggedIn ? (session.email?.[0] || "已") : "游" }}</span>
-          <span>{{ session.loggedIn ? "已登录" : "登录" }}</span>
+          <span>{{ session.loggedIn ? t("loggedIn") : t("login") }}</span>
         </button>
       </div>
     </header>
@@ -52,7 +59,7 @@
             :class="{ active: space === 'square' }"
             @click="openSquare"
           >
-            <span class="nav-icon">◎</span><span>提示词广场</span>
+            <span class="nav-icon">◎</span><span>{{ t("square") }}</span>
           </button>
           <button
             type="button"
@@ -62,13 +69,13 @@
             :class="{ active: space === 'local' }"
             @click="openLocal"
           >
-            <span class="nav-icon">▣</span><span>本地提示词</span>
+            <span class="nav-icon">▣</span><span>{{ t("local") }}</span>
             <span class="nav-count">{{ localCount }}</span>
           </button>
         </div>
 
         <div class="sidebar-toolbar">
-          <span>{{ space === "local" ? "我的分类" : "探索分类" }}</span>
+          <span>{{ space === "local" ? t("myCategories") : t("exploreCategories") }}</span>
           <div>
             <button type="button" class="mini-button" title="全部折叠" @click="collapseAll">−</button>
             <button type="button" class="mini-button" data-testid="add-category" title="新建小分类" @click="startAddCategory">＋</button>
@@ -94,7 +101,7 @@
           >
             <span class="chevron ghost">›</span>
             <span class="tree-icon warm">⌘</span>
-            <span>全部提示词</span>
+            <span>{{ t("allPrompts") }}</span>
             <span class="tree-count">{{ localCount }}</span>
           </button>
           <div v-for="group in categoryGroups" :key="group.id" class="tree-group" :class="{ open: group.open }">
@@ -126,7 +133,7 @@
             <span class="sidebar-bottom-action">第一期</span>
           </button>
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
-            <span>⚙</span><span>设置</span><span class="sidebar-bottom-action">›</span>
+            <span>⚙</span><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
           </button>
         </div>
       </aside>
@@ -153,7 +160,7 @@
               data-testid="publish-prompt"
               @click="startPublish"
             >
-              <span>＋</span><span>发布提示词</span>
+              <span>＋</span><span>{{ t("publish") }}</span>
             </button>
             <button
               v-else
@@ -161,7 +168,7 @@
               class="button primary-button"
               @click="creating = true"
             >
-              <span>＋</span><span>新建</span>
+              <span>＋</span><span>{{ t("create") }}</span>
             </button>
           </div>
         </section>
@@ -180,20 +187,20 @@
           <div class="filter-tabs" role="tablist">
             <button
               v-for="tab in filterTabs"
-              :key="tab"
+              :key="tab.id"
               type="button"
-              :data-sort="tab"
-              :class="{ active: sortTab === tab }"
-              @click="setSort(tab)"
+              :data-sort="tab.id"
+              :class="{ active: sortTab === tab.id }"
+              @click="setSort(tab.id)"
             >
-              {{ tab }} <small>{{ tabCount(tab) }}</small>
+              {{ tab.label }} <small>{{ tabCount(tab.id) }}</small>
             </button>
           </div>
           <div class="filter-spacer"></div>
           <label class="compact-select">
-            <span>模型</span>
+            <span>{{ t("model") }}</span>
             <select data-testid="model-filter" v-model="modelFilter" @change="onModelFilter">
-              <option value="">全部模型</option>
+              <option value="">{{ t("allModels") }}</option>
               <option v-for="name in modelOptions" :key="name" :value="name">{{ name }}</option>
             </select>
           </label>
@@ -333,7 +340,9 @@
       :theme="theme"
       :host="host"
       :session="session"
+      :language="uiLanguage"
       @cancel="closeSettings"
+      @language="applyUiLanguage"
       @theme="applyTheme"
       @imported="reloadPrompts"
       @history-cleared="reloadPrompts"
@@ -410,13 +419,13 @@
     <footer data-region="statusbar" class="statusbar">
       <span class="status-item">
         <span class="connection-dot" :class="databaseStatus === 'ready' ? 'online' : 'offline'"></span>
-        <span>本地优先</span>
+        <span>{{ t("localFirst") }}</span>
       </span>
       <span class="status-sep"></span>
       <span class="status-item">{{ databaseLabel }}</span>
       <span class="status-item">本地 <strong>{{ localCount }}</strong> 条</span>
       <span class="status-spacer"></span>
-      <span class="status-item muted-status">右键查看更多操作</span>
+      <span class="status-item muted-status">{{ t("moreActions") }}</span>
       <span class="status-sep"></span>
       <button type="button" class="status-button" @click="$emit('open-launcher')">
         ⌕ 快捷搜索 <kbd>{{ shortcutLabel }}</kbd>
@@ -435,6 +444,7 @@ import UsePromptModal from "./UsePromptModal.vue";
 import { getSession, logoutSession } from "../platform/session.js";
 import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
 import { parseModelNames } from "../platform/modelCatalog.js";
+import { uiText } from "../platform/uiStrings.js";
 import { downloadSquareItem, listFavorites, listSquareItems } from "../platform/square.js";
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
 import { parseCoverUrls } from "../lib/cover.js";
@@ -506,6 +516,11 @@ const seenModels = ref([]);
 const defaultModel = ref("");
 const showModelTags = ref(true);
 const variableHints = ref(false);
+const uiLanguage = ref("zh");
+
+function t(key) {
+  return uiText(uiLanguage.value, key);
+}
 const libraryItems = computed(() => [
   ...collections.value.map((item) => ({ ...item, kind: "collection" })),
   ...prompts.value.map((item) => ({ ...item, kind: "prompt" })),
@@ -521,30 +536,41 @@ const displayedItems = computed(() => {
   if (!modelFilter.value) return rows;
   return rows.filter((item) => item.kind === "prompt" && item.model === modelFilter.value);
 });
-const filterTabs = computed(() => (space.value === "square" ? ["推荐", "最新", "热门", "收藏"] : ["全部", "最近", "收藏"]));
+const filterTabs = computed(() =>
+  space.value === "square"
+    ? [
+        { id: "推荐", label: t("tabRecommended") },
+        { id: "最新", label: t("tabLatest") },
+        { id: "热门", label: t("tabHot") },
+        { id: "收藏", label: t("tabFavorite") },
+      ]
+    : [
+        { id: "全部", label: t("tabAll") },
+        { id: "最近", label: t("tabRecent") },
+        { id: "收藏", label: t("tabFavorite") },
+      ],
+);
 const selectedLabel = computed(() => {
-  if (!selectedId.value) return "全部提示词";
+  if (!selectedId.value) return t("allPrompts");
   for (const group of categoryGroups.value) {
     if (group.id === selectedId.value) return group.name;
     const child = group.children.find((item) => item.id === selectedId.value);
     if (child) return child.name;
   }
-  return "全部提示词";
+  return t("allPrompts");
 });
 
 const modelOptions = computed(() =>
   parseModelNames(modelCatalogText.value, customModelsText.value, seenModels.value, prompts.value),
 );
 const emptyHeading = computed(() => {
-  if (space.value === "square") return squareOffline.value ? "暂时看不到广场列表" : "广场还没有内容";
-  if (sortTab.value === "最近") return "还没有最近使用";
-  if (sortTab.value === "收藏") return "还没有本地收藏";
-  return "本地库是空的";
+  if (space.value === "square") return squareOffline.value ? t("emptyOffline") : t("emptySquare");
+  if (sortTab.value === "最近") return t("emptyRecent");
+  if (sortTab.value === "收藏") return t("emptyFavorite");
+  return t("emptyLocal");
 });
-const emptyCopy = computed(() =>
-  space.value === "square" ? "本地提示词仍然可用。" : "点右上角「新建提示词」即可写入本机。",
-);
-const locationLabel = computed(() => (space.value === "square" ? "提示词广场" : "本地提示词"));
+const emptyCopy = computed(() => (space.value === "square" ? t("emptySquareHint") : t("emptyLocalHint")));
+const locationLabel = computed(() => (space.value === "square" ? t("square") : t("local")));
 const databaseLabel = computed(() => {
   if (props.databaseStatus === "ready") return "SQLite 就绪";
   if (props.databaseStatus === "failed") return "SQLite 失败";
@@ -746,6 +772,18 @@ async function loadModelPrefs() {
   defaultModel.value = (await getLocalSetting("default_model")) || "";
   showModelTags.value = (await getLocalSetting("show_model_tags")) !== "0";
   variableHints.value = (await getLocalSetting("variable_hints")) === "1";
+  const storedLang = await getLocalSetting("ui_language");
+  if (storedLang === "en" || storedLang === "zh") uiLanguage.value = storedLang;
+}
+
+async function applyUiLanguage(next) {
+  uiLanguage.value = next === "en" ? "en" : "zh";
+  document.documentElement.lang = uiLanguage.value === "en" ? "en" : "zh-CN";
+  await setLocalSetting("ui_language", uiLanguage.value);
+}
+
+async function toggleLanguage() {
+  await applyUiLanguage(uiLanguage.value === "en" ? "zh" : "en");
 }
 
 function onModelFilter() {
@@ -769,21 +807,21 @@ function openContextMenu(event, item) {
 function contextActions(item) {
   if (space.value === "square") {
     return [
-      { id: "download", label: "下载" },
-      { id: "favorite", label: favoriteIds.value.includes(item.id) ? "取消收藏" : "收藏" },
+      { id: "download", label: t("download") },
+      { id: "favorite", label: favoriteIds.value.includes(item.id) ? t("unfavorite") : t("favorite") },
     ];
   }
   if (item.kind === "collection") {
-    return [{ id: "open", label: "打开" }];
+    return [{ id: "open", label: t("open") }];
   }
   return [
-    { id: "edit", label: "编辑" },
-    { id: "use", label: "使用" },
+    { id: "edit", label: t("edit") },
+    { id: "use", label: t("use") },
     {
       id: "favorite",
-      label: localFavoriteIds.value.includes(item.id) ? "取消收藏" : "收藏",
+      label: localFavoriteIds.value.includes(item.id) ? t("unfavorite") : t("favorite"),
     },
-    { id: "delete", label: "删除" },
+    { id: "delete", label: t("remove") },
   ];
 }
 

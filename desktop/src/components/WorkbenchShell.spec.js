@@ -1243,6 +1243,22 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="prompt-editor"]').exists()).toBe(true);
   });
 
+  it("switches chrome copy to English and back", async () => {
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get(".language-toggle").trigger("click");
+    await flushPromises();
+    expect(w.get('[data-space="square"]').text()).toContain("Square");
+    expect(await getLocalSetting("ui_language")).toBe("en");
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    expect(w.findAll("[data-settings-page]").map((button) => button.text())[0]).toBe("General");
+    await w.get(".modal-close").trigger("click");
+    await w.get(".language-toggle").trigger("click");
+    await flushPromises();
+    expect(w.get('[data-space="square"]').text()).toContain("广场");
+    expect(await getLocalSetting("ui_language")).toBe("zh");
+  });
+
   it("shows a local variable hint from the workbench setting", async () => {
     await createLocalPrompt({ title: "行程", content: "去 {{城市}} 玩" });
     await setLocalSetting("variable_hints", "1");

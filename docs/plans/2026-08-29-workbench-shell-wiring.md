@@ -61,11 +61,11 @@
 
 **Files:** `desktop/src/platform/` · `desktop/src/components/` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（顶栏 EN 或设置 English 后壳层文案切换；再选中文恢复）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 本机语言包覆盖壳层与设置导航**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（顶栏 EN 或设置 English 后壳层文案切换；再选中文恢复）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 本机语言包覆盖壳层与设置导航**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 6: 关闭本计划
 
