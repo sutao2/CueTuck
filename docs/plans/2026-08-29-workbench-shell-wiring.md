@@ -71,6 +71,6 @@
 
 **Files:** `docs/plans/` · `docs/INDEX.md`
 
-- [ ] **Step 1: Write the failing check**（完成记录与 INDEX 仍把本计划标现行）
-- [ ] **Step 2: 关闭 done 记录；队列回到 deferred**
-- [ ] **Step 3: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing check**（完成记录与 INDEX 仍把本计划标现行）
+- [x] **Step 2: 关闭 done 记录；队列回到 deferred**
+- [x] **Step 3: `./scripts/docs-check` 并提交**
