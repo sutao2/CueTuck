@@ -67,6 +67,16 @@ pub fn create_prompt_in_dir(
     content: &str,
     category_id: Option<&str>,
 ) -> Result<PromptRecord, String> {
+    create_prompt_in_dir_with_model(dir, title, content, category_id, None)
+}
+
+pub fn create_prompt_in_dir_with_model(
+    dir: &Path,
+    title: &str,
+    content: &str,
+    category_id: Option<&str>,
+    model: Option<&str>,
+) -> Result<PromptRecord, String> {
     let title = title.trim();
     if title.is_empty() {
         return Err("标题不能为空".to_string());
@@ -77,9 +87,9 @@ pub fn create_prompt_in_dir(
     connection
         .execute(
             "INSERT INTO prompts (
-                id, title, summary, content, category_id, source, version, use_count, created_at, updated_at
-            ) VALUES (?1, ?2, NULL, ?3, ?4, 'local', 1, 0, ?5, ?5)",
-            rusqlite::params![id, title, content, category_id, now],
+                id, title, summary, content, category_id, source, version, use_count, created_at, updated_at, model
+            ) VALUES (?1, ?2, NULL, ?3, ?4, 'local', 1, 0, ?5, ?5, ?6)",
+            rusqlite::params![id, title, content, category_id, now, model],
         )
         .map_err(|error| error.to_string())?;
     read_prompt(&connection, &id)
@@ -167,6 +177,17 @@ pub fn update_prompt_in_dir(
     content: &str,
     category_id: Option<&str>,
 ) -> Result<PromptRecord, String> {
+    update_prompt_in_dir_with_model(dir, id, title, content, category_id, None)
+}
+
+pub fn update_prompt_in_dir_with_model(
+    dir: &Path,
+    id: &str,
+    title: &str,
+    content: &str,
+    category_id: Option<&str>,
+    model: Option<&str>,
+) -> Result<PromptRecord, String> {
     let title = title.trim();
     if title.is_empty() {
         return Err("标题不能为空".to_string());
@@ -174,9 +195,9 @@ pub fn update_prompt_in_dir(
     let connection = open_db(dir)?;
     let changed = connection
         .execute(
-            "UPDATE prompts SET title = ?1, content = ?2, category_id = ?3, updated_at = ?4
-             WHERE id = ?5 AND deleted_at IS NULL",
-            rusqlite::params![title, content, category_id, now_iso(), id],
+            "UPDATE prompts SET title = ?1, content = ?2, category_id = ?3, model = ?4, updated_at = ?5
+             WHERE id = ?6 AND deleted_at IS NULL",
+            rusqlite::params![title, content, category_id, model, now_iso(), id],
         )
         .map_err(|error| error.to_string())?;
     if changed == 0 {

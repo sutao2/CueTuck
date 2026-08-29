@@ -41,11 +41,11 @@
 
 **Files:** `desktop/src/platform/` · `desktop/src/components/` · `docs/specs/settings/spec.md`
 
-- [ ] **Step 1: Write the failing test**（打开显示模型标签后卡片出现 model；新建用默认模型；目录进入下拉）
-- [ ] **Step 2: Run test — FAIL**
-- [ ] **Step 3: 卡片标签、编辑器模型、目录解析**
-- [ ] **Step 4: 测试 PASS**
-- [ ] **Step 5: `./scripts/docs-check` 并提交**
+- [x] **Step 1: Write the failing test**（打开显示模型标签后卡片出现 model；新建用默认模型；目录进入下拉）
+- [x] **Step 2: Run test — FAIL**
+- [x] **Step 3: 卡片标签、编辑器模型、目录解析**
+- [x] **Step 4: 测试 PASS**
+- [x] **Step 5: `./scripts/docs-check` 并提交**
 
 ### Task 4: 变量智能建议
 

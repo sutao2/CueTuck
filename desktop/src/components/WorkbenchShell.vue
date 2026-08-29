@@ -260,6 +260,7 @@
               </div>
               <div class="card-top">
                 <span class="type-badge">{{ item.kind === "collection" ? "合集" : space === "square" ? "广场" : "本地" }}</span>
+                <span v-if="showModelTags && item.model" class="model-tag" data-testid="model-tag">{{ item.model }}</span>
               </div>
               <h3>{{ item.title }}</h3>
               <p v-if="item.author" class="prompt-author" data-testid="prompt-author">{{ item.author }}</p>
@@ -306,6 +307,8 @@
       v-if="creating || editing"
       :prompt="editing"
       :groups="categoryGroups"
+      :model-options="modelOptions"
+      :default-model="defaultModel"
       @cancel="closeEditor"
       @save="savePrompt"
       @remove="removePrompt"
@@ -494,16 +497,22 @@ const modelFilter = ref("");
 const modelCatalogText = ref("");
 const customModelsText = ref("");
 const seenModels = ref([]);
+const defaultModel = ref("");
+const showModelTags = ref(true);
 const libraryItems = computed(() => [
   ...collections.value.map((item) => ({ ...item, kind: "collection" })),
   ...prompts.value.map((item) => ({ ...item, kind: "prompt" })),
 ]);
 const displayedItems = computed(() => {
-  if (space.value === "square") return squareItems.value;
-  return filterLocalItems(libraryItems.value, {
-    tab: sortTab.value,
-    favoriteIds: localFavoriteIds.value,
-  });
+  const rows =
+    space.value === "square"
+      ? squareItems.value
+      : filterLocalItems(libraryItems.value, {
+          tab: sortTab.value,
+          favoriteIds: localFavoriteIds.value,
+        });
+  if (!modelFilter.value) return rows;
+  return rows.filter((item) => item.kind === "prompt" && item.model === modelFilter.value);
 });
 const filterTabs = computed(() => (space.value === "square" ? ["推荐", "最新", "热门", "收藏"] : ["全部", "最近", "收藏"]));
 const selectedLabel = computed(() => {
@@ -517,7 +526,7 @@ const selectedLabel = computed(() => {
 });
 
 const modelOptions = computed(() =>
-  parseModelNames(modelCatalogText.value, customModelsText.value, seenModels.value),
+  parseModelNames(modelCatalogText.value, customModelsText.value, seenModels.value, prompts.value),
 );
 const emptyHeading = computed(() => {
   if (space.value === "square") return squareOffline.value ? "暂时看不到广场列表" : "广场还没有内容";
@@ -727,6 +736,8 @@ function rememberModels(items) {
 async function loadModelPrefs() {
   modelCatalogText.value = (await getLocalSetting("model_catalog")) || "";
   customModelsText.value = (await getLocalSetting("custom_models")) || "";
+  defaultModel.value = (await getLocalSetting("default_model")) || "";
+  showModelTags.value = (await getLocalSetting("show_model_tags")) !== "0";
 }
 
 function onModelFilter() {
@@ -856,13 +867,13 @@ function coverPreview(item) {
   return parseCoverUrls(item.cover_json).slice(0, 3);
 }
 
-async function savePrompt({ id, kind, title, content, categoryId, coverType, coverUrls }) {
+async function savePrompt({ id, kind, title, content, categoryId, model, coverType, coverUrls }) {
   if (id) {
-    await updateLocalPrompt({ id, title, content, categoryId });
+    await updateLocalPrompt({ id, title, content, categoryId, model });
   } else if (kind === "collection") {
     await createLocalCollection({ title, categoryId, coverType, coverUrls });
   } else {
-    await createLocalPrompt({ title, content, categoryId });
+    await createLocalPrompt({ title, content, categoryId, model });
   }
   closeEditor();
   query.value = "";

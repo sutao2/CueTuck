@@ -437,6 +437,7 @@
 }
 .card-top { display: flex; align-items: center; gap: 7px; }
 .type-badge { padding: 3px 7px; border-radius: 10px; font-size: 9px; font-weight: 700; background: #e4ece9; color: #2c6b61; }
+.model-tag { padding: 3px 7px; border-radius: 10px; font-size: 9px; font-weight: 700; background: #ece6d8; color: #6b542c; }
 
 .modal-layer { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; }
 .modal-backdrop { position: absolute; inset: 0; background: rgba(24, 30, 31, 0.38); }

@@ -1,14 +1,15 @@
 use super::{
     add_prompt_to_collection_in_dir, backup_library_in_dir, collection_member_count,
     count_local_prompts_in_dir, create_category_in_dir, create_collection_in_dir,
-    create_prompt_in_dir, delete_prompt_in_dir, export_library_zip_in_dir, get_setting_in_dir,
+    create_prompt_in_dir, create_prompt_in_dir_with_model, delete_prompt_in_dir,
+    export_library_zip_in_dir, get_setting_in_dir,
     import_downloaded_prompt_in_dir,
     initialize_in_dir,
     list_categories_in_dir, list_collection_members_in_dir, list_collections_in_dir,
     list_prompts_in_dir,
     list_system_category_names, preview_import_json_in_dir, prompt_deleted_at, prompt_use_count,
     clear_prompt_use_in_dir, record_prompt_use_in_dir, restore_library_in_dir, set_setting_in_dir,
-    update_prompt_in_dir, upsert_synced_prompt_in_dir,
+    update_prompt_in_dir, update_prompt_in_dir_with_model, upsert_synced_prompt_in_dir,
 };
 
 #[tokio::test]
@@ -256,6 +257,25 @@ async fn recording_use_increments_count() {
     let used = record_prompt_use_in_dir(dir.path(), &created.id).unwrap();
     assert_eq!(prompt_use_count(dir.path(), &created.id).unwrap(), 4);
     assert!(used.last_used_at.is_some());
+}
+
+#[tokio::test]
+async fn create_and_update_persist_model() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let created =
+        create_prompt_in_dir_with_model(dir.path(), "模型片", "正文", None, Some("Flux")).unwrap();
+    assert_eq!(created.model.as_deref(), Some("Flux"));
+    let updated = update_prompt_in_dir_with_model(
+        dir.path(),
+        &created.id,
+        "模型片",
+        "正文",
+        None,
+        Some("GPT-5"),
+    )
+    .unwrap();
+    assert_eq!(updated.model.as_deref(), Some("GPT-5"));
 }
 
 #[tokio::test]
