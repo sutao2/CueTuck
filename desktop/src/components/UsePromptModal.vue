@@ -21,6 +21,7 @@
               :placeholder="'请输入' + currentName"
               @keydown="onValueKeydown"
             ></textarea>
+            <small v-if="currentHint" data-testid="variable-hint">{{ currentHint }}</small>
           </label>
         </template>
         <template v-else>
@@ -46,9 +47,11 @@
 <script setup>
 import { computed, ref } from "vue";
 import { extractVariables, renderPrompt } from "../lib/renderPrompt.js";
+import { hintForVariable } from "../platform/variableHints.js";
 
 const props = defineProps({
   prompt: { type: Object, required: true },
+  hintsEnabled: { type: Boolean, default: false },
 });
 const emit = defineEmits(["cancel", "copied"]);
 
@@ -59,6 +62,9 @@ const currentValue = ref("");
 const step = ref(names.length ? "variable" : "preview");
 
 const currentName = computed(() => names[index.value] ?? "");
+const currentHint = computed(() =>
+  props.hintsEnabled ? hintForVariable(currentName.value) : "",
+);
 const preview = computed(() => renderPrompt(props.prompt.content, values.value));
 const kicker = computed(() => (step.value === "preview" ? "FINAL PREVIEW" : "填写当前变量"));
 const heading = computed(() => (step.value === "preview" ? "确认并使用提示词" : currentName.value));

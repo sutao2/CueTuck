@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import UsePromptModal from "./UsePromptModal.vue";
 
 describe("UsePromptModal", () => {
@@ -14,6 +14,7 @@ describe("UsePromptModal", () => {
       },
     });
     expect(w.get('[data-testid="use-variable"]').text()).toBe("城市");
+    expect(w.find('[data-testid="variable-hint"]').exists()).toBe(false);
     expect(w.text()).not.toContain("天数");
     await w.get('[data-testid="use-value"]').setValue("京都");
     await w.get('[data-testid="use-next"]').trigger("click");
@@ -24,6 +25,24 @@ describe("UsePromptModal", () => {
     expect(w.get('[data-testid="use-preview"]').text()).toBe("去 京都 玩 3 天，再提一次 京都");
     await w.get('[data-testid="use-next"]').trigger("click");
     expect(w.emitted("copied")[0][0]).toBe("去 京都 玩 3 天，再提一次 京都");
+  });
+
+  it("shows a local variable hint when hints are enabled", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const w = mount(UsePromptModal, {
+      props: {
+        hintsEnabled: true,
+        prompt: {
+          id: "p-hint",
+          title: "行程",
+          content: "去 {{城市}} 玩",
+        },
+      },
+    });
+    expect(w.get('[data-testid="variable-hint"]').text()).toMatch(/京都/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   it("skips fill and previews when the prompt has no variables", async () => {

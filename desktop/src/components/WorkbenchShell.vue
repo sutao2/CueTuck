@@ -313,7 +313,13 @@
       @save="savePrompt"
       @remove="removePrompt"
     />
-    <UsePromptModal v-if="using" :prompt="using" @cancel="using = null" @copied="finishUse" />
+    <UsePromptModal
+      v-if="using"
+      :prompt="using"
+      :hints-enabled="variableHints"
+      @cancel="using = null"
+      @copied="finishUse"
+    />
     <CollectionDetailModal
       v-if="openedCollection"
       :collection="openedCollection"
@@ -499,6 +505,7 @@ const customModelsText = ref("");
 const seenModels = ref([]);
 const defaultModel = ref("");
 const showModelTags = ref(true);
+const variableHints = ref(false);
 const libraryItems = computed(() => [
   ...collections.value.map((item) => ({ ...item, kind: "collection" })),
   ...prompts.value.map((item) => ({ ...item, kind: "prompt" })),
@@ -738,6 +745,7 @@ async function loadModelPrefs() {
   customModelsText.value = (await getLocalSetting("custom_models")) || "";
   defaultModel.value = (await getLocalSetting("default_model")) || "";
   showModelTags.value = (await getLocalSetting("show_model_tags")) !== "0";
+  variableHints.value = (await getLocalSetting("variable_hints")) === "1";
 }
 
 function onModelFilter() {

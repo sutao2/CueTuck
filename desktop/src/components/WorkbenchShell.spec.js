@@ -1243,6 +1243,15 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="prompt-editor"]').exists()).toBe(true);
   });
 
+  it("shows a local variable hint from the workbench setting", async () => {
+    await createLocalPrompt({ title: "行程", content: "去 {{城市}} 玩" });
+    await setLocalSetting("variable_hints", "1");
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get(".card-action").trigger("click");
+    expect(w.get('[data-testid="variable-hint"]').text()).toMatch(/京都/);
+  });
+
   it("shows model tags on cards when the setting is on", async () => {
     await createLocalPrompt({ title: "Flux 片", content: "x", model: "Flux" });
     await setLocalSetting("show_model_tags", "1");

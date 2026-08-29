@@ -376,7 +376,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 冲突处理可选保留本地 | `WorkbenchShell.spec.js` keeps the local body when keep-local is selected before syncing；`librarySync.test.js` keeps the local body when keep-local is chosen and remote updated_at is newer |
 | 仅 Wi-Fi 同步图片可开关 | `WorkbenchShell.spec.js` persists wifi-only image sync from the settings row；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |
 | 自动同步收藏可开关 | `WorkbenchShell.spec.js` persists auto-sync queue from the settings row；`WorkbenchShell.spec.js` opens settings from the sidebar；`WorkbenchShell.spec.js` shows sync rows without requesting the backend |
-| 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
+| 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies；`UsePromptModal.spec.js` shows a local variable hint when hints are enabled；`variableHints.test.js` returns a local example for a known name and nothing for unknown |
 | 显示模型标签接到卡片 | `WorkbenchShell.spec.js` shows model tags on cards when the setting is on；`WorkbenchShell.spec.js` hides model tags when the setting is off |
 | 默认模型进入新建编辑器 | `WorkbenchShell.spec.js` preselects the default model in the editor；`library.test.js` persists the selected model on create and update |
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
