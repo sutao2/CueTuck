@@ -54,13 +54,14 @@ export function setDownloadStatsTransport(transport) {
   testStatsTransport = transport;
 }
 
-export async function listSquareItems({ sort = "推荐", query = "" } = {}) {
-  if (testTransport) return testTransport({ sort, query });
+export async function listSquareItems({ sort = "推荐", query = "", model = "" } = {}) {
+  if (testTransport) return testTransport({ sort, query, model });
   if (isTauri()) {
-    return tauriInvoke("list_square_items", { sort, query });
+    return tauriInvoke("list_square_items", { sort, query, model });
   }
   try {
     const params = new URLSearchParams({ sort, q: query });
+    if (model) params.set("model", model);
     const response = await fetch(`${apiBase()}/v1/square/items?${params}`);
     if (!response.ok) throw new Error("广场暂时不可用");
     const payload = await response.json();

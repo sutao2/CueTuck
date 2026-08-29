@@ -191,7 +191,10 @@
           <div class="filter-spacer"></div>
           <label class="compact-select">
             <span>模型</span>
-            <select><option>全部模型</option></select>
+            <select data-testid="model-filter" v-model="modelFilter" @change="onModelFilter">
+              <option value="">全部模型</option>
+              <option v-for="name in modelOptions" :key="name" :value="name">{{ name }}</option>
+            </select>
           </label>
           <div class="view-switch" aria-label="视图切换">
             <button type="button" :class="{ active: view === 'grid' }" title="网格视图" @click="view = 'grid'">▦</button>
@@ -319,7 +322,7 @@
       :theme="theme"
       :host="host"
       :session="session"
-      @cancel="settingsOpen = false"
+      @cancel="closeSettings"
       @theme="applyTheme"
       @imported="reloadPrompts"
       @login="openLogin('登录账号')"
@@ -394,6 +397,7 @@ import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import UsePromptModal from "./UsePromptModal.vue";
 import { getSession, logoutSession } from "../platform/session.js";
+import { parseModelNames } from "../platform/modelCatalog.js";
 import { downloadSquareItem, listFavorites, listSquareItems } from "../platform/square.js";
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
 import { parseCoverUrls } from "../lib/cover.js";
@@ -456,6 +460,10 @@ const squareItems = ref([]);
 const squareOffline = ref(false);
 const squareBlocked = ref(false);
 const favoriteIds = ref([]);
+const modelFilter = ref("");
+const modelCatalogText = ref("");
+const customModelsText = ref("");
+const seenModels = ref([]);
 const libraryItems = computed(() => [
   ...collections.value.map((item) => ({ ...item, kind: "collection" })),
   ...prompts.value.map((item) => ({ ...item, kind: "prompt" })),
@@ -472,6 +480,9 @@ const selectedLabel = computed(() => {
   return "全部提示词";
 });
 
+const modelOptions = computed(() =>
+  parseModelNames(modelCatalogText.value, customModelsText.value, seenModels.value),
+);
 const locationLabel = computed(() => (space.value === "square" ? "提示词广场" : "本地提示词"));
 const databaseLabel = computed(() => {
   if (props.databaseStatus === "ready") return "SQLite 就绪";
@@ -645,14 +656,41 @@ async function loadSquare() {
         openLogin("收藏需要登录");
         return;
       }
-      squareItems.value = await listFavorites();
+      let rows = await listFavorites();
+      if (modelFilter.value) {
+        rows = rows.filter((row) => row.model === modelFilter.value);
+      }
+      squareItems.value = rows;
     } else {
-      squareItems.value = await listSquareItems({ sort: sortTab.value, query: query.value });
+      squareItems.value = await listSquareItems({
+        sort: sortTab.value,
+        query: query.value,
+        model: modelFilter.value,
+      });
     }
+    rememberModels(squareItems.value);
   } catch {
     squareItems.value = [];
     squareOffline.value = true;
   }
+}
+
+function rememberModels(items) {
+  seenModels.value = parseModelNames(seenModels.value, items);
+}
+
+async function loadModelPrefs() {
+  modelCatalogText.value = (await getLocalSetting("model_catalog")) || "";
+  customModelsText.value = (await getLocalSetting("custom_models")) || "";
+}
+
+function onModelFilter() {
+  if (space.value === "square") loadSquare();
+}
+
+async function closeSettings() {
+  settingsOpen.value = false;
+  await loadModelPrefs();
 }
 
 function setSort(tab) {
@@ -765,6 +803,7 @@ onMounted(async () => {
     await applyTheme(stored);
   }
   categoryGroups.value = buildCategoryTree(await listLocalCategories());
+  await loadModelPrefs();
   await reloadPrompts();
   await refreshFavorites();
   if (window.__TAURI_INTERNALS__) {
