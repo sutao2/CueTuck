@@ -30,6 +30,16 @@ describe("square client", () => {
     expect(rows[0].title).toBe("自然光群像");
   });
 
+  it("forwards the selected model to the square transport", async () => {
+    let seen;
+    setSquareTransport(async (request) => {
+      seen = request;
+      return [];
+    });
+    await listSquareItems({ sort: "最新", query: "光", model: "Flux" });
+    expect(seen).toEqual({ sort: "最新", query: "光", model: "Flux" });
+  });
+
   it("surfaces offline as a thrown error", async () => {
     setSquareTransport(async () => {
       throw new Error("广场暂时不可用");

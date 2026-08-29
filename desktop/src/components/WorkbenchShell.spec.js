@@ -1190,4 +1190,24 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="settings-modal"]').text()).not.toMatch(/已从商店|已经上架/);
     vi.unstubAllGlobals();
   });
+
+  it("filters square items by the selected model", async () => {
+    const seen = [];
+    setSquareTransport(async (request) => {
+      seen.push(request);
+      return [
+        { id: "a", title: "Flux 人像", kind: "prompt", model: "Flux" },
+        { id: "b", title: "GPT 文案", kind: "prompt", model: "GPT-5" },
+      ];
+    });
+    await setLocalSetting("model_catalog", "Flux\nGPT-5");
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    const select = w.get('[data-testid="model-filter"]');
+    expect(select.findAll("option").map((option) => option.element.value)).toEqual(["", "Flux", "GPT-5"]);
+    await select.setValue("Flux");
+    await flushPromises();
+    expect(seen.at(-1).model).toBe("Flux");
+  });
 });

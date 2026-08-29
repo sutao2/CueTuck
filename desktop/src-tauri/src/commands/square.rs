@@ -27,14 +27,26 @@ fn data_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
 }
 
 #[tauri::command]
-pub async fn list_square_items(sort: Option<String>, query: Option<String>) -> Result<Vec<serde_json::Value>, String> {
+pub async fn list_square_items(
+    sort: Option<String>,
+    query: Option<String>,
+    model: Option<String>,
+) -> Result<Vec<serde_json::Value>, String> {
     let client = crate::http::client()?;
-    let response = client
-        .get(format!("{}/v1/square/items", api_base()))
-        .query(&[
-            ("sort", sort.unwrap_or_else(|| "推荐".into())),
-            ("q", query.unwrap_or_default()),
+    let sort = sort.unwrap_or_else(|| "推荐".into());
+    let query = query.unwrap_or_default();
+    let model = model.unwrap_or_default();
+    let mut request = client.get(format!("{}/v1/square/items", api_base()));
+    request = if model.trim().is_empty() {
+        request.query(&[("sort", sort.as_str()), ("q", query.as_str())])
+    } else {
+        request.query(&[
+            ("sort", sort.as_str()),
+            ("q", query.as_str()),
+            ("model", model.trim()),
         ])
+    };
+    let response = request
         .send()
         .await
         .map_err(|error| error.to_string())?;

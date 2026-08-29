@@ -162,6 +162,6 @@
 | 合同 path 与匿名下载 | `squareContract.test.js` lists every contract path |
 | 浏览混排 | `WorkbenchShell.spec.js` shows square items in the content grid not the category tree；`backend` `lists_square_items_without_login` |
 | 条目详情 | `backend` `serves_square_item_without_login` |
-| 浏览排序与模型筛选 | `backend` `sorts_recommended_latest_and_hot_apart`；`backend` `record_anonymous_download_increments_count_without_auth`；`backend` `anonymous_download_count_survives_new_appstate_on_postgres` |
+| 浏览排序与模型筛选 | `backend` `sorts_recommended_latest_and_hot_apart`；`backend` `record_anonymous_download_increments_count_without_auth`；`backend` `anonymous_download_count_survives_new_appstate_on_postgres`；`square.test.js` forwards the selected model to the square transport；`WorkbenchShell.spec.js` filters square items by the selected model |
 | 已登录收藏排序 | `backend` `favorites_sort_requires_login` |
 | 进程重启后列表仍在 | `backend` `publication_favorite_and_settings_survive_postgres` |
