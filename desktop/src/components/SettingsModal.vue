@@ -415,7 +415,7 @@ const props = defineProps({
   host: { type: String, default: "macos" },
   session: { type: Object, default: () => ({ loggedIn: false, email: "" }) },
 });
-const emit = defineEmits(["cancel", "theme", "imported", "login", "logout"]);
+const emit = defineEmits(["cancel", "theme", "imported", "login", "logout", "history-cleared"]);
 
 function usesSystemKeychain() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -817,5 +817,6 @@ async function saveModels() {
 
 async function clearHistory() {
   await clearLocalPromptUse();
+  emit("history-cleared");
 }
 </script>

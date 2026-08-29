@@ -55,6 +55,26 @@
 - WHEN 用户切换到列表视图
 - THEN 同一批结果以行展示而不是卡片网格
 
+#### Scenario: 本地最近只含已使用
+
+- GIVEN 本地有一条未使用与一条已使用的提示词
+- WHEN 用户打开「最近」
+- THEN 只出现已使用的那条，且按 `last_used_at` 新的在前
+
+#### Scenario: 本地收藏只含本机星标
+
+- GIVEN 用户把一条本地提示词标为收藏
+- WHEN 用户打开「收藏」
+- THEN 只出现已标星的本地条目
+- AND 不因此请求广场收藏接口
+
+#### Scenario: 右键只提供已有动作
+
+- GIVEN 内容区有一条本地提示词
+- WHEN 用户在卡片上右键
+- THEN 菜单含编辑、使用、本机收藏与删除
+- AND 不得出现未实现的举报或分享
+
 ### Requirement: 宿主窗口样式
 
 系统 MUST 按宿主操作系统画窗口控件与快捷键记号。原型只定四区节奏与内容，不定 Windows 风窗框。macOS 上 MUST 使用系统红绿灯（左上），自定义顶栏 MUST 为红绿灯留出 inset，不得把无框矩形窗 + 右侧工具簇当成成品。快捷键展示 MUST 用 Mac 符号（如 `⌃Space`），不得写 `Ctrl Space`。
@@ -86,4 +106,7 @@
 | SQLite 就绪 | `desktop/src-tauri` `status_is_ready_after_initialize` |
 | 展开大分类 | `desktop/src/components/WorkbenchShell.spec.js` loads preset categories into the tree；`lists_children_under_software` |
 | 切换网格列表 | `WorkbenchShell.spec.js` shows the same prompts as rows in list view |
+| 本地最近只含已使用 | `WorkbenchShell.spec.js` shows recently used local prompts on the recent tab；`library.test.js` records last_used_at when a prompt is used |
+| 本地收藏只含本机星标 | `WorkbenchShell.spec.js` shows only starred local prompts on the favorite tab；`localFavorites.test.js` toggles a local favorite id in settings |
+| 右键只提供已有动作 | `WorkbenchShell.spec.js` opens a context menu with existing local actions |
 | macOS 主窗口 | `WorkbenchShell.spec.js` uses mac chrome on macos；`windowChrome.test.js` gives traffic-light inset and glyph shortcut on macos |

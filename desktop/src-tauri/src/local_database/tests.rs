@@ -253,8 +253,9 @@ async fn recording_use_increments_count() {
     record_prompt_use_in_dir(dir.path(), &created.id).unwrap();
     record_prompt_use_in_dir(dir.path(), &created.id).unwrap();
     record_prompt_use_in_dir(dir.path(), &created.id).unwrap();
-    record_prompt_use_in_dir(dir.path(), &created.id).unwrap();
+    let used = record_prompt_use_in_dir(dir.path(), &created.id).unwrap();
     assert_eq!(prompt_use_count(dir.path(), &created.id).unwrap(), 4);
+    assert!(used.last_used_at.is_some());
 }
 
 #[tokio::test]
