@@ -69,6 +69,7 @@
 |---|---|
 | 新建并保存 | `desktop/src-tauri` `creates_prompt_and_lists_it`；`desktop/src/platform/library.test.js` |
 | 增加变量 | `desktop/src/lib/renderPrompt.test.js` dedupes repeated variables |
+| 编辑模型 | `library.test.js` persists the selected model on create and update；`WorkbenchShell.spec.js` preselects the default model in the editor |
 | 删除后搜索 | `desktop/src-tauri` `soft_deleted_prompt_is_hidden` |
 | 按正文命中 | `desktop/src-tauri` `search_hits_content` |
 | 复制后计数 | `desktop/src-tauri` `recording_use_increments_count`；`library.test.js` records last_used_at when a prompt is used |

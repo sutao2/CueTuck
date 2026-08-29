@@ -30,6 +30,19 @@ describe("memory library", () => {
     expect(rows[0].title).toBe("测试");
   });
 
+  it("persists the selected model on create and update", async () => {
+    const created = await createLocalPrompt({ title: "模型片", content: "正文", model: "Flux" });
+    expect(created.model).toBe("Flux");
+    const { updateLocalPrompt } = await import("./library.js");
+    const updated = await updateLocalPrompt({
+      id: created.id,
+      title: "模型片",
+      content: "正文",
+      model: "GPT-5",
+    });
+    expect(updated.model).toBe("GPT-5");
+  });
+
   it("hides deleted prompts from default search", async () => {
     const created = await createLocalPrompt({ title: "过期模板", content: "x" });
     await deleteLocalPrompt(created.id);

@@ -1243,6 +1243,43 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="prompt-editor"]').exists()).toBe(true);
   });
 
+  it("shows model tags on cards when the setting is on", async () => {
+    await createLocalPrompt({ title: "Flux 片", content: "x", model: "Flux" });
+    await setLocalSetting("show_model_tags", "1");
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    expect(w.get('[data-testid="model-tag"]').text()).toBe("Flux");
+  });
+
+  it("hides model tags when the setting is off", async () => {
+    await createLocalPrompt({ title: "Flux 片", content: "x", model: "Flux" });
+    await setLocalSetting("show_model_tags", "0");
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    expect(w.find('[data-testid="model-tag"]').exists()).toBe(false);
+  });
+
+  it("does not apply the default model when editing an untagged prompt", async () => {
+    await createLocalPrompt({ title: "无模型", content: "x" });
+    await setLocalSetting("default_model", "Flux");
+    await setLocalSetting("model_catalog", "Flux");
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get(".prompt-card").trigger("click");
+    expect(w.get('[data-testid="prompt-model"]').element.value).toBe("");
+  });
+
+  it("preselects the default model in the editor", async () => {
+    await setLocalSetting("default_model", "Flux");
+    await setLocalSetting("model_catalog", "Flux\nGPT-5");
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get(".content-actions .primary-button").trigger("click");
+    const select = w.get('[data-testid="prompt-model"]');
+    expect(select.findAll("option").map((option) => option.element.value)).toEqual(["", "Flux", "GPT-5"]);
+    expect(select.element.value).toBe("Flux");
+  });
+
   it("filters square items by the selected model", async () => {
     const seen = [];
     setSquareTransport(async (request) => {

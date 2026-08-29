@@ -24,6 +24,13 @@
           <span>{{ kind === "collection" ? "合集名称" : "标题" }}</span>
           <input v-model="title" placeholder="例如：SaaS 官网生成器">
         </label>
+        <label v-if="kind === 'prompt'" class="field">
+          <span>模型</span>
+          <select data-testid="prompt-model" v-model="model">
+            <option value="">未指定</option>
+            <option v-for="name in modelOptions" :key="name" :value="name">{{ name }}</option>
+          </select>
+        </label>
         <label class="field">
           <span>小分类</span>
           <select v-model="categoryId">
@@ -80,6 +87,8 @@ import { computed, ref } from "vue";
 const props = defineProps({
   prompt: { type: Object, default: null },
   groups: { type: Array, default: () => [] },
+  modelOptions: { type: Array, default: () => [] },
+  defaultModel: { type: String, default: "" },
 });
 
 const emit = defineEmits(["cancel", "save", "remove"]);
@@ -87,6 +96,7 @@ const kind = ref("prompt");
 const title = ref(props.prompt?.title ?? "");
 const content = ref(props.prompt?.content ?? "");
 const categoryId = ref(props.prompt?.category_id ?? "");
+const model = ref(props.prompt ? (props.prompt.model ?? "") : (props.defaultModel ?? ""));
 const coverType = ref("none");
 const coverUrls = ref([]);
 const heading = computed(() => {
@@ -117,6 +127,7 @@ function submit() {
     title: title.value.trim(),
     content: content.value,
     categoryId: categoryId.value || null,
+    model: kind.value === "prompt" ? model.value || null : null,
     coverType: coverType.value,
     coverUrls: coverType.value === "none" ? [] : coverUrls.value,
   });

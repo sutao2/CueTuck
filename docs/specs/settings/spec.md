@@ -221,6 +221,20 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 - THEN 五行星都在
 - AND 打开变量智能建议不会把提示词正文发到本机以外
 
+#### Scenario: 显示模型标签接到卡片
+
+- GIVEN 一条本地提示词带模型名且开关打开
+- WHEN 用户看内容区卡片
+- THEN 卡片展示该模型标签
+- AND 关闭开关后标签消失
+
+#### Scenario: 默认模型进入新建编辑器
+
+- GIVEN 已启用模型库含 Flux 且默认目标模型为 Flux
+- WHEN 用户新建提示词
+- THEN 编辑器模型下拉含目录中的名称
+- AND 默认选中 Flux
+
 ### Requirement: 网络与代理
 
 网络与代理页 MUST 展示：允许访问提示词广场、代理、同步状态。「允许访问提示词广场」接通后 MUST 成为本机开关：关闭时工作台 MUST 不请求广场，启动器仍 MUST 只搜本地。代理接通后 MUST 可填写 http 或 https 地址：空 MUST 跟随系统；填写后本机 Tauri 请求 MUST 走该代理。非法地址 MUST NOT 保存。浏览器预览 MUST NOT 声称走该代理。MUST NOT 把 SOCKS 写成已支持。同步状态 MUST 标明个人库可立即同步，MUST NOT 写成没有云同步或尚未提供，MUST NOT 假装正在同步或已同步。
@@ -363,6 +377,8 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 仅 Wi-Fi 同步图片可开关 | `WorkbenchShell.spec.js` persists wifi-only image sync from the settings row；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |
 | 自动同步收藏可开关 | `WorkbenchShell.spec.js` persists auto-sync queue from the settings row；`WorkbenchShell.spec.js` opens settings from the sidebar；`WorkbenchShell.spec.js` shows sync rows without requesting the backend |
 | 模型页可见且不外传正文 | `WorkbenchShell.spec.js` shows model rows without sending prompt bodies |
+| 显示模型标签接到卡片 | `WorkbenchShell.spec.js` shows model tags on cards when the setting is on；`WorkbenchShell.spec.js` hides model tags when the setting is off |
+| 默认模型进入新建编辑器 | `WorkbenchShell.spec.js` preselects the default model in the editor；`library.test.js` persists the selected model on create and update |
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
 | 同步状态不写没有云同步 | `WorkbenchShell.spec.js` does not claim the network page has no cloud sync；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |
 | 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |
