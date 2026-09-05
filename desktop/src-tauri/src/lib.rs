@@ -21,6 +21,8 @@ pub fn run() {
     builder
         .invoke_handler(tauri::generate_handler![
             commands::database::initialize_local_database,
+            commands::database::export_local_sync_changes,
+            commands::database::apply_local_sync_changes,
             commands::database::get_local_database_status,
             commands::database::count_local_prompts,
             commands::database::create_local_prompt,

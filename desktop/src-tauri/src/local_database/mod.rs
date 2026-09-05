@@ -3,10 +3,15 @@ mod categories;
 mod collections;
 mod prompts;
 mod settings;
+mod sync;
+pub use sync::{apply_sync_changes, export_sync_changes, SyncChange};
 
 use rusqlite::Connection;
 use std::path::Path;
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static LAST_TIMESTAMP: AtomicU64 = AtomicU64::new(0);
 
 pub use categories::{create_category_in_dir, list_categories_in_dir, CategoryRecord};
 pub use collections::{
@@ -144,7 +149,19 @@ pub fn initialize_in_dir(dir: &Path) -> Result<String, String> {
         )
         .map_err(|error| error.to_string())?;
     ensure_prompt_columns(&connection)?;
+    for table in ["categories", "settings"] {
+        if !table_columns(&connection, table)?.iter().any(|column| column == "updated_at") {
+            connection.execute(&format!("ALTER TABLE {table} ADD COLUMN updated_at TEXT NOT NULL DEFAULT '0'"), [])
+                .map_err(|error| error.to_string())?;
+        }
+    }
     seed_system_categories(&connection)?;
+    for table in ["prompts", "collections", "categories", "settings"] {
+        let latest: i64 = connection.query_row(&format!(
+            "SELECT COALESCE(MAX(CASE WHEN CAST(updated_at AS INTEGER) >= 1000000000 AND CAST(updated_at AS INTEGER) < 100000000000 THEN CAST(updated_at AS INTEGER) * 1000 ELSE CAST(updated_at AS INTEGER) END), 0) FROM {table}"
+        ), [], |row| row.get(0)).map_err(|error| error.to_string())?;
+        observe_timestamp(latest.max(0) as u64);
+    }
     Ok(DatabaseStatus::Ready.as_str().to_string())
 }
 
@@ -186,6 +203,22 @@ fn table_columns(connection: &Connection, table: &str) -> Result<Vec<String>, St
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;
     Ok(columns)
+}
+
+pub(crate) fn timestamp_ms(raw: &str) -> u64 {
+    let value = raw.parse::<u64>().unwrap_or(0);
+    if (1_000_000_000..100_000_000_000).contains(&value) { value * 1000 } else { value }
+}
+
+pub(crate) fn now_millis() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
+    let previous = LAST_TIMESTAMP.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |last| Some(now.max(last + 1))).unwrap();
+    now.max(previous + 1).to_string()
+}
+
+pub(crate) fn observe_timestamp(timestamp: u64) {
+    LAST_TIMESTAMP.fetch_max(timestamp, Ordering::SeqCst);
 }
 
 fn seed_system_categories(connection: &Connection) -> Result<(), String> {

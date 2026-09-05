@@ -39,9 +39,10 @@ export async function pushAccountPrompt(row) {
   const item = {
     id: row.id,
     kind: "prompt",
-    payload: { title: row.title, content: row.content, category_id: row.category_id ?? null, model: row.model ?? null },
+    payload: { ...row, source: row.original_source ?? row.source ?? "local" },
     updated_at: String(row.updated_at ?? Date.now()),
   };
+  delete item.payload.original_source;
   if (testTransport?.put) {
     return testTransport.put([item]);
   }

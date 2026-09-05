@@ -1,9 +1,8 @@
 import {
   getLocalSetting,
-  insertSyncedLocalPrompt,
-  listLocalCategories,
-  listLocalCollections,
-  listLocalPrompts,
+  exportLocalSyncChanges,
+  applyLocalSyncChanges,
+  timestampMillis,
 } from "./library.js";
 import { getSession } from "./session.js";
 
@@ -24,15 +23,6 @@ function requireAccessToken() {
   const token = getSession().accessToken;
   if (!token) throw new Error("同步需要登录");
   return token;
-}
-
-function asChange(kind, row) {
-  return {
-    id: row.id,
-    kind,
-    payload: { ...row },
-    updated_at: String(row.updated_at ?? "0"),
-  };
 }
 
 export function resetLibrarySync() {
@@ -106,31 +96,13 @@ export async function listLibraryChanges({ since = "" } = {}) {
   return response.json();
 }
 
-async function applyRemotePromptChanges(items) {
-  const keepLocal = (await getLocalSetting("sync_conflict")) === "keep_local";
-  const existingIds = keepLocal
-    ? new Set((await listLocalPrompts({ query: "" })).map((row) => row.id))
-    : null;
-  for (const item of items) {
-    if (item.kind !== "prompt" || item.deleted_at) continue;
-    if (keepLocal && existingIds.has(item.id)) continue;
-    await insertSyncedLocalPrompt({
-      id: item.id,
-      title: item.payload?.title ?? "",
-      content: item.payload?.content ?? "",
-      categoryId: item.payload?.category_id ?? null,
-      updatedAt: item.updated_at,
-    });
-  }
-}
-
 export async function syncLocalLibraryNow() {
-  requireAccessToken();
-  const [prompts, collections, categories] = await Promise.all([
-    listLocalPrompts({ query: "" }),
-    listLocalCollections({ query: "" }),
-    listLocalCategories(),
-  ]);
+  const token = requireAccessToken();
+  const assertSameSession = () => {
+    if (getSession().accessToken !== token) throw new Error("登录状态已改变，请重新同步");
+  };
+  const snapshot = await exportLocalSyncChanges();
+  const keepLocal = (await getLocalSetting("sync_conflict")) === "keep_local";
   const skipImages = await shouldSkipImageAssets();
   const remoteById = new Map();
   if (skipImages) {
@@ -139,13 +111,29 @@ export async function syncLocalLibraryNow() {
       if (item.kind === "collection") remoteById.set(item.id, item);
     }
   }
-  const items = [
-    ...prompts.map((row) => asChange("prompt", row)),
-    ...collections.map((row) => asChange("collection", collectionPayloadForPush(row, skipImages, remoteById))),
-    ...categories.map((row) => asChange("category", row)),
-  ];
+  const items = snapshot.map((item) => item.kind === "collection"
+    ? { ...item, payload: collectionPayloadForPush({ ...item.payload, id: item.id }, skipImages, remoteById) }
+    : item);
+  assertSameSession();
   await putLibraryChanges(items);
+  assertSameSession();
   const remote = await listLibraryChanges({ since: "" });
-  await applyRemotePromptChanges(remote.items ?? []);
+  assertSameSession();
+  const localCollections = new Map(snapshot.filter((item) => item.kind === "collection").map((item) => [item.id, item]));
+  const incoming = (remote.items ?? []).map((item) => item.kind === "collection" && skipImages
+    ? { ...item, payload: collectionPayloadForPush({ ...item.payload, id: item.id }, true, localCollections) }
+    : item);
+  await applyLocalSyncChanges(incoming, { keepLocal });
+  if (skipImages) {
+    // Keep withheld local cover edits newer than the accepted text-only revision,
+    // so the next Wi-Fi sync actually uploads them instead of losing an equal-time conflict.
+    const remoteCollections = new Map((remote.items ?? []).filter((item) => item.kind === "collection").map((item) => [item.id, item]));
+    const deferred = snapshot.filter((item) => {
+      const server = remoteCollections.get(item.id);
+      return item.kind === "collection" && server && timestampMillis(item.updated_at) >= timestampMillis(server.updated_at)
+        && (item.payload.cover_json !== server.payload.cover_json || item.payload.cover_type !== server.payload.cover_type);
+    }).map((item) => ({ ...item, updated_at: String(timestampMillis(item.updated_at) + 1) }));
+    await applyLocalSyncChanges(deferred);
+  }
   return remote;
 }

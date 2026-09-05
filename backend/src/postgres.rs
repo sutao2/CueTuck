@@ -295,16 +295,19 @@ impl Pg {
     ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
         let rows = sqlx::query(&format!(
             "SELECT id, kind, payload, updated_at, deleted_at FROM {}
-             WHERE owner_email = $1 AND ($2 = '' OR updated_at > $2)
+             WHERE owner_email = $1
              ORDER BY id",
             self.t("library_changes")
         ))
         .bind(email)
-        .bind(since)
         .fetch_all(&self.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        rows.iter().map(Self::library_change_from_row).collect()
+        let mut items = rows.iter().map(Self::library_change_from_row).collect::<Result<Vec<_>, _>>()?;
+        if !since.is_empty() {
+            items.retain(|row| crate::library::timestamp_ms(&row.updated_at) > crate::library::timestamp_ms(since));
+        }
+        Ok(items)
     }
 
     pub async fn put_library_changes(
@@ -312,6 +315,8 @@ impl Pg {
         email: &str,
         items: &[crate::library::LibraryChange],
     ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
+        crate::library::validate_changes(items)?;
+        let mut transaction = self.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         for item in items {
             let payload = serde_json::to_string(&item.payload).unwrap_or_else(|_| "{}".into());
             sqlx::query(&format!(
@@ -322,19 +327,23 @@ impl Pg {
                    payload = EXCLUDED.payload,
                    updated_at = EXCLUDED.updated_at,
                    deleted_at = EXCLUDED.deleted_at
-                 WHERE {0}.updated_at < EXCLUDED.updated_at",
+                 WHERE (CASE WHEN {0}.updated_at ~ '^[0-9]{{1,16}}$' THEN
+                   CASE WHEN {0}.updated_at::numeric >= 1000000000 AND {0}.updated_at::numeric < 100000000000
+                     THEN {0}.updated_at::numeric * 1000 ELSE {0}.updated_at::numeric END
+                   ELSE 0 END) < EXCLUDED.updated_at::numeric",
                 self.t("library_changes")
             ))
             .bind(email)
             .bind(&item.id)
             .bind(&item.kind)
             .bind(payload)
-            .bind(&item.updated_at)
+            .bind(crate::library::timestamp_ms(&item.updated_at).to_string())
             .bind(&item.deleted_at)
-            .execute(&self.pool)
+            .execute(&mut *transaction)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         }
+        transaction.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         self.list_library_changes(email, "").await
     }
 

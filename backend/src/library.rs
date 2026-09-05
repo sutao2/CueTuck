@@ -5,6 +5,22 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 use serde::{Deserialize, Serialize};
 
+pub(crate) fn timestamp_ms(raw: &str) -> u64 {
+    let value = raw.parse::<u64>().unwrap_or(0);
+    if (1_000_000_000..100_000_000_000).contains(&value) { value * 1000 } else { value }
+}
+
+pub(crate) fn validate_changes(items: &[LibraryChange]) -> Result<(), StatusCode> {
+    for item in items {
+        if item.id.trim().is_empty() || !matches!(item.kind.as_str(), "prompt" | "collection" | "category" | "setting")
+            || !item.payload.is_object() || item.updated_at.parse::<u64>().is_err()
+            || item.updated_at.len() > 16 {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
+    Ok(())
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LibraryChange {
     pub id: String,

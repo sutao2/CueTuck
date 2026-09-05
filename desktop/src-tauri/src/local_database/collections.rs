@@ -21,11 +21,7 @@ fn open_db(dir: &Path) -> Result<Connection, String> {
 }
 
 fn now_iso() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_secs().to_string())
-        .unwrap_or_else(|_| "0".to_string())
+    super::now_millis()
 }
 
 fn normalize_cover_json(cover_type: &str, raw: Option<&str>) -> String {

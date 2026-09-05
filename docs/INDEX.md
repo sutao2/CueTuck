@@ -49,7 +49,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；不进桌面包 |
 | [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 流体桌面布局；不进桌面包 |
 | [specs/mcp/spec.md](specs/mcp/spec.md) | 目标 | 做本机 MCP | stdio 查询本地提示词 |
-| [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 登录后推拉账号库 |
+| [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 完整分类/合集/成员/软删除往返与时间归一化 |
 | [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 不得把未付费写成 Pro |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
 | [reference/test-gates.md](reference/test-gates.md) | 现行 | 加测试或 CI | 分阶段门禁 |

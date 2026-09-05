@@ -38,10 +38,12 @@ export function replacePromptsFromAccount(items) {
   prompts = (Array.isArray(items) ? items : [])
     .filter((item) => item?.kind === "prompt" && !item.deleted_at)
     .map((item) => ({
+      ...item.payload,
       id: item.id,
       title: String(item.payload?.title ?? "").trim(),
       content: item.payload?.content ?? "",
       source: "account",
+      original_source: item.payload?.source ?? "local",
       category_id: item.payload?.category_id ?? null,
       model: item.payload?.model ?? null,
       updated_at: String(item.updated_at ?? "0"),
@@ -60,6 +62,8 @@ export function updateLocalPrompt({ id, title, content } = {}) {
   if (!nextTitle) return row;
   row.title = nextTitle;
   row.content = content ?? "";
-  row.updated_at = String(Date.now());
+  const stamp = Number(row.updated_at || 0);
+  const previous = stamp >= 1e9 && stamp < 1e11 ? stamp * 1000 : stamp;
+  row.updated_at = String(Math.max(Date.now(), previous + 1));
   return row;
 }

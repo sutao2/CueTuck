@@ -41,6 +41,7 @@
 | icon | 可选 |
 | is_system | 系统预置分类 |
 | sort_order | 排序 |
+| updated_at | Unix 毫秒时间，旧分类初始化为 0 |
 
 只允许两级：大分类 → 小分类。小分类不得再有子节点。
 
@@ -79,6 +80,7 @@
 |---|---|
 | key | 设置键 |
 | value_json | JSON |
+| updated_at | Unix 毫秒时间，旧设置初始化为 0 |
 
 键名与含义只写在 [设置规格](../specs/settings/spec.md)，本表不重复。M8 增加键不得删已有 `theme` 与启动器快捷键。
 
