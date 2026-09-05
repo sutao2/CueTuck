@@ -3,6 +3,7 @@
     class="launcher-canvas"
     :class="{ 'host-mac': host === 'macos' }"
     aria-label="快捷搜索"
+    @keydown.esc.prevent.stop="resetAndHide"
   >
     <section
       class="launcher-stage"
@@ -39,6 +40,7 @@
         </div>
 
         <div v-if="!isCollapsed" class="launcher-list">
+          <p v-if="feedback" role="status" data-testid="launcher-feedback" class="launcher-empty">{{ feedback }}</p>
           <div v-if="results.length" id="launcher-results" role="listbox" aria-label="搜索结果">
             <p class="group-title">本地提示词</p>
             <button
@@ -79,9 +81,9 @@
           <span class="brand-mark" aria-hidden="true"></span>
           <div class="result-copy">
             <span class="row-title">{{ active?.title }}</span>
-            <span class="row-desc">填写变量后生成最终提示词</span>
+            <span class="row-desc">{{ variableNames.length ? '填写变量后生成最终提示词' : '确认正文后复制或粘贴' }}</span>
           </div>
-          <span class="pill">变量</span>
+          <span class="pill">{{ variableNames.length ? '变量' : '预览' }}</span>
         </div>
         <div class="launcher-list launcher-fill-body">
           <div class="form-layout">
@@ -103,14 +105,15 @@
             <section class="stack">
               <h3>预览最终提示词</h3>
               <pre class="preview code">{{ preview }}</pre>
+              <p v-if="feedback" role="status" data-testid="launcher-feedback">{{ feedback }}</p>
             </section>
           </div>
         </div>
         <footer class="launcher-foot launcher-fill-foot">
           <div class="launcher-actions">
             <button type="button" class="ghost" @click="backToSearch">返回</button>
-            <button type="button" class="ghost" @click="copyRendered('copy')">复制</button>
-            <button type="button" class="primary" @click="pasteRendered">粘贴到当前窗口</button>
+            <button type="button" class="ghost" :disabled="useBusy" @click="copyRendered('copy')">复制</button>
+            <button type="button" class="primary" :disabled="useBusy" @click="pasteRendered">粘贴到当前窗口</button>
           </div>
         </footer>
       </template>
@@ -145,6 +148,8 @@ const step = ref("search");
 const active = ref(null);
 const values = reactive({});
 const feedback = ref("");
+const useBusy = ref(false);
+let searchRequest = 0;
 const canReadSelected = supportsSelectedText();
 
 const variableNames = computed(() => extractVariables(active.value?.content ?? ""));
@@ -156,13 +161,21 @@ const launcherLayout = computed(() =>
 const copyChord = computed(() => formatShortcutLabel("Control+Enter", props.host));
 
 watch(query, async (value) => {
+  const request = ++searchRequest;
   const needle = value.trim();
+  feedback.value = "";
   selectedIndex.value = 0;
+  results.value = [];
   if (!needle) {
     results.value = [];
     return;
   }
-  results.value = (await listLocalPrompts({ query: needle })).slice(0, LAUNCHER_RESULT_LIMIT);
+  try {
+    const rows = await listLocalPrompts({ query: needle });
+    if (request === searchRequest) results.value = rows.slice(0, LAUNCHER_RESULT_LIMIT);
+  } catch (error) {
+    if (request === searchRequest) { results.value = []; feedback.value = `搜索失败：${error.message || error}`; }
+  }
 });
 
 watch(launcherLayout, (layout) => resizeLauncherWindow(layout), { immediate: true });
@@ -196,11 +209,11 @@ function onSearchKey(event) {
 }
 
 function activate(row, mode) {
-  if (!row) return;
+  if (!row || useBusy.value) return;
+  feedback.value = "";
   active.value = row;
   for (const key of Object.keys(values)) delete values[key];
-  const names = extractVariables(row.content);
-  if (mode === "copy" || !names.length) {
+  if (mode === "copy") {
     copyRendered(mode);
     return;
   }
@@ -221,15 +234,13 @@ function startDragFromChrome(event) {
 }
 
 async function finishUse(text, pasted) {
-  if (active.value?.id) {
-    try {
-      await recordLocalPromptUse(active.value.id);
-    } catch {
-      /* ignore missing row in tests */
-    }
-  }
   feedback.value = pasted === false ? "已复制，未能粘贴" : "已复制";
-  await setLocalSetting("last_rendered_prompt", text);
+  try {
+    if (active.value?.id) {
+      await recordLocalPromptUse(active.value.id);
+    }
+    await setLocalSetting("last_rendered_prompt", text);
+  } catch (error) { feedback.value += `；保存使用记录失败：${error.message || error}`; return text; }
   const closeAfter = await getLocalSetting("close_launcher_after_use");
   if (pasted !== false && closeAfter !== "0") {
     await resetAndHide();
@@ -238,19 +249,30 @@ async function finishUse(text, pasted) {
 }
 
 async function copyRendered() {
+  if (useBusy.value) return;
+  useBusy.value = true;
   const text = renderPrompt(active.value?.content ?? "", values);
   try {
     await navigator.clipboard.writeText(text);
   } catch {
-    /* tests and some browsers deny clipboard */
+    feedback.value = "复制失败，请检查剪贴板权限后重试；内容已保留。";
+    useBusy.value = false;
+    return;
   }
-  await finishUse(text, true);
+  try { await finishUse(text, true); }
+  catch (error) { feedback.value = `已复制；${error.message || error}`; }
+  finally { useBusy.value = false; }
 }
 
 async function pasteRendered() {
+  if (useBusy.value) return;
+  useBusy.value = true;
   const text = renderPrompt(active.value?.content ?? "", values);
-  const result = await copyThenPaste(text);
-  await finishUse(text, result.ok);
+  try {
+    const result = await copyThenPaste(text);
+    await finishUse(text, result.ok);
+  } catch (error) { feedback.value = `复制或粘贴失败：${error.message || error}`; }
+  finally { useBusy.value = false; }
 }
 
 async function readSelected() {
@@ -276,6 +298,8 @@ async function onBlur() {
 }
 
 async function resetAndHide() {
+  searchRequest += 1;
+  feedback.value = "";
   query.value = "";
   results.value = [];
   selectedIndex.value = 0;
