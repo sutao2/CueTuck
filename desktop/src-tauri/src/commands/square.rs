@@ -7,8 +7,8 @@ struct SquareListResponse {
     items: Vec<serde_json::Value>,
 }
 
-#[derive(Deserialize)]
-struct SquareContentResponse {
+#[derive(Deserialize, serde::Serialize)]
+pub struct SquareContentResponse {
     id: String,
     title: String,
     content: String,
@@ -64,7 +64,7 @@ pub async fn list_square_items(
 }
 
 #[tauri::command]
-pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRecord, String> {
+pub async fn get_square_content(id: String) -> Result<SquareContentResponse, String> {
     let client = crate::http::client()?;
     let response = client
         .get(format!("{}/v1/square/items/{}/content", api_base(), id))
@@ -74,7 +74,12 @@ pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRe
     if !response.status().is_success() {
         return Err("广场暂时不可用".to_string());
     }
-    let payload: SquareContentResponse = response.json().await.map_err(|error| error.to_string())?;
+    response.json().await.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRecord, String> {
+    let payload = get_square_content(id).await?;
     let dir = data_dir(&app)?;
     let keep = get_setting_in_dir(&dir, "keep_author_on_download")
         .map(|value| value == "1")

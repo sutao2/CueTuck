@@ -63,6 +63,48 @@ describe("WorkbenchShell", () => {
     });
   });
 
+  it("opens read-only square detail, retries errors and reports download success", async () => {
+    setSquareTransport(async () => [{ id: "sq-1", title: "详情", kind: "prompt" }]);
+    const content = vi.fn().mockRejectedValueOnce(new Error("断网")).mockResolvedValue({ id: "sq-1", title: "详情", content: "完整{{正文}}", model: "Flux" });
+    setSquareContentTransport(content);
+    const stats = vi.fn();
+    setDownloadStatsTransport(stats);
+    await setLocalSetting("anonymous_download_stats", "1");
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get(".prompt-card").trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="square-detail"]').text()).toContain("读取详情失败");
+    await w.get('[data-testid="square-detail-retry"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="square-detail-content"]').text()).toBe("完整{{正文}}");
+    expect(await listLocalPrompts()).toHaveLength(0);
+    expect(stats).not.toHaveBeenCalled();
+    await w.get('[data-testid="square-detail-download"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="square-detail"]').text()).toContain("已下载到本地");
+    expect(await listLocalPrompts()).toHaveLength(1);
+    expect(stats).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reopen square detail after its pending request is closed", async () => {
+    setSquareTransport(async () => [{ id: "sq-1", title: "详情", kind: "prompt" }]);
+    let resolveContent;
+    setSquareContentTransport(() => new Promise((resolve) => { resolveContent = resolve; }));
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get(".prompt-card").trigger("click");
+    await w.get('[data-testid="square-detail"] .modal-close').trigger("click");
+    resolveContent({ content: "迟到响应" });
+    await flushPromises();
+    expect(w.find('[data-testid="square-detail"]').exists()).toBe(false);
+    expect(await listLocalPrompts()).toHaveLength(0);
+  });
+
   it("renders four chrome regions", () => {
     const w = mount(WorkbenchShell);
     expect(w.get('[data-region="titlebar"]').exists()).toBe(true);
