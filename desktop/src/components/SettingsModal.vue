@@ -248,15 +248,16 @@
             <textarea v-model="exportText" rows="6" readonly></textarea>
             <label class="field">
               <span>导入 JSON</span>
-              <textarea v-model="importText" rows="5" placeholder='{"prompts":[{"title":"一","content":"a"}]}'></textarea>
+              <textarea v-model="importText" :disabled="importBusy" rows="5" placeholder='{"prompts":[{"title":"一","content":"a"}]}' @input="preview = null"></textarea>
             </label>
             <div class="modal-actions">
-              <button type="button" class="button ghost-button" @click="doPreview">预览</button>
-              <button type="button" class="button primary-button" :disabled="!preview" @click="doApply">确认导入</button>
+              <button type="button" class="button ghost-button" :disabled="importBusy" @click="doPreview">预览</button>
+              <button type="button" class="button primary-button" :disabled="importBusy || !preview" @click="doApply">确认导入</button>
             </div>
             <p v-if="preview" data-testid="import-preview">
               将导入 {{ preview.prompt_count }} 条提示词、{{ preview.collection_count }} 个合集。确认前不会写入。
             </p>
+            <p v-if="importNote" role="status">{{ importNote }}</p>
             <label class="field">
               <span>恢复库文件路径</span>
               <input v-model="restorePath" placeholder="/path/to/promptark.sqlite">
@@ -440,6 +441,9 @@ const current = ref("general");
 const exportText = ref("");
 const importText = ref("");
 const preview = ref(null);
+const previewedText = ref("");
+const importBusy = ref(false);
+const importNote = ref("");
 const shortcut = ref(DEFAULT_LAUNCHER_SHORTCUT);
 const newPromptShortcut = ref(DEFAULT_NEW_PROMPT_SHORTCUT);
 const pasteRecentShortcut = ref(DEFAULT_PASTE_RECENT_SHORTCUT);
@@ -670,16 +674,36 @@ async function saveShortcut() {
 }
 
 async function doExport() {
-  exportText.value = await exportLocalLibrary();
+  dataError.value = "";
+  try { exportText.value = await exportLocalLibrary(); }
+  catch (error) { dataError.value = `导出失败：${error.message || error}`; }
 }
 
 async function doPreview() {
-  preview.value = await previewLocalImport(importText.value);
+  dataError.value = "";
+  importNote.value = "";
+  preview.value = null;
+  const text = importText.value;
+  try {
+    const result = await previewLocalImport(text);
+    if (text !== importText.value) return;
+    preview.value = result;
+    previewedText.value = text;
+  } catch (error) { dataError.value = `预览失败：${error.message || error}`; }
 }
 
 async function doApply() {
-  await applyLocalImport(importText.value);
-  emit("imported");
+  if (importBusy.value || !preview.value || previewedText.value !== importText.value) return;
+  importBusy.value = true;
+  dataError.value = "";
+  try {
+    await applyLocalImport(previewedText.value);
+    preview.value = null;
+    importText.value = "";
+    importNote.value = "导入完成；原有条目未被覆盖。";
+    emit("imported");
+  } catch (error) { dataError.value = `导入失败：${error.message || error}`; }
+  finally { importBusy.value = false; }
 }
 
 async function doBackup() {

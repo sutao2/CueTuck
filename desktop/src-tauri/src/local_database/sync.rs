@@ -13,6 +13,25 @@ pub struct SyncChange {
     pub deleted_at: Option<String>,
 }
 
+pub(crate) fn validate_payload(kind: &str, payload: &Value) -> Result<(), String> {
+    let object = payload.as_object().ok_or("记录必须是对象")?;
+    let (_, _, columns) = schema(kind).ok_or("记录类型错误")?;
+    for field in columns {
+        if let Some(value) = object.get(*field).filter(|value| !value.is_null()) {
+            let valid = match *field {
+                "sort_order" | "use_count" | "version" => value.as_i64().is_some_and(|n| n >= 0),
+                "is_system" => value.is_boolean() || value.as_i64().is_some_and(|n| n == 0 || n == 1),
+                _ => value.is_string(),
+            };
+            if !valid { return Err(format!("字段 {field} 格式错误")); }
+        }
+    }
+    if kind == "setting" {
+        serde_json::from_str::<String>(payload["value_json"].as_str().ok_or("设置格式错误")?).map_err(|_| "设置格式错误")?;
+    }
+    Ok(())
+}
+
 const SETTINGS: &[&str] = &[
     "theme",
     "default_model",
@@ -161,6 +180,7 @@ pub fn apply_sync_changes(
             if !item.payload.is_object() {
                 return Err("同步记录格式错误".into());
             }
+            validate_payload(kind, &item.payload)?;
             let local: Option<String> = transaction
                 .query_row(
                     &format!("SELECT COALESCE(updated_at, '0') FROM {table} WHERE {key} = ?1"),

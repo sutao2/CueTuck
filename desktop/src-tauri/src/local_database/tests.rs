@@ -106,6 +106,38 @@ async fn status_is_ready_after_initialize() {
     assert_eq!(status, "ready");
 }
 
+#[test]
+fn json_transfer_preserves_structure_as_new_copies_and_rejects_partial_imports() {
+    use super::{apply_import_json_in_dir, export_library_json_in_dir};
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let category = create_category_in_dir(dir.path(), "自定义图片", "cat-image").unwrap();
+    let collection = create_collection_in_dir(dir.path(), "合集", Some(&category.id), "single", Some("[\"one.png\"]")).unwrap();
+    let prompt = create_prompt_in_dir_with_model(dir.path(), "成员", "正文", Some(&category.id), Some("Flux")).unwrap();
+    add_prompt_to_collection_in_dir(dir.path(), &prompt.id, &collection.id).unwrap();
+    let exported = export_library_json_in_dir(dir.path()).unwrap();
+    apply_import_json_in_dir(dir.path(), &exported).unwrap();
+    let prompts = list_prompts_in_dir(dir.path(), "", None).unwrap();
+    assert_eq!(prompts.len(), 2);
+    let copy = prompts.iter().find(|row| row.id != prompt.id).unwrap();
+    assert_eq!(copy.model.as_deref(), Some("Flux"));
+    assert_ne!(copy.category_id.as_deref(), Some(category.id.as_str()));
+    assert_ne!(copy.collection_id.as_deref(), Some(collection.id.as_str()));
+    let collections = list_collections_in_dir(dir.path(), "", None).unwrap();
+    assert_eq!(collections.iter().find(|row| Some(&row.id) == copy.collection_id.as_ref()).unwrap().cover_json, "[\"one.png\"]");
+    for raw in [r#"{"prompts":[{"title":"不能部分写入"},{"title":""}]}"#,
+        r#"{"prompts":[{"title":"坏引用","category_id":"missing"}]}"#,
+        r#"{"prompts":[{"title":"坏字段","use_count":"not-a-number"}]}"#,
+        r#"{"prompts":null}"#,
+        r#"{"prompts":[{"id":"x","title":"一"},{"id":"x","title":"二"}]}"#] {
+        assert!(preview_import_json_in_dir(dir.path(), raw).is_err());
+        assert!(apply_import_json_in_dir(dir.path(), raw).is_err());
+        assert_eq!(list_prompts_in_dir(dir.path(), "", None).unwrap().len(), 2);
+    }
+    apply_import_json_in_dir(dir.path(), r#"{"prompts":[{"title":"旧格式","content":"旧正文"}]}"#).unwrap();
+    assert_eq!(list_prompts_in_dir(dir.path(), "旧格式", None).unwrap()[0].content, "旧正文");
+}
+
 #[tokio::test]
 async fn empty_library_counts_zero() {
     let dir = tempfile::tempdir().unwrap();
