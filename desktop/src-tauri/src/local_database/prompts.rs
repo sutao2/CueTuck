@@ -279,6 +279,7 @@ pub fn list_prompts_in_dir(
                AND (?1 = '' OR p.title LIKE ?2 OR p.content LIKE ?2 OR IFNULL(c.name, '') LIKE ?2 OR IFNULL(parent.name, '') LIKE ?2)
                AND (
                     ?3 IS NULL
+                    OR (?3 = '__uncategorized__' AND c.id IS NULL)
                     OR p.category_id = ?3
                     OR c.parent_id = ?3
                )

@@ -102,14 +102,19 @@
             <span class="chevron ghost">›</span>
             <span class="tree-icon warm">⌘</span>
             <span>{{ t("allPrompts") }}</span>
-            <span class="tree-count">{{ localCount }}</span>
+            <span v-if="space === 'local'" class="tree-count">{{ allLocalItems.length }}</span>
+          </button>
+          <button v-if="space === 'local'" type="button" class="tree-row" data-testid="uncategorized"
+            :class="{ active: selectedId === '__uncategorized__' }" @click="selectCategory('__uncategorized__')">
+            <span>{{ uiLanguage === 'en' ? 'Uncategorized' : '未分类' }}</span>
+            <span class="tree-count">{{ categoryCount('__uncategorized__') }}</span>
           </button>
           <div v-for="group in categoryGroups" :key="group.id" class="tree-group" :class="{ open: group.open }">
             <button type="button" class="tree-row tree-parent" :class="{ active: selectedId === group.id }" @click="toggleGroup(group)">
               <span class="chevron">›</span>
               <span class="tree-icon" :class="group.tone">{{ group.icon }}</span>
               <span>{{ group.name }}</span>
-              <span class="tree-count">{{ group.children.length }}</span>
+              <span v-if="space === 'local'" class="tree-count">{{ categoryCount(group.id) }}</span>
             </button>
             <div class="tree-children">
               <button
@@ -121,6 +126,7 @@
                 @click="selectCategory(child.id)"
               >
                 <span>{{ child.name }}</span>
+                <span v-if="space === 'local'" class="tree-count">{{ categoryCount(child.id) }}</span>
               </button>
             </div>
           </div>
@@ -316,6 +322,7 @@
       :groups="categoryGroups"
       :model-options="modelOptions"
       :default-model="defaultModel"
+      :default-category-id="selectedId === '__uncategorized__' ? '' : (selectedId || '')"
       @cancel="closeEditor"
       @save="savePrompt"
       @remove="removePrompt"
@@ -492,6 +499,7 @@ const collectionMembers = ref([]);
 const query = ref("");
 const prompts = ref([]);
 const collections = ref([]);
+const allLocalItems = ref([]);
 const categoryGroups = ref([]);
 const addingCategoryId = ref("");
 const newCategoryName = ref("");
@@ -552,6 +560,7 @@ const filterTabs = computed(() =>
 );
 const selectedLabel = computed(() => {
   if (!selectedId.value) return t("allPrompts");
+  if (selectedId.value === "__uncategorized__") return uiLanguage.value === "en" ? "Uncategorized" : "未分类";
   for (const group of categoryGroups.value) {
     if (group.id === selectedId.value) return group.name;
     const child = group.children.find((item) => item.id === selectedId.value);
@@ -588,7 +597,15 @@ function collapseAll() {
 
 function selectCategory(id) {
   selectedId.value = id;
-  reloadPrompts();
+  return space.value === "square" ? loadSquare() : reloadPrompts();
+}
+
+function categoryCount(id) {
+  return allLocalItems.value.filter((item) => {
+    const category = categoryById(item.category_id);
+    if (id === "__uncategorized__") return !category;
+    return item.category_id === id || category?.parent_id === id;
+  }).length;
 }
 
 function categoryById(id) {
@@ -893,16 +910,22 @@ async function applyTheme(next) {
 
 async function reloadPrompts() {
   if (space.value !== "local") return;
+  const request = ++localRequest;
   const filter = { query: query.value, categoryId: selectedId.value };
-  const [filteredPrompts, filteredCollections, allPrompts] = await Promise.all([
+  const [filteredPrompts, filteredCollections, allPrompts, allCollections] = await Promise.all([
     listLocalPrompts(filter),
     listLocalCollections(filter),
     listLocalPrompts({ query: "", categoryId: null }),
+    listLocalCollections({ query: "", categoryId: null }),
   ]);
+  if (request !== localRequest || space.value !== "local") return;
   prompts.value = filteredPrompts;
   collections.value = filteredCollections;
+  allLocalItems.value = [...allPrompts, ...allCollections];
   emit("library-changed", allPrompts.length);
 }
+
+let localRequest = 0;
 
 function closeEditor() {
   creating.value = false;

@@ -94,6 +94,7 @@ function matchesQuery(row, query, categories) {
 
 function inCategory(row, categoryId, categories) {
   if (!categoryId) return true;
+  if (categoryId === "__uncategorized__") return !categories.some((item) => item.id === row.category_id);
   if (row.category_id === categoryId) return true;
   const category = categories.find((item) => item.id === row.category_id);
   return category?.parent_id === categoryId;

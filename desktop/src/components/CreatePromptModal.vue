@@ -32,10 +32,11 @@
           </select>
         </label>
         <label class="field">
-          <span>小分类</span>
-          <select v-model="categoryId">
+          <span>分类</span>
+          <select data-testid="prompt-category" v-model="categoryId">
             <option value="">未分类</option>
             <optgroup v-for="group in groups" :key="group.id" :label="group.name">
+              <option :value="group.id">{{ group.name }}（大分类）</option>
               <option v-for="child in group.children" :key="child.id" :value="child.id">
                 {{ child.name }}
               </option>
@@ -89,13 +90,14 @@ const props = defineProps({
   groups: { type: Array, default: () => [] },
   modelOptions: { type: Array, default: () => [] },
   defaultModel: { type: String, default: "" },
+  defaultCategoryId: { type: String, default: "" },
 });
 
 const emit = defineEmits(["cancel", "save", "remove"]);
 const kind = ref("prompt");
 const title = ref(props.prompt?.title ?? "");
 const content = ref(props.prompt?.content ?? "");
-const categoryId = ref(props.prompt?.category_id ?? "");
+const categoryId = ref(props.prompt ? (props.prompt.category_id ?? "") : props.defaultCategoryId);
 const model = ref(props.prompt ? (props.prompt.model ?? "") : (props.defaultModel ?? ""));
 const coverType = ref("none");
 const coverUrls = ref([]);

@@ -56,6 +56,31 @@
 
 ## 测试映射
 
+### Requirement: 分类上下文与数量
+
+分类树 MUST 显示本地未删除提示词与合集的条目数量，大分类含子分类。未分类 MUST 有可选择入口；新建 MUST 继承当前分类，编辑 MUST 保留原分类。广场分类数量未取得全量统计时不得显示本地数量。
+
+#### Scenario: 分类下新建
+
+- GIVEN 用户选中「人像摄影」
+- WHEN 打开新建并保存标题正文
+- THEN 新记录属于「人像摄影」并立即出现在当前列表
+
+#### Scenario: 数量与未分类
+
+- GIVEN 图片分类下一条提示词、一个合集，另有一条未分类提示词
+- WHEN 查看分类树
+- THEN 图片分类计数为 2，未分类计数为 1
+- AND 搜索或切换排序不改变分类总数
+
+#### Scenario: 编辑大分类记录
+
+- GIVEN 一条提示词直接属于「图片生成」
+- WHEN 打开编辑并保存
+- THEN 下拉正确显示大分类且所属分类不丢失
+
+回归：`WorkbenchShell.spec.js` 分类上下文与数量；`library.test.js` 未分类过滤。
+
 | 场景 | 测试 |
 |---|---|
 | 空库首次打开 | `desktop/src-tauri` `seeds_ten_system_categories` |
