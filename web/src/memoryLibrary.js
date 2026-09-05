@@ -1,7 +1,9 @@
 let prompts = [];
+let collections = [];
 
 export function resetMemoryLibrary() {
   prompts = [];
+  collections = [];
 }
 
 export function createLocalPrompt({ title, content, source = "local", categoryId = null, model = null } = {}) {
@@ -34,7 +36,30 @@ export function listLocalPrompts() {
   return [...prompts];
 }
 
+export function listLocalCollections() {
+  return collections.map((row) => ({ ...row, member_count: prompts.filter((prompt) => prompt.collection_id === row.id).length }));
+}
+
+export function importDownloadedCollection(payload) {
+  if (typeof payload.title !== "string" || !payload.title.trim() || !Array.isArray(payload.members) || !payload.members.length) throw new Error("该合集缺少成员快照，暂时无法下载");
+  const collectionId = crypto.randomUUID();
+  const timestamp = String(Date.now());
+  const members = payload.members.map((member) => {
+    if (typeof member?.title !== "string" || !member.title.trim() || typeof member.content !== "string" || !member.content.trim()) throw new Error("合集成员快照不完整");
+    return { id: crypto.randomUUID(), title: member.title, content: member.content,
+      category_id: member.category_id ?? null, model: member.model ?? null,
+      collection_id: collectionId, source: "downloaded", remote_id: payload.id, updated_at: timestamp };
+  });
+  const collection = { id: collectionId, title: payload.title, category_id: payload.category_id ?? null, cover_type: "none", cover_json: "[]", updated_at: timestamp };
+  collections = [collection, ...collections];
+  prompts = [...members, ...prompts];
+  return collection;
+}
+
 export function replacePromptsFromAccount(items) {
+  collections = (Array.isArray(items) ? items : [])
+    .filter((item) => item?.kind === "collection" && !item.deleted_at)
+    .map((item) => ({ ...item.payload, id: item.id, updated_at: String(item.updated_at ?? "0") }));
   prompts = (Array.isArray(items) ? items : [])
     .filter((item) => item?.kind === "prompt" && !item.deleted_at)
     .map((item) => ({

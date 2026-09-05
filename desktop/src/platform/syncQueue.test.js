@@ -38,6 +38,22 @@ describe("sync queue", () => {
     expect(await listLocalPrompts({ query: "" })).toHaveLength(0);
   });
 
+  it("replays collection kind and immutable member snapshots from the offline queue", async () => {
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "acc" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    await setLocalSetting("auto_sync_queue", "1");
+    setPublishTransport(async () => { throw new Error("offline"); });
+    const members = [{ title: "成员", content: "原始正文", model: "Flux" }];
+    await publishWithQueue({ sourceId: "collection", kind: "collection", title: "合集", members });
+    members[0].content = "后来修改";
+    let seen;
+    setPublishTransport(async (payload) => { seen = payload; return { status: "pending" }; });
+    await flushSyncQueue();
+    expect(seen.kind).toBe("collection");
+    expect(seen.members[0].content).toBe("原始正文");
+    expect(await listSyncQueue()).toEqual([]);
+  });
+
   it("does not queue a favorite when auto-sync is off", async () => {
     setSessionTransport(async () => ({
       email: "dev@promptark.local",

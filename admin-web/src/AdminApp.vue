@@ -41,6 +41,17 @@
         <li v-for="item in items" :key="item.id" class="review-row">
           <span>{{ item.source_id }}</span>
           <span>{{ item.status }}</span>
+          <details class="review-content" data-testid="review-content">
+            <summary>{{ item.title || '未提供标题快照' }} · {{ item.kind === 'collection' ? '合集' : '提示词' }}</summary>
+            <template v-if="item.kind === 'collection'">
+              <article v-for="(member, index) in item.members" :key="index">
+                <h3>{{ member.title }}</h3>
+                <p>{{ member.category_id }} · {{ member.model }}</p>
+                <pre>{{ member.content }}</pre>
+              </article>
+            </template>
+            <pre v-else>{{ item.content || '未提供正文快照' }}</pre>
+          </details>
           <button type="button" data-testid="review-approve" @click="approve(item.id)">通过</button>
           <button type="button" data-testid="review-reject" @click="reject(item.id)">驳回</button>
         </li>
@@ -197,6 +208,8 @@ async function reject(id) {
 </script>
 
 <style>
+.review-content { grid-column: 1 / -1; min-width: 0; }
+.review-content pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 :root {
   color-scheme: light;
   font-family: "SF Pro Text", "PingFang SC", sans-serif;

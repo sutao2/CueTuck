@@ -1,11 +1,22 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createLocalPrompt, listLocalPrompts, addPromptToCollection, exportLocalSyncChanges, applyLocalSyncChanges } from "./library.js";
 import { invokeCommand } from "./tauri.js";
-import { fetchSquareContent } from "./square.js";
+import { downloadSquareItem, fetchSquareContent, resetSquare, setSquareContentTransport } from "./square.js";
 
 const invoke = vi.hoisted(() => vi.fn(async () => []));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
-afterEach(() => { delete window.__TAURI_INTERNALS__; invoke.mockClear(); });
+afterEach(() => { delete window.__TAURI_INTERNALS__; invoke.mockClear(); resetSquare(); });
+
+it("sends a whole downloaded collection to the native transactional import", async () => {
+  window.__TAURI_INTERNALS__ = {};
+  setSquareContentTransport(async () => ({ id: "remote", kind: "collection", title: "合集", members: [{ title: "成员", content: "正文", model: "Flux" }] }));
+  await downloadSquareItem("remote");
+  const call = invoke.mock.calls.find(([command]) => command === "apply_local_import");
+  const payload = JSON.parse(call[1].json);
+  expect(payload.collections).toHaveLength(1);
+  expect(payload.prompts[0]).toMatchObject({ collection_id: payload.collections[0].id, source: "downloaded", model: "Flux" });
+  expect(invoke.mock.calls.filter(([command]) => command === "apply_local_import")).toHaveLength(1);
+});
 
 it("reads native square detail without invoking the download write command", async () => {
   window.__TAURI_INTERNALS__ = {};

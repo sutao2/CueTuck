@@ -84,6 +84,8 @@ export async function publishWithQueue(payload) {
         content: payload.content,
         categoryId: payload.categoryId,
         model: payload.model,
+        sourceKind: payload.kind,
+        members: payload.members,
       }, email);
       return { queued: true };
     }
@@ -126,6 +128,8 @@ async function runJob(job) {
       content: job.content,
       categoryId: job.categoryId,
       model: job.model,
+      kind: job.sourceKind,
+      members: job.members,
     });
     return;
   }

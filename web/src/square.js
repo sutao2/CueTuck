@@ -1,4 +1,4 @@
-import { importDownloadedPrompt } from "./memoryLibrary.js";
+import { importDownloadedCollection, importDownloadedPrompt } from "./memoryLibrary.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
 
@@ -36,6 +36,7 @@ export async function downloadSquareItem(id) {
   const payload = testContent
     ? await testContent(id)
     : await fetchSquareContent(id);
+  if (payload.kind === "collection") return importDownloadedCollection(payload);
   return importDownloadedPrompt({
     title: payload.title,
     content: payload.content ?? "",

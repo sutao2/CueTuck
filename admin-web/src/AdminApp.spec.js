@@ -51,6 +51,17 @@ describe("AdminApp", () => {
     expect(w.get('[data-testid="review-list"]').text()).toContain("pending");
   });
 
+  it("shows collection member bodies for review", async () => {
+    setAdminApiTransport(async () => ({ items: [{ id: "c", source_id: "local", kind: "collection", title: "合集", members: [{ title: "成员", content: "审核正文", model: "Flux" }] }] }));
+    const w = mount(AdminApp);
+    await w.get('[data-testid="admin-email"]').setValue("admin@promptark.local");
+    await w.get('[data-testid="admin-password"]').setValue("adminpass");
+    await w.get('[data-testid="admin-login"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="review-content"]').text()).toContain("审核正文");
+    expect(w.get('[data-testid="review-content"]').text()).toContain("Flux");
+  });
+
   it("approves a pending publication from the list", async () => {
     const w = mount(AdminApp);
     await w.get('[data-testid="admin-email"]').setValue("admin@promptark.local");

@@ -14,6 +14,7 @@ fn demo_sort_items() -> Vec<SquareItem> {
             category_id: None,
             member_count: None,
             content: None,
+            members: vec![],
         },
         SquareItem {
             id: "sq-a".into(),
@@ -24,6 +25,7 @@ fn demo_sort_items() -> Vec<SquareItem> {
             category_id: None,
             member_count: None,
             content: None,
+            members: vec![],
         },
         SquareItem {
             id: "sq-g".into(),
@@ -34,6 +36,7 @@ fn demo_sort_items() -> Vec<SquareItem> {
             category_id: None,
             member_count: None,
             content: None,
+            members: vec![],
         },
     ]
 }

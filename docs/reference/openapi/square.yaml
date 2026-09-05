@@ -31,7 +31,7 @@ paths:
       operationId: getSquareItemContent
       security: []
       summary: 下载正文（匿名）
-      description: 返回 id、title、content、category_id、model；历史条目分类与模型可为 null
+      description: 返回 id、title、kind、content、category_id、model、members；members 为合集成员快照数组（title、content、category_id、model），普通提示词为空数组；历史条目分类与模型可为 null
       parameters:
         - name: id
           in: path
@@ -122,7 +122,7 @@ paths:
     post:
       operationId: createPublication
       summary: 提交审核；可带 title、content、category_id、model 快照，通过后进入广场列表
-      description: category_id 必须为系统分类 ID；自定义小分类由客户端映射至所属系统大分类；未知分类返回 400
+      description: kind 省略为 prompt；collection 必须传非空 members（每项 title、content 非空，可带系统 category_id 和 model），成员不传本地 ID。category_id 必须为系统分类 ID；自定义小分类由客户端映射至所属系统大分类；未知分类或非法快照返回 400
   /v1/publications/mine:
     get:
       operationId: listMyPublications

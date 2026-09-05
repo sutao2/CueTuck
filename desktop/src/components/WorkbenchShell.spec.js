@@ -7,6 +7,7 @@ import WorkbenchShell from "./WorkbenchShell.vue";
 import SettingsModal from "./SettingsModal.vue";
 import {
   createLocalCollection,
+  addPromptToCollection,
   createLocalPrompt,
   listLocalPrompts,
   resetMemoryLibrary,
@@ -103,6 +104,33 @@ describe("WorkbenchShell", () => {
     await flushPromises();
     expect(w.find('[data-testid="square-detail"]').exists()).toBe(false);
     expect(await listLocalPrompts()).toHaveLength(0);
+  });
+
+  it("rejects an empty collection and publishes current member snapshots without private fields", async () => {
+    const collection = await createLocalCollection({ title: "合集", categoryId: "cat-image" });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "acc" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const publish = vi.fn(async () => ({ status: "pending" }));
+    setPublishTransport(publish);
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="publish-prompt"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="publish-source"]').setValue(collection.id);
+    await w.get('[data-testid="publish-submit"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="publish-resume"]').text()).toContain("至少需要一条");
+    expect(publish).not.toHaveBeenCalled();
+    const member = await createLocalPrompt({ title: "成员", content: "完整正文", categoryId: "cat-software-0", model: "GPT" });
+    await addPromptToCollection(member.id, collection.id);
+    await w.get('[data-testid="publish-submit"]').trigger("click");
+    await flushPromises();
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ kind: "collection", members: [
+      { title: "成员", content: "完整正文", category_id: "cat-software-0", model: "GPT" },
+    ] }));
+    expect((await listLocalPrompts())[0].content).toBe("完整正文");
   });
 
   it("renders four chrome regions", () => {

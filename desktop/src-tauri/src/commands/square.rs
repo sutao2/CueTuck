@@ -1,6 +1,4 @@
-use crate::local_database::{get_setting_in_dir, import_downloaded_prompt_with_metadata, PromptRecord};
 use serde::Deserialize;
-use tauri::{AppHandle, Manager};
 
 #[derive(Deserialize)]
 struct SquareListResponse {
@@ -16,16 +14,16 @@ pub struct SquareContentResponse {
     author: Option<String>,
     category_id: Option<String>,
     model: Option<String>,
+    #[serde(default = "prompt_kind")]
+    kind: String,
+    #[serde(default)]
+    members: Vec<serde_json::Value>,
 }
+
+fn prompt_kind() -> String { "prompt".into() }
 
 fn api_base() -> String {
     std::env::var("PROMPTARK_API_BASE").unwrap_or_else(|_| "http://127.0.0.1:8787".into())
-}
-
-fn data_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
-    app.path()
-        .app_data_dir()
-        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -78,33 +76,6 @@ pub async fn get_square_content(id: String) -> Result<SquareContentResponse, Str
 }
 
 #[tauri::command]
-pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRecord, String> {
-    let payload = get_square_content(id).await?;
-    let dir = data_dir(&app)?;
-    let keep = get_setting_in_dir(&dir, "keep_author_on_download")
-        .map(|value| value == "1")
-        .unwrap_or(false);
-    let author = if keep {
-        payload
-            .author
-            .as_deref()
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-    } else {
-        None
-    };
-    import_downloaded_prompt_with_metadata(
-        &dir,
-        &payload.title,
-        &payload.content,
-        Some(&payload.id),
-        author,
-        payload.category_id.as_deref(),
-        payload.model.as_deref(),
-    )
-}
-
-#[tauri::command]
 pub async fn record_square_download(id: String) -> Result<(), String> {
     let client = crate::http::client()?;
     let response = client
@@ -126,6 +97,8 @@ pub async fn create_publication(
     content: Option<String>,
     category_id: Option<String>,
     model: Option<String>,
+    kind: Option<String>,
+    members: Option<Vec<serde_json::Value>>,
 ) -> Result<serde_json::Value, String> {
     if source_id.trim().is_empty() {
         return Err("未选择本地内容".to_string());
@@ -140,6 +113,8 @@ pub async fn create_publication(
             "content": content,
             "category_id": category_id,
             "model": model,
+            "kind": kind.unwrap_or_else(prompt_kind),
+            "members": members.unwrap_or_default(),
         }))
         .send()
         .await
