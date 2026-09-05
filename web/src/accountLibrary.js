@@ -1,5 +1,5 @@
 import { getSession } from "./session.js";
-import { listLocalPrompts, replacePromptsFromAccount } from "./memoryLibrary.js";
+import { listLocalCollections, listLocalPrompts, replacePromptsFromAccount } from "./memoryLibrary.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
 
@@ -43,8 +43,10 @@ export async function pushAccountPrompt(row) {
     updated_at: String(row.updated_at ?? Date.now()),
   };
   delete item.payload.original_source;
+  const collection = listLocalCollections().find((value) => value.id === row.collection_id);
+  const items = collection ? [{ id: collection.id, kind: "collection", payload: collection, updated_at: collection.updated_at }, item] : [item];
   if (testTransport?.put) {
-    return testTransport.put([item]);
+    return testTransport.put(items);
   }
   const response = await fetch(`${API_BASE}/v1/library/changes`, {
     method: "PUT",
@@ -52,7 +54,7 @@ export async function pushAccountPrompt(row) {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ items: [item] }),
+    body: JSON.stringify({ items }),
   });
   if (!response.ok) throw new Error("同步失败");
   return response.json();

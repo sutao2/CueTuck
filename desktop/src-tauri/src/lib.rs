@@ -80,7 +80,6 @@ pub fn run() {
             commands::updates::check_for_updates,
             commands::updates::queue_update_install,
             commands::square::list_square_items,
-            commands::square::download_square_item,
             commands::square::get_square_content,
             commands::square::record_square_download,
             commands::square::create_publication,

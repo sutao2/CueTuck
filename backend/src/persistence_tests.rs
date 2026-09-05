@@ -14,6 +14,27 @@ async fn postgres_state() -> Option<AppState> {
 }
 
 #[tokio::test]
+async fn collection_members_survive_publication_review_and_restart() {
+    let state = postgres_state().await.expect("local Postgres required");
+    let publication = Publication { id: "collection-test".into(), source_id: "local".into(), status: "pending".into(),
+        title: Some("合集".into()), content: None, author_email: Some("dev@promptark.local".into()),
+        category_id: Some("cat-image".into()), model: None, kind: "collection".into(),
+        members: vec![PublishedPrompt { title: "成员".into(), content: "原始正文".into(), category_id: Some("cat-image-0".into()), model: Some("Flux".into()) }] };
+    state.insert_publication(&publication).await.unwrap();
+    let restarted = AppState { db: state.db.clone(), ..AppState::default() };
+    let pending = restarted.pending_publications().await.unwrap();
+    assert_eq!(pending[0].kind, "collection");
+    assert_eq!(pending[0].members[0].content, "原始正文");
+    restarted.set_publication_status(&publication.id, "approved").await.unwrap();
+    let restarted = AppState { db: state.db.clone(), ..AppState::default() };
+    let item = restarted.get_item(&publication.id).await.unwrap().unwrap();
+    assert_eq!(item.kind, "collection");
+    assert_eq!(item.member_count, Some(1));
+    assert_eq!(item.members[0].model.as_deref(), Some("Flux"));
+    assert_eq!(item.members[0].category_id.as_deref(), Some("cat-image-0"));
+}
+
+#[tokio::test]
 async fn session_survives_new_appstate_on_postgres() {
     let Some(state) = postgres_state().await else {
         panic!("expected local Postgres at postgres://pl:pl@127.0.0.1:5432/promptark");
@@ -85,6 +106,7 @@ async fn publication_favorite_and_settings_survive_postgres() {
         category_id: None,
         member_count: None,
         content: Some("body".into()),
+        members: vec![],
     }])
     .await
     .unwrap();
@@ -366,6 +388,7 @@ async fn anonymous_download_count_survives_new_appstate_on_postgres() {
         category_id: None,
         member_count: None,
         content: Some("body".into()),
+        members: vec![],
     })
     .await
     .unwrap();
@@ -378,6 +401,7 @@ async fn anonymous_download_count_survives_new_appstate_on_postgres() {
         category_id: None,
         member_count: None,
         content: Some("body".into()),
+        members: vec![],
     })
     .await
     .unwrap();

@@ -285,7 +285,7 @@
                     : item.content || item.excerpt || "还没有正文"
                 }}
               </p>
-              <div v-if="item.kind === 'prompt'" class="card-footer">
+              <div v-if="item.kind === 'prompt' || space === 'square'" class="card-footer">
                 <template v-if="space === 'square'">
                   <button
                     type="button"
@@ -764,7 +764,7 @@ async function loadPublishSources() {
   ]);
   publishSources.value = [
     ...localPrompts.map((item) => ({ ...item, kind: "prompt" })),
-    ...localCollections.map((item) => ({ ...item, kind: "collection", content: "" })),
+    ...localCollections.map((item) => ({ ...item, kind: "collection" })),
   ];
   publishSourceId.value = "";
 }
@@ -799,12 +799,22 @@ async function submitPublish() {
   publishBusy.value = true;
   const source = publishSources.value.find((item) => item.id === publishSourceId.value);
   try {
+    if (!source) throw new Error("未选择本地内容");
+    let members;
+    if (source.kind === "collection") {
+      members = (await listCollectionMembers(source.id)).map((member) => ({
+        title: member.title, content: member.content, category_id: publicationCategory(member.category_id), model: member.model,
+      }));
+      if (!members.length) throw new Error("合集至少需要一条提示词才能发布");
+      if (members.some((member) => !member.title?.trim() || !member.content?.trim())) throw new Error("合集成员标题和正文不能为空");
+    }
     const result = await publishWithQueue({
       sourceId: publishSourceId.value,
       title: source?.title,
       content: source?.content ?? "",
       categoryId: publicationCategory(source?.category_id),
       model: source?.model,
+      ...(source.kind === "collection" ? { kind: "collection", members } : {}),
     });
     publishResume.value = false;
     operationNote.value = result.queued ? "草稿已保存在本机队列，尚未提交审核。" : "已提交审核，本地内容仍可编辑。";

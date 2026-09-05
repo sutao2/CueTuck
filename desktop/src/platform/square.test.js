@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { createLocalPrompt, listLocalPrompts, resetMemoryLibrary, setLocalSetting } from "./library.js";
+import { createLocalPrompt, listLocalCollections, listCollectionMembers, listLocalPrompts, resetMemoryLibrary, setLocalSetting } from "./library.js";
 import {
   createPublication,
   downloadSquareItem,
@@ -28,6 +28,30 @@ describe("square client", () => {
     const rows = await listSquareItems({ sort: "推荐" });
     expect(rows).toHaveLength(1);
     expect(rows[0].title).toBe("自然光群像");
+  });
+
+  it("downloads collection members atomically as independent copies with metadata", async () => {
+    const payload = { id: "remote", kind: "collection", title: "合集", category_id: "cat-image", members: [
+      { title: "人像", content: "光影", category_id: "cat-image-0", model: "Flux" },
+      { title: "代码", content: "测试", category_id: "cat-software-0", model: "GPT" },
+    ] };
+    setSquareContentTransport(async () => payload);
+    await downloadSquareItem("remote");
+    await downloadSquareItem("remote");
+    const collections = await listLocalCollections();
+    expect(collections).toHaveLength(2);
+    for (const collection of collections) {
+      expect(collection.category_id).toBe("cat-image");
+      const members = await listCollectionMembers(collection.id);
+      expect(members).toHaveLength(2);
+      expect(members.find((row) => row.title === "人像")).toMatchObject({ content: "光影", model: "Flux", category_id: "cat-image-0", source: "downloaded", remote_id: "remote" });
+    }
+    payload.members[1].category_id = "missing";
+    await expect(downloadSquareItem("remote")).rejects.toThrow();
+    expect(await listLocalCollections()).toHaveLength(2);
+    expect(await listLocalPrompts()).toHaveLength(4);
+    payload.members = [];
+    await expect(downloadSquareItem("remote")).rejects.toThrow("缺少成员快照");
   });
 
   it("retains category and model when downloading", async () => {

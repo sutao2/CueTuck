@@ -90,6 +90,16 @@ pub struct SessionResponse {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct PublishedPrompt {
+    pub title: String,
+    pub content: String,
+    pub category_id: Option<String>,
+    pub model: Option<String>,
+}
+
+fn prompt_kind() -> String { "prompt".into() }
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SquareItem {
     pub id: String,
     pub title: String,
@@ -101,6 +111,8 @@ pub struct SquareItem {
     pub member_count: Option<i64>,
     #[serde(default, skip_serializing)]
     pub content: Option<String>,
+    #[serde(default, skip_serializing)]
+    pub members: Vec<PublishedPrompt>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -110,6 +122,8 @@ pub struct SquareContentResponse {
     pub content: String,
     pub category_id: Option<String>,
     pub model: Option<String>,
+    pub kind: String,
+    pub members: Vec<PublishedPrompt>,
 }
 
 #[derive(Deserialize)]
@@ -119,6 +133,10 @@ pub struct PublicationRequest {
     pub content: Option<String>,
     pub category_id: Option<String>,
     pub model: Option<String>,
+    #[serde(default = "prompt_kind")]
+    pub kind: String,
+    #[serde(default)]
+    pub members: Vec<PublishedPrompt>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -136,6 +154,10 @@ pub struct Publication {
     pub category_id: Option<String>,
     #[serde(default)]
     pub model: Option<String>,
+    #[serde(default = "prompt_kind")]
+    pub kind: String,
+    #[serde(default)]
+    pub members: Vec<PublishedPrompt>,
 }
 
 #[derive(Deserialize, Default)]
@@ -253,6 +275,7 @@ impl AppState {
                 category_id: Some("cat-image-0".into()),
                 member_count: None,
                 content: Some("清透蓝天下的多元人物群像。".into()),
+                members: vec![],
             },
             SquareItem {
                 id: "col-portrait".into(),
@@ -263,6 +286,7 @@ impl AppState {
                 category_id: Some("cat-image-0".into()),
                 member_count: Some(9),
                 content: None,
+                members: vec![],
             },
         ];
     }
@@ -489,6 +513,15 @@ async fn create_publication(
     if category_id.as_deref().is_some_and(|id| system_category(id).is_none()) {
         return Err(StatusCode::BAD_REQUEST);
     }
+    if !matches!(body.kind.as_str(), "prompt" | "collection")
+        || (body.kind == "prompt" && !body.members.is_empty())
+        || (body.kind == "collection" && (body.title.as_deref().unwrap_or("").trim().is_empty()
+            || body.members.is_empty()
+            || body.members.iter().any(|member| member.title.trim().is_empty()
+                || member.content.trim().is_empty()
+                || member.category_id.as_deref().is_some_and(|id| system_category(id).is_none())))) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     let publication = Publication {
         id: format!("pub.{}", Uuid::new_v4()),
         source_id,
@@ -498,6 +531,8 @@ async fn create_publication(
         author_email: Some(author_email),
         category_id,
         model: body.model,
+        kind: body.kind,
+        members: body.members,
     };
     state.insert_publication(&publication).await?;
     Ok(Json(publication))
@@ -676,6 +711,8 @@ async fn get_square_item_content(
         content: item.content.unwrap_or_default(),
         category_id: item.category_id,
         model: item.model,
+        kind: item.kind,
+        members: item.members,
     }))
 }
 
@@ -724,6 +761,50 @@ mod tests {
             ("dev@promptark.local", "devpass", "user"),
             ("admin@promptark.local", "adminpass", "admin"),
         ]))
+    }
+
+    #[tokio::test]
+    async fn collection_publication_preserves_members_through_review_and_download() {
+        let (router, session) = login_as(app_with_user_and_admin(), "dev@promptark.local", "devpass").await;
+        let request = serde_json::json!({ "source_id": "col", "title": "合集", "kind": "collection", "category_id": "cat-image", "members": [
+            { "title": "人像", "content": "原始{{正文}}", "category_id": "cat-image-0", "model": "Flux" },
+            { "title": "代码", "content": "测试", "category_id": "cat-software-0", "model": "GPT" }
+        ] });
+        let response = router.clone().oneshot(Request::builder().method("POST").uri("/v1/publications")
+            .header(header::CONTENT_TYPE, "application/json").header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+            .body(Body::from(request.to_string())).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let publication: Publication = serde_json::from_slice(&to_bytes(response.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(publication.members.len(), 2);
+        let (router, admin) = login_as(router, "admin@promptark.local", "adminpass").await;
+        let reviewed = router.clone().oneshot(Request::builder().method("POST").uri(format!("/v1/admin/publications/{}/approve", publication.id))
+            .header(header::AUTHORIZATION, format!("Bearer {}", admin.access_token)).body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(reviewed.status(), StatusCode::OK);
+        let response = router.clone().oneshot(Request::builder().uri(format!("/v1/square/items/{}/content", publication.id)).body(Body::empty()).unwrap()).await.unwrap();
+        let downloaded: SquareContentResponse = serde_json::from_slice(&to_bytes(response.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(downloaded.kind, "collection");
+        assert_eq!(downloaded.members[0].content, "原始{{正文}}");
+        assert_eq!(downloaded.members[1].category_id.as_deref(), Some("cat-software-0"));
+        let response = router.oneshot(Request::builder().uri("/v1/square/items").body(Body::empty()).unwrap()).await.unwrap();
+        let listed: SquareListResponse = serde_json::from_slice(&to_bytes(response.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(listed.items[0].kind, "collection");
+        assert_eq!(listed.items[0].member_count, Some(2));
+    }
+
+    #[tokio::test]
+    async fn invalid_collection_snapshots_do_not_create_publications() {
+        let (router, session) = login_as(app_with_user_and_admin(), "dev@promptark.local", "devpass").await;
+        for members in [serde_json::json!([]), serde_json::json!([{ "title": "成员", "content": "" }]),
+            serde_json::json!([{ "title": "成员", "content": "正文", "category_id": "private" }])] {
+            let response = router.clone().oneshot(Request::builder().method("POST").uri("/v1/publications")
+                .header(header::CONTENT_TYPE, "application/json").header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+                .body(Body::from(serde_json::json!({ "source_id": "col", "title": "合集", "kind": "collection", "members": members }).to_string())).unwrap()).await.unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        }
+        let response = router.oneshot(Request::builder().uri("/v1/publications/mine")
+            .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token)).body(Body::empty()).unwrap()).await.unwrap();
+        let mine: AdminPublicationList = serde_json::from_slice(&to_bytes(response.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert!(mine.items.is_empty());
     }
 
     async fn publish(app: &Router, access_token: &str, source_id: &str) -> String {
@@ -801,6 +882,7 @@ mod tests {
             category_id: None,
             member_count: None,
             content: None,
+            members: vec![],
         }]));
         let response = app
             .oneshot(
@@ -834,6 +916,7 @@ mod tests {
             category_id: None,
             member_count: None,
             content: None,
+            members: vec![],
         }]));
         let response = app
             .oneshot(
@@ -864,6 +947,7 @@ mod tests {
             category_id: None,
             member_count: None,
             content: None,
+            members: vec![],
         }]));
         let response = app
             .oneshot(
@@ -894,6 +978,7 @@ mod tests {
             category_id: None,
             member_count: None,
             content: Some("清透蓝天下的多元人物群像。".into()),
+            members: vec![],
         }]));
         let response = app
             .oneshot(
@@ -924,6 +1009,7 @@ mod tests {
             category_id: None,
             member_count: None,
             content: Some("不该出现在详情里".into()),
+            members: vec![],
         }]));
         let response = app
             .clone()
@@ -969,6 +1055,7 @@ mod tests {
                 category_id: None,
                 member_count: None,
                 content: None,
+                members: vec![],
             },
             SquareItem {
                 id: "b".into(),
@@ -979,6 +1066,7 @@ mod tests {
                 category_id: None,
                 member_count: None,
                 content: None,
+                members: vec![],
             },
             SquareItem {
                 id: "c".into(),
@@ -989,6 +1077,7 @@ mod tests {
                 category_id: None,
                 member_count: None,
                 content: None,
+                members: vec![],
             },
         ]));
         async fn titles(app: &Router, uri: &str) -> Vec<String> {

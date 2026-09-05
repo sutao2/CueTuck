@@ -17,13 +17,22 @@
         </div>
         <template v-else>
           <p v-if="item.model" class="model-tag">{{ item.model }}</p>
-          <pre class="square-body" data-testid="square-detail-content">{{ item.content || '还没有正文' }}</pre>
+          <template v-if="item.kind === 'collection'">
+            <p>{{ item.members?.length || 0 }} 个提示词</p>
+            <p v-if="!item.members?.length">该合集缺少成员快照，暂时无法下载。</p>
+            <article v-for="(member, index) in item.members" :key="index" data-testid="square-detail-member">
+              <h3>{{ member.title }}</h3>
+              <p v-if="member.model">{{ member.model }}</p>
+              <pre class="square-body">{{ member.content }}</pre>
+            </article>
+          </template>
+          <pre v-else class="square-body" data-testid="square-detail-content">{{ item.content || '还没有正文' }}</pre>
         </template>
         <p v-if="note" role="status">{{ note }}</p>
       </div>
       <footer class="modal-footer">
         <button type="button" class="button ghost-button" :disabled="favoriteBusy" @click="$emit('favorite')">{{ favorite ? '已收藏' : '收藏' }}</button>
-        <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading" @click="$emit('download')">{{ downloading ? '正在下载…' : '下载到本地' }}</button>
+        <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? '正在下载…' : '下载到本地' }}</button>
       </footer>
     </section>
   </div>

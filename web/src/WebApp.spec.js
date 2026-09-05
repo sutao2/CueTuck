@@ -44,6 +44,23 @@ describe("WebApp", () => {
     expect(w.get('[data-region="content"]').exists()).toBe(true);
   });
 
+  it("opens a downloaded collection member and retains failed downloads in square", async () => {
+    setSquareTransport(async () => [{ id: "c", kind: "collection", title: "合集" }]);
+    setSquareContentTransport(async () => ({ id: "c", kind: "collection", title: "合集", members: [] }));
+    const w = mount(WebApp);
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="square-download"]').trigger("click");
+    await flushPromises();
+    expect(w.text()).toContain("下载失败");
+    setSquareContentTransport(async () => ({ id: "c", kind: "collection", title: "合集", members: [{ title: "成员", content: "可用正文" }] }));
+    await w.get('[data-testid="square-download"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="collection-list"]').text()).toContain("合集");
+    await w.get('[data-testid="collection-member"]').trigger("click");
+    expect(w.get('[data-testid="prompt-body"]').text()).toBe("可用正文");
+  });
+
   it("does not claim the browser library is synced to desktop sqlite", () => {
     const w = mount(WebApp);
     expect(w.get('[data-testid="library-note"]').text()).toContain("尚未与桌面");

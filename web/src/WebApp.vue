@@ -106,6 +106,13 @@
           <button type="button" class="primary-button" data-testid="edit-prompt" @click="startEdit">编辑</button>
           <button type="button" class="primary-button" data-testid="use-prompt" @click="startUse">使用</button>
         </article>
+        <section v-if="space === 'local' && collections.length" data-testid="collection-list">
+          <h2>合集</h2>
+          <details v-for="collection in collections" :key="collection.id">
+            <summary>{{ collection.title }} · {{ collection.member_count }} 个提示词</summary>
+            <button v-for="member in prompts.filter((row) => row.collection_id === collection.id)" :key="member.id" type="button" class="prompt-row" data-testid="collection-member" @click="openPrompt(member.id)">{{ member.title }}</button>
+          </details>
+        </section>
         <section v-if="space === 'local' && using" class="wizard" data-testid="use-wizard">
           <div v-if="wizardStep === 'fill'">
             <p data-testid="wizard-step">{{ wizardNames[wizardIndex] }}</p>
@@ -156,7 +163,7 @@
           <ul v-if="!squareOffline && squareItems.length" data-testid="square-list" class="prompt-list">
             <li v-for="item in squareItems" :key="item.id">
               <span>{{ item.title }}</span>
-              <button type="button" data-testid="square-download" @click="downloadItem(item.id)">下载</button>
+              <button type="button" data-testid="square-download" :disabled="downloadBusy.includes(item.id)" @click="downloadItem(item.id)">下载</button>
               <button type="button" data-testid="square-favorite" @click="favoriteItem(item.id)">收藏</button>
             </li>
           </ul>
@@ -169,7 +176,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { createLocalPrompt, getLocalPrompt, listLocalPrompts, updateLocalPrompt } from "./memoryLibrary.js";
+import { createLocalPrompt, getLocalPrompt, listLocalCollections, listLocalPrompts, updateLocalPrompt } from "./memoryLibrary.js";
 import { extractVariables, renderPrompt } from "./renderPrompt.js";
 import { downloadSquareItem, listSquareItems, putFavorite } from "./square.js";
 import { loadAccountLibrary, pushAccountPrompt } from "./accountLibrary.js";
@@ -188,6 +195,8 @@ import {
 const sidebarCollapsed = ref(false);
 const space = ref("local");
 const prompts = ref([]);
+const collections = ref([]);
+const downloadBusy = ref([]);
 const editing = ref(false);
 const editingId = ref(null);
 const draftTitle = ref("");
@@ -217,6 +226,7 @@ let loginAbort = new AbortController();
 
 function reload() {
   prompts.value = listLocalPrompts();
+  collections.value = listLocalCollections();
 }
 
 function startCreate() {
@@ -313,9 +323,14 @@ async function openSquare() {
 }
 
 async function downloadItem(id) {
-  await downloadSquareItem(id);
-  reload();
-  space.value = "local";
+  if (downloadBusy.value.includes(id)) return;
+  downloadBusy.value = [...downloadBusy.value, id];
+  try {
+    await downloadSquareItem(id);
+    reload();
+    space.value = "local";
+  } catch (error) { favoriteNote.value = `下载失败：${error.message || error}`; }
+  finally { downloadBusy.value = downloadBusy.value.filter((item) => item !== id); }
 }
 
 async function favoriteItem(id) {

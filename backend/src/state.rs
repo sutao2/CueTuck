@@ -525,12 +525,13 @@ impl AppState {
                     pg.insert_item(&SquareItem {
                         id: publication.id.clone(),
                         title,
-                        kind: "prompt".into(),
+                        kind: publication.kind.clone(),
                         excerpt: None,
                         model: publication.model.clone(),
                         category_id: publication.category_id.clone(),
-                        member_count: None,
+                        member_count: (publication.kind == "collection").then_some(publication.members.len() as i64),
                         content: publication.content.clone(),
+                        members: publication.members.clone(),
                     })
                     .await?;
                 }
@@ -563,12 +564,13 @@ impl AppState {
                     .push(SquareItem {
                         id: publication.id.clone(),
                         title,
-                        kind: "prompt".into(),
+                        kind: publication.kind.clone(),
                         excerpt: None,
                         model: publication.model.clone(),
                         category_id: publication.category_id.clone(),
-                        member_count: None,
+                        member_count: (publication.kind == "collection").then_some(publication.members.len() as i64),
                         content: publication.content.clone(),
+                        members: publication.members.clone(),
                     });
             }
         }

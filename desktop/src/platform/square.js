@@ -1,4 +1,4 @@
-import { importDownloadedPrompt, getLocalSetting } from "./library.js";
+import { applyLocalImport, importDownloadedPrompt, getLocalSetting } from "./library.js";
 import { getSession } from "./session.js";
 
 let testTransport = null;
@@ -84,11 +84,22 @@ export async function fetchSquareContent(id) {
 }
 
 export async function downloadSquareItem(id) {
+  const payload = await fetchSquareContent(id);
   let row;
-  if (isTauri() && !testContentTransport) {
-    row = await tauriInvoke("download_square_item", { id });
+  if (payload.kind === "collection") {
+    if (!Array.isArray(payload.members) || !payload.members.length) throw new Error("该合集缺少成员快照，暂时无法下载");
+    if (payload.members.some((member) => !member?.title?.trim() || !member?.content?.trim())) throw new Error("合集成员快照不完整");
+    const keepAuthor = (await getLocalSetting("keep_author_on_download")) === "1";
+    row = await applyLocalImport(JSON.stringify({
+      version: 2,
+      collections: [{ id: "download", title: payload.title, category_id: payload.category_id }],
+      prompts: payload.members.map((member) => ({
+        title: member.title, content: member.content, category_id: member.category_id, model: member.model,
+        collection_id: "download", source: "downloaded", remote_id: payload.id ?? id,
+        author: keepAuthor ? payload.author : null,
+      })),
+    }));
   } else {
-    const payload = await fetchSquareContent(id);
     row = await importDownloadedPrompt({
       title: payload.title,
       content: payload.content ?? "",
@@ -126,10 +137,10 @@ async function recordAnonymousDownload(id) {
   }
 }
 
-export async function createPublication({ sourceId, title, content, categoryId, model } = {}) {
+export async function createPublication({ sourceId, title, content, categoryId, model, kind, members } = {}) {
   const id = String(sourceId ?? "").trim();
   if (!id) throw new Error("未选择本地内容");
-  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}) });
+  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}), ...(kind ? { kind } : {}), ...(members ? { members } : {}) });
   if (isTauri()) {
     return tauriInvoke("create_publication", {
       source_id: id,
@@ -138,6 +149,8 @@ export async function createPublication({ sourceId, title, content, categoryId, 
       content: content ?? null,
       category_id: categoryId ?? null,
       model: model ?? null,
+      kind: kind ?? "prompt",
+      members: members ?? [],
     });
   }
   const token = getSession().accessToken;
@@ -149,7 +162,7 @@ export async function createPublication({ sourceId, title, content, categoryId, 
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ source_id: id, title, content, category_id: categoryId, model }),
+      body: JSON.stringify({ source_id: id, title, content, category_id: categoryId, model, kind, members }),
     });
     if (!response.ok) throw new Error("发布失败");
     return response.json();
