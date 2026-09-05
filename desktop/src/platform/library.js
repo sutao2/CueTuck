@@ -44,6 +44,15 @@ function nextTimestamp() {
   return String(memoryClock);
 }
 
+function validatePayload(row) {
+  for (const field of ["id", "key", "value_json", "title", "name", "icon", "summary", "description", "parent_id", "category_id", "collection_id", "content", "model", "source", "remote_id", "author", "cover_json", "cover_type", "created_at", "updated_at", "last_used_at", "deleted_at"]) {
+    if (row[field] != null && typeof row[field] !== "string") throw new Error(`字段 ${field} 格式错误`);
+  }
+  for (const field of ["version", "use_count", "sort_order"]) {
+    if (row[field] != null && (!Number.isSafeInteger(row[field]) || row[field] < 0)) throw new Error(`字段 ${field} 格式错误`);
+  }
+}
+
 function nextMemoryId(prefix) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
@@ -429,10 +438,13 @@ export async function applyLocalSyncChanges(items, { keepLocal = false } = {}) {
     for (const item of items.filter((row) => row.kind === kind)) {
       const payload = item.payload;
       if (!item.id || !payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("同步记录格式错误");
+      validatePayload(payload);
       if (kind === "setting") {
         const key = item.id.replace(/^setting:/, "");
         if (SYNC_SETTINGS.includes(key) && timestampMillis(item.updated_at) > timestampMillis(stamps[key])) {
-          settings[key] = JSON.parse(payload.value_json);
+          const value = JSON.parse(payload.value_json);
+          if (typeof value !== "string") throw new Error("设置格式错误");
+          settings[key] = value;
           stamps[key] = item.updated_at;
         }
         continue;
@@ -470,8 +482,10 @@ export async function exportLocalLibrary() {
   }
   return JSON.stringify(
     {
-      prompts: memoryPrompts.map(({ title, content }) => ({ title, content })),
-      collections: memoryCollections.map(({ title }) => ({ title })),
+      version: 2,
+      prompts: memoryPrompts.filter((row) => !row.deleted_at),
+      collections: memoryCollections.filter((row) => !row.deleted_at),
+      categories: memoryCategories,
     },
     null,
     2,
@@ -479,14 +493,71 @@ export async function exportLocalLibrary() {
 }
 
 export function previewImportJson(json) {
-  const file = JSON.parse(json);
-  const prompts = file.prompts ?? [];
-  const collections = file.collections ?? [];
+  const { file } = prepareImport(json, "0");
+  const prompts = file.prompts;
+  const collections = file.collections;
   return {
     prompt_count: prompts.length,
     collection_count: collections.length,
     titles: [...prompts.map((item) => item.title), ...collections.map((item) => item.title)],
   };
+}
+
+function prepareImport(json, timestamp) {
+  const file = JSON.parse(json);
+  if (!file || typeof file !== "object" || Array.isArray(file) || (file.version != null && ![1, 2].includes(file.version))) throw new Error("不支持的导入格式");
+  const systemIds = new Set(seedCategories().map((row) => row.id));
+  const rootIds = new Set(PRESET_CATEGORIES.map(([id]) => id));
+  const maps = { category: new Map(), collection: new Map(), prompt: new Map() };
+  const groups = [["category", "categories"], ["collection", "collections"], ["prompt", "prompts"]];
+  for (const [kind, key] of groups) {
+    if (!(key in file)) file[key] = [];
+    if (!Array.isArray(file[key])) throw new Error(`${key} 必须是数组`);
+    for (const row of file[key]) {
+      const title = kind === "category" ? row?.name : row?.title;
+      if (!row || typeof row !== "object" || Array.isArray(row) || typeof title !== "string" || !title.trim()) throw new Error("导入记录缺少名称");
+      validatePayload(row);
+      if (kind === "category" && !row.id) throw new Error("分类缺少 id");
+      if (row.id) {
+        if (maps[kind].has(row.id)) throw new Error("导入记录 id 重复");
+        maps[kind].set(row.id, kind === "category" && systemIds.has(row.id) ? row.id : crypto.randomUUID());
+      }
+    }
+  }
+  const reference = (kind, id) => {
+    if (id == null) return null;
+    const mapped = maps[kind].get(id) ?? (kind === "category" && systemIds.has(id) ? id : null);
+    if (!mapped) throw new Error(`导入记录引用不存在的 ${kind}`);
+    return mapped;
+  };
+  const changes = [];
+  for (const [kind, key] of groups) {
+    for (const row of file[key]) {
+      if (kind === "category" && systemIds.has(row.id)) continue;
+      const id = maps[kind].get(row.id) ?? crypto.randomUUID();
+      const payload = { ...row, id, updated_at: timestamp, deleted_at: null };
+      if (kind === "category") {
+        if (!rootIds.has(row.parent_id)) throw new Error("导入小分类必须属于系统大分类");
+        payload.is_system = false;
+      } else {
+        payload.title = row.title.trim();
+        payload.category_id = reference("category", row.category_id);
+        payload.created_at = timestamp;
+        if (kind === "prompt") {
+          payload.collection_id = reference("collection", row.collection_id);
+          payload.content = row.content ?? "";
+          payload.source = row.source ?? "local";
+        } else {
+          payload.cover_type = row.cover_type ?? "none";
+          payload.cover_json = row.cover_json ?? "[]";
+          const covers = JSON.parse(payload.cover_json);
+          if (!Array.isArray(covers) || covers.some((url) => typeof url !== "string")) throw new Error("导入封面格式错误");
+        }
+      }
+      changes.push({ id, kind, payload, updated_at: timestamp, deleted_at: null });
+    }
+  }
+  return { file, changes };
 }
 
 export async function previewLocalImport(json) {
@@ -501,13 +572,8 @@ export async function applyLocalImport(json) {
     return tauriInvoke("apply_local_import", { json });
   }
   const preview = previewImportJson(json);
-  const file = JSON.parse(json);
-  for (const prompt of file.prompts ?? []) {
-    await createLocalPrompt({ title: prompt.title, content: prompt.content ?? "" });
-  }
-  for (const collection of file.collections ?? []) {
-    await createLocalCollection({ title: collection.title });
-  }
+  const { changes } = prepareImport(json, nextTimestamp());
+  await applyLocalSyncChanges(changes);
   return preview;
 }
 
@@ -550,11 +616,7 @@ export async function exportLibraryZip() {
   if (isTauri()) {
     return tauriInvoke("export_library_zip", { dest: null });
   }
-  return JSON.stringify({
-    prompts: memoryPrompts.map(({ title, content }) => ({ title, content })),
-    collections: memoryCollections.map(({ title }) => ({ title })),
-    settings: memorySettings,
-  });
+  return JSON.stringify({ ...JSON.parse(await exportLocalLibrary()), settings: memorySettings });
 }
 
 export async function clearLocalPromptUse() {

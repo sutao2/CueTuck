@@ -360,7 +360,7 @@
       @cancel="closeSettings"
       @language="applyUiLanguage"
       @theme="applyTheme"
-      @imported="reloadPrompts"
+      @imported="refreshLocalSettings"
       @history-cleared="reloadPrompts"
       @login="openLogin('登录账号')"
       @logout="logoutFromSettings"
@@ -913,7 +913,13 @@ async function runContextAction(action) {
 
 async function closeSettings() {
   settingsOpen.value = false;
+  await refreshLocalSettings();
+}
+
+async function refreshLocalSettings() {
   categoryGroups.value = buildCategoryTree(await listLocalCategories());
+  const storedTheme = await getLocalSetting("theme");
+  if (["light", "dark", "system"].includes(storedTheme) && storedTheme !== theme.value) await applyTheme(storedTheme);
   await loadModelPrefs();
   await reloadPrompts();
 }
