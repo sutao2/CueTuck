@@ -68,6 +68,8 @@ export async function publishWithQueue(payload) {
       sourceId: payload.sourceId,
       title: payload.title,
       content: payload.content,
+      categoryId: payload.categoryId,
+      model: payload.model,
     });
     return { queued: true };
   }
@@ -98,6 +100,8 @@ async function runJob(job) {
       sourceId: job.sourceId,
       title: job.title,
       content: job.content,
+      categoryId: job.categoryId,
+      model: job.model,
     });
   }
 }

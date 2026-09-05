@@ -686,8 +686,8 @@ async function loadPublishSources() {
     listLocalCollections({ query: "", categoryId: null }),
   ]);
   publishSources.value = [
-    ...localPrompts.map((item) => ({ id: item.id, title: item.title, kind: "prompt", content: item.content })),
-    ...localCollections.map((item) => ({ id: item.id, title: item.title, kind: "collection", content: "" })),
+    ...localPrompts.map((item) => ({ ...item, kind: "prompt" })),
+    ...localCollections.map((item) => ({ ...item, kind: "collection", content: "" })),
   ];
   publishSourceId.value = "";
 }
@@ -724,6 +724,8 @@ async function submitPublish() {
       sourceId: publishSourceId.value,
       title: source?.title,
       content: source?.content ?? "",
+      categoryId: publicationCategory(source?.category_id),
+      model: source?.model,
     });
     publishResume.value = false;
   } catch {
@@ -745,6 +747,7 @@ async function refreshFavorites() {
 }
 
 async function loadSquare() {
+  const request = ++squareRequest;
   squareOffline.value = false;
   squareBlocked.value = false;
   const access = await getLocalSetting("square_access");
@@ -761,22 +764,41 @@ async function loadSquare() {
         return;
       }
       let rows = await listFavorites();
+      if (request !== squareRequest || space.value !== "square") return;
+      rows = rows.filter((item) => squareMatchesCategory(item)
+        && (!query.value.trim() || item.title.toLowerCase().includes(query.value.trim().toLowerCase())));
       if (modelFilter.value) {
         rows = rows.filter((row) => row.model === modelFilter.value);
       }
       squareItems.value = rows;
     } else {
-      squareItems.value = await listSquareItems({
+      const rows = await listSquareItems({
         sort: sortTab.value,
         query: query.value,
         model: modelFilter.value,
+        categoryId: selectedId.value,
       });
+      if (request !== squareRequest || space.value !== "square") return;
+      squareItems.value = rows.filter(squareMatchesCategory);
     }
     rememberModels(squareItems.value);
   } catch {
+    if (request !== squareRequest || space.value !== "square") return;
     squareItems.value = [];
     squareOffline.value = true;
   }
+}
+
+let squareRequest = 0;
+
+function squareMatchesCategory(item) {
+  return !selectedId.value || item.category_id === selectedId.value
+    || categoryById(item.category_id)?.parent_id === selectedId.value;
+}
+
+function publicationCategory(id) {
+  const category = categoryById(id);
+  return category?.is_system ? category.id : category?.parent_id ?? null;
 }
 
 function rememberModels(items) {
@@ -884,6 +906,9 @@ function setSort(tab) {
 
 function openSquare() {
   space.value = "square";
+  if (selectedId.value === "__uncategorized__" || (selectedId.value && !categoryById(selectedId.value)?.is_system)) {
+    selectedId.value = null;
+  }
   sortTab.value = "推荐";
   loadSquare();
 }

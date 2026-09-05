@@ -30,6 +30,15 @@ describe("square client", () => {
     expect(rows[0].title).toBe("自然光群像");
   });
 
+  it("retains category and model when downloading", async () => {
+    setSquareContentTransport(async () => ({ id: "sq-image", title: "人像", content: "光影", category_id: "cat-image-0", model: "Flux" }));
+    await downloadSquareItem("sq-image");
+    const rows = await listLocalPrompts({ categoryId: "cat-image" });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].model).toBe("Flux");
+    expect(rows[0].category_id).toBe("cat-image-0");
+  });
+
   it("forwards the selected model to the square transport", async () => {
     let seen;
     setSquareTransport(async (request) => {

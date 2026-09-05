@@ -109,6 +109,26 @@ describe("WorkbenchShell", () => {
     expect(w.get(".statusbar .status-item").exists()).toBe(true);
   });
 
+  it("filters square content when selecting a category", async () => {
+    const requests = [];
+    setSquareTransport(async (request) => {
+      requests.push(request);
+      return [
+        { id: "pic", title: "分类人像", kind: "prompt", category_id: "cat-image-0" },
+        { id: "code", title: "分类代码", kind: "prompt", category_id: "cat-software-0" },
+      ];
+    });
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-space="square"]').trigger("click");
+    await flushPromises();
+    await w.findAll(".tree-parent").find((row) => row.text().includes("图片生成")).trigger("click");
+    await flushPromises();
+    expect(requests.at(-1).categoryId).toBe("cat-image");
+    expect(w.get('[data-testid="library-view"]').text()).toContain("分类人像");
+    expect(w.get('[data-testid="library-view"]').text()).not.toContain("分类代码");
+  });
+
   it("opens create modal from primary action", async () => {
     const w = mount(WorkbenchShell);
     await w.get(".primary-button").trigger("click");

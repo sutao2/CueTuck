@@ -119,6 +119,9 @@ impl Pg {
                 )",
                 self.t("publications")
             ),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS category_id TEXT", self.t("square_items")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS category_id TEXT", self.t("publications")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS model TEXT", self.t("publications")),
             format!(
                 "CREATE TABLE IF NOT EXISTS {} (
                   email TEXT NOT NULL REFERENCES {}(email) ON DELETE CASCADE,
@@ -465,6 +468,7 @@ impl Pg {
             kind: row.get("kind"),
             excerpt: row.get("excerpt"),
             model: row.get("model"),
+            category_id: row.get("category_id"),
             member_count: row.get("member_count"),
             content: row.get("content"),
         }
@@ -472,7 +476,7 @@ impl Pg {
 
     pub async fn list_items(&self) -> Result<Vec<SquareItem>, StatusCode> {
         let rows = sqlx::query(&format!(
-            "SELECT id, title, kind, excerpt, model, member_count, content
+            "SELECT id, title, kind, excerpt, model, member_count, content, category_id
              FROM {} ORDER BY sort_index, id",
             self.t("square_items")
         ))
@@ -484,7 +488,7 @@ impl Pg {
 
     pub async fn get_item(&self, id: &str) -> Result<Option<SquareItem>, StatusCode> {
         let row = sqlx::query(&format!(
-            "SELECT id, title, kind, excerpt, model, member_count, content
+            "SELECT id, title, kind, excerpt, model, member_count, content, category_id
              FROM {} WHERE id = $1",
             self.t("square_items")
         ))
@@ -531,8 +535,8 @@ impl Pg {
 
     pub async fn insert_item(&self, item: &SquareItem) -> Result<(), StatusCode> {
         sqlx::query(&format!(
-            "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, sort_index)
-             VALUES ($1,$2,$3,$4,$5,$6,$7, COALESCE((SELECT MAX(sort_index)+1 FROM {0}), 0))",
+            "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, category_id, sort_index)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8, COALESCE((SELECT MAX(sort_index)+1 FROM {0}), 0))",
             self.t("square_items")
         ))
         .bind(&item.id)
@@ -542,6 +546,7 @@ impl Pg {
         .bind(&item.model)
         .bind(item.member_count)
         .bind(&item.content)
+        .bind(&item.category_id)
         .execute(&self.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -555,8 +560,8 @@ impl Pg {
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         for (index, item) in items.iter().enumerate() {
             sqlx::query(&format!(
-                "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, sort_index)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+                "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, sort_index, category_id)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
                 self.t("square_items")
             ))
             .bind(&item.id)
@@ -567,6 +572,7 @@ impl Pg {
             .bind(item.member_count)
             .bind(&item.content)
             .bind(index as i32)
+            .bind(&item.category_id)
             .execute(&self.pool)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -576,7 +582,7 @@ impl Pg {
 
     pub async fn insert_publication(&self, publication: &Publication) -> Result<(), StatusCode> {
         sqlx::query(&format!(
-            "INSERT INTO {} (id, source_id, status, title, content, author_email) VALUES ($1,$2,$3,$4,$5,$6)",
+            "INSERT INTO {} (id, source_id, status, title, content, author_email, category_id, model) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
             self.t("publications")
         ))
         .bind(&publication.id)
@@ -585,6 +591,8 @@ impl Pg {
         .bind(&publication.title)
         .bind(&publication.content)
         .bind(&publication.author_email)
+        .bind(&publication.category_id)
+        .bind(&publication.model)
         .execute(&self.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -599,12 +607,14 @@ impl Pg {
             title: row.get("title"),
             content: row.get("content"),
             author_email: row.get("author_email"),
+            category_id: row.get("category_id"),
+            model: row.get("model"),
         }
     }
 
     pub async fn pending_publications(&self) -> Result<Vec<Publication>, StatusCode> {
         let rows = sqlx::query(&format!(
-            "SELECT id, source_id, status, title, content, author_email FROM {} WHERE status = 'pending'",
+            "SELECT id, source_id, status, title, content, author_email, category_id, model FROM {} WHERE status = 'pending'",
             self.t("publications")
         ))
         .fetch_all(&self.pool)
@@ -615,7 +625,7 @@ impl Pg {
 
     pub async fn publications_for(&self, email: &str) -> Result<Vec<Publication>, StatusCode> {
         let rows = sqlx::query(&format!(
-            "SELECT id, source_id, status, title, content, author_email FROM {} WHERE author_email = $1 ORDER BY id",
+            "SELECT id, source_id, status, title, content, author_email, category_id, model FROM {} WHERE author_email = $1 ORDER BY id",
             self.t("publications")
         ))
         .bind(email)
@@ -632,7 +642,7 @@ impl Pg {
     ) -> Result<Publication, StatusCode> {
         let row = sqlx::query(&format!(
             "UPDATE {} SET status = $2 WHERE id = $1
-             RETURNING id, source_id, status, title, content, author_email",
+             RETURNING id, source_id, status, title, content, author_email, category_id, model",
             self.t("publications")
         ))
         .bind(id)

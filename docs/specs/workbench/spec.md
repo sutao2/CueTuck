@@ -99,6 +99,19 @@
 
 ## 测试映射
 
+### Requirement: 原生命令参数
+
+客户端 MUST 按 Tauri 的 camelCase 参数协议调用命令，嵌套 API 数据保留 snake_case。浏览器内存测试通过不能替代原生命令参数测试。
+
+#### Scenario: 桌面分类保存
+
+- GIVEN 用户在真实桌面窗口指定分类并保存
+- WHEN 调用创建命令
+- THEN 分类参数为 categoryId，Rust 收到所选分类
+- AND 鉴权命令的 accessToken 与合集的 collectionId 同样正确传入
+
+回归：`platform/tauri.test.js`。
+
 | 场景 | 测试 |
 |---|---|
 | 打开应用 | `desktop/src/components/WorkbenchShell.spec.js` renders four chrome regions；renders prototype sidebar chrome |

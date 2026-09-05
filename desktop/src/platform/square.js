@@ -12,10 +12,7 @@ function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
 }
 
-async function tauriInvoke(command, args) {
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke(command, args);
-}
+import { invokeCommand as tauriInvoke } from "./tauri.js";
 
 function apiBase() {
   return "http://127.0.0.1:8787";
@@ -54,14 +51,15 @@ export function setDownloadStatsTransport(transport) {
   testStatsTransport = transport;
 }
 
-export async function listSquareItems({ sort = "推荐", query = "", model = "" } = {}) {
-  if (testTransport) return testTransport({ sort, query, model });
+export async function listSquareItems({ sort = "推荐", query = "", model = "", categoryId = null } = {}) {
+  if (testTransport) return testTransport({ sort, query, model, ...(categoryId ? { categoryId } : {}) });
   if (isTauri()) {
-    return tauriInvoke("list_square_items", { sort, query, model });
+    return tauriInvoke("list_square_items", { sort, query, model, category_id: categoryId });
   }
   try {
     const params = new URLSearchParams({ sort, q: query });
     if (model) params.set("model", model);
+    if (categoryId) params.set("category_id", categoryId);
     const response = await fetch(`${apiBase()}/v1/square/items?${params}`);
     if (!response.ok) throw new Error("广场暂时不可用");
     const payload = await response.json();
@@ -96,6 +94,8 @@ export async function downloadSquareItem(id) {
       content: payload.content ?? "",
       remoteId: payload.id ?? id,
       author: payload.author,
+      categoryId: payload.category_id,
+      model: payload.model,
     });
   }
   await recordAnonymousDownload(id);
@@ -126,16 +126,18 @@ async function recordAnonymousDownload(id) {
   }
 }
 
-export async function createPublication({ sourceId, title, content } = {}) {
+export async function createPublication({ sourceId, title, content, categoryId, model } = {}) {
   const id = String(sourceId ?? "").trim();
   if (!id) throw new Error("未选择本地内容");
-  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content });
+  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}) });
   if (isTauri()) {
     return tauriInvoke("create_publication", {
       source_id: id,
       access_token: getSession().accessToken,
       title: title ?? null,
       content: content ?? null,
+      category_id: categoryId ?? null,
+      model: model ?? null,
     });
   }
   const token = getSession().accessToken;
@@ -147,7 +149,7 @@ export async function createPublication({ sourceId, title, content } = {}) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ source_id: id, title, content }),
+      body: JSON.stringify({ source_id: id, title, content, category_id: categoryId, model }),
     });
     if (!response.ok) throw new Error("发布失败");
     return response.json();

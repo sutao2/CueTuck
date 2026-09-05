@@ -104,10 +104,7 @@ function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
 }
 
-async function tauriInvoke(command, args) {
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke(command, args);
-}
+import { invokeCommand as tauriInvoke } from "./tauri.js";
 
 export async function createLocalPrompt({ title, content, categoryId = null, source = "local", model = null } = {}) {
   if (isTauri()) {
@@ -187,7 +184,7 @@ async function authorForDownload(author) {
   return value || null;
 }
 
-export async function importDownloadedPrompt({ title, content, remoteId = null, author = null } = {}) {
+export async function importDownloadedPrompt({ title, content, remoteId = null, author = null, categoryId = null, model = null } = {}) {
   const keptAuthor = await authorForDownload(author);
   if (isTauri()) {
     return tauriInvoke("import_downloaded_prompt", {
@@ -195,6 +192,8 @@ export async function importDownloadedPrompt({ title, content, remoteId = null, 
       content,
       remote_id: remoteId,
       author: keptAuthor,
+      category_id: categoryId,
+      model,
     });
   }
   const row = {
@@ -202,12 +201,14 @@ export async function importDownloadedPrompt({ title, content, remoteId = null, 
     title: String(title ?? "").trim(),
     summary: null,
     content: content ?? "",
-    category_id: null,
+    category_id: categoryId,
     collection_id: null,
     use_count: 0,
     source: "downloaded",
     remote_id: remoteId,
     author: keptAuthor,
+    model,
+    updated_at: String(Date.now()),
   };
   memoryPrompts.unshift(row);
   return row;

@@ -82,6 +82,7 @@ async fn publication_favorite_and_settings_survive_postgres() {
         kind: "prompt".into(),
         excerpt: None,
         model: None,
+        category_id: None,
         member_count: None,
         content: Some("body".into()),
     }])
@@ -362,6 +363,7 @@ async fn anonymous_download_count_survives_new_appstate_on_postgres() {
         kind: "prompt".into(),
         excerpt: None,
         model: None,
+        category_id: None,
         member_count: None,
         content: Some("body".into()),
     })
@@ -373,6 +375,7 @@ async fn anonymous_download_count_survives_new_appstate_on_postgres() {
         kind: "prompt".into(),
         excerpt: None,
         model: None,
+        category_id: None,
         member_count: None,
         content: Some("body".into()),
     })

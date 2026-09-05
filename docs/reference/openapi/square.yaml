@@ -9,6 +9,12 @@ paths:
       operationId: listSquareItems
       security: []
       summary: 浏览广场（匿名）
+      parameters:
+        - name: category_id
+          in: query
+          description: 系统大分类含其小分类；小分类精确匹配；省略返回全部
+          schema:
+            type: string
   /v1/square/items/{id}:
     get:
       operationId: getSquareItem
@@ -25,6 +31,7 @@ paths:
       operationId: getSquareItemContent
       security: []
       summary: 下载正文（匿名）
+      description: 返回 id、title、content、category_id、model；历史条目分类与模型可为 null
       parameters:
         - name: id
           in: path
@@ -112,7 +119,8 @@ paths:
   /v1/publications:
     post:
       operationId: createPublication
-      summary: 提交审核；可带 title 与 content 快照，通过后进入广场列表
+      summary: 提交审核；可带 title、content、category_id、model 快照，通过后进入广场列表
+      description: category_id 必须为系统分类 ID；自定义小分类由客户端映射至所属系统大分类；未知分类返回 400
   /v1/publications/mine:
     get:
       operationId: listMyPublications
