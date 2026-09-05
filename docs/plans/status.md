@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-08-29（完整产品队列已空；剩余见 deferred） |
+| 更新日期 | 2026-09-05（功能复审发现分类与跨端缺口，重新进入修复验收） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -24,7 +24,7 @@
 
 ## 当前可执行的下一步
 
-1. 完整产品逐步计划已关闭。不能诚实做完的项仍在 [deferred.md](deferred.md)。
+1. 历史实现计划已关闭，但实际功能验收未完成。当前队首：[功能复审与修复](2026-09-05-functional-repair.md)。外部依赖见 [deferred.md](deferred.md)。
 2. 工作台壳层接线已关闭。证据：[done/2026-08-29-workbench-shell-wiring.md](done/2026-08-29-workbench-shell-wiring.md)。
 3. 手动配置代理已关闭。证据：[done/2026-08-27-manual-proxy.md](done/2026-08-27-manual-proxy.md)。
 4. 匿名下载统计已关闭。证据：[done/2026-08-27-anonymous-download-stats.md](done/2026-08-27-anonymous-download-stats.md)。

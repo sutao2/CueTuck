@@ -26,6 +26,22 @@ async fn empty_library_counts_zero() {
     assert_eq!(count_local_prompts_in_dir(dir.path()).unwrap(), 0);
 }
 
+#[test]
+fn uncategorized_filters_prompts_and_collections() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    create_prompt_in_dir(dir.path(), "待分类", "正文", None).unwrap();
+    create_prompt_in_dir(dir.path(), "人像", "正文", Some("cat-image-0")).unwrap();
+    create_collection_in_dir(dir.path(), "待分类合集", None, "none", None).unwrap();
+    create_collection_in_dir(dir.path(), "图片合集", Some("cat-image"), "none", None).unwrap();
+    let prompts = list_prompts_in_dir(dir.path(), "", Some("__uncategorized__")).unwrap();
+    assert_eq!(prompts.len(), 1);
+    assert_eq!(prompts[0].title, "待分类");
+    let collections = list_collections_in_dir(dir.path(), "", Some("__uncategorized__")).unwrap();
+    assert_eq!(collections.len(), 1);
+    assert_eq!(collections[0].title, "待分类合集");
+}
+
 #[tokio::test]
 async fn seeds_ten_system_categories() {
     let dir = tempfile::tempdir().unwrap();

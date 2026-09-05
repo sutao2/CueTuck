@@ -122,6 +122,42 @@ describe("WorkbenchShell", () => {
     expect(w.text()).toContain("网站开发");
   });
 
+  it("counts content and creates in the selected category", async () => {
+    await createLocalPrompt({ title: "人像", content: "摄影", categoryId: "cat-image-0" });
+    await createLocalCollection({ title: "相册", categoryId: "cat-image-1" });
+    await createLocalPrompt({ title: "待整理", content: "正文" });
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    const image = w.findAll(".tree-parent").find((row) => row.text().includes("图片生成"));
+    expect(image.get(".tree-count").text()).toBe("2");
+    expect(w.get('[data-testid="uncategorized"] .tree-count').text()).toBe("1");
+    const portrait = w.findAll(".tree-row.child").find((row) => row.text().includes("人像摄影"));
+    await portrait.trigger("click");
+    await flushPromises();
+    await w.get(".content-actions .primary-button").trigger("click");
+    expect(w.get('[data-testid="prompt-category"]').element.value).toBe("cat-image-0");
+    await w.get(".create-body input").setValue("新的人像");
+    await w.get(".modal-footer .primary-button").trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="library-view"]').text()).toContain("新的人像");
+    expect(image.get(".tree-count").text()).toBe("3");
+    await w.get('[data-testid="uncategorized"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="library-view"]').text()).toContain("待整理");
+    expect(w.get('[data-testid="library-view"]').text()).not.toContain("新的人像");
+  });
+
+  it("preserves a parent category when editing", async () => {
+    await createLocalPrompt({ title: "大分类内容", content: "正文", categoryId: "cat-image" });
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get(".prompt-card").trigger("click");
+    expect(w.get('[data-testid="prompt-category"]').element.value).toBe("cat-image");
+    await w.get(".modal-footer .primary-button").trigger("click");
+    await flushPromises();
+    expect((await listLocalPrompts())[0].category_id).toBe("cat-image");
+  });
+
   it("creates a collection in the content grid", async () => {
     const w = mount(WorkbenchShell);
     await flushPromises();

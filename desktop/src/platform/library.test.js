@@ -19,6 +19,12 @@ import {
 } from "./library.js";
 
 describe("memory library", () => {
+  it("filters uncategorized prompts without including categorized rows", async () => {
+    resetMemoryLibrary();
+    await createLocalPrompt({ title: "无分类", content: "正文" });
+    await createLocalPrompt({ title: "图片", content: "正文", categoryId: "cat-image-0" });
+    expect((await listLocalPrompts({ categoryId: "__uncategorized__" })).map((row) => row.title)).toEqual(["无分类"]);
+  });
   beforeEach(() => {
     resetMemoryLibrary();
   });
