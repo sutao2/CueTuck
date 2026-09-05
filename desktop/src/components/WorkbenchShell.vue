@@ -902,7 +902,8 @@ async function loadModelPrefs() {
   showModelTags.value = (await getLocalSetting("show_model_tags")) !== "0";
   variableHints.value = (await getLocalSetting("variable_hints")) === "1";
   const storedLang = await getLocalSetting("ui_language");
-  if (storedLang === "en" || storedLang === "zh") uiLanguage.value = storedLang;
+  uiLanguage.value = storedLang === "en" ? "en" : "zh";
+  document.documentElement.lang = uiLanguage.value === "en" ? "en" : "zh-CN";
 }
 
 async function applyUiLanguage(next) {
@@ -990,7 +991,8 @@ async function closeSettings() {
 
 async function refreshLocalSettings() {
   categoryGroups.value = buildCategoryTree(await listLocalCategories());
-  const storedTheme = await getLocalSetting("theme");
+  if (selectedId.value && selectedId.value !== "__uncategorized__" && !categoryById(selectedId.value)) selectedId.value = null;
+  const storedTheme = (await getLocalSetting("theme")) || "light";
   if (["light", "dark", "system"].includes(storedTheme) && storedTheme !== theme.value) await applyTheme(storedTheme);
   await loadModelPrefs();
   await reloadPrompts();

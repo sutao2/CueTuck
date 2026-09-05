@@ -44,7 +44,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 两级分类 |
 | [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析 |
 | [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 认证；邮箱密码；Refresh 进钥匙串 |
-| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 本机设置、完整 JSON 副本导入与预览防误操作 |
+| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | JSON 导入、一致性备份恢复与原生周期备份 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；不进桌面包 |
 | [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 流体桌面布局；不进桌面包 |
