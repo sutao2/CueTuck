@@ -375,6 +375,13 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 - AND 不说明没有可用更新
 - AND 不声称已经连上应用商店
 
+#### Scenario: 仅更高有效版本可升级
+
+- GIVEN 返回列表含乱序版本、草稿、无效标签或仅构建元数据不同的版本
+- WHEN 检查更新或准备安装
+- THEN 按语义版本选择指定通道中最高的非草稿有效版本，不依赖返回顺序
+- AND 只有版本优先级高于当前版本才可升级；同版和旧版不得触发下载
+
 #### Scenario: 自动下载按通道排队安装
 
 - GIVEN 自动下载已打开且当前通道有包
@@ -425,4 +432,5 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | Tauri 标明本机钥匙串 | `WorkbenchShell.spec.js` labels the keychain row as local keychain inside Tauri |
 | 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check；`packageIsolation.test.js` keeps package version aligned with tauri and cargo；`updates.test.js` reports no update when the latest stable tag matches the tauri build；`updates.test.js` asks GitHub Releases and reports none when the list is empty |
 | 检查失败不写成没有更新 | `WorkbenchShell.spec.js` does not treat a failed update check as no updates；`updates.test.js` does not treat a failed GitHub read as no updates |
+| 仅更高有效版本可升级 | `updates.test.js` 旧版/同版构建、乱序草稿与预发行排序；Rust `commands::updates::tests` |
 | 自动下载按通道排队安装 | `WorkbenchShell.spec.js` queues an updater install when auto-download is on and the channel has a package；`updates.test.js` queues an updater install when auto-download is on and the channel has a package |

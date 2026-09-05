@@ -1,4 +1,5 @@
 import pkg from "../../package.json";
+import parseVersion from "semver/functions/parse.js";
 
 const RELEASES_URL = "https://api.github.com/repos/sutao2/PromptArk/releases";
 
@@ -33,16 +34,21 @@ function fromReleases(releases, channel = "stable") {
     return { available: false, notes: "" };
   }
   const wantPreview = channel === "preview";
-  const latest = releases.find((row) => Boolean(row?.prerelease) === wantPreview);
+  const candidates = releases.flatMap((row) => {
+    const version = parseVersion(String(row?.tag_name ?? "").replace(/^v/i, ""));
+    if (row?.draft || !version || Boolean(row?.prerelease) !== wantPreview || Boolean(version.prerelease.length) !== wantPreview) return [];
+    return [{ row, version }];
+  }).sort((a, b) => b.version.compare(a.version));
+  const latest = candidates[0];
   if (!latest) {
     return { available: false, notes: "" };
   }
-  const remote = String(latest.tag_name ?? "").replace(/^v/i, "");
-  const current = String(pkg.version ?? "").replace(/^v/i, "");
-  const available = Boolean(remote) && remote !== current;
+  const remote = String(latest.row.tag_name).replace(/^v/i, "");
+  const current = parseVersion(String(pkg.version ?? ""));
+  const available = Boolean(current) && latest.version.compare(current) > 0;
   return {
     available,
-    notes: String(latest.body ?? ""),
+    notes: String(latest.row.body ?? ""),
     version: remote,
   };
 }
@@ -53,7 +59,7 @@ export async function checkForUpdates({ channel } = {}) {
   if (isTauri()) {
     return tauriInvoke("check_for_updates", { channel: selected });
   }
-  const response = await fetch(`${RELEASES_URL}?per_page=5`, {
+  const response = await fetch(`${RELEASES_URL}?per_page=100`, {
     headers: { Accept: "application/vnd.github+json" },
   });
   if (!response.ok) {
