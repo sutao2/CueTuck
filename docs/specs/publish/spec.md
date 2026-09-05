@@ -54,6 +54,13 @@ M0–M4 MUST NOT 出现可成功提交审核的发布动作。M5 起以「选择
 - THEN 审核记录被创建
 - AND 队列清空
 
+#### Scenario: 新稿成功后清除旧草稿
+
+- GIVEN 同一本地源的旧快照还在离线队列
+- WHEN 新快照直接提交成功
+- THEN 旧快照从队列清除，不再重复提交审核
+- AND 仅入队时界面明确说明尚未提交审核
+
 ### Requirement: 提交快照与通过后上架
 
 `POST /v1/publications` MUST 能带上标题与正文快照。管理员通过后，该快照 MUST 出现在广场列表。MUST NOT 用审核结果覆盖本地正文。缺快照时 MUST NOT 把该条假装已上架。
