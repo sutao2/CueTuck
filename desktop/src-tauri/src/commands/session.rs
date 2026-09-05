@@ -284,17 +284,23 @@ pub async fn get_billing_status(access_token: String) -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub async fn start_billing_checkout(access_token: String) -> Result<Value, String> {
+pub async fn start_billing_checkout(access_token: String, mock_outcome: Option<String>) -> Result<Value, String> {
     let response = http_client(true)?
         .post(format!("{}/v1/billing/checkout", api_base()))
         .bearer_auth(&access_token)
+        .json(&serde_json::json!({ "mock_outcome": mock_outcome }))
         .send()
         .await
         .map_err(|error| error.to_string())?;
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
         return Err("账单需要登录".to_string());
     }
-    response.json().await.map_err(|error| error.to_string())
+    let status = response.status();
+    let payload: Value = response.json().await.map_err(|_| "支付请求失败，请重试".to_string())?;
+    if !status.is_success() && !([403, 409].contains(&status.as_u16()) && payload["note"].is_string()) {
+        return Err("支付请求失败，请重试".into());
+    }
+    Ok(payload)
 }
 
 #[tauri::command]
@@ -311,4 +317,3 @@ pub async fn redeem_billing_code(access_token: String, code: String) -> Result<V
     }
     response.json().await.map_err(|error| error.to_string())
 }
-

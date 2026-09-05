@@ -325,6 +325,37 @@ describe("WebApp", () => {
     expect(w.text()).not.toContain("已写入本机 SQLite");
   });
 
+  it("simulates payment with visible mock state and never opens real checkout", async () => {
+    const opened = vi.fn();
+    vi.stubGlobal("open", opened);
+    setAccountLibraryTransport({ get: async () => ({ items: [] }) });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "mock-token" }));
+    let mockPro = false;
+    const checkout = vi.fn(async (outcome) => {
+      if (outcome === "success") mockPro = true;
+      if (outcome === "reset") mockPro = false;
+      return { pro: false, mock: true, mock_pro: mockPro, note: `Mock ${outcome}`, checkout_url: "https://checkout.stripe.com/should-not-open" };
+    });
+    setBillingTransport({ status: async () => ({ pro: false, mock: true, mock_pro: false }), checkout });
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WebApp);
+    await flushPromises();
+    expect(w.get('[data-testid="billing-redeem"]').attributes("disabled")).toBeDefined();
+    for (const outcome of ["failure", "cancel", "success", "reset"]) {
+      await w.get(`[data-testid="billing-mock-${outcome}"]`).trigger("click");
+      await flushPromises();
+      expect(checkout).toHaveBeenLastCalledWith(outcome);
+      expect(w.get('[data-testid="billing-mock"]').text()).toContain(outcome === "success" ? "模拟 Pro" : "模拟未订阅");
+      expect(w.get('[data-testid="billing-pro"]').text()).toBe("未订阅");
+    }
+    checkout.mockRejectedValueOnce(new Error("offline"));
+    await w.get('[data-testid="billing-mock-success"]').trigger("click"); await flushPromises();
+    expect(w.get('[data-testid="billing-note"]').text()).toContain("offline");
+    expect(w.get('[data-testid="billing-mock-success"]').attributes("disabled")).toBeUndefined();
+    expect(opened).not.toHaveBeenCalled();
+    w.unmount();
+  });
+
   it("shows unpaid billing as 支付未开通 and does not open checkout", async () => {
     const opened = [];
     vi.stubGlobal("open", (url) => {

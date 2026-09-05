@@ -31,6 +31,7 @@ impl AppState {
         };
         let state = Self {
             db: Some(pg),
+            billing_mock: std::env::var("PROMPTARK_BILLING_MOCK").ok().as_deref() == Some("1"),
             redis,
             media: media::MediaConfig::from_env(),
             oauth: OAuthSettings::default(),

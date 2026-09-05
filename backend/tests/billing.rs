@@ -24,6 +24,45 @@ async fn login(app: axum::Router) -> (axum::Router, promptark_api::SessionRespon
 }
 
 #[tokio::test]
+async fn mock_payment_is_account_scoped_and_never_grants_real_pro() {
+    let state = AppState::with_user("dev@promptark.local", "devpass")
+        .with_billing_mock().with_stripe_secret("sk_live_must_never_be_called");
+    let (app, session) = login(app(state)).await;
+    for (outcome, expected) in [("failure", false), ("cancel", false), ("success", true), ("success", true), ("failure", true), ("cancel", true), ("reset", false)] {
+        let response = app.clone().oneshot(Request::builder().method("POST").uri("/v1/billing/checkout")
+            .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(serde_json::json!({"mock_outcome": outcome}).to_string())).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let payload: serde_json::Value = serde_json::from_slice(&to_bytes(response.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(payload["mock"], true);
+        assert_eq!(payload["mock_pro"], expected);
+        assert_eq!(payload["pro"], false);
+        assert_eq!(payload["payment_enabled"], false);
+        assert!(payload["checkout_url"].is_null());
+        assert!(payload["note"].as_str().unwrap().contains("Mock"));
+    }
+    for (path, body) in [("checkout", r#"{"mock_outcome":"success"}"#), ("redeem", r#"{"code":"anything"}"#)] {
+        let denied = app.clone().oneshot(Request::builder().method("POST").uri(format!("/v1/billing/{path}"))
+            .header(header::CONTENT_TYPE, "application/json").body(Body::from(body)).unwrap()).await.unwrap();
+        assert_eq!(denied.status(), StatusCode::UNAUTHORIZED);
+    }
+    let redeem = app.oneshot(Request::builder().method("POST").uri("/v1/billing/redeem")
+        .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+        .header(header::CONTENT_TYPE, "application/json").body(Body::from(r#"{"code":"anything"}"#)).unwrap()).await.unwrap();
+    assert_eq!(redeem.status(), StatusCode::CONFLICT);
+}
+
+#[tokio::test]
+async fn mock_checkout_is_rejected_when_disabled() {
+    let (app, session) = login(app(AppState::with_user("dev@promptark.local", "devpass"))).await;
+    let response = app.oneshot(Request::builder().method("POST").uri("/v1/billing/checkout")
+        .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token))
+        .header(header::CONTENT_TYPE, "application/json").body(Body::from(r#"{"mock_outcome":"success"}"#)).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+}
+
+#[tokio::test]
 async fn unsigned_status_is_not_pro_when_payment_is_unconfigured() {
     std::env::remove_var("STRIPE_SECRET_KEY");
     std::env::remove_var("PROMPTARK_STRIPE_SECRET");

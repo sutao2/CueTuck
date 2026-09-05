@@ -39,18 +39,20 @@ export async function getBillingStatus() {
   return response.json();
 }
 
-export async function startBillingCheckout() {
-  if (testTransport?.checkout) return testTransport.checkout();
+export async function startBillingCheckout(mockOutcome) {
+  if (testTransport?.checkout) return testTransport.checkout(mockOutcome);
   const token = requireAccessToken();
   if (isTauri()) {
-    return tauriInvoke("start_billing_checkout", { access_token: token });
+    return tauriInvoke("start_billing_checkout", { access_token: token, mock_outcome: mockOutcome });
   }
   const response = await fetch(`${apiBase()}/v1/billing/checkout`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ mock_outcome: mockOutcome }),
   });
   const payload = await response.json().catch(() => ({}));
   if (response.status === 401) throw new Error("账单需要登录");
+  if (!response.ok && !([403, 409].includes(response.status) && typeof payload.note === "string")) throw new Error("支付请求失败，请重试");
   return payload;
 }
 

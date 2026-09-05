@@ -109,10 +109,14 @@
               <span class="setting-copy"><strong>账单</strong><small>预发可查状态、兑换码；只有测试密钥才跳转 Checkout。不是公开售卖。</small></span>
               <span class="setting-control author-profile">
                 <span data-testid="billing-pro">{{ session.loggedIn ? (billingPro ? "Pro" : "未订阅") : "未登录" }}</span>
-                <small v-if="billingNote" data-testid="billing-note">{{ billingNote }}</small>
+                <small v-if="session.loggedIn && billingMock" data-testid="billing-mock">Mock · {{ billingMockPro ? "模拟 Pro" : "模拟未订阅" }}（不扣款，不改变真实权益）</small>
+            <small v-if="billingNote" data-testid="billing-note">{{ billingNote }}</small>
+            <span v-if="session.loggedIn && billingMock">
+              <button v-for="(label, outcome) in { success: '模拟成功', failure: '模拟失败', cancel: '模拟取消', reset: '重置模拟' }" :key="outcome" type="button" :data-testid="`billing-mock-${outcome}`" :disabled="billingBusy" @click="runCheckout(outcome)">{{ label }}</button>
+            </span>
                 <input
                   data-testid="billing-redeem-code"
-                  :disabled="!session.loggedIn"
+                  :disabled="!session.loggedIn || billingMock || billingBusy"
                   v-model="redeemCode"
                   placeholder="兑换码"
                 >
@@ -120,7 +124,7 @@
                   type="button"
                   class="button ghost-button"
                   data-testid="billing-redeem"
-                  :disabled="!session.loggedIn"
+                  :disabled="!session.loggedIn || billingMock || billingBusy"
                   @click="runRedeem"
                 >
                   兑换
@@ -129,7 +133,8 @@
                   type="button"
                   class="button primary-button"
                   data-testid="billing-checkout"
-                  :disabled="!session.loggedIn"
+                  v-if="!billingMock"
+                  :disabled="!session.loggedIn || billingBusy"
                   @click="runCheckout"
                 >
                   前往支付
@@ -403,7 +408,7 @@ import { DEFAULT_LAUNCHER_SHORTCUT, DEFAULT_NEW_PROMPT_SHORTCUT, DEFAULT_PASTE_R
 import pkg from "../../package.json";
 import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/desktopPrefs.js";
 import { listMyPublications } from "../platform/square.js";
-import { getMe, putMe } from "../platform/session.js";
+import { getMe, putMe, getSession } from "../platform/session.js";
 import {
   getBillingStatus,
   redeemBillingCode,
@@ -484,6 +489,9 @@ const customModels = ref("");
 const keepAuthorOnDownload = ref(false);
 const myPublications = ref([]);
 const billingPro = ref(false);
+const billingMock = ref(false);
+const billingMockPro = ref(false);
+const billingBusy = ref(false);
 const billingNote = ref("");
 const redeemCode = ref("");
 const displayName = ref("");
@@ -528,7 +536,7 @@ async function loadSettings() {
     const [mine, profile, billing] = await Promise.all([
       listMyPublications().catch(() => []),
       getMe().catch(() => null),
-      getBillingStatus().catch(() => null),
+      getBillingStatus().catch((error) => ({ note: error.message || String(error) })),
     ]);
     myPublications.value = mine;
     displayName.value = profile?.display_name ?? profile?.displayName ?? "";
@@ -805,27 +813,36 @@ async function saveAuthorProfile() {
 
 function applyBilling(payload) {
   billingPro.value = Boolean(payload?.pro);
+  billingMock.value = Boolean(payload?.mock);
+  billingMockPro.value = Boolean(payload?.mock_pro);
   billingNote.value = payload?.note ?? "";
 }
 
-async function runCheckout() {
+async function runCheckout(mockOutcome) {
+  if (billingBusy.value) return;
+  const token = getSession().accessToken;
   if (!props.session.loggedIn) {
     emit("login");
     return;
   }
   try {
-    const payload = await startBillingCheckout();
+    billingBusy.value = true;
+    const payload = await startBillingCheckout(typeof mockOutcome === "string" ? mockOutcome : undefined);
+    if (getSession().accessToken !== token) return;
     applyBilling(payload);
     const url = payload?.checkout_url;
-    if (typeof url === "string" && url.startsWith("https://checkout.stripe.com/")) {
+    if (!payload?.mock && typeof url === "string" && url.startsWith("https://checkout.stripe.com/")) {
       window.open(url, "_blank", "noopener");
     }
   } catch (error) {
-    billingNote.value = error instanceof Error ? error.message : String(error);
+    if (getSession().accessToken === token) billingNote.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    billingBusy.value = false;
   }
 }
 
 async function runRedeem() {
+  if (billingBusy.value || billingMock.value) return;
   if (!props.session.loggedIn) {
     emit("login");
     return;
