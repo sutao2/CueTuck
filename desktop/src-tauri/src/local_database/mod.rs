@@ -15,6 +15,7 @@ static LAST_TIMESTAMP: AtomicU64 = AtomicU64::new(0);
 
 pub use categories::{create_category_in_dir, list_categories_in_dir, CategoryRecord};
 pub use collections::{
+    remove_prompt_from_collection_in_dir, update_collection_in_dir, delete_collection_in_dir,
     add_prompt_to_collection_in_dir, collection_member_count, create_collection_in_dir,
     list_collection_members_in_dir, list_collections_in_dir, CollectionRecord,
 };

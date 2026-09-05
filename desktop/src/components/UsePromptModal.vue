@@ -10,6 +10,7 @@
         <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
       </header>
       <div class="create-body">
+        <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <template v-if="step === 'variable'">
           <p class="use-hint">填写后进入下一步。未填会在最终文本里保留变量名。</p>
           <label class="field">
@@ -35,7 +36,7 @@
           <button v-if="step !== 'preview' || names.length" type="button" class="button ghost-button" @click="back">
             上一步
           </button>
-          <button type="button" class="button primary-button" data-testid="use-next" @click="next">
+          <button type="button" class="button primary-button" data-testid="use-next" :disabled="busy" @click="next">
             {{ step === "preview" ? "复制并完成" : "下一步" }}
           </button>
         </div>
@@ -52,6 +53,8 @@ import { hintForVariable } from "../platform/variableHints.js";
 const props = defineProps({
   prompt: { type: Object, required: true },
   hintsEnabled: { type: Boolean, default: false },
+  error: { type: String, default: "" },
+  busy: { type: Boolean, default: false },
 });
 const emit = defineEmits(["cancel", "copied"]);
 

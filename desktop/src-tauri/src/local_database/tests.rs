@@ -72,6 +72,33 @@ fn sync_rolls_back_bad_references_and_normalizes_legacy_seconds() {
     assert!(list_prompts_in_dir(dir.path(), "", None).unwrap().is_empty());
 }
 
+#[test]
+fn collections_can_be_edited_moved_and_deleted_without_deleting_prompts() {
+    use super::{delete_collection_in_dir, remove_prompt_from_collection_in_dir, update_collection_in_dir};
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let a = create_collection_in_dir(dir.path(), "A", None, "none", None).unwrap();
+    let b = create_collection_in_dir(dir.path(), "B", None, "none", None).unwrap();
+    let p = create_prompt_in_dir(dir.path(), "成员", "保留正文", None).unwrap();
+    assert!(add_prompt_to_collection_in_dir(dir.path(), &p.id, "missing").is_err());
+    add_prompt_to_collection_in_dir(dir.path(), &p.id, &a.id).unwrap();
+    add_prompt_to_collection_in_dir(dir.path(), &p.id, &b.id).unwrap();
+    assert_eq!(collection_member_count(dir.path(), &a.id).unwrap(), 0);
+    assert_eq!(collection_member_count(dir.path(), &b.id).unwrap(), 1);
+    remove_prompt_from_collection_in_dir(dir.path(), &p.id, &b.id).unwrap();
+    assert_eq!(list_prompts_in_dir(dir.path(), "", None).unwrap()[0].collection_id, None);
+    update_collection_in_dir(dir.path(), &b.id, "新名称", Some("cat-image"), "single", "[\"cover.png\"]").unwrap();
+    let updated = list_collections_in_dir(dir.path(), "新名称", None).unwrap();
+    assert_eq!(updated[0].cover_json, "[\"cover.png\"]");
+    add_prompt_to_collection_in_dir(dir.path(), &p.id, &b.id).unwrap();
+    delete_collection_in_dir(dir.path(), &b.id).unwrap();
+    assert!(list_collections_in_dir(dir.path(), "新名称", None).unwrap().is_empty());
+    let rows = list_prompts_in_dir(dir.path(), "", None).unwrap();
+    assert_eq!(rows[0].content, "保留正文");
+    assert_eq!(rows[0].collection_id, None);
+    assert!(add_prompt_to_collection_in_dir(dir.path(), &p.id, &b.id).is_err());
+}
+
 #[tokio::test]
 async fn status_is_ready_after_initialize() {
     let dir = tempfile::tempdir().unwrap();

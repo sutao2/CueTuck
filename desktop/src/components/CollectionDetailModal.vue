@@ -10,6 +10,7 @@
         <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
       </header>
       <div class="create-body">
+        <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <div v-if="collection.cover_type === 'single' && singleCover" class="cover-single">
           <img :src="singleCover" alt="">
         </div>
@@ -20,7 +21,11 @@
         </div>
         <p class="use-hint">{{ members.length }} 个提示词。缺图不会阻止打开详情。</p>
         <ul class="member-list">
-          <li v-for="member in members" :key="member.id">{{ member.title }}</li>
+          <li v-for="member in members" :key="member.id">
+            <button type="button" class="card-action" @click="$emit('open', member)">{{ member.title }}</button>
+            <button type="button" class="card-action" @click="$emit('use', member)">使用</button>
+            <button type="button" class="card-action" data-testid="remove-member" @click="$emit('remove-member', member.id)">移出合集</button>
+          </li>
         </ul>
         <label class="field">
           <span>加入已有提示词</span>
@@ -33,7 +38,7 @@
         </label>
       </div>
       <footer class="modal-footer">
-        <span class="create-location">合集不出现在侧栏树中</span>
+        <button type="button" class="button ghost-button" data-testid="edit-collection" @click="$emit('edit')">编辑合集</button>
         <div class="modal-actions">
           <button type="button" class="button ghost-button" @click="$emit('cancel')">关闭</button>
           <button type="button" class="button primary-button" :disabled="!selectedPromptId" @click="add">
@@ -53,8 +58,9 @@ const props = defineProps({
   collection: { type: Object, required: true },
   members: { type: Array, default: () => [] },
   prompts: { type: Array, default: () => [] },
+  error: { type: String, default: "" },
 });
-const emit = defineEmits(["cancel", "add"]);
+const emit = defineEmits(["cancel", "add", "open", "use", "remove-member", "edit"]);
 const selectedPromptId = ref("");
 const available = computed(() =>
   props.prompts.filter((prompt) => prompt.collection_id !== props.collection.id),

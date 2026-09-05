@@ -210,6 +210,21 @@ pub fn list_local_collection_members(
 }
 
 #[tauri::command]
+pub fn remove_prompt_from_local_collection(app: AppHandle, prompt_id: String, collection_id: String) -> Result<(), String> {
+    crate::local_database::remove_prompt_from_collection_in_dir(&data_dir(&app)?, &prompt_id, &collection_id)
+}
+
+#[tauri::command]
+pub fn update_local_collection(app: AppHandle, id: String, title: String, category_id: Option<String>, cover_type: String, cover_json: String) -> Result<(), String> {
+    crate::local_database::update_collection_in_dir(&data_dir(&app)?, &id, &title, category_id.as_deref(), &cover_type, &cover_json)
+}
+
+#[tauri::command]
+pub fn delete_local_collection(app: AppHandle, id: String) -> Result<(), String> {
+    crate::local_database::delete_collection_in_dir(&data_dir(&app)?, &id)
+}
+
+#[tauri::command]
 pub fn get_local_setting(app: AppHandle, key: String) -> Result<String, String> {
     get_setting_in_dir(&data_dir(&app)?, &key)
 }

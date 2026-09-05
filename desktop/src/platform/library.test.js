@@ -16,6 +16,10 @@ import {
   clearLocalPromptUse,
   createLocalCategory,
   listLocalCategories,
+  listLocalCollections,
+  updateLocalCollection,
+  deleteLocalCollection,
+  removePromptFromCollection,
 } from "./library.js";
 
 describe("memory library", () => {
@@ -72,6 +76,27 @@ describe("memory library", () => {
     const members = await listCollectionMembers(collection.id);
     expect(members).toHaveLength(1);
     expect(members[0].title).toBe("提示词B");
+  });
+
+  it("updates both collection counts on move and keeps members when deleting a collection", async () => {
+    const a = await createLocalCollection({ title: "A" });
+    const b = await createLocalCollection({ title: "B" });
+    const prompt = await createLocalPrompt({ title: "成员", content: "保留" });
+    await expect(addPromptToCollection(prompt.id, "missing")).rejects.toThrow(/不存在/);
+    await addPromptToCollection(prompt.id, a.id);
+    await addPromptToCollection(prompt.id, b.id);
+    const counts = new Map((await listLocalCollections()).map((row) => [row.id, row.member_count]));
+    expect(counts.get(a.id)).toBe(0);
+    expect(counts.get(b.id)).toBe(1);
+    await removePromptFromCollection(prompt.id, b.id);
+    expect((await listLocalPrompts())[0].collection_id).toBeNull();
+    await updateLocalCollection({ id: b.id, title: "新合集", categoryId: "cat-image", coverType: "single", coverUrls: ["one.png"] });
+    expect((await listLocalCollections({ query: "新合集" }))[0].cover_json).toBe('["one.png"]');
+    await addPromptToCollection(prompt.id, b.id);
+    await deleteLocalCollection(b.id);
+    expect(await listLocalCollections({ query: "新合集" })).toHaveLength(0);
+    expect((await listLocalPrompts())[0]).toMatchObject({ content: "保留", collection_id: null });
+    await expect(addPromptToCollection(prompt.id, b.id)).rejects.toThrow(/不存在/);
   });
 
   it("previews import without writing", async () => {

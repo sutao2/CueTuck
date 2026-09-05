@@ -10,6 +10,7 @@
         <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
       </header>
       <div class="create-body">
+        <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <div v-if="!prompt" class="create-type-grid">
           <button type="button" class="create-type" :class="{ active: kind === 'prompt' }" @click="kind = 'prompt'">
             <strong>单个提示词</strong>
@@ -73,8 +74,8 @@
         <span v-else class="create-location">将创建在本地库</span>
         <div class="modal-actions">
           <button type="button" class="button ghost-button" @click="$emit('cancel')">取消</button>
-          <button type="button" class="button primary-button" :disabled="!title.trim()" @click="submit">
-            {{ kind === "collection" ? "创建合集" : "保存" }}
+          <button type="button" class="button primary-button" :disabled="busy || !title.trim()" @click="submit">
+            {{ kind === "collection" && !prompt ? "创建合集" : "保存" }}
           </button>
         </div>
       </footer>
@@ -84,6 +85,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { parseCoverUrls } from "../lib/cover.js";
 
 const props = defineProps({
   prompt: { type: Object, default: null },
@@ -91,18 +93,20 @@ const props = defineProps({
   modelOptions: { type: Array, default: () => [] },
   defaultModel: { type: String, default: "" },
   defaultCategoryId: { type: String, default: "" },
+  error: { type: String, default: "" },
+  busy: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["cancel", "save", "remove"]);
-const kind = ref("prompt");
+const kind = ref(props.prompt?.kind ?? "prompt");
 const title = ref(props.prompt?.title ?? "");
 const content = ref(props.prompt?.content ?? "");
 const categoryId = ref(props.prompt ? (props.prompt.category_id ?? "") : props.defaultCategoryId);
 const model = ref(props.prompt ? (props.prompt.model ?? "") : (props.defaultModel ?? ""));
-const coverType = ref("none");
-const coverUrls = ref([]);
+const coverType = ref(props.prompt?.cover_type ?? "none");
+const coverUrls = ref(parseCoverUrls(props.prompt?.cover_json));
 const heading = computed(() => {
-  if (props.prompt) return "编辑提示词";
+  if (props.prompt) return kind.value === "collection" ? "编辑合集" : "编辑提示词";
   return kind.value === "collection" ? "新建合集" : "新建提示词";
 });
 
