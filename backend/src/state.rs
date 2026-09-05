@@ -424,7 +424,7 @@ impl AppState {
             .map(|rows| rows.values().cloned().collect::<Vec<_>>())
             .unwrap_or_default();
         if !since.is_empty() {
-            items.retain(|row| row.updated_at.as_str() > since);
+            items.retain(|row| crate::library::timestamp_ms(&row.updated_at) > crate::library::timestamp_ms(since));
         }
         items.sort_by(|left, right| left.id.cmp(&right.id));
         Ok(items)
@@ -435,6 +435,7 @@ impl AppState {
         email: &str,
         items: Vec<crate::library::LibraryChange>,
     ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
+        crate::library::validate_changes(&items)?;
         if let Some(pg) = &self.db {
             return pg.put_library_changes(email, &items).await;
         }
@@ -447,7 +448,7 @@ impl AppState {
             for item in items {
                 let keep_existing = account
                     .get(&item.id)
-                    .is_some_and(|existing| existing.updated_at.as_str() >= item.updated_at.as_str());
+                    .is_some_and(|existing| crate::library::timestamp_ms(&existing.updated_at) >= crate::library::timestamp_ms(&item.updated_at));
                 if keep_existing {
                     continue;
                 }

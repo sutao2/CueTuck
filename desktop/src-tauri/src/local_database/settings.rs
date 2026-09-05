@@ -38,9 +38,9 @@ pub fn set_setting_in_dir(dir: &Path, key: &str, value: &str) -> Result<(), Stri
     let encoded = serde_json::to_string(value).map_err(|error| error.to_string())?;
     connection
         .execute(
-            "INSERT INTO settings (key, value_json) VALUES (?1, ?2)
-             ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
-            rusqlite::params![key, encoded],
+            "INSERT INTO settings (key, value_json, updated_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at",
+            rusqlite::params![key, encoded, super::now_millis()],
         )
         .map_err(|error| error.to_string())?;
     Ok(())

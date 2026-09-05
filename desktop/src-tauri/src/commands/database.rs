@@ -20,6 +20,16 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
+pub fn export_local_sync_changes(app: AppHandle) -> Result<Vec<crate::local_database::SyncChange>, String> {
+    crate::local_database::export_sync_changes(&data_dir(&app)?)
+}
+
+#[tauri::command]
+pub fn apply_local_sync_changes(app: AppHandle, items: Vec<crate::local_database::SyncChange>, keep_local: bool) -> Result<(), String> {
+    crate::local_database::apply_sync_changes(&data_dir(&app)?, &items, keep_local)
+}
+
+#[tauri::command]
 pub fn get_local_database_status(database: State<'_, LocalDatabase>) -> String {
     database.status().as_str().to_string()
 }

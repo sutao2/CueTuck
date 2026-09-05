@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { createLocalCollection, createLocalPrompt, resetMemoryLibrary, setLocalSetting } from "./library.js";
+import { addPromptToCollection, applyLocalSyncChanges, createLocalCategory, createLocalCollection, createLocalPrompt, deleteLocalPrompt, exportLocalSyncChanges, getLocalSetting, listCollectionMembers, listLocalCategories, listLocalCollections, listLocalPrompts, resetMemoryLibrary, setLocalSetting, timestampMillis } from "./library.js";
 import { loginSession, resetMemorySession, setSessionTransport } from "./session.js";
 import {
   resetLibrarySync,
@@ -13,6 +13,99 @@ describe("library sync", () => {
     resetMemoryLibrary();
     resetMemorySession();
     resetLibrarySync();
+  });
+
+  it("restores a second device including custom categories, collections, models and tombstones", async () => {
+    const account = new Map();
+    setLibrarySyncTransport({
+      put: async (items) => {
+        for (const item of items) {
+          if (!account.has(item.id) || timestampMillis(item.updated_at) > timestampMillis(account.get(item.id).updated_at)) account.set(item.id, structuredClone(item));
+        }
+        return { items: [...account.values()] };
+      },
+      get: async () => ({ items: [...account.values()].reverse() }),
+    });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const category = await createLocalCategory({ name: "自定义", parentId: "cat-image" });
+    const collection = await createLocalCollection({ title: "合集", categoryId: category.id });
+    const prompt = await createLocalPrompt({ title: "成员", content: "正文", categoryId: category.id, model: "Flux" });
+    await addPromptToCollection(prompt.id, collection.id);
+    await setLocalSetting("theme", "dark");
+    await setLocalSetting("manual_proxy", "private");
+    await syncLocalLibraryNow();
+    expect(account.has("setting:manual_proxy")).toBe(false);
+    resetMemoryLibrary();
+    await syncLocalLibraryNow();
+    expect((await listLocalCategories()).some((row) => row.id === category.id)).toBe(true);
+    expect(await listCollectionMembers(collection.id)).toEqual([expect.objectContaining({ id: prompt.id, model: "Flux", category_id: category.id })]);
+    expect((await listLocalCollections())[0].member_count).toBe(1);
+    expect(await getLocalSetting("theme")).toBe("dark");
+    await deleteLocalPrompt(prompt.id);
+    await syncLocalLibraryNow();
+    expect(account.get(prompt.id).deleted_at).toBeTruthy();
+    resetMemoryLibrary();
+    await syncLocalLibraryNow();
+    expect(await listLocalPrompts()).toEqual([]);
+    expect((await listLocalCollections())[0].member_count).toBe(0);
+  });
+
+  it("rolls back orphan references and compares legacy seconds numerically", async () => {
+    const old = { id: "p", kind: "prompt", payload: { title: "旧" }, updated_at: "1700000000000" };
+    await expect(applyLocalSyncChanges([old, { ...old, id: "bad", payload: { title: "坏", category_id: "missing" } }])).rejects.toThrow(/不存在/);
+    expect(await listLocalPrompts()).toEqual([]);
+    await applyLocalSyncChanges([old]);
+    await applyLocalSyncChanges([{ ...old, payload: { title: "新" }, updated_at: "1700000001" }]);
+    expect((await listLocalPrompts())[0].title).toBe("新");
+    const snapshot = await exportLocalSyncChanges();
+    expect(snapshot.find((row) => row.id === "p").updated_at).toBe("1700000001000");
+  });
+
+  it("does not apply an in-flight response after logout", async () => {
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    setLibrarySyncTransport({
+      put: async () => ({ items: [] }),
+      get: async () => {
+        resetMemorySession();
+        return { items: [{ id: "private", kind: "prompt", payload: { title: "私有" }, updated_at: "1" }] };
+      },
+    });
+    await expect(syncLocalLibraryNow()).rejects.toThrow(/登录状态/);
+    expect(await listLocalPrompts()).toEqual([]);
+  });
+
+  it("retries deferred cover upload and download after returning to wifi", async () => {
+    const account = new Map();
+    setLibrarySyncTransport({
+      put: async (items) => {
+        for (const item of items) {
+          if (!account.has(item.id) || timestampMillis(item.updated_at) > timestampMillis(account.get(item.id).updated_at)) account.set(item.id, structuredClone(item));
+        }
+        return { items: [...account.values()] };
+      },
+      get: async () => ({ items: [...account.values()] }),
+    });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    await setLocalSetting("sync_wifi_images", "1");
+    setNetworkType("cellular");
+    const collection = await createLocalCollection({ title: "封面", coverType: "single", coverUrls: ["local.png"] });
+    await syncLocalLibraryNow();
+    expect(account.get(collection.id).payload.cover_json).toBe("[]");
+    expect((await listLocalCollections())[0].cover_json).toBe('["local.png"]');
+    setNetworkType("wifi");
+    await syncLocalLibraryNow();
+    expect(account.get(collection.id).payload.cover_json).toBe('["local.png"]');
+    resetMemoryLibrary();
+    await setLocalSetting("sync_wifi_images", "1");
+    setNetworkType("cellular");
+    await syncLocalLibraryNow();
+    expect((await listLocalCollections())[0].cover_json).toBe("[]");
+    setNetworkType("wifi");
+    await syncLocalLibraryNow();
+    expect((await listLocalCollections())[0].cover_json).toBe('["local.png"]');
   });
 
   it("puts the local prompt onto the account library when signed in", async () => {

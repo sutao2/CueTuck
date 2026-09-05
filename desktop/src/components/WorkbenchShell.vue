@@ -895,6 +895,7 @@ async function runContextAction(action) {
 
 async function closeSettings() {
   settingsOpen.value = false;
+  categoryGroups.value = buildCategoryTree(await listLocalCategories());
   await loadModelPrefs();
   await reloadPrompts();
 }

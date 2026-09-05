@@ -30,11 +30,22 @@ let memoryPrompts = [];
 let memoryCollections = [];
 let memorySettings = { theme: "light" };
 let memoryCategories = seedCategories();
-let memorySeq = 0;
+let memoryClock = 0;
+let memorySettingStamps = {};
+const SYNC_SETTINGS = ["theme", "default_model", "model_catalog", "custom_models", "show_model_tags", "ui_language", "variable_hints"];
+
+export function timestampMillis(raw) {
+  const value = Number(raw || 0);
+  return value >= 1e9 && value < 1e11 ? value * 1000 : value;
+}
+
+function nextTimestamp() {
+  memoryClock = Math.max(Date.now(), memoryClock + 1);
+  return String(memoryClock);
+}
 
 function nextMemoryId(prefix) {
-  memorySeq += 1;
-  return `${prefix}-${memorySeq}`;
+  return `${prefix}-${crypto.randomUUID()}`;
 }
 
 export function resetMemoryLibrary() {
@@ -42,7 +53,8 @@ export function resetMemoryLibrary() {
   memoryCollections = [];
   memorySettings = { theme: "light" };
   memoryCategories = seedCategories();
-  memorySeq = 0;
+  memoryClock = 0;
+  memorySettingStamps = {};
 }
 
 function seedCategories() {
@@ -126,7 +138,7 @@ export async function createLocalPrompt({ title, content, categoryId = null, sou
     source,
     model,
     last_used_at: null,
-    updated_at: String(Date.now()),
+    updated_at: nextTimestamp(),
   };
   memoryPrompts.unshift(row);
   return row;
@@ -153,7 +165,7 @@ export async function insertSyncedLocalPrompt({
   }
   const existing = memoryPrompts.find((item) => item.id === promptId);
   if (existing) {
-    if (!(String(updatedAt ?? "") > String(existing.updated_at ?? "0"))) {
+    if (timestampMillis(updatedAt) <= timestampMillis(existing.updated_at)) {
       return existing;
     }
     existing.title = heading;
@@ -208,7 +220,7 @@ export async function importDownloadedPrompt({ title, content, remoteId = null, 
     remote_id: remoteId,
     author: keptAuthor,
     model,
-    updated_at: String(Date.now()),
+    updated_at: nextTimestamp(),
   };
   memoryPrompts.unshift(row);
   return row;
@@ -230,6 +242,7 @@ export async function updateLocalPrompt({ id, title, content, categoryId = null,
   row.content = content;
   row.category_id = categoryId;
   if (model !== undefined) row.model = model;
+  row.updated_at = nextTimestamp();
   return row;
 }
 
@@ -237,7 +250,8 @@ export async function deleteLocalPrompt(id) {
   if (isTauri()) {
     return tauriInvoke("delete_local_prompt", { id });
   }
-  memoryPrompts = memoryPrompts.filter((item) => item.id !== id);
+  const row = memoryPrompts.find((item) => item.id === id);
+  if (row) row.deleted_at = row.updated_at = nextTimestamp();
 }
 
 export async function listLocalPrompts({ query = "", categoryId = null } = {}) {
@@ -248,7 +262,7 @@ export async function listLocalPrompts({ query = "", categoryId = null } = {}) {
     });
   }
   return memoryPrompts.filter(
-    (row) => matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
+    (row) => !row.deleted_at && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
   );
 }
 
@@ -270,12 +284,13 @@ export async function createLocalCategory({ name, parentId } = {}) {
   if (parent.parent_id) throw new Error("小分类下不能再创建子分类");
   const siblings = memoryCategories.filter((row) => row.parent_id === parentId);
   const row = {
-    id: `cat-user-${memoryCategories.length + 1}`,
+    id: nextMemoryId("cat-user"),
     parent_id: parentId,
     name: title,
     icon: null,
     is_system: false,
     sort_order: siblings.length,
+    updated_at: nextTimestamp(),
   };
   memoryCategories.push(row);
   return row;
@@ -297,13 +312,14 @@ export async function createLocalCollection({
     });
   }
   const row = {
-    id: `col-${Date.now()}`,
+    id: nextMemoryId("col"),
     title: title.trim(),
     description: null,
     category_id: categoryId,
     cover_type: coverType || "none",
     cover_json,
     member_count: 0,
+    updated_at: nextTimestamp(),
   };
   memoryCollections.unshift(row);
   return row;
@@ -317,8 +333,8 @@ export async function listLocalCollections({ query = "", categoryId = null } = {
     });
   }
   return memoryCollections.filter(
-    (row) => matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
-  );
+    (row) => !row.deleted_at && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
+  ).map((row) => ({ ...row, member_count: memoryPrompts.filter((prompt) => !prompt.deleted_at && prompt.collection_id === row.id).length }));
 }
 
 export async function addPromptToCollection(promptId, collectionId) {
@@ -332,6 +348,7 @@ export async function addPromptToCollection(promptId, collectionId) {
   const collection = memoryCollections.find((item) => item.id === collectionId);
   if (!prompt || !collection) throw new Error("合集或提示词不存在");
   prompt.collection_id = collectionId;
+  prompt.updated_at = nextTimestamp();
   collection.member_count = memoryPrompts.filter((item) => item.collection_id === collectionId).length;
 }
 
@@ -339,7 +356,7 @@ export async function listCollectionMembers(collectionId) {
   if (isTauri()) {
     return tauriInvoke("list_local_collection_members", { collection_id: collectionId });
   }
-  return memoryPrompts.filter((item) => item.collection_id === collectionId);
+  return memoryPrompts.filter((item) => !item.deleted_at && item.collection_id === collectionId);
 }
 
 export async function getLocalSetting(key) {
@@ -358,6 +375,67 @@ export async function setLocalSetting(key, value) {
     return tauriInvoke("set_local_setting", { key, value });
   }
   memorySettings[key] = value;
+  memorySettingStamps[key] = nextTimestamp();
+}
+
+export async function exportLocalSyncChanges() {
+  if (isTauri()) return tauriInvoke("export_local_sync_changes");
+  const rows = [
+    ...memoryCategories.map((row) => ["category", row]),
+    ...memoryCollections.map((row) => ["collection", row]),
+    ...memoryPrompts.map((row) => ["prompt", row]),
+    ...SYNC_SETTINGS.filter((key) => key in memorySettings).map((key) => ["setting", {
+      id: `setting:${key}`, key, value_json: JSON.stringify(memorySettings[key]), updated_at: memorySettingStamps[key] ?? "0",
+    }]),
+  ];
+  return rows.map(([kind, row]) => ({
+    id: row.id, kind, payload: { ...row }, updated_at: String(timestampMillis(row.updated_at)), deleted_at: row.deleted_at ?? null,
+  }));
+}
+
+export async function applyLocalSyncChanges(items, { keepLocal = false } = {}) {
+  if (isTauri()) return tauriInvoke("apply_local_sync_changes", { items, keep_local: keepLocal });
+  if (items.some((item) => !["category", "collection", "prompt", "setting"].includes(item.kind) || !/^\d+$/.test(item.updated_at))) throw new Error("同步记录类型或时间无效");
+  const tables = { category: memoryCategories.map((row) => ({ ...row })), collection: memoryCollections.map((row) => ({ ...row })), prompt: memoryPrompts.map((row) => ({ ...row })) };
+  const settings = { ...memorySettings };
+  const stamps = { ...memorySettingStamps };
+  for (const kind of ["category", "collection", "prompt", "setting"]) {
+    for (const item of items.filter((row) => row.kind === kind)) {
+      const payload = item.payload;
+      if (!item.id || !payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("同步记录格式错误");
+      if (kind === "setting") {
+        const key = item.id.replace(/^setting:/, "");
+        if (SYNC_SETTINGS.includes(key) && timestampMillis(item.updated_at) > timestampMillis(stamps[key])) {
+          settings[key] = JSON.parse(payload.value_json);
+          stamps[key] = item.updated_at;
+        }
+        continue;
+      }
+      const existing = tables[kind].find((row) => row.id === item.id);
+      if (existing && kind === "collection" && timestampMillis(existing.updated_at) === timestampMillis(item.updated_at)) {
+        for (const field of ["cover_json", "cover_type"]) if (field in payload) existing[field] = payload[field];
+      }
+      if (existing && ((keepLocal && kind === "prompt") || timestampMillis(existing.updated_at) >= timestampMillis(item.updated_at))) continue;
+      if (kind === "category") {
+        if (existing?.is_system) continue;
+        if (!payload.name?.trim() || !tables.category.some((row) => row.id === payload.parent_id && !row.parent_id)) throw new Error("同步分类无效");
+      }
+      for (const [field, target] of [["category_id", "category"], ["collection_id", "collection"]]) {
+        if (payload[field] != null && !tables[target].some((row) => row.id === payload[field])) throw new Error(`同步记录引用不存在的 ${field}`);
+      }
+      const row = { ...existing, ...payload, id: item.id, updated_at: String(timestampMillis(item.updated_at)) };
+      if (kind === "category") row.is_system = false;
+      else row.deleted_at = item.deleted_at ?? null;
+      if (existing) Object.assign(existing, row);
+      else tables[kind].push(row);
+    }
+  }
+  memoryCategories = tables.category;
+  memoryCollections = tables.collection;
+  memoryPrompts = tables.prompt;
+  memorySettings = settings;
+  memorySettingStamps = stamps;
+  for (const item of items) memoryClock = Math.max(memoryClock, timestampMillis(item.updated_at));
 }
 
 export async function exportLocalLibrary() {
@@ -431,6 +509,7 @@ export async function recordLocalPromptUse(id) {
   if (!row) throw new Error("提示词不存在");
   row.use_count = (row.use_count ?? 0) + 1;
   row.last_used_at = String(Date.now());
+  row.updated_at = nextTimestamp();
   return row;
 }
 
@@ -459,5 +538,6 @@ export async function clearLocalPromptUse() {
   memoryPrompts.forEach((row) => {
     row.use_count = 0;
     row.last_used_at = null;
+    row.updated_at = nextTimestamp();
   });
 }

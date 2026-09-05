@@ -12,6 +12,66 @@ use super::{
     update_prompt_in_dir, update_prompt_in_dir_with_model, upsert_synced_prompt_in_dir,
 };
 
+#[test]
+fn sync_round_trip_restores_categories_collections_members_models_and_deletions() {
+    use super::{apply_sync_changes, export_sync_changes};
+    let a = tempfile::tempdir().unwrap();
+    let b = tempfile::tempdir().unwrap();
+    initialize_in_dir(a.path()).unwrap();
+    initialize_in_dir(b.path()).unwrap();
+    let category = create_category_in_dir(a.path(), "我的图片", "cat-image").unwrap();
+    let collection = create_collection_in_dir(a.path(), "灵感", Some(&category.id), "single", Some("[\"cover.png\"]")).unwrap();
+    let prompt = create_prompt_in_dir_with_model(a.path(), "人像", "正文", Some(&category.id), Some("Flux")).unwrap();
+    add_prompt_to_collection_in_dir(a.path(), &prompt.id, &collection.id).unwrap();
+    set_setting_in_dir(a.path(), "theme", "dark").unwrap();
+    set_setting_in_dir(a.path(), "manual_proxy", "private-proxy").unwrap();
+    let snapshot = export_sync_changes(a.path()).unwrap();
+    assert!(!snapshot.iter().any(|row| row.payload["value_json"] == "private-proxy"));
+    assert!(snapshot.iter().filter(|row| row.kind == "prompt").all(|row| row.updated_at.len() == 13));
+    // Deliberately reverse the dependencies to test transactional ordering.
+    apply_sync_changes(b.path(), &snapshot.into_iter().rev().collect::<Vec<_>>(), false).unwrap();
+    assert!(list_categories_in_dir(b.path()).unwrap().iter().any(|row| row.id == category.id));
+    let members = list_collection_members_in_dir(b.path(), &collection.id).unwrap();
+    assert_eq!(members.len(), 1);
+    assert_eq!(members[0].model.as_deref(), Some("Flux"));
+    assert_eq!(get_setting_in_dir(b.path(), "theme").unwrap(), "dark");
+    assert_eq!(list_collections_in_dir(b.path(), "", Some("cat-image")).unwrap()[0].cover_json, "[\"cover.png\"]");
+    delete_prompt_in_dir(a.path(), &prompt.id).unwrap();
+    apply_sync_changes(b.path(), &export_sync_changes(a.path()).unwrap(), false).unwrap();
+    assert!(list_prompts_in_dir(b.path(), "", None).unwrap().is_empty());
+    assert_eq!(collection_member_count(b.path(), &collection.id).unwrap(), 0);
+    // A stale snapshot must not resurrect the deleted member.
+    let mut stale = export_sync_changes(a.path()).unwrap();
+    let row = stale.iter_mut().find(|row| row.id == prompt.id).unwrap();
+    row.updated_at = "1".into();
+    row.deleted_at = None;
+    apply_sync_changes(b.path(), &stale, false).unwrap();
+    assert!(list_prompts_in_dir(b.path(), "", None).unwrap().is_empty());
+}
+
+#[test]
+fn sync_rolls_back_bad_references_and_normalizes_legacy_seconds() {
+    use super::{apply_sync_changes, SyncChange};
+    use serde_json::json;
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let change = |id: &str, stamp: &str, payload| SyncChange { id: id.into(), kind: "prompt".into(), payload, updated_at: stamp.into(), deleted_at: None };
+    let valid = change("p", "1700000000000", json!({"title":"旧版", "content":"旧"}));
+    let invalid = change("bad", "2", json!({"title":"坏引用", "category_id":"missing"}));
+    assert!(apply_sync_changes(dir.path(), &[valid.clone(), invalid], false).is_err());
+    assert!(list_prompts_in_dir(dir.path(), "", None).unwrap().is_empty());
+    apply_sync_changes(dir.path(), &[valid], false).unwrap();
+    let newer = change("p", "1700000001", json!({"title":"新版", "content":"新"}));
+    apply_sync_changes(dir.path(), &[newer.clone()], true).unwrap();
+    assert_eq!(list_prompts_in_dir(dir.path(), "", None).unwrap()[0].content, "旧");
+    apply_sync_changes(dir.path(), &[newer], false).unwrap();
+    assert_eq!(list_prompts_in_dir(dir.path(), "", None).unwrap()[0].content, "新");
+    let tombstone = SyncChange { deleted_at: Some("1700000002000".into()), ..change("p", "1700000002000", json!({})) };
+    apply_sync_changes(dir.path(), &[tombstone], false).unwrap();
+    apply_sync_changes(dir.path(), &[change("p", "1700000003000", json!({"title":"不要复活"}))], true).unwrap();
+    assert!(list_prompts_in_dir(dir.path(), "", None).unwrap().is_empty());
+}
+
 #[tokio::test]
 async fn status_is_ready_after_initialize() {
     let dir = tempfile::tempdir().unwrap();

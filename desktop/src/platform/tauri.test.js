@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { createLocalPrompt, listLocalPrompts, addPromptToCollection } from "./library.js";
+import { createLocalPrompt, listLocalPrompts, addPromptToCollection, exportLocalSyncChanges, applyLocalSyncChanges } from "./library.js";
 import { invokeCommand } from "./tauri.js";
 
 const invoke = vi.hoisted(() => vi.fn(async () => []));
@@ -22,4 +22,13 @@ it("converts auth arguments without rewriting nested sync payloads", async () =>
   const items = [{ payload: { category_id: "cat-image-0" } }];
   await invokeCommand("put_library_changes", { access_token: "test", items });
   expect(invoke).toHaveBeenLastCalledWith("put_library_changes", { accessToken: "test", items });
+});
+
+it("uses native snapshot commands including tombstones and keep-local", async () => {
+  window.__TAURI_INTERNALS__ = {};
+  const items = [{ id: "p", kind: "prompt", payload: { collection_id: "col" }, updated_at: "2", deleted_at: "2" }];
+  await exportLocalSyncChanges();
+  expect(invoke).toHaveBeenLastCalledWith("export_local_sync_changes", undefined);
+  await applyLocalSyncChanges(items, { keepLocal: true });
+  expect(invoke).toHaveBeenLastCalledWith("apply_local_sync_changes", { items, keepLocal: true });
 });

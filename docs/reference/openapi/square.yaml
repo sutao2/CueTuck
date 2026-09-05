@@ -90,9 +90,11 @@ paths:
     get:
       operationId: listLibraryChanges
       summary: 拉取账号库变更
+      description: since 按 Unix 时间比较，兼容旧秒值与新毫秒值；返回包含软删除的记录。
     put:
       operationId: putLibraryChanges
       summary: 推送账号库变更
+      description: 支持 prompt、collection、category、setting；payload 为对象，updated_at 为非负整数字符串，按归一化后的时间较新者胜。非法批次整体拒绝。
   /v1/favorites:
     get:
       operationId: listFavorites

@@ -69,9 +69,9 @@ pub fn create_category_in_dir(
     let id = format!("cat-user-{}", Uuid::new_v4());
     connection
         .execute(
-            "INSERT INTO categories (id, parent_id, name, icon, is_system, sort_order)
-             VALUES (?1, ?2, ?3, NULL, 0, ?4)",
-            rusqlite::params![id, parent_id, title, sort_order],
+            "INSERT INTO categories (id, parent_id, name, icon, is_system, sort_order, updated_at)
+             VALUES (?1, ?2, ?3, NULL, 0, ?4, ?5)",
+            rusqlite::params![id, parent_id, title, sort_order, super::now_millis()],
         )
         .map_err(|error| error.to_string())?;
     Ok(CategoryRecord {

@@ -26,11 +26,7 @@ fn open_db(dir: &Path) -> Result<Connection, String> {
 }
 
 fn now_iso() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_secs().to_string())
-        .unwrap_or_else(|_| "0".to_string())
+    super::now_millis()
 }
 
 pub(crate) fn map_prompt_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<PromptRecord> {
@@ -154,7 +150,7 @@ pub fn upsert_synced_prompt_in_dir(
         )
         .ok();
     if let Some(local_updated) = local_updated {
-        if stamp.as_str() <= local_updated.as_str() {
+        if super::timestamp_ms(&stamp) <= super::timestamp_ms(&local_updated) {
             return read_prompt(&connection, id);
         }
         connection
@@ -245,8 +241,8 @@ pub fn prompt_use_count(dir: &Path, id: &str) -> Result<i64, String> {
 pub fn clear_prompt_use_in_dir(dir: &Path) -> Result<(), String> {
     open_db(dir)?
         .execute(
-            "UPDATE prompts SET use_count = 0, last_used_at = NULL WHERE deleted_at IS NULL",
-            [],
+            "UPDATE prompts SET use_count = 0, last_used_at = NULL, updated_at = ?1 WHERE deleted_at IS NULL",
+            [now_iso()],
         )
         .map_err(|error| error.to_string())?;
     Ok(())
