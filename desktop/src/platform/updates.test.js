@@ -95,6 +95,33 @@ describe("updates", () => {
     expect(JSON.stringify(result)).not.toMatch(/商店/);
   });
 
+  it.each(["v0.0.9", `v${tauriVersion}+rebuild`])("does not offer older or equivalent version %s", async (tag_name) => {
+    vi.stubGlobal("fetch", async () => ({ ok: true, json: async () => [{ tag_name }] }));
+    expect((await checkForUpdates()).available).toBe(false);
+  });
+
+  it("chooses the highest valid non-draft version rather than the first release", async () => {
+    vi.stubGlobal("fetch", async () => ({ ok: true, json: async () => [
+      { tag_name: "v99.0.0", draft: true },
+      { tag_name: "nightly" },
+      { tag_name: "v0.2.0" },
+      { tag_name: "V0.10.0", body: "newest" },
+      { tag_name: "v1.0.0-beta.1", prerelease: true },
+    ] }));
+    expect(await checkForUpdates()).toMatchObject({ available: true, version: "0.10.0", notes: "newest" });
+  });
+
+  it("orders prerelease numbers semantically and rejects invalid or mislabeled releases", async () => {
+    vi.stubGlobal("fetch", async () => ({ ok: true, json: async () => [
+      { tag_name: "v1.0.0-beta.2", prerelease: true },
+      { tag_name: "v1.0.0-beta.10", prerelease: true },
+      { tag_name: "v2.0.0-beta.1", prerelease: false },
+      { tag_name: "bad", prerelease: false },
+    ] }));
+    expect((await checkForUpdates({ channel: "preview" })).version).toBe("1.0.0-beta.10");
+    expect((await checkForUpdates()).available).toBe(false);
+  });
+
   it("queues an updater install when auto-download is on and the channel has a package", async () => {
     const install = vi.fn(async ({ channel }) => ({
       queued: true,
