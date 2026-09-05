@@ -1,9 +1,23 @@
 let prompts = [];
 let collections = [];
+let activeAccount = null;
+const libraries = new Map();
 
 export function resetMemoryLibrary() {
   prompts = [];
   collections = [];
+  activeAccount = null;
+  libraries.clear();
+}
+
+export function activateMemoryLibrary(email) {
+  const next = email || null;
+  if (next === activeAccount) return;
+  libraries.set(activeAccount, { prompts, collections });
+  const saved = libraries.get(next);
+  prompts = saved?.prompts ?? [];
+  collections = saved?.collections ?? [];
+  activeAccount = next;
 }
 
 export function createLocalPrompt({ title, content, source = "local", categoryId = null, model = null } = {}) {
@@ -57,6 +71,8 @@ export function importDownloadedCollection(payload) {
 }
 
 export function replacePromptsFromAccount(items) {
+  const pending = prompts.filter((row) => row.sync_pending);
+  const pendingCollections = collections.filter((row) => pending.some((prompt) => prompt.collection_id === row.id));
   collections = (Array.isArray(items) ? items : [])
     .filter((item) => item?.kind === "collection" && !item.deleted_at)
     .map((item) => ({ ...item.payload, id: item.id, updated_at: String(item.updated_at ?? "0") }));
@@ -73,7 +89,14 @@ export function replacePromptsFromAccount(items) {
       model: item.payload?.model ?? null,
       updated_at: String(item.updated_at ?? "0"),
     }));
+  prompts = [...pending, ...prompts.filter((row) => !pending.some((draft) => draft.id === row.id))];
+  collections = [...pendingCollections, ...collections.filter((row) => !pendingCollections.some((draft) => draft.id === row.id))];
   return listLocalPrompts();
+}
+
+export function markPromptSynced(id, updatedAt) {
+  const row = prompts.find((row) => row.id === id && row.updated_at === updatedAt);
+  if (row) delete row.sync_pending;
 }
 
 export function getLocalPrompt(id) {

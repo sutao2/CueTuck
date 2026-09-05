@@ -1,9 +1,10 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { listLocalPrompts, resetMemoryLibrary } from "./memoryLibrary.js";
+import { createLocalPrompt, listLocalPrompts, resetMemoryLibrary } from "./memoryLibrary.js";
 import { resetSquare, setSquareContentTransport, setSquareTransport, setFavoriteTransport } from "./square.js";
 import {
   loginOAuthSession,
+  getSession,
   loginSession,
   resetMemorySession,
   setOAuthProviderList,
@@ -42,6 +43,72 @@ describe("WebApp", () => {
     expect(w.get('[data-testid="sidebar"]').classes()).toContain("is-collapsed");
     expect(w.get('[data-space="local"]').exists()).toBe(true);
     expect(w.get('[data-region="content"]').exists()).toBe(true);
+  });
+
+  it("keeps failed saves in the tab and retries without losing guest drafts on logout", async () => {
+    createLocalPrompt({ title: "访客草稿", content: "保留" });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "acc" }));
+    const put = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValue({ items: [] });
+    setAccountLibraryTransport({ get: async () => ({ items: [] }), put });
+    const w = mount(WebApp);
+    await flushPromises();
+    await w.get('[data-testid="open-login"]').trigger("click");
+    await w.get('[data-testid="login-email"]').setValue("dev@promptark.local");
+    await w.get('[data-testid="login-password"]').setValue("devpass");
+    await w.get('[data-testid="login-submit"]').trigger("click");
+    await flushPromises();
+    expect(w.text()).not.toContain("访客草稿");
+    await w.get('[data-testid="new-prompt"]').trigger("click");
+    await w.get('[data-testid="prompt-title"]').setValue("账号草稿");
+    await w.get('[data-testid="prompt-content"]').setValue("修改保留");
+    await w.get('[data-testid="save-prompt"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="cloud-note"]').text()).toContain("尚未保存到账号库");
+    expect(listLocalPrompts()[0].sync_pending).toBe(true);
+    await w.get('[data-testid="reload-account"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="prompt-list"]').text()).toContain("账号草稿");
+    await w.get('[data-testid="retry-save"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="cloud-note"]').text()).toBe("已保存到账号库。");
+    expect(put.mock.calls[1][0][0].payload).not.toHaveProperty("sync_pending");
+    await w.get('[data-testid="logout"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="prompt-list"]').text()).toContain("访客草稿");
+    expect(w.get('[data-testid="prompt-list"]').text()).not.toContain("账号草稿");
+  });
+
+  it("keeps the wizard preview after clipboard rejection and reports only successful copies", async () => {
+    const writeText = vi.fn().mockRejectedValueOnce(new Error("denied")).mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const row = createLocalPrompt({ title: "复制测试", content: "保留正文" });
+    const w = mount(WebApp);
+    await flushPromises();
+    await w.get('[data-testid="prompt-row"]').trigger("click");
+    await w.get('[data-testid="use-prompt"]').trigger("click");
+    await w.get('[data-testid="wizard-copy"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="copy-note"]').text()).toContain("复制失败");
+    expect(w.get('[data-testid="wizard-preview"]').text()).toBe(row.content);
+    await w.get('[data-testid="wizard-copy"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="copy-note"]').text()).toBe("已复制");
+    delete navigator.clipboard;
+  });
+
+  it("ignores a login response after the user cancels the form", async () => {
+    let resolveLogin;
+    setSessionTransport(() => new Promise((resolve) => { resolveLogin = resolve; }));
+    const w = mount(WebApp);
+    await w.get('[data-testid="open-login"]').trigger("click");
+    await w.get('[data-testid="login-email"]').setValue("dev@promptark.local");
+    await w.get('[data-testid="login-password"]').setValue("devpass");
+    await w.get('[data-testid="login-submit"]').trigger("click");
+    await w.get('[data-testid="login-modal"]').findAll("button").find((button) => button.text() === "取消").trigger("click");
+    resolveLogin({ email: "dev@promptark.local", access_token: "late" });
+    await flushPromises();
+    expect(getSession().loggedIn).toBe(false);
+    expect(w.find('[data-testid="logout"]').exists()).toBe(false);
   });
 
   it("opens a downloaded collection member and retains failed downloads in square", async () => {
