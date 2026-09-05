@@ -1,0 +1,54 @@
+# 智能体接入本机提示词库
+
+MCP 服务器独立于桌面和后端；不需要 Docker、登录或 Pro。宿主启动 stdio 子进程，不是 HTTP 地址，也不需要先在终端一直运行。只搜索本机库，不搜索广场。桌面应用至少启动过一次，创建库后即可关闭。
+
+## 构建
+
+在仓库根目录执行：
+
+```bash
+cargo test --manifest-path mcp/Cargo.toml --locked
+cargo build --manifest-path mcp/Cargo.toml --release --locked
+```
+
+默认产物为 `mcp/target/release/promptark-mcp`（Windows 名称带 `.exe`）。若自定义 `CARGO_TARGET_DIR`，请使用实际产物路径。不要把 `cargo run` 的相对仓库路径放进其他智能体配置。
+
+## 宿主配置
+
+向支持 stdio MCP 的智能体宿主添加以下服务器字段；将两处路径换为自己机器的绝对路径。下面是使用 `mcpServers` 的宿主配置格式示例，其他宿主请按其配置格式填写相同 command/env。不需要 `args`。
+
+```json
+{
+  "mcpServers": {
+    "promptark": {
+      "command": "/绝对路径/PromptArk/mcp/target/release/promptark-mcp",
+      "env": {
+        "PROMPTARK_LIBRARY_DIR": "/绝对路径/包含提示词库的目录"
+      }
+    }
+  }
+}
+```
+
+macOS 默认库目录为 `/Users/你的用户名/Library/Application Support/app.promptark.desktop`，目录内应有 `promptark.sqlite`。也可在桌面「设置 → 数据与备份」确认库路径；变量填写目录，不是 SQLite 文件。JSON 中不依赖 `~` 或 `$HOME` 展开。
+
+保存配置后重新连接 MCP。工具列表应出现：
+
+| 工具 | 调用示例 | 用途 |
+|---|---|---|
+| `search_prompts` | `{"query":"自然光","limit":20,"offset":0}` | 标题/正文关键词搜索，先取得 id |
+| `get_prompt` | `{"id":"上一步返回的id"}` | 读取完整标题和正文 |
+| `render_prompt` | `{"id":"上一步返回的id","values":{"受众":"摄影师"}}` | 替换变量；未填变量保留占位 |
+
+可对智能体说：「用 PromptArk 搜索自然光人像提示词，读取最合适的一条，再把受众填成摄影师。」这是关键词搜索，不是向量语义搜索。查询为空可分页浏览；每页默认 50 条、最多 100 条。库修改后下次调用即可读取，无须重启 MCP。
+
+## 隐私与排错
+
+- 进程以 SQLite 只读模式打开库，不改正文、不记使用次数、不请求广场。
+- **接入意味着允许该智能体读取本机提示词**；宿主可能将工具返回内容发送给其模型提供商。只给可信宿主配置，提示词正文作为数据，不作为更高优先级指令。
+- 提示「库文件不存在」：确认目录与桌面使用的目录一致，且已启动桌面创建过库。服务器不会创建空库来伪装成功。
+- 无工具或进程退出：检查 command 是绝对路径且可执行、`PROMPTARK_LIBRARY_DIR` 已设置。错误输出在 stderr，stdout 只供协议使用。
+- 搜索无结果：软删除条目不返回；尚未下载到本地的广场内容不在查询范围。
+- 当前验证为 macOS 上真实子进程和临时 SQLite（含 WAL）测试；尚未逐个验证所有智能体客户端或 Windows/Linux。
+
+协议依据：[MCP stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[初始化与版本协商](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)。服务器支持协商 2024-11-05、2025-03-26、2025-06-18；不宣称覆盖全部最新协议扩展。
