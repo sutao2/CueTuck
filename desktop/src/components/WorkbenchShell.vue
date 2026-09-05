@@ -303,7 +303,7 @@
                     {{ favoriteIds.includes(item.id) ? "已收藏" : "收藏" }}
                   </button>
                 </template>
-                <button v-else type="button" class="card-action" @click.stop="using = item">使用</button>
+                <button v-else type="button" class="card-action" @click.stop="startUse(item)">使用</button>
               </div>
             </article>
           </div>
@@ -323,6 +323,8 @@
       :model-options="modelOptions"
       :default-model="defaultModel"
       :default-category-id="selectedId === '__uncategorized__' ? '' : (selectedId || '')"
+      :error="editorError"
+      :busy="editorBusy"
       @cancel="closeEditor"
       @save="savePrompt"
       @remove="removePrompt"
@@ -331,6 +333,8 @@
       v-if="using"
       :prompt="using"
       :hints-enabled="variableHints"
+      :error="useError"
+      :busy="useBusy"
       @cancel="using = null"
       @copied="finishUse"
     />
@@ -338,9 +342,14 @@
       v-if="openedCollection"
       :collection="openedCollection"
       :members="collectionMembers"
-      :prompts="prompts"
+      :prompts="collectionCandidates"
+      :error="collectionError"
       @cancel="openedCollection = null"
       @add="addToOpenedCollection"
+      @remove-member="removeFromOpenedCollection"
+      @open="openCollectionMember"
+      @use="useCollectionMember"
+      @edit="editOpenedCollection"
     />
     <SettingsModal
       v-if="settingsOpen"
@@ -459,6 +468,9 @@ import { DEFAULT_LAUNCHER_SHORTCUT } from "../platform/shortcut.js";
 import { applyHostChrome, detectHost, formatShortcutLabel, trafficLightInsetPx } from "../platform/windowChrome.js";
 import {
   addPromptToCollection,
+  removePromptFromCollection,
+  updateLocalCollection,
+  deleteLocalCollection,
   buildCategoryTree,
   createLocalCategory,
   createLocalCollection,
@@ -493,6 +505,12 @@ const sortTab = ref("全部");
 const creating = ref(false);
 const editing = ref(null);
 const using = ref(null);
+const useError = ref("");
+const useBusy = ref(false);
+const editorError = ref("");
+const editorBusy = ref(false);
+const collectionError = ref("");
+const collectionCandidates = ref([]);
 const settingsOpen = ref(false);
 const openedCollection = ref(null);
 const collectionMembers = ref([]);
@@ -873,7 +891,7 @@ async function runContextAction(action) {
     return;
   }
   if (action === "use") {
-    using.value = item;
+    startUse(item);
     return;
   }
   if (action === "delete") {
@@ -956,6 +974,7 @@ let localRequest = 0;
 function closeEditor() {
   creating.value = false;
   editing.value = null;
+  editorError.value = "";
 }
 
 function coverPreview(item) {
@@ -963,33 +982,54 @@ function coverPreview(item) {
 }
 
 async function savePrompt({ id, kind, title, content, categoryId, model, coverType, coverUrls }) {
-  if (id) {
-    await updateLocalPrompt({ id, title, content, categoryId, model });
-  } else if (kind === "collection") {
-    await createLocalCollection({ title, categoryId, coverType, coverUrls });
-  } else {
-    await createLocalPrompt({ title, content, categoryId, model });
-  }
-  closeEditor();
-  query.value = "";
-  await reloadPrompts();
+  if (editorBusy.value) return;
+  editorBusy.value = true;
+  editorError.value = "";
+  try {
+    if (id && kind === "collection") {
+      await updateLocalCollection({ id, title, categoryId, coverType, coverUrls });
+    } else if (id) {
+      await updateLocalPrompt({ id, title, content, categoryId, model });
+    } else if (kind === "collection") {
+      await createLocalCollection({ title, categoryId, coverType, coverUrls });
+    } else {
+      await createLocalPrompt({ title, content, categoryId, model });
+    }
+    closeEditor();
+    query.value = "";
+    await reloadPrompts();
+  } catch (error) {
+    editorError.value = `保存失败：${error.message || error}`;
+  } finally { editorBusy.value = false; }
 }
 
 async function removePrompt(id) {
-  await deleteLocalPrompt(id);
-  closeEditor();
-  await reloadPrompts();
+  try {
+    if (editing.value?.kind === "collection") await deleteLocalCollection(id);
+    else await deleteLocalPrompt(id);
+    closeEditor();
+    await reloadPrompts();
+  } catch (error) { editorError.value = `删除失败：${error.message || error}`; }
 }
 
 async function finishUse(text) {
+  if (useBusy.value) return;
+  const prompt = using.value;
+  useBusy.value = true;
+  useError.value = "";
   try {
     await navigator.clipboard.writeText(text);
   } catch {
-    /* browser may deny clipboard in tests */
+    useError.value = "复制失败，请检查剪贴板权限后重试；填写内容已保留。";
+    useBusy.value = false;
+    return;
   }
-  await recordLocalPromptUse(using.value.id);
-  using.value = null;
-  await reloadPrompts();
+  try {
+    await recordLocalPromptUse(prompt.id);
+    if (using.value?.id === prompt.id) using.value = null;
+    await reloadPrompts();
+  } catch (error) { useError.value = `已复制，但保存使用记录失败：${error.message || error}`; }
+  finally { useBusy.value = false; }
 }
 
 function openItem(item) {
@@ -1003,13 +1043,48 @@ function openItem(item) {
 
 async function openCollection(collection) {
   openedCollection.value = collection;
-  collectionMembers.value = await listCollectionMembers(collection.id);
+  collectionError.value = "";
+  try {
+    [collectionMembers.value, collectionCandidates.value] = await Promise.all([
+      listCollectionMembers(collection.id), listLocalPrompts({ query: "", categoryId: null }),
+    ]);
+  } catch (error) { collectionError.value = `读取失败：${error.message || error}`; }
 }
 
 async function addToOpenedCollection(promptId) {
-  await addPromptToCollection(promptId, openedCollection.value.id);
-  collectionMembers.value = await listCollectionMembers(openedCollection.value.id);
-  await reloadPrompts();
+  try {
+    await addPromptToCollection(promptId, openedCollection.value.id);
+    await openCollection(openedCollection.value);
+    await reloadPrompts();
+  } catch (error) { collectionError.value = `加入失败：${error.message || error}`; }
+}
+
+async function removeFromOpenedCollection(promptId) {
+  try {
+    await removePromptFromCollection(promptId, openedCollection.value.id);
+    await openCollection(openedCollection.value);
+    await reloadPrompts();
+  } catch (error) { collectionError.value = `移除失败：${error.message || error}`; }
+}
+
+function openCollectionMember(member) {
+  openedCollection.value = null;
+  editing.value = member;
+}
+
+function useCollectionMember(member) {
+  openedCollection.value = null;
+  startUse(member);
+}
+
+function startUse(member) {
+  useError.value = "";
+  using.value = member;
+}
+
+function editOpenedCollection() {
+  editing.value = { ...openedCollection.value, kind: "collection" };
+  openedCollection.value = null;
 }
 
 onMounted(async () => {

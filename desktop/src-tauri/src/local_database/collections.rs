@@ -122,6 +122,8 @@ pub fn add_prompt_to_collection_in_dir(
     collection_id: &str,
 ) -> Result<(), String> {
     let connection = open_db(dir)?;
+    let exists: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM collections WHERE id=?1 AND deleted_at IS NULL)", [collection_id], |row| row.get(0)).map_err(|error| error.to_string())?;
+    if !exists { return Err("合集不存在".into()); }
     let changed = connection
         .execute(
             "UPDATE prompts SET collection_id = ?1, updated_at = ?2
@@ -133,6 +135,31 @@ pub fn add_prompt_to_collection_in_dir(
         return Err("提示词不存在".to_string());
     }
     Ok(())
+}
+
+pub fn remove_prompt_from_collection_in_dir(dir: &Path, prompt_id: &str, collection_id: &str) -> Result<(), String> {
+    open_db(dir)?.execute("UPDATE prompts SET collection_id=NULL, updated_at=?1 WHERE id=?2 AND collection_id=?3 AND deleted_at IS NULL",
+        rusqlite::params![now_iso(), prompt_id, collection_id]).map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+pub fn update_collection_in_dir(dir: &Path, id: &str, title: &str, category_id: Option<&str>, cover_type: &str, cover_json: &str) -> Result<(), String> {
+    let title = title.trim();
+    if title.is_empty() { return Err("合集名称不能为空".into()); }
+    let cover_type = if matches!(cover_type, "single" | "grid") { cover_type } else { "none" };
+    let changed = open_db(dir)?.execute("UPDATE collections SET title=?1, category_id=?2, cover_type=?3, cover_json=?4, updated_at=?5 WHERE id=?6 AND deleted_at IS NULL",
+        rusqlite::params![title, category_id, cover_type, normalize_cover_json(cover_type, Some(cover_json)), now_iso(), id]).map_err(|error| error.to_string())?;
+    if changed == 0 { return Err("合集不存在".into()); }
+    Ok(())
+}
+
+pub fn delete_collection_in_dir(dir: &Path, id: &str) -> Result<(), String> {
+    let mut connection = open_db(dir)?;
+    let transaction = connection.transaction().map_err(|error| error.to_string())?;
+    let now = now_iso();
+    transaction.execute("UPDATE collections SET deleted_at=?1, updated_at=?1 WHERE id=?2 AND deleted_at IS NULL", rusqlite::params![now, id]).map_err(|error| error.to_string())?;
+    transaction.execute("UPDATE prompts SET collection_id=NULL, updated_at=?1 WHERE collection_id=?2", rusqlite::params![now, id]).map_err(|error| error.to_string())?;
+    transaction.commit().map_err(|error| error.to_string())
 }
 
 pub fn collection_member_count(dir: &Path, collection_id: &str) -> Result<i64, String> {

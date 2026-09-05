@@ -71,6 +71,46 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-region="statusbar"]').exists()).toBe(true);
   });
 
+  it("keeps the use dialog and count unchanged after clipboard failure, then retries", async () => {
+    const writeText = vi.fn().mockRejectedValueOnce(new Error("denied")).mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    await createLocalPrompt({ title: "复制测试", content: "正文" });
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get(".card-action").trigger("click");
+    await w.get('[data-testid="use-next"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="use-modal"]').text()).toContain("复制失败");
+    expect((await listLocalPrompts())[0].use_count).toBe(0);
+    await w.get('[data-testid="use-next"]').trigger("click");
+    await flushPromises();
+    expect(w.find('[data-testid="use-modal"]').exists()).toBe(false);
+    expect((await listLocalPrompts())[0].use_count).toBe(1);
+    delete navigator.clipboard;
+  });
+
+  it("offers members from the whole library and can remove without deleting the prompt", async () => {
+    const { listCollectionMembers } = await import("../platform/library.js");
+    const collection = await createLocalCollection({ title: "图片合集", categoryId: "cat-image-0" });
+    const prompt = await createLocalPrompt({ title: "编程", content: "正文", categoryId: "cat-software-0" });
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.findAll(".tree-row.child").find((row) => row.text().includes("人像摄影")).trigger("click");
+    await flushPromises();
+    await w.get(".prompt-card").trigger("click");
+    await flushPromises();
+    const dialog = w.get('[data-testid="collection-detail"]');
+    expect(dialog.get("select").text()).toContain("编程");
+    await dialog.get("select").setValue(prompt.id);
+    await dialog.get(".primary-button").trigger("click");
+    await flushPromises();
+    expect(await listCollectionMembers(collection.id)).toHaveLength(1);
+    await dialog.get('[data-testid="remove-member"]').trigger("click");
+    await flushPromises();
+    expect(await listCollectionMembers(collection.id)).toHaveLength(0);
+    expect(await listLocalPrompts()).toHaveLength(1);
+  });
+
   it("shows a non-blocking offline notice and can return to local", async () => {
     await createLocalPrompt({ title: "本地仍在", content: "x" });
     setSquareTransport(async () => {

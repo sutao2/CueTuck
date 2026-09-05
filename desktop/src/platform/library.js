@@ -346,10 +346,36 @@ export async function addPromptToCollection(promptId, collectionId) {
   }
   const prompt = memoryPrompts.find((item) => item.id === promptId);
   const collection = memoryCollections.find((item) => item.id === collectionId);
-  if (!prompt || !collection) throw new Error("合集或提示词不存在");
+  if (!prompt || prompt.deleted_at || !collection || collection.deleted_at) throw new Error("合集或提示词不存在");
   prompt.collection_id = collectionId;
   prompt.updated_at = nextTimestamp();
   collection.member_count = memoryPrompts.filter((item) => item.collection_id === collectionId).length;
+}
+
+export async function removePromptFromCollection(promptId, collectionId) {
+  if (isTauri()) return tauriInvoke("remove_prompt_from_local_collection", { prompt_id: promptId, collection_id: collectionId });
+  const row = memoryPrompts.find((item) => item.id === promptId && item.collection_id === collectionId && !item.deleted_at);
+  if (row) { row.collection_id = null; row.updated_at = nextTimestamp(); }
+}
+
+export async function updateLocalCollection({ id, title, categoryId = null, coverType = "none", coverUrls = [] }) {
+  const cover_json = serializeCoverUrls(coverType, coverUrls);
+  if (isTauri()) return tauriInvoke("update_local_collection", { id, title, category_id: categoryId, cover_type: coverType, cover_json });
+  const row = memoryCollections.find((item) => item.id === id && !item.deleted_at);
+  if (!row) throw new Error("合集不存在");
+  if (!title.trim()) throw new Error("合集名称不能为空");
+  Object.assign(row, { title: title.trim(), category_id: categoryId, cover_type: coverType, cover_json, updated_at: nextTimestamp() });
+}
+
+export async function deleteLocalCollection(id) {
+  if (isTauri()) return tauriInvoke("delete_local_collection", { id });
+  const row = memoryCollections.find((item) => item.id === id && !item.deleted_at);
+  if (!row) return;
+  row.deleted_at = row.updated_at = nextTimestamp();
+  for (const prompt of memoryPrompts.filter((item) => item.collection_id === id)) {
+    prompt.collection_id = null;
+    prompt.updated_at = row.updated_at;
+  }
 }
 
 export async function listCollectionMembers(collectionId) {
