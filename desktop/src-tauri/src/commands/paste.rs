@@ -22,11 +22,23 @@ pub fn capture_selected_text() -> Result<String, String> {
 
 #[tauri::command]
 pub async fn paste_to_active_app(app: AppHandle) -> Result<(), String> {
-    crate::commands::launcher::hide_launcher_window(&app)?;
+    let result = paste_after_hiding(&app);
+    if result.is_err() {
+        if let Some(guard) = app.try_state::<crate::commands::launcher::LauncherFocusGuard>() { guard.mark_shown(); }
+        if let Some(window) = app.get_webview_window("launcher") {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }
+    result
+}
+
+fn paste_after_hiding(app: &AppHandle) -> Result<(), String> {
+    crate::commands::launcher::hide_launcher_window(app)?;
     #[cfg(target_os = "macos")]
     {
         if let Some(previous) = app.try_state::<crate::commands::launcher::PreviousApplication>() {
-            previous.restore_previous(&app)?;
+            previous.restore_previous(app)?;
         }
     }
     #[cfg(not(target_os = "macos"))]

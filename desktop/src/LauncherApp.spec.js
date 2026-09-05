@@ -1,10 +1,12 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as library from "./platform/library.js";
 import LauncherApp from "./LauncherApp.vue";
 import { createLocalPrompt, resetMemoryLibrary } from "./platform/library.js";
 import { resetSquare, setSquareTransport } from "./platform/square.js";
 
 describe("LauncherApp", () => {
+  afterEach(() => { vi.restoreAllMocks(); delete navigator.clipboard; });
   beforeEach(() => {
     resetMemoryLibrary();
     resetSquare();
@@ -78,5 +80,47 @@ describe("LauncherApp", () => {
     await w.get("input").trigger("keydown", { key: "Enter" });
     expect(w.text()).toContain("姓名");
     expect(w.get(".preview").text()).toContain("{{姓名}}");
+  });
+
+  it("previews plain prompts and keeps clipboard failures out of usage history", async () => {
+    await createLocalPrompt({ title: "普通正文", content: "未复制的文本" });
+    const writeText = vi.fn().mockRejectedValueOnce(new Error("denied")).mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const w = mount(LauncherApp);
+    await flushPromises();
+    await w.get("input").setValue("普通");
+    await flushPromises();
+    await w.get("input").trigger("keydown", { key: "Enter" });
+    expect(w.get(".preview").text()).toBe("未复制的文本");
+    expect(writeText).not.toHaveBeenCalled();
+    await w.findAll("button").find((button) => button.text() === "复制").trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="launcher-feedback"]').text()).toContain("复制失败");
+    expect((await library.listLocalPrompts())[0].use_count).toBe(0);
+    expect(await library.getLocalSetting("last_rendered_prompt")).toBeFalsy();
+    await w.findAll("button").find((button) => button.text() === "复制").trigger("click");
+    await flushPromises();
+    expect((await library.listLocalPrompts())[0].use_count).toBe(1);
+    expect(await library.getLocalSetting("last_rendered_prompt")).toBe("未复制的文本");
+  });
+
+  it("does not let old searches overwrite new results or reopen a cleared query", async () => {
+    const pending = {};
+    vi.spyOn(library, "listLocalPrompts").mockImplementation(({ query }) => new Promise((resolve) => { pending[query] = resolve; }));
+    const w = mount(LauncherApp);
+    await flushPromises();
+    await w.get("input").setValue("old");
+    await w.get("input").setValue("new");
+    pending.new([{ id: "new", title: "新结果", content: "正文" }]);
+    await flushPromises();
+    pending.old([{ id: "old", title: "旧结果", content: "正文" }]);
+    await flushPromises();
+    expect(w.text()).toContain("新结果");
+    expect(w.text()).not.toContain("旧结果");
+    await w.get("input").setValue("late");
+    await w.get("input").setValue("");
+    pending.late([{ id: "late", title: "迟到结果", content: "正文" }]);
+    await flushPromises();
+    expect(w.find('[role="listbox"]').exists()).toBe(false);
   });
 });
