@@ -40,6 +40,8 @@ export async function downloadSquareItem(id) {
     title: payload.title,
     content: payload.content ?? "",
     remoteId: payload.id ?? id,
+    categoryId: payload.category_id,
+    model: payload.model,
   });
 }
 

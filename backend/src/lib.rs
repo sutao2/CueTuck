@@ -96,6 +96,8 @@ pub struct SquareItem {
     pub kind: String,
     pub excerpt: Option<String>,
     pub model: Option<String>,
+    #[serde(default)]
+    pub category_id: Option<String>,
     pub member_count: Option<i64>,
     #[serde(default, skip_serializing)]
     pub content: Option<String>,
@@ -106,6 +108,8 @@ pub struct SquareContentResponse {
     pub id: String,
     pub title: String,
     pub content: String,
+    pub category_id: Option<String>,
+    pub model: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -113,6 +117,8 @@ pub struct PublicationRequest {
     pub source_id: String,
     pub title: Option<String>,
     pub content: Option<String>,
+    pub category_id: Option<String>,
+    pub model: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -126,6 +132,10 @@ pub struct Publication {
     pub content: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author_email: Option<String>,
+    #[serde(default)]
+    pub category_id: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
 }
 
 #[derive(Deserialize, Default)]
@@ -133,6 +143,20 @@ pub struct SquareListQuery {
     pub sort: Option<String>,
     pub q: Option<String>,
     pub model: Option<String>,
+    pub category_id: Option<String>,
+}
+
+fn system_category(id: &str) -> Option<&str> {
+    for (parent, children) in [
+        ("cat-software", 4), ("cat-image", 3), ("cat-video", 2),
+        ("cat-office", 3), ("cat-writing", 3), ("cat-product", 3),
+        ("cat-marketing", 3), ("cat-data", 3), ("cat-education", 3), ("cat-life", 3),
+    ] {
+        if id == parent || (0..children).any(|index| id == format!("{parent}-{index}")) {
+            return Some(parent);
+        }
+    }
+    None
 }
 
 #[derive(Serialize, Deserialize)]
@@ -226,6 +250,7 @@ impl AppState {
                 kind: "prompt".into(),
                 excerpt: Some("清透蓝天下的多元人物群像。".into()),
                 model: Some("Flux".into()),
+                category_id: Some("cat-image-0".into()),
                 member_count: None,
                 content: Some("清透蓝天下的多元人物群像。".into()),
             },
@@ -235,6 +260,7 @@ impl AppState {
                 kind: "collection".into(),
                 excerpt: Some("9 个真实人像参考与摄影提示词。".into()),
                 model: None,
+                category_id: Some("cat-image-0".into()),
                 member_count: Some(9),
                 content: None,
             },
@@ -408,6 +434,11 @@ async fn list_square_items(
         .into_iter()
         .filter(|item| needle.is_empty() || item.title.to_lowercase().contains(&needle))
         .filter(|item| model.is_empty() || item.model.as_deref() == Some(model.as_str()))
+        .filter(|item| match query.category_id.as_deref().filter(|id| !id.is_empty()) {
+            None => true,
+            Some(id) => item.category_id.as_deref() == Some(id)
+                || item.category_id.as_deref().and_then(system_category) == Some(id),
+        })
         .collect::<Vec<_>>();
     if sort == "favorites" || sort == "收藏" {
         let Some(email) = optional_access_email(&state, &headers).await else {
@@ -454,6 +485,10 @@ async fn create_publication(
     if source_id.is_empty() {
         return Err(StatusCode::BAD_REQUEST);
     }
+    let category_id = body.category_id.filter(|id| !id.is_empty());
+    if category_id.as_deref().is_some_and(|id| system_category(id).is_none()) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     let publication = Publication {
         id: format!("pub.{}", Uuid::new_v4()),
         source_id,
@@ -461,6 +496,8 @@ async fn create_publication(
         title: body.title.filter(|value| !value.trim().is_empty()),
         content: body.content,
         author_email: Some(author_email),
+        category_id,
+        model: body.model,
     };
     state.insert_publication(&publication).await?;
     Ok(Json(publication))
@@ -637,6 +674,8 @@ async fn get_square_item_content(
         id: item.id,
         title: item.title,
         content: item.content.unwrap_or_default(),
+        category_id: item.category_id,
+        model: item.model,
     }))
 }
 
@@ -759,6 +798,7 @@ mod tests {
             kind: "prompt".into(),
             excerpt: None,
             model: None,
+            category_id: None,
             member_count: None,
             content: None,
         }]));
@@ -791,6 +831,7 @@ mod tests {
             kind: "prompt".into(),
             excerpt: None,
             model: None,
+            category_id: None,
             member_count: None,
             content: None,
         }]));
@@ -820,6 +861,7 @@ mod tests {
             kind: "prompt".into(),
             excerpt: None,
             model: None,
+            category_id: None,
             member_count: None,
             content: None,
         }]));
@@ -849,6 +891,7 @@ mod tests {
             kind: "prompt".into(),
             excerpt: None,
             model: None,
+            category_id: None,
             member_count: None,
             content: Some("清透蓝天下的多元人物群像。".into()),
         }]));
@@ -878,6 +921,7 @@ mod tests {
             kind: "prompt".into(),
             excerpt: Some("摘要".into()),
             model: Some("Flux".into()),
+            category_id: None,
             member_count: None,
             content: Some("不该出现在详情里".into()),
         }]));
@@ -922,6 +966,7 @@ mod tests {
                 kind: "prompt".into(),
                 excerpt: None,
                 model: Some("Flux".into()),
+                category_id: None,
                 member_count: None,
                 content: None,
             },
@@ -931,6 +976,7 @@ mod tests {
                 kind: "prompt".into(),
                 excerpt: None,
                 model: Some("Midjourney".into()),
+                category_id: None,
                 member_count: None,
                 content: None,
             },
@@ -940,6 +986,7 @@ mod tests {
                 kind: "prompt".into(),
                 excerpt: None,
                 model: Some("Flux".into()),
+                category_id: None,
                 member_count: None,
                 content: None,
             },
@@ -1095,7 +1142,7 @@ mod tests {
                     .header(header::CONTENT_TYPE, "application/json")
                     .header(header::AUTHORIZATION, format!("Bearer {}", user.access_token))
                     .body(Body::from(
-                        r#"{"source_id":"mem-1","title":"新稿","content":"快照正文"}"#,
+                        r#"{"source_id":"mem-1","title":"新稿","content":"快照正文","category_id":"cat-image-0","model":"Flux"}"#,
                     ))
                     .unwrap(),
             )
@@ -1119,6 +1166,21 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(approved.status(), StatusCode::OK);
+        for (category, expected) in [("cat-image", 1), ("cat-image-0", 1), ("cat-software", 0)] {
+            let response = app.clone().oneshot(Request::builder()
+                .uri(format!("/v1/square/items?category_id={category}"))
+                .body(Body::empty()).unwrap()).await.unwrap();
+            let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+            let rows: SquareListResponse = serde_json::from_slice(&body).unwrap();
+            assert_eq!(rows.items.len(), expected);
+        }
+        let response = app.clone().oneshot(Request::builder()
+            .uri(format!("/v1/square/items/{id}/content"))
+            .body(Body::empty()).unwrap()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let downloaded: SquareContentResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(downloaded.category_id.as_deref(), Some("cat-image-0"));
+        assert_eq!(downloaded.model.as_deref(), Some("Flux"));
         let listed = app
             .oneshot(
                 Request::builder()

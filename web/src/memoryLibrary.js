@@ -4,23 +4,27 @@ export function resetMemoryLibrary() {
   prompts = [];
 }
 
-export function createLocalPrompt({ title, content, source = "local" } = {}) {
+export function createLocalPrompt({ title, content, source = "local", categoryId = null, model = null } = {}) {
   const row = {
     id: `mem-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     title: String(title ?? "").trim(),
     content: content ?? "",
     source,
+    category_id: categoryId,
+    model,
     updated_at: String(Date.now()),
   };
   prompts = [row, ...prompts];
   return row;
 }
 
-export function importDownloadedPrompt({ title, content, remoteId = null } = {}) {
+export function importDownloadedPrompt({ title, content, remoteId = null, categoryId = null, model = null } = {}) {
   const row = createLocalPrompt({
     title,
     content,
     source: "downloaded",
+    categoryId,
+    model,
   });
   row.remote_id = remoteId;
   return row;
@@ -38,6 +42,8 @@ export function replacePromptsFromAccount(items) {
       title: String(item.payload?.title ?? "").trim(),
       content: item.payload?.content ?? "",
       source: "account",
+      category_id: item.payload?.category_id ?? null,
+      model: item.payload?.model ?? null,
       updated_at: String(item.updated_at ?? "0"),
     }));
   return listLocalPrompts();

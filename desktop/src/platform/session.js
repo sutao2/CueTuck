@@ -8,10 +8,7 @@ function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
 }
 
-async function tauriInvoke(command, args) {
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke(command, args);
-}
+import { invokeCommand as tauriInvoke } from "./tauri.js";
 
 function stripRefreshFromWebStorage() {
   for (const storage of [localStorage, sessionStorage]) {

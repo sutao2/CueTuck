@@ -85,6 +85,17 @@ async fn imports_downloaded_prompt_with_source() {
     assert_eq!(rows[0].source, "downloaded");
 }
 
+#[test]
+fn download_preserves_category_and_model() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    super::import_downloaded_prompt_with_metadata(dir.path(), "人像", "正文", Some("sq-p"), None,
+        Some("cat-image-0"), Some("Flux")).unwrap();
+    let rows = list_prompts_in_dir(dir.path(), "", Some("cat-image")).unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].model.as_deref(), Some("Flux"));
+}
+
 #[tokio::test]
 async fn keeps_author_on_downloaded_prompt_without_rewriting_content() {
     let dir = tempfile::tempdir().unwrap();

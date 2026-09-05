@@ -39,7 +39,7 @@ export async function pushAccountPrompt(row) {
   const item = {
     id: row.id,
     kind: "prompt",
-    payload: { title: row.title, content: row.content },
+    payload: { title: row.title, content: row.content, category_id: row.category_id ?? null, model: row.model ?? null },
     updated_at: String(row.updated_at ?? Date.now()),
   };
   if (testTransport?.put) {

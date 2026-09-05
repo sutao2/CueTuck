@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS square_items (
   kind TEXT NOT NULL,
   excerpt TEXT,
   model TEXT,
+  category_id TEXT,
   member_count BIGINT,
   content TEXT,
   sort_index INT NOT NULL DEFAULT 0
@@ -43,7 +44,9 @@ CREATE TABLE IF NOT EXISTS publications (
   status TEXT NOT NULL,
   title TEXT,
   content TEXT,
-  author_email TEXT
+  author_email TEXT,
+  category_id TEXT,
+  model TEXT
 );
 
 CREATE TABLE IF NOT EXISTS favorites (

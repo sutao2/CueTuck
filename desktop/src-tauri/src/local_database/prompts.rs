@@ -102,6 +102,13 @@ pub fn import_downloaded_prompt_in_dir(
     remote_id: Option<&str>,
     author: Option<&str>,
 ) -> Result<PromptRecord, String> {
+    import_downloaded_prompt_with_metadata(dir, title, content, remote_id, author, None, None)
+}
+
+pub fn import_downloaded_prompt_with_metadata(
+    dir: &Path, title: &str, content: &str, remote_id: Option<&str>,
+    author: Option<&str>, category_id: Option<&str>, model: Option<&str>,
+) -> Result<PromptRecord, String> {
     let title = title.trim();
     if title.is_empty() {
         return Err("标题不能为空".to_string());
@@ -113,9 +120,9 @@ pub fn import_downloaded_prompt_in_dir(
     connection
         .execute(
             "INSERT INTO prompts (
-                id, title, summary, content, category_id, source, remote_id, version, use_count, created_at, updated_at, author
-            ) VALUES (?1, ?2, NULL, ?3, NULL, 'downloaded', ?4, 1, 0, ?5, ?5, ?6)",
-            rusqlite::params![id, title, content, remote_id, now, author],
+                id, title, summary, content, category_id, source, remote_id, version, use_count, created_at, updated_at, author, model
+            ) VALUES (?1, ?2, NULL, ?3, ?7, 'downloaded', ?4, 1, 0, ?5, ?5, ?6, ?8)",
+            rusqlite::params![id, title, content, remote_id, now, author, category_id, model],
         )
         .map_err(|error| error.to_string())?;
     read_prompt(&connection, &id)

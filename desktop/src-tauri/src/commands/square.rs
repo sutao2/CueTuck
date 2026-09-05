@@ -1,4 +1,4 @@
-use crate::local_database::{get_setting_in_dir, import_downloaded_prompt_in_dir, PromptRecord};
+use crate::local_database::{get_setting_in_dir, import_downloaded_prompt_with_metadata, PromptRecord};
 use serde::Deserialize;
 use tauri::{AppHandle, Manager};
 
@@ -14,6 +14,8 @@ struct SquareContentResponse {
     content: String,
     #[serde(default)]
     author: Option<String>,
+    category_id: Option<String>,
+    model: Option<String>,
 }
 
 fn api_base() -> String {
@@ -31,12 +33,16 @@ pub async fn list_square_items(
     sort: Option<String>,
     query: Option<String>,
     model: Option<String>,
+    category_id: Option<String>,
 ) -> Result<Vec<serde_json::Value>, String> {
     let client = crate::http::client()?;
     let sort = sort.unwrap_or_else(|| "推荐".into());
     let query = query.unwrap_or_default();
     let model = model.unwrap_or_default();
     let mut request = client.get(format!("{}/v1/square/items", api_base()));
+    if let Some(category) = category_id {
+        request = request.query(&[("category_id", category)]);
+    }
     request = if model.trim().is_empty() {
         request.query(&[("sort", sort.as_str()), ("q", query.as_str())])
     } else {
@@ -82,12 +88,14 @@ pub async fn download_square_item(app: AppHandle, id: String) -> Result<PromptRe
     } else {
         None
     };
-    import_downloaded_prompt_in_dir(
+    import_downloaded_prompt_with_metadata(
         &dir,
         &payload.title,
         &payload.content,
         Some(&payload.id),
         author,
+        payload.category_id.as_deref(),
+        payload.model.as_deref(),
     )
 }
 
@@ -111,6 +119,8 @@ pub async fn create_publication(
     access_token: String,
     title: Option<String>,
     content: Option<String>,
+    category_id: Option<String>,
+    model: Option<String>,
 ) -> Result<serde_json::Value, String> {
     if source_id.trim().is_empty() {
         return Err("未选择本地内容".to_string());
@@ -123,6 +133,8 @@ pub async fn create_publication(
             "source_id": source_id,
             "title": title,
             "content": content,
+            "category_id": category_id,
+            "model": model,
         }))
         .send()
         .await

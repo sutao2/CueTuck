@@ -526,7 +526,8 @@ impl AppState {
                         title,
                         kind: "prompt".into(),
                         excerpt: None,
-                        model: None,
+                        model: publication.model.clone(),
+                        category_id: publication.category_id.clone(),
                         member_count: None,
                         content: publication.content.clone(),
                     })
@@ -563,7 +564,8 @@ impl AppState {
                         title,
                         kind: "prompt".into(),
                         excerpt: None,
-                        model: None,
+                        model: publication.model.clone(),
+                        category_id: publication.category_id.clone(),
                         member_count: None,
                         content: publication.content.clone(),
                     });
