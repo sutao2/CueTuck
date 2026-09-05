@@ -234,13 +234,14 @@
               <button type="button" class="button ghost-button" data-testid="open-library-dir" @click="openDir">打开目录</button>
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>导出完整备份</strong><small>ZIP 含提示词、合集、分类、封面与设置。</small></span>
+              <span class="setting-copy"><strong>导出完整备份</strong><small>ZIP 含库文件与 JSON，保留封面引用；不包含外部图片文件。</small></span>
               <button type="button" class="button ghost-button" data-testid="export-zip" @click="doZip">导出 ZIP</button>
             </div>
             <label class="setting-row">
-              <span class="setting-copy"><strong>自动备份</strong><small>额外调度，不替换 JSON 或库文件备份。</small></span>
-              <input type="checkbox" data-testid="auto-backup" :checked="autoBackup" @change="toggleAutoBackup">
+              <span class="setting-copy"><strong>自动备份</strong><small>仅桌面：开启即备份，应用运行时每 24 小时备份一次，保留历史文件。</small></span>
+              <input type="checkbox" data-testid="auto-backup" :checked="autoBackup" :disabled="dataBusy" @change="toggleAutoBackup">
             </label>
+            <p v-if="autoBackupNote" role="status" data-testid="auto-backup-note">{{ autoBackupNote }}</p>
             <p v-if="zipPath" data-testid="zip-path">{{ zipPath }}</p>
             <div class="modal-actions">
               <button type="button" class="button ghost-button" @click="doExport">导出 JSON</button>
@@ -263,8 +264,8 @@
               <input v-model="restorePath" placeholder="/path/to/promptark.sqlite">
             </label>
             <div class="modal-actions">
-              <button type="button" class="button ghost-button" @click="doBackup">备份库文件</button>
-              <button type="button" class="button primary-button" @click="doRestore">恢复库文件</button>
+              <button type="button" class="button ghost-button" :disabled="dataBusy" @click="doBackup">备份库文件</button>
+              <button type="button" class="button primary-button" :disabled="dataBusy || !restorePath.trim()" @click="doRestore">恢复库文件</button>
             </div>
             <p v-if="backupPath" data-testid="backup-path">已备份到 {{ backupPath }}</p>
             <p v-if="dataError" data-testid="backup-error">{{ dataError }}</p>
@@ -388,6 +389,7 @@ import { uiText } from "../platform/uiStrings.js";
 import {
   applyLocalImport,
   backupLocalLibrary,
+  setAutoBackup,
   clearLocalPromptUse,
   exportLibraryZip,
   exportLocalLibrary,
@@ -450,6 +452,8 @@ const pasteRecentShortcut = ref(DEFAULT_PASTE_RECENT_SHORTCUT);
 const shortcutError = ref("");
 const restorePath = ref("");
 const backupPath = ref("");
+const dataBusy = ref(false);
+const autoBackupNote = ref("");
 const dataError = ref("");
 const syncNote = ref("");
 const updateNote = ref("");
@@ -486,7 +490,9 @@ const displayName = ref("");
 const bio = ref("");
 const profileNote = ref("");
 
-onMounted(async () => {
+onMounted(loadSettings);
+
+async function loadSettings() {
   const stored = await getLocalSetting("launcher_shortcut");
   if (stored) shortcut.value = stored;
   const storedNew = await getLocalSetting("new_prompt_shortcut");
@@ -500,6 +506,7 @@ onMounted(async () => {
     true,
   );
   autoBackup.value = isPrefOn(await getLocalSetting("auto_backup"));
+  await refreshAutoBackupNote();
   squareAccess.value = isPrefOn(await getLocalSetting("square_access"), true);
   uiLanguage.value = (await getLocalSetting("ui_language")) || "zh";
   promptBilingual.value = isPrefOn(await getLocalSetting("prompt_bilingual"), true);
@@ -528,7 +535,7 @@ onMounted(async () => {
     bio.value = profile?.bio ?? "";
     applyBilling(billing);
   }
-});
+}
 
 async function togglePref(key, event) {
   const enabled = event.target.checked;
@@ -707,23 +714,29 @@ async function doApply() {
 }
 
 async function doBackup() {
+  if (dataBusy.value) return;
+  dataBusy.value = true;
   dataError.value = "";
   backupPath.value = "";
   try {
     backupPath.value = await backupLocalLibrary();
   } catch (error) {
     dataError.value = error instanceof Error ? error.message : String(error);
-  }
+  } finally { dataBusy.value = false; }
 }
 
 async function doRestore() {
+  if (dataBusy.value || !restorePath.value.trim()) return;
+  dataBusy.value = true;
   dataError.value = "";
   try {
     await restoreLocalLibrary(restorePath.value.trim());
+    dataError.value = "恢复完成。快捷键、代理和系统级偏好请重启应用后生效。";
+    await loadSettings();
     emit("imported");
   } catch (error) {
     dataError.value = error instanceof Error ? error.message : String(error);
-  }
+  } finally { dataBusy.value = false; }
 }
 
 async function openDir() {
@@ -745,15 +758,24 @@ async function doZip() {
 }
 
 async function toggleAutoBackup(event) {
-  autoBackup.value = event.target.checked;
-  await setLocalSetting("auto_backup", autoBackup.value ? "1" : "0");
-  if (autoBackup.value) {
-    try {
-      await backupLocalLibrary("backups/auto-latest.sqlite");
-    } catch {
-      /* 浏览器预览没有库文件备份 */
-    }
-  }
+  if (dataBusy.value) return;
+  const enabled = event.target.checked;
+  dataBusy.value = true;
+  dataError.value = "";
+  try {
+    await setAutoBackup(enabled);
+    autoBackup.value = enabled;
+    await refreshAutoBackupNote();
+  } catch (error) {
+    event.target.checked = autoBackup.value;
+    dataError.value = `自动备份设置失败：${error.message || error}`;
+  } finally { dataBusy.value = false; }
+}
+
+async function refreshAutoBackupNote() {
+  const error = await getLocalSetting("auto_backup_error");
+  const path = await getLocalSetting("auto_backup_last_path");
+  autoBackupNote.value = error ? `最近自动备份失败：${error}` : (path ? `最近自动备份：${path}` : "");
 }
 
 async function toggleSquareAccess(event) {

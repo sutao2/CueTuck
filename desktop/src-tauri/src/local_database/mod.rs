@@ -1,4 +1,6 @@
 mod backup;
+mod auto_backup;
+pub use auto_backup::{set_auto_backup_in_dir, start_auto_backup_worker};
 mod categories;
 mod collections;
 mod prompts;
@@ -169,6 +171,8 @@ pub fn initialize_in_dir(dir: &Path) -> Result<String, String> {
 fn ensure_prompt_columns(connection: &Connection) -> Result<(), String> {
     let existing = table_columns(connection, "prompts")?;
     let needed = [
+        ("summary", "TEXT"),
+        ("deleted_at", "TEXT"),
         ("category_id", "TEXT"),
         ("collection_id", "TEXT"),
         ("model", "TEXT"),

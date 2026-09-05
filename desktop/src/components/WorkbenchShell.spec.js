@@ -141,6 +141,21 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-region="statusbar"]').exists()).toBe(true);
   });
 
+  it("refreshes default theme and language after an old library without preferences is restored", async () => {
+    await setLocalSetting("theme", "dark");
+    await setLocalSetting("ui_language", "en");
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-testid="open-settings"]').trigger("click");
+    await flushPromises();
+    resetMemoryLibrary();
+    w.findComponent(SettingsModal).vm.$emit("imported");
+    await flushPromises();
+    expect(document.documentElement.lang).toBe("zh-CN");
+    expect(document.body.classList.contains("theme-dark")).toBe(false);
+    expect(await getLocalSetting("theme")).toBe("light");
+  });
+
   it("keeps the use dialog and count unchanged after clipboard failure, then retries", async () => {
     const writeText = vi.fn().mockRejectedValueOnce(new Error("denied")).mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });

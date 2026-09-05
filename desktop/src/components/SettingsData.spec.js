@@ -1,9 +1,20 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, expect, it } from "vitest";
 import SettingsModal from "./SettingsModal.vue";
-import { listLocalPrompts, resetMemoryLibrary } from "../platform/library.js";
+import { getLocalSetting, listLocalPrompts, resetMemoryLibrary } from "../platform/library.js";
 
 beforeEach(resetMemoryLibrary);
+
+it("refuses browser auto-backup instead of persisting an ineffective enabled flag", async () => {
+  const w = mount(SettingsModal);
+  await flushPromises();
+  await w.get('[data-settings-page="data"]').trigger("click");
+  await w.get('[data-testid="auto-backup"]').setValue(true);
+  await flushPromises();
+  expect(w.get('[data-testid="auto-backup"]').element.checked).toBe(false);
+  expect(w.get('[data-testid="backup-error"]').text()).toContain("仅桌面窗口支持");
+  expect(await getLocalSetting("auto_backup")).not.toBe("1");
+});
 
 it("invalidates changed previews and disables repeat import after success", async () => {
   const w = mount(SettingsModal);

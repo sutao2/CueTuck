@@ -47,6 +47,7 @@ pub fn run() {
             commands::database::preview_local_import,
             commands::database::apply_local_import,
             commands::database::backup_local_library,
+            commands::database::set_auto_backup,
             commands::database::restore_local_library,
             commands::database::open_library_dir,
             commands::database::export_library_zip,
@@ -91,7 +92,9 @@ pub fn run() {
         .setup(|app| {
             let database = app.state::<LocalDatabase>();
             if let Ok(dir) = app.path().app_data_dir() {
-                let _ = database.initialize(&dir);
+                if database.initialize(&dir).is_ok() {
+                    local_database::start_auto_backup_worker(dir.clone());
+                }
                 crate::http::load_from_dir(&dir);
             }
             if let Some(window) = app.get_webview_window("main") {

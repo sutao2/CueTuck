@@ -256,16 +256,24 @@ pub fn apply_local_import(app: AppHandle, json: String) -> Result<ImportPreview,
 pub fn backup_local_library(app: AppHandle, dest: Option<String>) -> Result<String, String> {
     let dir = data_dir(&app)?;
     let dest_path = match dest.filter(|value| !value.trim().is_empty()) {
-        Some(path) => PathBuf::from(path),
+        Some(path) => {
+            let path = PathBuf::from(path);
+            if path.is_absolute() { path } else { dir.join(path) }
+        },
         None => {
             let stamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_err(|error| error.to_string())?
                 .as_secs();
-            dir.join("backups").join(format!("promptark-{stamp}.sqlite"))
+            dir.join("backups").join(format!("promptark-{stamp}-{}.sqlite", uuid::Uuid::new_v4()))
         }
     };
     backup_library_in_dir(&dir, &dest_path)
+}
+
+#[tauri::command]
+pub fn set_auto_backup(app: AppHandle, enabled: bool) -> Result<(), String> {
+    crate::local_database::set_auto_backup_in_dir(&data_dir(&app)?, enabled)
 }
 
 #[tauri::command]

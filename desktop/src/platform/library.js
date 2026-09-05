@@ -586,6 +586,11 @@ export async function backupLocalLibrary(dest) {
   throw new Error(FILE_BACKUP_DESKTOP_ONLY);
 }
 
+export async function setAutoBackup(enabled) {
+  if (isTauri()) return tauriInvoke("set_auto_backup", { enabled });
+  throw new Error(FILE_BACKUP_DESKTOP_ONLY);
+}
+
 export async function restoreLocalLibrary(src) {
   if (isTauri()) {
     return tauriInvoke("restore_local_library", { src });
