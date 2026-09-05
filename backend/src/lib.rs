@@ -160,6 +160,20 @@ pub struct Publication {
     pub members: Vec<PublishedPrompt>,
 }
 
+impl Publication {
+    fn square_item(&self) -> Option<SquareItem> {
+        let title = self.title.as_deref()?.trim();
+        if title.is_empty() || (self.kind == "collection" && self.members.is_empty())
+            || (self.kind == "prompt" && self.content.is_none()) { return None; }
+        Some(SquareItem {
+            id: self.id.clone(), title: title.into(), kind: self.kind.clone(), excerpt: None,
+            model: self.model.clone(), category_id: self.category_id.clone(),
+            member_count: (self.kind == "collection").then_some(self.members.len() as i64),
+            content: self.content.clone(), members: self.members.clone(),
+        })
+    }
+}
+
 #[derive(Deserialize, Default)]
 pub struct SquareListQuery {
     pub sort: Option<String>,
@@ -805,6 +819,25 @@ mod tests {
             .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token)).body(Body::empty()).unwrap()).await.unwrap();
         let mine: AdminPublicationList = serde_json::from_slice(&to_bytes(response.into_body(), usize::MAX).await.unwrap()).unwrap();
         assert!(mine.items.is_empty());
+    }
+
+    #[tokio::test]
+    async fn repeated_reviews_are_idempotent_and_opposite_decisions_conflict() {
+        let state = AppState::default();
+        let publication = Publication { id: "p".into(), source_id: "local".into(), status: "pending".into(), title: Some("原稿".into()),
+            content: Some("正文".into()), author_email: None, category_id: None, model: None, kind: "prompt".into(), members: vec![] };
+        state.insert_publication(&publication).await.unwrap();
+        let (first, second) = tokio::join!(state.set_publication_status("p", "approved"), state.set_publication_status("p", "approved"));
+        assert!(first.is_ok() && second.is_ok());
+        assert_eq!(state.all_items().await.unwrap().len(), 1);
+        assert!(matches!(state.set_publication_status("p", "rejected").await, Err(StatusCode::CONFLICT)));
+        assert_eq!(state.all_items().await.unwrap().len(), 1);
+        let mut missing = publication;
+        missing.id = "without-body".into();
+        missing.content = None;
+        state.insert_publication(&missing).await.unwrap();
+        state.set_publication_status("without-body", "approved").await.unwrap();
+        assert_eq!(state.all_items().await.unwrap().len(), 1);
     }
 
     async fn publish(app: &Router, access_token: &str, source_id: &str) -> String {

@@ -546,6 +546,7 @@ impl Pg {
             .collect())
     }
 
+    #[cfg(test)]
     pub async fn insert_item(&self, item: &SquareItem) -> Result<(), StatusCode> {
         sqlx::query(&format!(
             "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, category_id, members, sort_index)
@@ -659,6 +660,12 @@ impl Pg {
         id: &str,
         status: &str,
     ) -> Result<Publication, StatusCode> {
+        let mut transaction = self.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let existing = sqlx::query(&format!("SELECT status FROM {} WHERE id = $1 FOR UPDATE", self.t("publications")))
+            .bind(id).fetch_optional(&mut *transaction).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .ok_or(StatusCode::NOT_FOUND)?;
+        let previous: String = existing.get("status");
+        if previous != "pending" && previous != status { return Err(StatusCode::CONFLICT); }
         let row = sqlx::query(&format!(
             "UPDATE {} SET status = $2 WHERE id = $1
              RETURNING id, source_id, status, title, content, author_email, category_id, model, kind, members",
@@ -666,11 +673,24 @@ impl Pg {
         ))
         .bind(id)
         .bind(status)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *transaction)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
-        Ok(Self::publication_from_row(&row))
+        let publication = Self::publication_from_row(&row);
+        if status == "approved" {
+            if let Some(item) = publication.square_item() {
+                sqlx::query(&format!(
+                    "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, category_id, members, sort_index)
+                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, COALESCE((SELECT MAX(sort_index)+1 FROM {0}), 0)) ON CONFLICT(id) DO NOTHING",
+                    self.t("square_items")))
+                    .bind(&item.id).bind(&item.title).bind(&item.kind).bind(&item.excerpt).bind(&item.model)
+                    .bind(item.member_count).bind(&item.content).bind(&item.category_id).bind(sqlx::types::Json(&item.members))
+                    .execute(&mut *transaction).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            }
+        }
+        transaction.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(publication)
     }
 
     pub async fn favorite_ids(&self, email: &str) -> Result<Vec<String>, StatusCode> {

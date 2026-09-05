@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminApp from "./AdminApp.vue";
 import { resetAdminSession, setAdminTransport, setOAuthProviderList } from "./session.js";
 import { resetAdminApi, setAdminApiTransport } from "./adminApi.js";
@@ -71,6 +71,32 @@ describe("AdminApp", () => {
     await w.get('[data-testid="review-approve"]').trigger("click");
     await flushPromises();
     expect(w.get('[data-testid="review-list"]').text()).not.toContain("mem-1");
+  });
+
+  it("disables both review actions while pending and keeps failures available for retry", async () => {
+    let fail;
+    const action = vi.fn(() => new Promise((_, reject) => { fail = reject; }));
+    setAdminApiTransport(async (request) => request.kind === "list"
+      ? { items: [{ id: "p", source_id: "待审", status: "pending" }] } : action());
+    const w = mount(AdminApp);
+    await w.get('[data-testid="admin-email"]').setValue("admin@promptark.local");
+    await w.get('[data-testid="admin-password"]').setValue("adminpass");
+    await w.get('[data-testid="admin-login"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="review-approve"]').trigger("click");
+    await w.get('[data-testid="review-reject"]').trigger("click");
+    expect(w.get('[data-testid="review-approve"]').element.disabled).toBe(true);
+    expect(w.get('[data-testid="review-reject"]').element.disabled).toBe(true);
+    expect(action).toHaveBeenCalledTimes(1);
+    fail(new Error("审核失败"));
+    await flushPromises();
+    expect(w.get('[data-testid="admin-error"]').text()).toContain("审核失败");
+    expect(w.get('[data-testid="review-list"]').text()).toContain("待审");
+    action.mockResolvedValue({ status: "approved" });
+    await w.get('[data-testid="review-approve"]').trigger("click");
+    await flushPromises();
+    expect(w.get('[data-testid="review-list"]').text()).not.toContain("待审pending");
+    expect(w.find('[data-testid="review-approve"]').exists()).toBe(false);
   });
 
   it("lists user emails and roles without password or delete controls", async () => {

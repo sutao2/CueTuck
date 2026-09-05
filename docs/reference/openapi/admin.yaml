@@ -16,6 +16,7 @@ paths:
     post:
       operationId: approvePublication
       summary: 通过审核
+      description: 审核状态与上架原子提交；重复通过成功且不重复上架；已驳回返回 409
       parameters:
         - name: id
           in: path
@@ -26,6 +27,7 @@ paths:
     post:
       operationId: rejectPublication
       summary: 驳回审核
+      description: 重复驳回成功；已通过返回 409，不允许覆盖相反审核结果
       parameters:
         - name: id
           in: path

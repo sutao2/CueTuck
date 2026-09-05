@@ -35,6 +35,33 @@ async fn collection_members_survive_publication_review_and_restart() {
 }
 
 #[tokio::test]
+async fn review_is_atomic_and_concurrent_decisions_cannot_overwrite_each_other() {
+    let state = postgres_state().await.expect("local Postgres required");
+    let pg = state.db.as_ref().unwrap();
+    let publication = Publication { id: "atomic-review".into(), source_id: "local".into(), status: "pending".into(),
+        title: Some("fail-listing".into()), content: Some("正文".into()), author_email: None,
+        category_id: None, model: None, kind: "prompt".into(), members: vec![] };
+    state.insert_publication(&publication).await.unwrap();
+    sqlx::query(&format!("ALTER TABLE \"{}\".square_items ADD CONSTRAINT simulate_failure CHECK (title <> 'fail-listing')", pg.schema))
+        .execute(&pg.pool).await.unwrap();
+    assert!(matches!(state.set_publication_status(&publication.id, "approved").await, Err(StatusCode::INTERNAL_SERVER_ERROR)));
+    assert_eq!(state.pending_publications().await.unwrap().len(), 1);
+    assert!(state.all_items().await.unwrap().is_empty());
+    sqlx::query(&format!("ALTER TABLE \"{}\".square_items DROP CONSTRAINT simulate_failure", pg.schema))
+        .execute(&pg.pool).await.unwrap();
+    let (first, second) = tokio::join!(state.set_publication_status(&publication.id, "approved"), state.set_publication_status(&publication.id, "approved"));
+    assert!(first.is_ok() && second.is_ok());
+    assert_eq!(state.all_items().await.unwrap().len(), 1);
+    assert!(matches!(state.set_publication_status(&publication.id, "rejected").await, Err(StatusCode::CONFLICT)));
+    let mut conflict = publication;
+    conflict.id = "opposite".into();
+    state.insert_publication(&conflict).await.unwrap();
+    let (approve, reject) = tokio::join!(state.set_publication_status(&conflict.id, "approved"), state.set_publication_status(&conflict.id, "rejected"));
+    assert_ne!(approve.is_ok(), reject.is_ok());
+    assert!(matches!(approve, Err(StatusCode::CONFLICT)) || matches!(reject, Err(StatusCode::CONFLICT)));
+}
+
+#[tokio::test]
 async fn session_survives_new_appstate_on_postgres() {
     let Some(state) = postgres_state().await else {
         panic!("expected local Postgres at postgres://pl:pl@127.0.0.1:5432/promptark");

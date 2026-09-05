@@ -513,68 +513,19 @@ impl AppState {
         status: &str,
     ) -> Result<crate::Publication, StatusCode> {
         if let Some(pg) = &self.db {
-            let publication = pg.set_publication_status(id, status).await?;
-            if status == "approved" {
-                let title = publication
-                    .title
-                    .as_deref()
-                    .unwrap_or("")
-                    .trim()
-                    .to_string();
-                if !title.is_empty() {
-                    pg.insert_item(&SquareItem {
-                        id: publication.id.clone(),
-                        title,
-                        kind: publication.kind.clone(),
-                        excerpt: None,
-                        model: publication.model.clone(),
-                        category_id: publication.category_id.clone(),
-                        member_count: (publication.kind == "collection").then_some(publication.members.len() as i64),
-                        content: publication.content.clone(),
-                        members: publication.members.clone(),
-                    })
-                    .await?;
-                }
-            }
-            return Ok(publication);
+            return pg.set_publication_status(id, status).await;
         }
-        let publication = {
-            let mut rows = self
-                .publications
-                .lock()
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            let publication = rows
-                .iter_mut()
-                .find(|row| row.id == id)
-                .ok_or(StatusCode::NOT_FOUND)?;
-            publication.status = status.into();
-            publication.clone()
-        };
+        let mut rows = self.publications.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let publication = rows.iter_mut().find(|row| row.id == id).ok_or(StatusCode::NOT_FOUND)?;
+        if publication.status != "pending" && publication.status != status { return Err(StatusCode::CONFLICT); }
         if status == "approved" {
-            let title = publication
-                .title
-                .as_deref()
-                .unwrap_or("")
-                .trim()
-                .to_string();
-            if !title.is_empty() {
-                self.items
-                    .lock()
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-                    .push(SquareItem {
-                        id: publication.id.clone(),
-                        title,
-                        kind: publication.kind.clone(),
-                        excerpt: None,
-                        model: publication.model.clone(),
-                        category_id: publication.category_id.clone(),
-                        member_count: (publication.kind == "collection").then_some(publication.members.len() as i64),
-                        content: publication.content.clone(),
-                        members: publication.members.clone(),
-                    });
+            if let Some(item) = publication.square_item() {
+                let mut items = self.items.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                if !items.iter().any(|row| row.id == id) { items.push(item); }
             }
         }
-        Ok(publication)
+        publication.status = status.into();
+        Ok(publication.clone())
     }
 
     pub(crate) async fn favorite_ids(&self, email: &str) -> Result<Vec<String>, StatusCode> {
