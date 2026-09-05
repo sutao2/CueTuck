@@ -55,28 +55,7 @@ npm run dev
 
 ## 本机 MCP（给 Codex 等宿主）
 
-```bash
-cd mcp
-unset CARGO_TARGET_DIR
-cargo test --locked
-PROMPTARK_LIBRARY_DIR="$HOME/Library/Application Support/app.promptark.desktop" cargo run
-```
-
-`PROMPTARK_LIBRARY_DIR` 必须是含 `promptark.sqlite` 的目录（与桌面 `app_data_dir` 相同）。进程走 stdio，不请求广场。Codex 配置示例：
-
-```json
-{
-  "mcpServers": {
-    "promptark": {
-      "command": "cargo",
-      "args": ["run", "--manifest-path", "mcp/Cargo.toml", "--quiet"],
-      "env": {
-        "PROMPTARK_LIBRARY_DIR": "/绝对路径/到/含 promptark.sqlite 的目录"
-      }
-    }
-  }
-}
-```
+构建、绝对路径配置、工具调用示例与隐私边界见 [智能体 MCP 接入](mcp-clients.md)。
 
 浏览器工作台（不要和桌面抢 `1420`，不要和管理台抢 `5174`）：
 

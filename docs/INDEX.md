@@ -48,7 +48,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；审核事务与重复操作保护 |
 | [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 账号隔离、保存重试与复制失败反馈；不进桌面包 |
-| [specs/mcp/spec.md](specs/mcp/spec.md) | 目标 | 做本机 MCP | stdio 查询本地提示词 |
+| [specs/mcp/spec.md](specs/mcp/spec.md) | 目标 | 做本机 MCP | stdio 只读搜索、分页与参数校验 |
 | [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 完整分类/合集/成员/软删除往返与时间归一化 |
 | [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 显式 mock 支付与真实权益隔离 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
@@ -57,6 +57,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [reference/openapi/admin.yaml](reference/openapi/admin.yaml) | 现行 | 改管理 API 时 | M6 管理合同；/v1/admin |
 | [reference/quality.md](reference/quality.md) | 现行 | 评审标准含糊时 | 质量约定 |
 | [how-to/local-dev.md](how-to/local-dev.md) | 现行 | 想在本机验证 | npm test / npm run dev / tauri dev / 备份恢复 |
+| [how-to/mcp-clients.md](how-to/mcp-clients.md) | 现行 | 让其他智能体搜索提示词 | 独立 stdio 产物、绝对路径配置、三工具与隐私边界 |
 | [how-to/release-qa.md](how-to/release-qa.md) | 现行 | 发行前手工 smoke | M4 QA 表；未验证平台不得勾选 |
 | [how-to/read-docs.md](how-to/read-docs.md) | 现行 | Agent 或人要省 token | 按问题打开哪份 |
 | [how-to/update-docs.md](how-to/update-docs.md) | 现行 | 要改规格或 ADR | 文档更新步骤 |
