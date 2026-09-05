@@ -146,6 +146,29 @@
 
 ## 测试映射
 
+### Requirement: 账号隔离与失败反馈
+
+Web MUST 提供登录与退出入口；访客和不同账号的标签页内存库 MUST 隔离，切换不丢弃访客副本。读取旧账号的迟到响应 MUST NOT 应用到新账号。账号库读写失败 MUST 可见；失败保存的副本 MUST 留在当前标签页，并可重试，重新读取账号库不得覆盖尚未送达的编辑。关闭/刷新标签页仍可能丢失内存副本，MUST 明确告知。
+
+#### Scenario: 保存失败可重试
+
+- GIVEN 用户已登录并编辑提示词
+- WHEN 服务端保存失败后恢复网络
+- THEN 标签页仍保留修改且说明尚未保存到账号库，重试成功后才标记送达
+- AND 读取服务端旧版本不得覆盖待同步修改
+
+#### Scenario: 退出与切换账号
+
+- GIVEN 用户有访客草稿，随后登录账号 A 再退出
+- WHEN 返回访客库或改用账号 B
+- THEN 访客草稿仍在，账号 B 不显示 A 的记录或迟到响应
+
+#### Scenario: 复制失败
+
+- GIVEN 用户已填写变量并预览
+- WHEN 剪贴板拒绝写入
+- THEN 展示错误并保留填写内容，再次复制成功才显示已复制
+
 | 场景 | 测试 |
 |---|---|
 | 桌面包不含 Web 工作台 | `desktop/src/platform/packageIsolation.test.js` does not depend on or bundle web workbench |

@@ -1,5 +1,5 @@
 import { getSession } from "./session.js";
-import { listLocalCollections, listLocalPrompts, replacePromptsFromAccount } from "./memoryLibrary.js";
+import { activateMemoryLibrary, listLocalCollections, listLocalPrompts, replacePromptsFromAccount } from "./memoryLibrary.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
 
@@ -15,6 +15,7 @@ export function setAccountLibraryTransport(transport) {
 
 export async function loadAccountLibrary() {
   const token = getSession().accessToken;
+  activateMemoryLibrary(getSession().email);
   if (!token) return listLocalPrompts();
   try {
     let payload;
@@ -27,9 +28,10 @@ export async function loadAccountLibrary() {
       if (!response.ok) throw new Error("同步失败");
       payload = await response.json();
     }
+    if (getSession().accessToken !== token) throw new Error("账号已改变，已忽略旧请求");
     return replacePromptsFromAccount(payload.items ?? []);
   } catch {
-    return listLocalPrompts();
+    throw new Error("账号库读取失败，当前标签页内容已保留");
   }
 }
 
@@ -43,6 +45,7 @@ export async function pushAccountPrompt(row) {
     updated_at: String(row.updated_at ?? Date.now()),
   };
   delete item.payload.original_source;
+  delete item.payload.sync_pending;
   const collection = listLocalCollections().find((value) => value.id === row.collection_id);
   const items = collection ? [{ id: collection.id, kind: "collection", payload: collection, updated_at: collection.updated_at }, item] : [item];
   if (testTransport?.put) {

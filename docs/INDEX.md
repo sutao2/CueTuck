@@ -47,7 +47,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | JSON 导入、一致性备份恢复与原生周期备份 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；审核事务与重复操作保护 |
-| [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 流体桌面布局；不进桌面包 |
+| [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 账号隔离、保存重试与复制失败反馈；不进桌面包 |
 | [specs/mcp/spec.md](specs/mcp/spec.md) | 目标 | 做本机 MCP | stdio 查询本地提示词 |
 | [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 完整分类/合集/成员/软删除往返与时间归一化 |
 | [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 不得把未付费写成 Pro |

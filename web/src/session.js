@@ -63,7 +63,7 @@ export async function listOAuthProviders() {
   }
 }
 
-export async function loginSession({ email, password } = {}) {
+export async function loginSession({ email, password, signal } = {}) {
   const title = String(email ?? "").trim();
   if (!title || !password) throw new Error("邮箱和密码不能为空");
   let result;
@@ -71,6 +71,7 @@ export async function loginSession({ email, password } = {}) {
     result = await testTransport({ email: title, password });
   } else {
     const response = await fetch(`${API_BASE}/v1/session`, {
+      signal,
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email: title, password }),
@@ -80,7 +81,18 @@ export async function loginSession({ email, password } = {}) {
     }
     result = await response.json();
   }
+  if (signal?.aborted) throw new Error("已取消");
   return applySession(result, title);
+}
+
+export async function logoutSession() {
+  const token = accessToken;
+  accessToken = null;
+  accountEmail = null;
+  if (!token) return;
+  if (testTransport) { await testTransport({ action: "logout" }); return; }
+  const response = await fetch(`${API_BASE}/v1/session`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok && response.status !== 401) throw new Error("已退出本页，但服务器会话注销失败");
 }
 
 export async function loginOAuthSession(provider, { signal } = {}) {
@@ -94,6 +106,7 @@ export async function loginOAuthSession(provider, { signal } = {}) {
   } else {
     result = await pollBrowserOAuth(name, signal);
   }
+  if (signal?.aborted) throw new Error("已取消");
   return applySession(result, null);
 }
 
