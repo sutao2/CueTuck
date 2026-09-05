@@ -291,6 +291,7 @@
                     type="button"
                     class="card-action"
                     data-testid="download-square"
+                    :disabled="downloadBusy.includes(item.id)"
                     @click.stop="downloadSquare(item)"
                   >
                     下载
@@ -366,6 +367,20 @@
       @history-cleared="reloadPrompts"
       @login="openLogin('登录账号')"
       @logout="logoutFromSettings"
+    />
+    <SquareDetailModal
+      v-if="squareDetail"
+      :item="squareDetail"
+      :loading="squareDetailLoading"
+      :error="squareDetailError"
+      :note="operationNote"
+      :downloading="downloadBusy.includes(squareDetail.id)"
+      :favorite="favoriteIds.includes(squareDetail.id)"
+      :favorite-busy="favoriteBusy.includes(squareDetail.id)"
+      @cancel="closeSquareDetail"
+      @retry="openSquareDetail(squareDetail)"
+      @download="downloadSquare(squareDetail)"
+      @favorite="favoriteSquare(squareDetail)"
     />
     <LoginModal
       v-if="loginReason"
@@ -459,12 +474,13 @@ import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
+import SquareDetailModal from "./SquareDetailModal.vue";
 import UsePromptModal from "./UsePromptModal.vue";
 import { getSession, logoutSession } from "../platform/session.js";
 import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
 import { parseModelNames } from "../platform/modelCatalog.js";
 import { uiText } from "../platform/uiStrings.js";
-import { downloadSquareItem, listFavorites, listSquareItems } from "../platform/square.js";
+import { downloadSquareItem, fetchSquareContent, listFavorites, listSquareItems } from "../platform/square.js";
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
 import { parseCoverUrls } from "../lib/cover.js";
 import { DEFAULT_LAUNCHER_SHORTCUT } from "../platform/shortcut.js";
@@ -680,12 +696,43 @@ async function logoutFromSettings() {
   session.value = getSession();
 }
 
+const squareDetail = ref(null);
+const squareDetailLoading = ref(false);
+const squareDetailError = ref("");
+const downloadBusy = ref([]);
+let detailRequest = 0;
+
+function closeSquareDetail() {
+  detailRequest += 1;
+  squareDetail.value = null;
+}
+
+async function openSquareDetail(item) {
+  const request = ++detailRequest;
+  squareDetail.value = { ...item };
+  squareDetailLoading.value = true;
+  squareDetailError.value = "";
+  operationNote.value = "";
+  try {
+    const content = await fetchSquareContent(item.id);
+    if (request === detailRequest) squareDetail.value = { ...item, ...content };
+  } catch (error) {
+    if (request === detailRequest) squareDetailError.value = `读取详情失败：${error.message || error}`;
+  } finally {
+    if (request === detailRequest) squareDetailLoading.value = false;
+  }
+}
+
 async function downloadSquare(item) {
+  if (downloadBusy.value.includes(item.id)) return;
+  downloadBusy.value = [...downloadBusy.value, item.id];
   try {
     await downloadSquareItem(item.id);
-  } catch {
-    squareOffline.value = true;
-  }
+    operationNote.value = `「${item.title}」已下载到本地。`;
+    await reloadPrompts();
+  } catch (error) {
+    operationNote.value = `下载失败：${error.message || error}`;
+  } finally { downloadBusy.value = downloadBusy.value.filter((id) => id !== item.id); }
 }
 
 async function favoriteSquare(item) {
@@ -1054,7 +1101,10 @@ async function finishUse(text) {
 }
 
 function openItem(item) {
-  if (space.value === "square") return;
+  if (space.value === "square") {
+    openSquareDetail(item);
+    return;
+  }
   if (item.kind === "collection") {
     openCollection(item);
     return;

@@ -1,10 +1,17 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createLocalPrompt, listLocalPrompts, addPromptToCollection, exportLocalSyncChanges, applyLocalSyncChanges } from "./library.js";
 import { invokeCommand } from "./tauri.js";
+import { fetchSquareContent } from "./square.js";
 
 const invoke = vi.hoisted(() => vi.fn(async () => []));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 afterEach(() => { delete window.__TAURI_INTERNALS__; invoke.mockClear(); });
+
+it("reads native square detail without invoking the download write command", async () => {
+  window.__TAURI_INTERNALS__ = {};
+  await fetchSquareContent("sq-1");
+  expect(invoke).toHaveBeenCalledExactlyOnceWith("get_square_content", { id: "sq-1" });
+});
 
 it("sends category and collection arguments in the native command schema", async () => {
   window.__TAURI_INTERNALS__ = {};

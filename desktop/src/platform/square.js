@@ -69,10 +69,10 @@ export async function listSquareItems({ sort = "推荐", query = "", model = "",
   }
 }
 
-async function fetchSquareContent(id) {
+export async function fetchSquareContent(id) {
   if (testContentTransport) return testContentTransport(id);
   if (isTauri()) {
-    return tauriInvoke("download_square_item", { id });
+    return tauriInvoke("get_square_content", { id });
   }
   try {
     const response = await fetch(`${apiBase()}/v1/square/items/${encodeURIComponent(id)}/content`);
