@@ -32,7 +32,7 @@
     <section v-else>
       <p data-testid="admin-account">{{ account }}</p>
       <nav class="admin-nav">
-        <button type="button" data-testid="nav-review" @click="page = 'review'">审核</button>
+        <button type="button" data-testid="nav-review" @click="openReview">审核 / 刷新</button>
         <button type="button" data-testid="nav-users" @click="openUsers">用户</button>
         <button type="button" data-testid="nav-settings" @click="openSettings">设置</button>
       </nav>
@@ -52,8 +52,8 @@
             </template>
             <pre v-else>{{ item.content || '未提供正文快照' }}</pre>
           </details>
-          <button type="button" data-testid="review-approve" @click="approve(item.id)">通过</button>
-          <button type="button" data-testid="review-reject" @click="reject(item.id)">驳回</button>
+          <button type="button" data-testid="review-approve" :disabled="reviewBusy.includes(item.id)" @click="review(item.id, true)">通过</button>
+          <button type="button" data-testid="review-reject" :disabled="reviewBusy.includes(item.id)" @click="review(item.id, false)">驳回</button>
         </li>
         <li v-if="items.length === 0">没有待审发布</li>
       </ul>
@@ -92,6 +92,7 @@ const error = ref("");
 const loggedIn = ref(false);
 const account = ref("");
 const items = ref([]);
+const reviewBusy = ref([]);
 const users = ref([]);
 const page = ref("review");
 const squarePublic = ref(true);
@@ -119,6 +120,7 @@ async function loadProviders() {
 
 async function submitLogin() {
   if (busy.value) return;
+  busy.value = true;
   error.value = "";
   try {
     const session = await loginAdmin({ email: email.value, password: password.value });
@@ -127,7 +129,7 @@ async function submitLogin() {
     await refreshList();
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : String(caught);
-  }
+  } finally { busy.value = false; }
 }
 
 async function submitOAuth(provider) {
@@ -152,6 +154,13 @@ async function submitOAuth(provider) {
 async function refreshList() {
   const payload = await listPendingPublications();
   items.value = payload.items ?? [];
+}
+
+async function openReview() {
+  page.value = "review";
+  error.value = "";
+  try { await refreshList(); }
+  catch (caught) { error.value = caught instanceof Error ? caught.message : String(caught); }
 }
 
 async function openSettings() {
@@ -186,24 +195,17 @@ async function openUsers() {
   }
 }
 
-async function approve(id) {
+async function review(id, approved) {
+  if (reviewBusy.value.includes(id)) return;
+  reviewBusy.value = [...reviewBusy.value, id];
   error.value = "";
   try {
-    await approvePublication(id);
+    if (approved) await approvePublication(id);
+    else await rejectPublication(id);
     items.value = items.value.filter((item) => item.id !== id);
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : String(caught);
-  }
-}
-
-async function reject(id) {
-  error.value = "";
-  try {
-    await rejectPublication(id);
-    items.value = items.value.filter((item) => item.id !== id);
-  } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught);
-  }
+  } finally { reviewBusy.value = reviewBusy.value.filter((value) => value !== id); }
 }
 </script>
 

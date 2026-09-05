@@ -37,6 +37,7 @@ async function request(kind, extra = {}) {
   }
   const response = await fetch(`${API_BASE}${path}`, init);
   if (response.status === 403) throw new Error("需要管理员账号");
+  if (response.status === 409) throw new Error("该投稿已有其他审核结果，请刷新审核列表");
   if (!response.ok) throw new Error("管理请求失败");
   return response.json();
 }
