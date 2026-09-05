@@ -11,6 +11,24 @@
 
 ## Requirements
 
+### Requirement: 显式 mock 支付
+
+仅后端启动时设置 `PROMPTARK_BILLING_MOCK=1` 才启用 mock。状态返回 `mock` 和 `mock_pro`，`pro` 始终是真实权益。模拟结果仅按账号存进程内存，重启清空，MUST NOT 调用 Stripe 或写真实 Pro。mock 时兑换入口禁用且服务端拒绝兑换/webhook，避免测试误改真实权益。
+
+#### Scenario: 模拟支付与重置
+
+- GIVEN 已登录且后端启用 mock
+- WHEN Checkout 请求携带 `mock_outcome` 为 success、failure、cancel 或 reset
+- THEN 分别模拟成功、失败、取消或重置，后两种失败/取消不改变已有模拟权益
+- AND 界面始终显示 Mock 标记，不打开外部支付、不改变真实权益；重置只清除此账号模拟状态
+
+#### Scenario: mock 不可越权或隐式开启
+
+- GIVEN 未登录、另一账号或 mock 关闭
+- WHEN 请求模拟操作或读取状态
+- THEN 未登录拒绝、另一账号看不到他人模拟权益、关闭时模拟请求拒绝
+- AND 非预期 HTTP 错误显示失败，不能当作未订阅成功响应
+
 ### Requirement: 状态诚实
 
 `GET /v1/billing/status` MUST 返回当前账号是否 Pro。未配置支付密钥时 MUST 标明支付未开通，MUST NOT 把未付费写成已付费。
@@ -85,6 +103,7 @@
 
 | 场景 | 测试 |
 |---|---|
+| 模拟支付与重置 / mock 不可越权 | `backend/tests/billing.rs` mock 系列、`billing::mock_tests`；桌面/Web mock 组件测试和账单请求失败测试 |
 | 未开通不得写成 Pro | `backend/tests/billing.rs` unsigned_status_is_not_pro_when_payment_is_unconfigured |
 | 兑换成功 | `backend/tests/billing.rs` valid_redeem_code_marks_account_pro_and_cannot_be_reused |
 | 无测试密钥不得结账 | `backend/tests/billing.rs` checkout_requires_test_secret_and_does_not_mark_pro |

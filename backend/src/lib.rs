@@ -46,6 +46,8 @@ pub struct AppState {
     stripe_secret: Option<String>,
     checkout_url: Option<String>,
     webhook_secret: Option<String>,
+    billing_mock: bool,
+    mock_pro_accounts: Arc<Mutex<HashSet<String>>>,
 }
 
 impl Default for AppState {
@@ -72,6 +74,8 @@ impl Default for AppState {
             stripe_secret: None,
             checkout_url: None,
             webhook_secret: None,
+            billing_mock: false,
+            mock_pro_accounts: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 }
@@ -259,6 +263,11 @@ impl AppState {
 
     pub fn with_stripe_secret(mut self, secret: &str) -> Self {
         self.stripe_secret = Some(secret.to_string());
+        self
+    }
+
+    pub fn with_billing_mock(mut self) -> Self {
+        self.billing_mock = true;
         self
     }
 

@@ -11,8 +11,25 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 type HmacSha256 = Hmac<Sha256>;
 
+#[cfg(test)]
+mod mock_tests {
+    use super::*;
+    #[tokio::test]
+    async fn mock_accounts_and_real_entitlements_are_separate() {
+        let state = AppState::default().with_billing_mock();
+        state.mock_pro_accounts.lock().unwrap().insert("a@example.test".into());
+        assert!(status_for(&state, "a@example.test").await.unwrap().mock_pro);
+        assert!(!status_for(&state, "a@example.test").await.unwrap().pro);
+        assert!(!status_for(&state, "b@example.test").await.unwrap().mock_pro);
+        assert!(!status_for(&AppState::default().with_billing_mock(), "a@example.test").await.unwrap().mock_pro);
+        assert_eq!(webhook(State(state), HeaderMap::new(), Bytes::new()).await.unwrap_err(), StatusCode::CONFLICT);
+    }
+}
+
 #[derive(Serialize)]
 pub struct BillingStatus {
+    pub mock: bool,
+    pub mock_pro: bool,
     pub pro: bool,
     pub payment_enabled: bool,
     pub note: String,
@@ -20,10 +37,14 @@ pub struct BillingStatus {
 
 #[derive(Serialize)]
 pub struct CheckoutResponse {
-    pub pro: bool,
-    pub payment_enabled: bool,
-    pub note: String,
+    #[serde(flatten)]
+    pub status: BillingStatus,
     pub checkout_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct CheckoutRequest {
+    pub mock_outcome: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -59,11 +80,13 @@ fn payment_note(payment_enabled: bool) -> String {
 }
 
 async fn status_for(state: &AppState, email: &str) -> Result<BillingStatus, StatusCode> {
-    let payment_enabled = configured_secret(state).is_some();
+    let payment_enabled = !state.billing_mock && configured_secret(state).is_some_and(|key| key.starts_with("sk_test_"));
     Ok(BillingStatus {
+        mock: state.billing_mock,
+        mock_pro: state.billing_mock && state.mock_pro_accounts.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.contains(email),
         pro: state.account_is_pro(email).await?,
         payment_enabled,
-        note: payment_note(payment_enabled),
+        note: if state.billing_mock { "Mock 支付：仅模拟，不扣款；重启服务清空模拟状态".into() } else { payment_note(payment_enabled) },
     })
 }
 
@@ -81,6 +104,7 @@ pub async fn redeem(
     Json(body): Json<RedeemRequest>,
 ) -> Result<Json<BillingStatus>, StatusCode> {
     let email = require_user(&state, &headers).await?;
+    if state.billing_mock { return Err(StatusCode::CONFLICT); }
     state.redeem_code(&email, &body.code).await?;
     Ok(Json(status_for(&state, &email).await?))
 }
@@ -88,27 +112,43 @@ pub async fn redeem(
 pub async fn checkout(
     State(state): State<AppState>,
     headers: HeaderMap,
+    body: Option<Json<CheckoutRequest>>,
 ) -> Result<(StatusCode, Json<CheckoutResponse>), StatusCode> {
     let email = require_user(&state, &headers).await?;
-    let pro = state.account_is_pro(&email).await?;
+    let outcome = body.as_ref().and_then(|body| body.mock_outcome.as_deref());
+    if state.billing_mock {
+        let note = {
+            let mut accounts = state.mock_pro_accounts.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            match outcome {
+                Some("success") => { accounts.insert(email.clone()); "Mock：模拟支付成功，未扣款" },
+                Some("failure") => "Mock：模拟支付失败，可重试；未扣款",
+                Some("cancel") => "Mock：已取消模拟支付，未扣款",
+                Some("reset") => { accounts.remove(&email); "Mock：模拟状态已重置，真实权益不变" },
+                None => "Mock：请选择模拟成功、失败或取消；未扣款",
+                _ => return Err(StatusCode::BAD_REQUEST),
+            }
+        };
+        let mut status = status_for(&state, &email).await?;
+        status.note = note.into();
+        return Ok((StatusCode::OK, Json(CheckoutResponse { status, checkout_url: None })));
+    }
+    if outcome.is_some() { return Err(StatusCode::CONFLICT); }
+    let mut status = status_for(&state, &email).await?;
     let Some(secret) = configured_secret(&state) else {
         return Ok((
             StatusCode::CONFLICT,
             Json(CheckoutResponse {
-                pro,
-                payment_enabled: false,
-                note: "支付未开通".into(),
+                status,
                 checkout_url: None,
             }),
         ));
     };
     if !secret.starts_with("sk_test_") {
+        status.note = "预发只接受测试密钥".into();
         return Ok((
             StatusCode::FORBIDDEN,
             Json(CheckoutResponse {
-                pro,
-                payment_enabled: true,
-                note: "预发只接受测试密钥".into(),
+                status,
                 checkout_url: None,
             }),
         ));
@@ -121,9 +161,7 @@ pub async fn checkout(
     Ok((
         StatusCode::OK,
         Json(CheckoutResponse {
-            pro,
-            payment_enabled: true,
-            note: String::new(),
+            status,
             checkout_url: Some(checkout_url),
         }),
     ))
@@ -236,6 +274,7 @@ pub async fn webhook(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<StatusCode, StatusCode> {
+    if state.billing_mock { return Err(StatusCode::CONFLICT); }
     let Some(secret) = webhook_secret(&state) else {
         return Err(StatusCode::CONFLICT);
     };
@@ -267,4 +306,3 @@ pub async fn webhook(
     state.grant_pro(email).await?;
     Ok(StatusCode::OK)
 }
-

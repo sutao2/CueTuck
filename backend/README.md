@@ -6,7 +6,9 @@
 cd backend
 unset CARGO_TARGET_DIR
 cargo test --locked
-PROMPTARK_ALLOW_DEV_USER=1 cargo run
+PROMPTARK_ALLOW_DEV_USER=1 PROMPTARK_BILLING_MOCK=1 cargo run
 ```
+
+当前测试请保留 `PROMPTARK_BILLING_MOCK=1`；桌面设置的账号页和 Web 账单区将显示模拟操作。mock 的隔离与清空规则见 [账单规格](../docs/specs/billing/spec.md)。不设置该变量则保持原测试支付行为。
 
 默认监听 `127.0.0.1:8787`。`cargo run` 连接本机 Postgres 库 `promptark`（不是 Flyway 库 `pl`）、Redis、MinIO。开发用户 `dev@promptark.local` / `devpass`（普通角色）。管理员 `admin@promptark.local` / `adminpass`。Google / GitHub 可读 `PL_GOOGLE_*` / `PL_GITHUB_*`。表不对时可 `PROMPTARK_RESET_SCHEMA=1` 删表重建。
