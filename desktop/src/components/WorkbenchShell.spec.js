@@ -938,6 +938,7 @@ describe("WorkbenchShell", () => {
     expect(await listSyncQueue()).toEqual([
       { kind: "favorite", method: "PUT", id: "sq-1", email: "dev@promptark.local" },
     ]);
+    expect(w.get('[data-testid="operation-note"]').text()).toContain("尚未送达服务器");
     expect(await listLocalPrompts({ query: "" })).toHaveLength(0);
     expect(w.find('[data-testid="square-offline"]').exists()).toBe(false);
     const flushed = [];

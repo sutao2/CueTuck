@@ -241,6 +241,7 @@
           <button type="button" data-testid="go-local" @click="openLocal">前往本地</button>
         </div>
 
+        <p v-if="operationNote" role="status" data-testid="operation-note" class="use-hint">{{ operationNote }}</p>
         <section class="prompt-section">
           <div class="section-heading-row">
             <div>
@@ -298,6 +299,7 @@
                     type="button"
                     class="card-action"
                     data-testid="favorite-square"
+                    :disabled="favoriteBusy.includes(item.id)"
                     @click.stop="favoriteSquare(item)"
                   >
                     {{ favoriteIds.includes(item.id) ? "已收藏" : "收藏" }}
@@ -391,6 +393,7 @@
               </option>
             </select>
           </label>
+          <p v-if="operationNote" role="status" class="use-hint">{{ operationNote }}</p>
           <p>提交后本地正文仍可编辑，审核状态不会覆盖本机内容。</p>
         </div>
         <footer class="modal-footer">
@@ -399,7 +402,7 @@
             type="button"
             class="button primary-button"
             data-testid="publish-submit"
-            :disabled="!publishSourceId"
+            :disabled="!publishSourceId || publishBusy"
             @click="submitPublish"
           >
             提交审核
@@ -529,6 +532,9 @@ const publishResume = ref(false);
 const pendingPublish = ref(false);
 const publishSources = ref([]);
 const publishSourceId = ref("");
+const publishBusy = ref(false);
+const favoriteBusy = ref([]);
+const operationNote = ref("");
 const squareItems = ref([]);
 const squareOffline = ref(false);
 const squareBlocked = ref(false);
@@ -683,19 +689,25 @@ async function downloadSquare(item) {
 }
 
 async function favoriteSquare(item) {
+  if (favoriteBusy.value.includes(item.id)) return;
   if (!getSession().loggedIn) {
     openLogin("收藏需要登录");
     return;
   }
   const removing = favoriteIds.value.includes(item.id);
+  const email = getSession().email;
+  favoriteBusy.value = [...favoriteBusy.value, item.id];
   try {
-    await favoriteWithQueue(item.id, removing ? "DELETE" : "PUT");
+    const result = await favoriteWithQueue(item.id, removing ? "DELETE" : "PUT");
+    if (getSession().email !== email) return;
     favoriteIds.value = removing
       ? favoriteIds.value.filter((id) => id !== item.id)
       : [...favoriteIds.value, item.id];
-  } catch {
-    squareOffline.value = true;
-  }
+    operationNote.value = result.queued ? "已保存到本机队列，尚未送达服务器。" : (removing ? "已取消收藏。" : "已收藏。");
+    if (removing && sortTab.value === "收藏") squareItems.value = squareItems.value.filter((row) => row.id !== item.id);
+  } catch (error) {
+    operationNote.value = `收藏操作失败：${error.message || error}`;
+  } finally { favoriteBusy.value = favoriteBusy.value.filter((id) => id !== item.id); }
 }
 
 async function loadPublishSources() {
@@ -711,6 +723,7 @@ async function loadPublishSources() {
 }
 
 async function openPublish() {
+  operationNote.value = "";
   await loadPublishSources();
   publishResume.value = true;
 }
@@ -735,10 +748,11 @@ async function finishLogin() {
 }
 
 async function submitPublish() {
-  if (!publishSourceId.value) return;
+  if (!publishSourceId.value || publishBusy.value) return;
+  publishBusy.value = true;
   const source = publishSources.value.find((item) => item.id === publishSourceId.value);
   try {
-    await publishWithQueue({
+    const result = await publishWithQueue({
       sourceId: publishSourceId.value,
       title: source?.title,
       content: source?.content ?? "",
@@ -746,9 +760,10 @@ async function submitPublish() {
       model: source?.model,
     });
     publishResume.value = false;
-  } catch {
-    squareOffline.value = true;
-  }
+    operationNote.value = result.queued ? "草稿已保存在本机队列，尚未提交审核。" : "已提交审核，本地内容仍可编辑。";
+  } catch (error) {
+    operationNote.value = `发布失败：${error.message || error}`;
+  } finally { publishBusy.value = false; }
 }
 
 async function refreshFavorites() {
