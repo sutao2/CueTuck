@@ -28,7 +28,7 @@
             <p>管理应用启动、托盘和快捷窗口的使用偏好。</p>
             <p v-if="prefError" data-testid="pref-error">{{ prefError }}</p>
             <label class="setting-row">
-              <span class="setting-copy"><strong>开机启动</strong><small>登录系统后自动打开应用。未验证的系统不会声称已生效。</small></span>
+              <span class="setting-copy"><strong>开机启动</strong><small>登录系统后自动打开提示方舟。</small></span>
               <input
                 type="checkbox"
                 data-testid="launch-at-login"
@@ -37,7 +37,7 @@
               >
             </label>
             <label class="setting-row">
-              <span class="setting-copy"><strong>关闭后最小化到托盘</strong><small>已接通的 macOS、Windows 与 Linux 会隐藏主窗口而不是退出。未在该系统手工作业验证前不得勾发行 QA。</small></span>
+              <span class="setting-copy"><strong>关闭后最小化到托盘</strong><small>关闭主窗口后保留在托盘，方便随时返回。</small></span>
               <input
                 type="checkbox"
                 data-testid="minimize-to-tray"
