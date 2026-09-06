@@ -17,7 +17,7 @@
       </div>
       <div class="titlebar-right">
         <button type="button" class="title-tool" :title="t('search')" @click="$emit('open-launcher')">
-          <span>⌕</span><span>{{ t("search") }}</span><kbd>{{ shortcutLabel }}</kbd>
+          <AppIcon name="search" /><span>{{ t("search") }}</span><kbd>{{ shortcutLabel }}</kbd>
         </button>
         <button
           type="button"
@@ -25,7 +25,7 @@
           :title="dark ? t('switchLight') : t('switchDark')"
           @click="toggleTheme"
         >
-          ◐
+          <AppIcon :name="dark ? 'sun' : 'moon'" />
         </button>
         <button
           type="button"
@@ -59,7 +59,7 @@
             :class="{ active: space === 'square' }"
             @click="openSquare"
           >
-            <span class="nav-icon">◎</span><span>{{ t("square") }}</span>
+            <span class="nav-icon"><AppIcon name="square" /></span><span>{{ t("square") }}</span>
           </button>
           <button
             type="button"
@@ -69,7 +69,7 @@
             :class="{ active: space === 'local' }"
             @click="openLocal"
           >
-            <span class="nav-icon">▣</span><span>{{ t("local") }}</span>
+            <span class="nav-icon"><AppIcon name="library" /></span><span>{{ t("local") }}</span>
             <span class="nav-count">{{ localCount }}</span>
           </button>
         </div>
@@ -100,19 +100,21 @@
             @click="selectCategory(null)"
           >
             <span class="chevron ghost">›</span>
-            <span class="tree-icon warm">⌘</span>
+            <span class="tree-icon warm"><AppIcon name="square" /></span>
             <span>{{ t("allPrompts") }}</span>
             <span v-if="space === 'local'" class="tree-count">{{ allLocalItems.length }}</span>
           </button>
           <button v-if="space === 'local'" type="button" class="tree-row" data-testid="uncategorized"
             :class="{ active: selectedId === '__uncategorized__' }" @click="selectCategory('__uncategorized__')">
+            <span class="chevron ghost">›</span>
+            <span class="tree-icon"><AppIcon name="folder" /></span>
             <span>{{ uiLanguage === 'en' ? 'Uncategorized' : '未分类' }}</span>
             <span class="tree-count">{{ categoryCount('__uncategorized__') }}</span>
           </button>
           <div v-for="group in categoryGroups" :key="group.id" class="tree-group" :class="{ open: group.open }">
             <button type="button" class="tree-row tree-parent" :class="{ active: selectedId === group.id }" @click="toggleGroup(group)">
               <span class="chevron">›</span>
-              <span class="tree-icon" :class="group.tone">{{ group.icon }}</span>
+              <span class="tree-icon" :class="group.tone"><AppIcon :name="group.tone" /></span>
               <span>{{ group.name }}</span>
               <span v-if="space === 'local'" class="tree-count">{{ categoryCount(group.id) }}</span>
             </button>
@@ -134,7 +136,7 @@
 
         <div class="sidebar-bottom">
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
-            <span>⚙</span><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
+            <AppIcon name="settings" /><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
           </button>
         </div>
       </aside>
@@ -142,7 +144,6 @@
       <main data-region="content" class="content-area">
         <section class="content-header">
           <div class="content-heading">
-            <p class="eyebrow">{{ space === "square" ? "COMMUNITY LIBRARY" : "LOCAL LIBRARY" }}</p>
             <h1>{{ space === "square" ? "发现好用的提示词" : "我的提示词" }}</h1>
             <p>
               {{
@@ -153,7 +154,7 @@
             </p>
           </div>
           <div class="content-actions">
-            <button v-if="space === 'square'" type="button" class="button ghost-button" @click="loadSquare">↻ 刷新</button>
+            <button v-if="space === 'square'" type="button" class="button ghost-button" @click="loadSquare"><AppIcon name="refresh" />{{ t("refresh") }}</button>
             <button
               v-if="space === 'square'"
               type="button"
@@ -161,7 +162,7 @@
               data-testid="publish-prompt"
               @click="startPublish"
             >
-              <span>＋</span><span>{{ t("publish") }}</span>
+              <AppIcon name="plus" /><span>{{ t("publish") }}</span>
             </button>
             <button
               v-else
@@ -169,14 +170,14 @@
               class="button primary-button"
               @click="creating = true"
             >
-              <span>＋</span><span>{{ t("create") }}</span>
+              <AppIcon name="plus" /><span>{{ t("create") }}</span>
             </button>
           </div>
         </section>
 
         <section class="filter-bar">
           <label class="inline-search">
-            <span>⌕</span>
+            <AppIcon name="search" />
             <input
               v-model="query"
               type="search"
@@ -206,8 +207,8 @@
             </select>
           </label>
           <div class="view-switch" aria-label="视图切换">
-            <button type="button" :class="{ active: view === 'grid' }" title="网格视图" @click="view = 'grid'">▦</button>
-            <button type="button" :class="{ active: view === 'list' }" title="列表视图" @click="view = 'list'">☷</button>
+            <button type="button" :class="{ active: view === 'grid' }" title="网格视图" @click="view = 'grid'"><AppIcon name="grid" /></button>
+            <button type="button" :class="{ active: view === 'list' }" title="列表视图" @click="view = 'list'"><AppIcon name="list" /></button>
           </div>
         </section>
 
@@ -240,7 +241,6 @@
         <section class="prompt-section">
           <div class="section-heading-row">
             <div>
-              <span class="section-kicker">{{ space === "square" ? "TRENDING PROMPTS" : "LIBRARY" }}</span>
               <h2>{{ space === "square" ? "正在流行" : selectedLabel }}</h2>
             </div>
             <span class="result-count">共 {{ displayedItems.length }} 个结果</span>
@@ -306,7 +306,7 @@
             </article>
           </div>
           <div v-else class="empty-state">
-            <span class="empty-glyph">{{ space === "square" ? "◎" : "▣" }}</span>
+            <span class="empty-glyph"><AppIcon :name="space === 'square' ? 'square' : 'library'" /></span>
             <h3>{{ emptyHeading }}</h3>
             <p>{{ emptyCopy }}</p>
           </div>
@@ -457,13 +457,14 @@
       <span class="status-item muted-status">{{ t("moreActions") }}</span>
       <span class="status-sep"></span>
       <button type="button" class="status-button" @click="$emit('open-launcher')">
-        ⌕ 快捷搜索 <kbd>{{ shortcutLabel }}</kbd>
+        <AppIcon name="search" /> 快捷搜索 <kbd>{{ shortcutLabel }}</kbd>
       </button>
     </footer>
   </div>
 </template>
 
 <script setup>
+import AppIcon from "./AppIcon.vue";
 import { computed, onMounted, ref } from "vue";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";

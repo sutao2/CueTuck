@@ -1,6 +1,6 @@
 # 5. 主窗口以提示词软件 2 为设计源
 
-- Status: accepted
+- Status: superseded by [ADR 0015](0015-workbench-visual-system.md)（2026-09-06；保留原始决策供追溯）
 - Date: 2026-08-22
 - 关联：[说明：设计源](../../explanation/ui-source.md)
 
