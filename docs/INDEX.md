@@ -27,7 +27,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0003-local-first-phase1.md](architecture/decisions/0003-local-first-phase1.md) | 现行 | 想接后端时 | 第一期纯本地 |
 | [architecture/decisions/0004-documentation-system.md](architecture/decisions/0004-documentation-system.md) | 现行 | 改文档规则时 | 文档组合方案 |
 | [architecture/decisions/0005-ui-source-prompt-ark-prototype.md](architecture/decisions/0005-ui-source-prompt-ark-prototype.md) | 归档 | 追溯主窗口设计源 | 已被 ADR 0015 取代 |
-| [architecture/decisions/0015-workbench-visual-system.md](architecture/decisions/0015-workbench-visual-system.md) | 现行 | 改主窗口视觉时 | 系统字体、线性图标、统一控件与中性色层级 |
+| [architecture/decisions/0015-workbench-visual-system.md](architecture/decisions/0015-workbench-visual-system.md) | 归档 | 追溯首次视觉优化 | 已被 ADR 0016 取代 |
+| [architecture/decisions/0016-workbench-frame-and-settings.md](architecture/decisions/0016-workbench-frame-and-settings.md) | 现行 | 改工作台框架与设置排版 | Codex 风格方向、纵向导航与分组表单 |
 | [architecture/decisions/0006-plan-altitude.md](architecture/decisions/0006-plan-altitude.md) | 现行 | 想一次写完所有逐步任务时 | 计划只写一层深 |
 | [architecture/decisions/0007-sqlite-access.md](architecture/decisions/0007-sqlite-access.md) | 现行 | 改本地库访问方式时 | rusqlite 而不是 plugin-sql |
 | [architecture/decisions/0008-m5-backend-contract.md](architecture/decisions/0008-m5-backend-contract.md) | 现行 | 接广场或后端前 | 改写 API；邮箱密码；覆盖率 |

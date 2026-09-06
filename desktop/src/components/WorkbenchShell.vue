@@ -7,43 +7,16 @@
       :style="{ '--traffic-light-inset': `${trafficInset}px` }"
       data-tauri-drag-region
     >
-      <div class="titlebar-left">
+      <div class="titlebar-left" data-tauri-drag-region>
         <button type="button" class="app-mark" :aria-label="t('brand')">P</button>
+        <span class="brand-name">{{ t("brand") }}</span>
       </div>
       <div class="titlebar-center" data-tauri-drag-region>
-        <span class="brand-name">{{ t("brand") }}</span>
-        <span class="title-dot">·</span>
         <span>{{ locationLabel }}</span>
       </div>
       <div class="titlebar-right">
         <button type="button" class="title-tool" :title="t('search')" @click="$emit('open-launcher')">
           <AppIcon name="search" /><span>{{ t("search") }}</span><kbd>{{ shortcutLabel }}</kbd>
-        </button>
-        <button
-          type="button"
-          class="preference-toggle"
-          :title="dark ? t('switchLight') : t('switchDark')"
-          @click="toggleTheme"
-        >
-          <AppIcon :name="dark ? 'sun' : 'moon'" />
-        </button>
-        <button
-          type="button"
-          class="preference-toggle language-toggle"
-          :title="t('languageToggle')"
-          @click="toggleLanguage"
-        >
-          {{ uiLanguage === "en" ? "中" : "EN" }}
-        </button>
-        <button
-          type="button"
-          class="account-button"
-          data-testid="open-login"
-          :title="session.loggedIn ? session.email : t('login')"
-          @click="openLogin(t('login'))"
-        >
-          <span class="avatar">{{ session.loggedIn ? (session.email?.[0] || "已") : "游" }}</span>
-          <span>{{ session.loggedIn ? t("loggedIn") : t("login") }}</span>
         </button>
       </div>
     </header>
@@ -56,6 +29,7 @@
             class="space-tab"
             data-space="square"
             role="tab"
+            :aria-selected="space === 'square'"
             :class="{ active: space === 'square' }"
             @click="openSquare"
           >
@@ -66,6 +40,7 @@
             class="space-tab"
             data-space="local"
             role="tab"
+            :aria-selected="space === 'local'"
             :class="{ active: space === 'local' }"
             @click="openLocal"
           >
@@ -138,6 +113,19 @@
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
             <AppIcon name="settings" /><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
           </button>
+          <div class="sidebar-account">
+            <button type="button" class="account-button" data-testid="open-login"
+              :title="session.loggedIn ? session.email : t('login')" @click="openLogin(t('login'))">
+              <span class="avatar">{{ session.loggedIn ? (session.email?.[0] || "已") : "游" }}</span>
+              <span>{{ session.loggedIn ? t("loggedIn") : t("login") }}</span>
+            </button>
+            <button type="button" class="preference-toggle" :title="dark ? t('switchLight') : t('switchDark')" @click="toggleTheme">
+              <AppIcon :name="dark ? 'sun' : 'moon'" />
+            </button>
+            <button type="button" class="preference-toggle language-toggle" :title="t('languageToggle')" @click="toggleLanguage">
+              {{ uiLanguage === "en" ? "中" : "EN" }}
+            </button>
+          </div>
         </div>
       </aside>
 

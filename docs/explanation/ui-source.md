@@ -6,6 +6,6 @@
 
 本仓库选择原型作为主窗口事实源，是为了一次对齐信息架构，而不是在旧壳上贴分类树。启动器不在本说明范围内，见 [旧启动器来源](legacy-launcher-source.md)。
 
-2026-09-06 起，原型保留为结构来源，现行主窗口视觉以 [ADR 0015](../architecture/decisions/0015-workbench-visual-system.md) 和工作台规格为准。
+2026-09-06 起，原型保留为结构来源，现行主窗口视觉以 [ADR 0016](../architecture/decisions/0016-workbench-frame-and-settings.md) 和工作台规格为准。
 
 原型路径：`../PromptLauncher/提示词软件 2/`。其中 `DEVELOPMENT.md` 是产品意图，`index.html` / `styles.css` / `app.js` 是交互参考。它们不是运行时代码，实现必须以本仓库规格为准。

@@ -32,6 +32,17 @@ M2 已落地且 MUST 保留：常规入口、启动器全局快捷键、JSON 导
 - THEN 弹窗保持 760 × 600 CSS 像素，视口较小时收缩到四周至少 24 像素边距
 - AND 标题与关闭按钮保持可见，导航和内容超出时分别内部滚动，不随正文撑大窗口
 
+### Requirement: 统一设置布局
+
+设置名称 MUST 位于左侧导航顶部，右侧只显示当前页标题；关闭按钮保持可见。普通选项左说明右控件；多字段资料、账单与多行编辑 MUST 纵向分组，不挤在说明旁边。文本控件、选择框和开关有一致的尺寸、禁用与键盘焦点状态。
+
+#### Scenario: 简单选项与复杂表单
+
+- GIVEN 设置弹窗打开
+- WHEN 切换常规、账号与广场、模型或数据页
+- THEN 导航位置与弹窗尺寸不变，简单选项对齐，多字段内容独占可用宽度
+- AND 所有原有设置入口、保存与错误提示保留，短视口只滚动内容，不裁掉关闭入口
+
 ### Requirement: M2 已交付页面
 
 下列页面在 M2 已有真实行为，后续里程碑 MUST 继续提供，不得改成纯说明页：常规、快捷键、数据与备份、外观。
@@ -172,7 +183,7 @@ M8 起外观页 MUST 另有：跟随系统、界面语言（中文 / English）�
 #### Scenario: 界面语言切换壳层文案
 
 - GIVEN 当前为中文
-- WHEN 用户把界面语言改为 English 或点顶栏 EN
+- WHEN 用户把界面语言改为 English 或点侧栏 EN
 - THEN 工作台壳层与设置导航改为英文
 - AND 再选中文后恢复
 
@@ -402,6 +413,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 场景 | 测试 |
 |---|---|
 | 打开设置 | `WorkbenchShell.spec.js` opens settings from the sidebar |
+| 简单选项与复杂表单 | `SettingsLayout.spec.js` 单一标题、当前页标识、纵向资料表单与切页保留草稿；浏览器十页尺寸/滚动检查 |
 | 未实现页 | `WorkbenchShell.spec.js` labels the proxy row as follow-system instead of available |
 | 空代理跟随系统 | `WorkbenchShell.spec.js` labels the proxy row as follow-system instead of available；`httpProxy.test.js` treats a blank value as follow-system；`desktop/src-tauri` `empty_setting_follows_system` |
 | 填写后本机走代理 | `WorkbenchShell.spec.js` persists a manual http proxy from the settings row；`httpProxy.test.js` accepts http and https proxy urls；`desktop/src-tauri` `http_and_https_urls_are_accepted` |
