@@ -376,11 +376,10 @@
     />
     <div v-if="publishResume" class="modal-layer" data-testid="publish-resume">
       <div class="modal-backdrop" @click="publishResume = false"></div>
-      <section class="modal create-modal" role="dialog" aria-modal="true">
+      <section v-dialog-focus="() => publishResume = false" class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="publish-title">
         <header class="modal-header">
           <div>
-            <p class="modal-kicker">PUBLISH</p>
-            <h2>发布到广场</h2>
+            <h2 id="publish-title">发布到广场</h2>
           </div>
           <button type="button" class="modal-close" aria-label="关闭" @click="publishResume = false">×</button>
         </header>
@@ -456,6 +455,7 @@
 
 <script setup>
 import AppIcon from "./AppIcon.vue";
+import { vDialogFocus } from "../lib/dialogFocus.js";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";

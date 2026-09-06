@@ -1,11 +1,11 @@
 <template>
   <div class="modal-layer" data-testid="use-modal">
     <div class="modal-backdrop" @click="$emit('cancel')"></div>
-    <section class="modal create-modal" role="dialog" aria-modal="true">
+    <section v-dialog-focus="() => $emit('cancel')" class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="use-title">
       <header class="modal-header">
         <div>
-          <p class="modal-kicker">{{ kicker }}</p>
-          <h2>{{ heading }}</h2>
+          <p class="modal-kicker">{{ prompt.title }}</p>
+          <h2 id="use-title">{{ heading }}</h2>
         </div>
         <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
       </header>
@@ -47,6 +47,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { vDialogFocus } from "../lib/dialogFocus.js";
 import { extractVariables, renderPrompt } from "../lib/renderPrompt.js";
 import { hintForVariable } from "../platform/variableHints.js";
 
@@ -69,7 +70,6 @@ const currentHint = computed(() =>
   props.hintsEnabled ? hintForVariable(currentName.value) : "",
 );
 const preview = computed(() => renderPrompt(props.prompt.content, values.value));
-const kicker = computed(() => (step.value === "preview" ? "FINAL PREVIEW" : "填写当前变量"));
 const heading = computed(() => (step.value === "preview" ? "确认并使用提示词" : currentName.value));
 const stepLabel = computed(() =>
   step.value === "preview" ? "预览" : `变量 ${index.value + 1} / ${names.length}`,

@@ -1,10 +1,10 @@
 <template>
-  <div class="modal-layer" data-testid="square-detail" @keydown.esc="$emit('cancel')">
+  <div class="modal-layer" data-testid="square-detail">
     <div class="modal-backdrop" @click="$emit('cancel')"></div>
-    <section class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="square-detail-title">
+    <section v-dialog-focus="() => $emit('cancel')" class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="square-detail-title">
       <header class="modal-header">
         <div>
-          <p class="modal-kicker">SQUARE</p>
+          <p class="modal-kicker">提示词广场</p>
           <h2 id="square-detail-title">{{ item.title }}</h2>
         </div>
         <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
@@ -39,6 +39,7 @@
 </template>
 
 <script setup>
+import { vDialogFocus } from "../lib/dialogFocus.js";
 defineProps({
   item: { type: Object, required: true },
   loading: Boolean,

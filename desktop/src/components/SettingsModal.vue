@@ -1,7 +1,7 @@
 <template>
-  <div class="modal-layer" data-testid="settings-modal" @keydown.esc.stop.prevent="pendingAction ? pendingAction = null : requestClose()">
+  <div class="modal-layer" data-testid="settings-modal" @keydown.esc="onEscape">
     <div class="modal-backdrop" @click="requestClose"></div>
-    <section class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <section v-dialog-focus="requestClose" class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <button type="button" class="modal-close settings-close" aria-label="关闭" @click="requestClose">×</button>
       <div class="settings-body">
         <nav class="settings-nav" aria-labelledby="settings-title">
@@ -406,6 +406,7 @@
 
 <script setup>
 import AppIcon from "./AppIcon.vue";
+import { vDialogFocus } from "../lib/dialogFocus.js";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { uiText } from "../platform/uiStrings.js";
 import {
@@ -533,6 +534,13 @@ const hasUnsaved = computed(() => !loading.value && (
 ));
 
 function showFeedback(message, error = false) { feedback.value = message; feedbackError.value = error; }
+function onEscape(event) {
+  if (event.isComposing) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (pendingAction.value) pendingAction.value = null;
+  else requestClose();
+}
 function requestClose() {
   if (saving.value || loading.value || dataBusy.value || importBusy.value || billingBusy.value) return;
   if (hasUnsaved.value) pendingAction.value = 'discard';

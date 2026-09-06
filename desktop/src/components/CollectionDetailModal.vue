@@ -1,11 +1,11 @@
 <template>
   <div class="modal-layer" data-testid="collection-detail">
     <div class="modal-backdrop" @click="$emit('cancel')"></div>
-    <section class="modal create-modal" role="dialog" aria-modal="true">
+    <section v-dialog-focus="() => $emit('cancel')" class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="collection-title">
       <header class="modal-header">
         <div>
-          <p class="modal-kicker">LOCAL COLLECTION</p>
-          <h2>{{ collection.title }}</h2>
+          <p class="modal-kicker">提示词合集</p>
+          <h2 id="collection-title">{{ collection.title }}</h2>
         </div>
         <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
       </header>
@@ -52,6 +52,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { vDialogFocus } from "../lib/dialogFocus.js";
 import { coverSlots, parseCoverUrls } from "../lib/cover.js";
 
 const props = defineProps({
