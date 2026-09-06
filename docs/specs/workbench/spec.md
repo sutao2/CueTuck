@@ -24,11 +24,12 @@
 - AND 顶栏左区与侧栏同宽，分隔线纵向对齐；内容面没有外边距、圆角外框或阴影
 - AND 深色侧栏比内容面稍亮，浅色也保持清晰分区，不改变已保存的主题选择
 
-#### Scenario: 收起后仍可搜索
+#### Scenario: 右上角固定搜索入口
 
-- GIVEN 用户收起侧栏
+- GIVEN 侧栏展开或收起
 - WHEN 点击顶栏搜索按钮
-- THEN 唤起现有独立启动器，展开侧栏后搜索入口回到品牌行
+- THEN 唤起现有独立启动器，右上角始终展示搜索图标、文字和宿主快捷键
+- AND 右上角不展示设置图标；设置仍可通过侧栏入口或设置快捷键打开，侧栏品牌行搜索保留
 
 #### Scenario: 不同视图与窗口下保持一致
 
@@ -165,4 +166,4 @@
 | 右键只提供已有动作 | `WorkbenchShell.spec.js` opens a context menu with existing local actions |
 | macOS 主窗口 | `WorkbenchShell.spec.js` uses mac chrome on macos；`windowChrome.test.js` gives traffic-light inset and glyph shortcut on macos |
 | 标题栏折叠入口不跳位 | `WorkbenchShell.spec.js` keeps the sidebar toggle outside the drag region；Playwright 两态坐标与窄窗口测量 |
-| 截图参考框架 / 收起后搜索 | `WorkbenchShell.spec.js` separates sidebar branding from window controls and keeps launcher search available；Playwright 分隔线与主题测量 |
+| 截图参考框架 / 右上角固定搜索 | `WorkbenchShell.spec.js` separates sidebar branding from window controls and keeps launcher search available；Playwright 分隔线与主题测量 |
