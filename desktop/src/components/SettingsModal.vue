@@ -4,7 +4,7 @@
     <section class="modal settings-modal" role="dialog" aria-modal="true">
       <header class="modal-header">
         <div>
-          <p class="modal-kicker">LOCAL SETTINGS</p>
+          <p class="modal-kicker">SETTINGS</p>
           <h2>{{ uiText(uiLanguage, "settings") }}</h2>
         </div>
         <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
@@ -25,7 +25,7 @@
         <div class="settings-content">
           <section v-if="current === 'general'">
             <h3>常规</h3>
-            <p>第一期只使用本机库。启动器仍是独立窗口。</p>
+            <p>管理应用启动、托盘和快捷窗口的使用偏好。</p>
             <p v-if="prefError" data-testid="pref-error">{{ prefError }}</p>
             <label class="setting-row">
               <span class="setting-copy"><strong>开机启动</strong><small>登录系统后自动打开应用。未验证的系统不会声称已生效。</small></span>

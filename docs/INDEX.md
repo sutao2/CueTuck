@@ -37,14 +37,14 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0013-oauth-google-github.md](architecture/decisions/0013-oauth-google-github.md) | 现行 | 接 Google / GitHub 登录前 | 选定 Google 与 GitHub；仍不接 QQ/LinuxDo |
 | [architecture/decisions/0014-full-product.md](architecture/decisions/0014-full-product.md) | 现行 | 问是否还按第一期冻结 | 剩余工作按完整产品排队 |
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 独立窗口、搜索竞态与复制/粘贴失败反馈 |
-| [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层 |
+| [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层与当前空间状态，无阶段占位 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
 | [specs/square/spec.md](specs/square/spec.md) | 目标 | 改广场浏览、下载或收藏 | 广场只读详情、重试与分类下载 |
 | [specs/collections/spec.md](specs/collections/spec.md) | 目标 | 做合集 | 合集编辑/删除与全库成员管理 |
 | [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 两级分类 |
 | [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析 |
 | [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 认证；邮箱密码；Refresh 进钥匙串 |
-| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 一致性备份恢复、周期备份与更新版本校验 |
+| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 固定尺寸弹窗、备份恢复与更新版本校验 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；审核事务与重复操作保护 |
 | [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 账号隔离、保存重试与复制失败反馈；不进桌面包 |
