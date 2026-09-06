@@ -1271,6 +1271,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="privacy"]').trigger("click");
     await w.get('[data-testid="clear-use-history"]').trigger("click");
+    await w.get('[data-testid="confirm-settings-action"]').trigger("click");
     await flushPromises();
     const rows = await listLocalPrompts({ query: "" });
     expect(rows).toHaveLength(1);

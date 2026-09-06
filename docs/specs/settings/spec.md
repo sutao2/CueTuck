@@ -14,6 +14,31 @@ M2 已落地且 MUST 保留：常规入口、启动器全局快捷键、JSON 导
 
 ## Requirements
 
+### Requirement: 保存反馈与安全退出
+
+即时开关和选择项 MUST 在保存成功后更新生效值；失败恢复原值并在固定反馈区说明失败。进行中禁止重复提交与关闭。模型、快捷键与作者资料为显式保存，MUST 标明保存方式，成功或失败均有可见反馈。含未保存表单或导入文本时关闭设置 MUST 先询问，取消保留输入，不自动提交。
+
+#### Scenario: 保存失败与未保存退出
+
+- GIVEN 设置已有持久化值，用户修改开关或表单
+- WHEN 写入失败或未保存就关闭
+- THEN 失败的即时选项回到原值；未保存退出先确认，选择继续编辑后输入仍在
+- AND 不将失败或部分保存写成全部保存成功
+
+#### Scenario: 危险操作确认
+
+- GIVEN 用户打开数据或隐私页
+- WHEN 点击恢复库文件或清除历史
+- THEN 显示操作范围的二次确认，取消不写数据
+- AND 只有确认后执行；恢复说明会替换当前库，清除历史说明不删除提示词
+
+#### Scenario: 密度真实生效
+
+- GIVEN 已打开工作台
+- WHEN 内容密度在舒适与紧凑之间切换
+- THEN 主窗口卡片、列表与分类行的间距改变，重新打开仍沿用已保存密度
+- AND 不改变独立启动器布局
+
 ### Requirement: 入口
 
 系统 MUST 从侧栏底部打开设置。
@@ -413,6 +438,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 场景 | 测试 |
 |---|---|
 | 打开设置 | `WorkbenchShell.spec.js` opens settings from the sidebar |
+| 保存反馈、未保存退出与危险确认 | `SettingsInteraction.spec.js` 写入失败回滚、待保存禁止关闭、草稿保留与取消/确认边界 |
 | 简单选项与复杂表单 | `SettingsLayout.spec.js` 单一标题、当前页标识、纵向资料表单与切页保留草稿；浏览器十页尺寸/滚动检查 |
 | 未实现页 | `WorkbenchShell.spec.js` labels the proxy row as follow-system instead of available |
 | 空代理跟随系统 | `WorkbenchShell.spec.js` labels the proxy row as follow-system instead of available；`httpProxy.test.js` treats a blank value as follow-system；`desktop/src-tauri` `empty_setting_follows_system` |
