@@ -14,10 +14,9 @@
         <AppIcon :name="space === 'local' ? 'folder' : 'square'" /><span data-tauri-drag-region>{{ locationLabel }}</span>
       </div>
       <div class="titlebar-right">
-        <button v-if="sidebarCollapsed" type="button" class="title-tool" data-testid="titlebar-search" :title="t('search')" @click="$emit('open-launcher')">
+        <button type="button" class="title-tool" data-testid="titlebar-search" :title="t('search')" @click="$emit('open-launcher')">
           <AppIcon name="search" /><span>{{ t("search") }}</span><kbd>{{ shortcutLabel }}</kbd>
         </button>
-        <button type="button" class="frame-icon-button" data-testid="titlebar-settings" :aria-label="t('settings')" :title="t('settings')" @click="settingsOpen = true"><AppIcon name="settings" /></button>
       </div>
     </header>
 
