@@ -1,8 +1,31 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import UsePromptModal from "./UsePromptModal.vue";
 
 describe("UsePromptModal", () => {
+  it('keeps keyboard focus inside when the last variable becomes a preview', async () => {
+    const w = mount(UsePromptModal, { attachTo: document.body, props: { prompt: { title: 'Focus', content: '{{产品}}' } } });
+    await flushPromises();
+    w.get('[data-testid="use-value"]').element.focus();
+    await w.get('[data-testid="use-value"]').trigger('keydown', { key: 'Enter' });
+    expect(document.activeElement).toBe(w.get('[data-testid="use-next"]').element);
+    await w.get('[data-testid="use-next"]').trigger('keydown', { key: 'Escape' });
+    expect(w.emitted('cancel')).toHaveLength(1);
+    w.unmount();
+  });
+  it('does not advance while composing Chinese or repeat copying while busy', async () => {
+    const w = mount(UsePromptModal, { props: { prompt: { title: '输入法', content: '{{主题}}' } } });
+    await w.get('[data-testid="use-value"]').setValue('设计');
+    await w.get('[data-testid="use-value"]').trigger('keydown', { key: 'Enter', isComposing: true });
+    expect(w.find('[data-testid="use-preview"]').exists()).toBe(false);
+    await w.get('[data-testid="use-value"]').trigger('keydown', { key: 'Enter' });
+    expect(w.get('[data-testid="use-preview"]').text()).toBe('设计');
+    await w.setProps({ busy: true });
+    await w.get('[data-testid="use-next"]').trigger('click');
+    expect(w.emitted('copied')).toBeUndefined();
+    expect(w.get('[data-testid="use-next"]').text()).toBe('正在复制…');
+    w.unmount();
+  });
   it("asks for one variable at a time then previews the filled text", async () => {
     const w = mount(UsePromptModal, {
       props: {

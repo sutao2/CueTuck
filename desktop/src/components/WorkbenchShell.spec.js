@@ -48,6 +48,20 @@ const tauriVersion = JSON.parse(
 ).version;
 
 describe("WorkbenchShell", () => {
+  it('distinguishes a filtered empty result and exposes a keyboard-operable card title', async () => {
+    await createLocalPrompt({ title: 'Keep this', content: 'body' });
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    await w.get('[data-space="local"]').trigger('click');
+    await flushPromises();
+    expect(w.get('.prompt-title').element.tagName).toBe('BUTTON');
+    await w.get('.inline-search input').setValue('no match here');
+    await flushPromises();
+    expect(w.get('.empty-state').text()).toContain('没有匹配的提示词');
+    expect(w.get('.empty-state').text()).not.toContain('本地库是空的');
+    expect(await listLocalPrompts()).toHaveLength(1);
+    w.unmount();
+  });
   beforeEach(() => {
     resetMemoryLibrary();
     resetMemorySession();

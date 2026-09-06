@@ -172,6 +172,7 @@
             <input
               v-model="query"
               type="search"
+              :aria-label="space === 'square' ? '搜索标题、标签或作者' : '搜索标题或正文'"
               :placeholder="space === 'square' ? '搜索标题、标签或作者' : '搜索标题或正文'"
               @input="space === 'square' ? loadSquare() : reloadPrompts()"
             >
@@ -183,6 +184,8 @@
               :key="tab.id"
               type="button"
               :data-sort="tab.id"
+              role="tab"
+              :aria-selected="sortTab === tab.id"
               :class="{ active: sortTab === tab.id }"
               @click="setSort(tab.id)"
             >
@@ -198,8 +201,8 @@
             </select>
           </label>
           <div class="view-switch" aria-label="视图切换">
-            <button type="button" :class="{ active: view === 'grid' }" title="网格视图" @click="view = 'grid'"><AppIcon name="grid" /></button>
-            <button type="button" :class="{ active: view === 'list' }" title="列表视图" @click="view = 'list'"><AppIcon name="list" /></button>
+            <button type="button" :class="{ active: view === 'grid' }" :aria-pressed="view === 'grid'" title="网格视图" @click="view = 'grid'"><AppIcon name="grid" /></button>
+            <button type="button" :class="{ active: view === 'list' }" :aria-pressed="view === 'list'" title="列表视图" @click="view = 'list'"><AppIcon name="list" /></button>
           </div>
         </section>
 
@@ -262,7 +265,7 @@
                 <span class="type-badge">{{ item.kind === "collection" ? "合集" : space === "square" ? "广场" : "本地" }}</span>
                 <span v-if="showModelTags && item.model" class="model-tag" data-testid="model-tag">{{ item.model }}</span>
               </div>
-              <h3>{{ item.title }}</h3>
+              <h3><button type="button" class="prompt-title" @click.stop="openItem(item)">{{ item.title }}</button></h3>
               <p v-if="item.author" class="prompt-author" data-testid="prompt-author">{{ item.author }}</p>
               <p class="prompt-excerpt">
                 {{
@@ -393,6 +396,7 @@
               </option>
             </select>
           </label>
+          <div class="publish-explainer"><AppIcon name="globe" /><div><strong>分享前确认内容可以公开</strong><p>请移除密钥、个人信息和其他不适合公开的内容。</p></div></div>
           <p v-if="operationNote" role="status" class="use-hint">{{ operationNote }}</p>
           <p>提交后本地正文仍可编辑，审核状态不会覆盖本机内容。</p>
         </div>
@@ -405,7 +409,7 @@
             :disabled="!publishSourceId || publishBusy"
             @click="submitPublish"
           >
-            提交审核
+            {{ publishBusy ? '正在提交…' : '提交审核' }}
           </button>
         </footer>
       </section>
@@ -613,13 +617,19 @@ const selectedLabel = computed(() => {
 const modelOptions = computed(() =>
   parseModelNames(modelCatalogText.value, customModelsText.value, seenModels.value, prompts.value),
 );
+const hasContentFilter = computed(() => Boolean(query.value.trim() || selectedId.value || modelFilter.value));
 const emptyHeading = computed(() => {
+  if (space.value === 'square' && squareOffline.value) return t('emptyOffline');
+  if (hasContentFilter.value) return t('emptyFiltered');
   if (space.value === "square") return squareOffline.value ? t("emptyOffline") : t("emptySquare");
   if (sortTab.value === "最近") return t("emptyRecent");
   if (sortTab.value === "收藏") return t("emptyFavorite");
   return t("emptyLocal");
 });
-const emptyCopy = computed(() => (space.value === "square" ? t("emptySquareHint") : t("emptyLocalHint")));
+const emptyCopy = computed(() => {
+  if (hasContentFilter.value && !(space.value === 'square' && squareOffline.value)) return t('emptyFilteredHint');
+  return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
+});
 const locationLabel = computed(() => (space.value === "square" ? t("square") : t("local")));
 const databaseLabel = computed(() => {
   if (props.databaseStatus === "ready") return "SQLite 就绪";

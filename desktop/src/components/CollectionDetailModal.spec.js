@@ -1,8 +1,35 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 
 describe("CollectionDetailModal", () => {
+  it('retains dialog focus after adding disables the submit button', async () => {
+    const w = mount(CollectionDetailModal, { attachTo: document.body, props: {
+      collection: { id: 'c', title: 'Collection' }, prompts: [{ id: 'p', title: 'Prompt' }],
+    } });
+    await w.get('select').setValue('p');
+    const add = w.findAll('button').find(button => button.text() === '加入合集');
+    add.element.focus();
+    await add.trigger('click');
+    await flushPromises();
+    expect(document.activeElement).toBe(w.get('[role="dialog"]').element);
+    await w.get('[role="dialog"]').trigger('keydown', { key: 'Escape' });
+    expect(w.emitted('cancel')).toHaveLength(1);
+    w.unmount();
+  });
+  it('explains an empty collection and keeps member actions separate from the title', async () => {
+    const w = mount(CollectionDetailModal, { props: { collection: { id: 'c', title: '工作' } } });
+    expect(w.get('.collection-empty').text()).toContain('从下方选择');
+    expect(w.get('select').text()).toContain('暂无可加入');
+    const member = { id: 'p', title: '长标题'.repeat(20), collection_id: 'c' };
+    await w.setProps({ members: [member], prompts: [member] });
+    expect(w.find('.collection-empty').exists()).toBe(false);
+    await w.get('.member-title').trigger('click');
+    expect(w.emitted('open')[0][0]).toEqual(member);
+    await w.get('[data-testid="remove-member"]').trigger('click');
+    expect(w.emitted('remove-member')[0][0]).toBe('p');
+    w.unmount();
+  });
   it("opens a sparse grid with real images and placeholders", () => {
     const w = mount(CollectionDetailModal, {
       props: {

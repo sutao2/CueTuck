@@ -16,6 +16,7 @@
           <label class="field">
             <span data-testid="use-variable">{{ currentName }}</span>
             <textarea
+              ref="variableInput"
               v-model="currentValue"
               rows="4"
               data-testid="use-value"
@@ -23,6 +24,7 @@
               @keydown="onValueKeydown"
             ></textarea>
             <small v-if="currentHint" data-testid="variable-hint">{{ currentHint }}</small>
+            <small class="field-help">Enter 下一步 · Shift+Enter 换行</small>
           </label>
         </template>
         <template v-else>
@@ -36,8 +38,8 @@
           <button v-if="step !== 'preview' || names.length" type="button" class="button ghost-button" @click="back">
             上一步
           </button>
-          <button type="button" class="button primary-button" data-testid="use-next" :disabled="busy" @click="next">
-            {{ step === "preview" ? "复制并完成" : "下一步" }}
+          <button ref="nextButton" type="button" class="button primary-button" data-testid="use-next" :disabled="busy" @click="next">
+            {{ busy ? '正在复制…' : step === "preview" ? "复制并完成" : "下一步" }}
           </button>
         </div>
       </footer>
@@ -46,7 +48,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { vDialogFocus } from "../lib/dialogFocus.js";
 import { extractVariables, renderPrompt } from "../lib/renderPrompt.js";
 import { hintForVariable } from "../platform/variableHints.js";
@@ -64,6 +66,11 @@ const values = ref({});
 const index = ref(0);
 const currentValue = ref("");
 const step = ref(names.length ? "variable" : "preview");
+const variableInput = ref(null);
+const nextButton = ref(null);
+watch([step, index], () => {
+  (step.value === 'variable' ? variableInput.value : nextButton.value)?.focus();
+}, { flush: 'post' });
 
 const currentName = computed(() => names[index.value] ?? "");
 const currentHint = computed(() =>
@@ -76,6 +83,7 @@ const stepLabel = computed(() =>
 );
 
 function next() {
+  if (props.busy) return;
   if (step.value === "variable") {
     values.value = { ...values.value, [currentName.value]: currentValue.value };
     if (index.value < names.length - 1) {
@@ -90,7 +98,7 @@ function next() {
 }
 
 function onValueKeydown(event) {
-  if (event.key !== "Enter" || event.shiftKey) return;
+  if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
   event.preventDefault();
   next();
 }

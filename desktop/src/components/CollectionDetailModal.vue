@@ -19,18 +19,21 @@
             <img v-if="src" :src="src" alt="">
           </i>
         </div>
-        <p class="use-hint">{{ members.length }} 个提示词。缺图不会阻止打开详情。</p>
+        <p class="use-hint">{{ members.length }} 个提示词</p>
+        <div v-if="!members.length" class="collection-empty"><strong>把相关提示词放在一起</strong><p>从下方选择本地提示词，开始整理这个合集。</p></div>
         <ul class="member-list">
           <li v-for="member in members" :key="member.id">
-            <button type="button" class="card-action" @click="$emit('open', member)">{{ member.title }}</button>
+            <button type="button" class="member-title" :title="member.title" @click="$emit('open', member)">{{ member.title }}</button>
+            <span class="member-actions">
             <button type="button" class="card-action" @click="$emit('use', member)">使用</button>
             <button type="button" class="card-action" data-testid="remove-member" @click="$emit('remove-member', member.id)">移出合集</button>
+            </span>
           </li>
         </ul>
         <label class="field">
           <span>加入已有提示词</span>
           <select v-model="selectedPromptId">
-            <option value="">选择一条</option>
+            <option value="">{{ available.length ? '选择一条本地提示词' : '暂无可加入的提示词' }}</option>
             <option v-for="prompt in available" :key="prompt.id" :value="prompt.id">
               {{ prompt.title }}
             </option>
