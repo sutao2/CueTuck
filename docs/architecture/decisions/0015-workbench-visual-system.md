@@ -1,6 +1,6 @@
 # 15. 以现行工作台能力为基础统一桌面视觉
 
-- Status: accepted
+- Status: superseded by [ADR 0016](0016-workbench-frame-and-settings.md)
 - Date: 2026-09-06
 - Supersedes: [ADR 0005](0005-ui-source-prompt-ark-prototype.md)
 

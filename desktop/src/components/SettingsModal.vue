@@ -1,28 +1,24 @@
 <template>
   <div class="modal-layer" data-testid="settings-modal">
     <div class="modal-backdrop" @click="$emit('cancel')"></div>
-    <section class="modal settings-modal" role="dialog" aria-modal="true">
-      <header class="modal-header">
-        <div>
-          <p class="modal-kicker">SETTINGS</p>
-          <h2>{{ uiText(uiLanguage, "settings") }}</h2>
-        </div>
-        <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
-      </header>
+    <section class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <button type="button" class="modal-close settings-close" aria-label="关闭" @click="$emit('cancel')">×</button>
       <div class="settings-body">
-        <nav class="settings-nav">
+        <nav class="settings-nav" aria-labelledby="settings-title">
+          <h2 id="settings-title">{{ uiText(uiLanguage, "settings") }}</h2>
           <button
             v-for="page in pages"
             :key="page.id"
             type="button"
             :class="{ active: current === page.id }"
             :data-settings-page="page.id"
+            :aria-current="current === page.id ? 'page' : undefined"
             @click="current = page.id"
           >
-            {{ page.label }}
+            <AppIcon :name="page.icon" /><span>{{ page.label }}</span>
           </button>
         </nav>
-        <div class="settings-content">
+        <div :key="current" class="settings-content">
           <section v-if="current === 'general'">
             <h3>常规</h3>
             <p>管理应用启动、托盘和快捷窗口的使用偏好。</p>
@@ -57,16 +53,16 @@
           </section>
           <section v-else-if="current === 'account'">
             <h3>账号与广场</h3>
-            <p>当前账号接到已有邮箱密码登录，不提供未选定的第三方绑定。</p>
+            <p>管理登录账号、公开资料与订阅。</p>
             <div class="setting-row">
-              <span class="setting-copy"><strong>当前账号</strong><small>使用工作台已有登录，不新增 OAuth。</small></span>
-              <span class="setting-control" data-testid="current-account">{{ session.loggedIn ? session.email : "未登录" }}</span>
+              <span class="setting-copy"><strong>当前账号</strong><small>登录后可发布、收藏和同步提示词。</small></span>
+              <span class="setting-control account-session">
+                <span data-testid="current-account">{{ session.loggedIn ? session.email : "未登录" }}</span>
+                <button v-if="!session.loggedIn" type="button" class="button primary-button" data-testid="settings-login" @click="$emit('login')">登录</button>
+                <button v-else type="button" class="button ghost-button" data-testid="settings-logout" @click="$emit('logout')">退出</button>
+              </span>
             </div>
-            <div class="modal-actions">
-              <button v-if="!session.loggedIn" type="button" class="button primary-button" data-testid="settings-login" @click="$emit('login')">登录</button>
-              <button v-else type="button" class="button ghost-button" data-testid="settings-logout" @click="$emit('logout')">退出</button>
-            </div>
-            <div class="setting-row">
+            <div class="setting-row setting-block">
               <span class="setting-copy"><strong>作者主页</strong><small>已登录可保存显示名与简介。</small></span>
               <span class="setting-control author-profile">
                 <input
@@ -105,7 +101,7 @@
                 </ul>
               </span>
             </div>
-            <div class="setting-row">
+            <div class="setting-row setting-block">
               <span class="setting-copy"><strong>账单</strong><small>预发可查状态、兑换码；只有测试密钥才跳转 Checkout。不是公开售卖。</small></span>
               <span class="setting-control author-profile">
                 <span data-testid="billing-pro">{{ session.loggedIn ? (billingPro ? "Pro" : "未订阅") : "未登录" }}</span>
@@ -158,10 +154,6 @@
               <span>唤起快捷搜索</span>
               <input v-model="shortcut" placeholder="Control+Space">
             </label>
-            <div class="modal-actions">
-              <button type="button" class="button primary-button" @click="saveShortcut">保存快捷键</button>
-            </div>
-            <p v-if="shortcutError" data-testid="shortcut-error">{{ shortcutError }}</p>
             <label class="field">
               <span>新建提示词</span>
               <input v-model="newPromptShortcut" data-testid="new-prompt-shortcut" placeholder="Control+Alt+N">
@@ -170,6 +162,10 @@
               <span>快速粘贴最近使用</span>
               <input v-model="pasteRecentShortcut" data-testid="paste-recent-shortcut" placeholder="Control+Shift+V">
             </label>
+            <div class="modal-actions">
+              <button type="button" class="button primary-button" @click="saveShortcut">保存快捷键</button>
+            </div>
+            <p v-if="shortcutError" data-testid="shortcut-error">{{ shortcutError }}</p>
           </section>
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
             <h3>同步</h3>
@@ -224,16 +220,17 @@
               <span class="setting-copy"><strong>变量智能建议</strong><small>关闭时不提供建议；打开也不上传正文。</small></span>
               <input type="checkbox" data-testid="variable-hints" v-model="variableHints">
             </label>
-            <div class="modal-actions">
-              <button type="button" class="button primary-button" data-testid="save-models" @click="saveModels">保存本机模型偏好</button>
-            </div>
             <label class="field">
               <span>自定义模型列表</span>
               <textarea v-model="customModels" data-testid="custom-models" rows="2" placeholder="本机自定义名称"></textarea>
             </label>
+            <div class="modal-actions">
+              <button type="button" class="button primary-button" data-testid="save-models" @click="saveModels">保存本机模型偏好</button>
+            </div>
           </section>
           <section v-else-if="current === 'data'">
             <h3>数据与备份</h3>
+            <p>管理本机资料、导入导出与数据恢复。</p>
             <div class="setting-row">
               <span class="setting-copy"><strong>SQLite 数据库</strong><small>打开库文件所在目录。</small></span>
               <button type="button" class="button ghost-button" data-testid="open-library-dir" @click="openDir">打开目录</button>
@@ -248,10 +245,11 @@
             </label>
             <p v-if="autoBackupNote" role="status" data-testid="auto-backup-note">{{ autoBackupNote }}</p>
             <p v-if="zipPath" data-testid="zip-path">{{ zipPath }}</p>
-            <div class="modal-actions">
+            <div class="setting-row">
+              <span class="setting-copy"><strong>导出 JSON</strong><small>导出可阅读、可再次导入的提示词数据。</small></span>
               <button type="button" class="button ghost-button" @click="doExport">导出 JSON</button>
             </div>
-            <textarea v-model="exportText" rows="6" readonly></textarea>
+            <textarea v-if="exportText" v-model="exportText" rows="6" aria-label="导出的 JSON" readonly></textarea>
             <label class="field">
               <span>导入 JSON</span>
               <textarea v-model="importText" :disabled="importBusy" rows="5" placeholder='{"prompts":[{"title":"一","content":"a"}]}' @input="preview = null"></textarea>
@@ -281,7 +279,7 @@
               <span class="setting-copy"><strong>允许访问提示词广场</strong><small>关闭后工作台不请求广场；启动器仍只搜本地。</small></span>
               <input type="checkbox" data-testid="square-access" :checked="squareAccess" @change="toggleSquareAccess">
             </label>
-            <label class="setting-row" data-testid="proxy-row">
+            <label class="setting-row setting-block" data-testid="proxy-row">
               <span class="setting-copy"><strong>代理</strong><small>空则跟随系统。填写 http 或 https 地址后，本机请求走该代理。浏览器预览不走该代理。</small></span>
               <input
                 data-testid="http-proxy"
@@ -298,6 +296,7 @@
           </section>
           <section v-else-if="current === 'appearance'">
             <h3>外观</h3>
+            <p>选择适合你的主题、语言与内容密度。</p>
             <label class="field">
               <span>主题</span>
               <select data-testid="theme-select" :value="theme" @change="$emit('theme', $event.target.value)">
@@ -389,6 +388,7 @@
 </template>
 
 <script setup>
+import AppIcon from "./AppIcon.vue";
 import { computed, onMounted, ref } from "vue";
 import { uiText } from "../platform/uiStrings.js";
 import {
@@ -433,16 +433,16 @@ function usesSystemKeychain() {
 
 const uiLanguage = ref(props.language);
 const pages = computed(() => [
-  { id: "general", label: uiText(uiLanguage.value, "settingsGeneral") },
-  { id: "account", label: uiText(uiLanguage.value, "settingsAccount") },
-  { id: "shortcuts", label: uiText(uiLanguage.value, "settingsShortcuts") },
-  { id: "sync", label: uiText(uiLanguage.value, "settingsSync") },
-  { id: "models", label: uiText(uiLanguage.value, "settingsModels") },
-  { id: "data", label: uiText(uiLanguage.value, "settingsData") },
-  { id: "network", label: uiText(uiLanguage.value, "settingsNetwork") },
-  { id: "appearance", label: uiText(uiLanguage.value, "settingsAppearance") },
-  { id: "privacy", label: uiText(uiLanguage.value, "settingsPrivacy") },
-  { id: "updates", label: uiText(uiLanguage.value, "settingsUpdates") },
+  { id: "general", icon: "settings", label: uiText(uiLanguage.value, "settingsGeneral") },
+  { id: "account", icon: "user", label: uiText(uiLanguage.value, "settingsAccount") },
+  { id: "shortcuts", icon: "keyboard", label: uiText(uiLanguage.value, "settingsShortcuts") },
+  { id: "sync", icon: "refresh", label: uiText(uiLanguage.value, "settingsSync") },
+  { id: "models", icon: "models", label: uiText(uiLanguage.value, "settingsModels") },
+  { id: "data", icon: "database", label: uiText(uiLanguage.value, "settingsData") },
+  { id: "network", icon: "globe", label: uiText(uiLanguage.value, "settingsNetwork") },
+  { id: "appearance", icon: "sun", label: uiText(uiLanguage.value, "settingsAppearance") },
+  { id: "privacy", icon: "shield", label: uiText(uiLanguage.value, "settingsPrivacy") },
+  { id: "updates", icon: "download", label: uiText(uiLanguage.value, "settingsUpdates") },
 ]);
 const current = ref("general");
 const exportText = ref("");
