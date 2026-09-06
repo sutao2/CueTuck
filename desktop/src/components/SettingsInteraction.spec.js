@@ -13,6 +13,26 @@ async function settings(page) {
   await w.get(`[data-settings-page="${page}"]`).trigger("click");
 }
 
+it('keeps Escape and Tab in the innermost confirmation without discarding drafts', async () => {
+  w = mount(SettingsModal, { attachTo: document.body });
+  await flushPromises();
+  await w.get('[data-settings-page="models"]').trigger('click');
+  await w.get('[data-testid="custom-models"]').setValue('Draft');
+  w.get('[data-testid="custom-models"]').element.focus();
+  await w.get('[data-testid="custom-models"]').trigger('keydown', { key: 'Escape', isComposing: true });
+  expect(w.find('[role="alertdialog"]').exists()).toBe(false);
+  await w.get('[data-testid="custom-models"]').trigger('keydown', { key: 'Escape' });
+  await flushPromises();
+  const cancel = w.get('[data-testid="cancel-settings-action"]');
+  expect(document.activeElement).toBe(cancel.element);
+  await cancel.trigger('keydown', { key: 'Tab', shiftKey: true });
+  expect(document.activeElement).toBe(w.get('[data-testid="confirm-settings-action"]').element);
+  await w.get('[role="alertdialog"]').trigger('keydown', { key: 'Escape' });
+  expect(w.find('[role="alertdialog"]').exists()).toBe(false);
+  expect(w.emitted('cancel')).toBeUndefined();
+  expect(w.get('[data-testid="custom-models"]').element.value).toBe('Draft');
+});
+
 it("rolls back an immediate switch when persistence fails", async () => {
   await library.setLocalSetting("square_access", "1");
   await settings("network");

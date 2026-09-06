@@ -1,11 +1,10 @@
 <template>
   <div class="modal-layer" data-testid="prompt-editor">
     <div class="modal-backdrop" @click="$emit('cancel')"></div>
-    <section class="modal create-modal" role="dialog" aria-modal="true">
+    <section v-dialog-focus="() => $emit('cancel')" class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="editor-title">
       <header class="modal-header">
         <div>
-          <p class="modal-kicker">LOCAL PROMPT</p>
-          <h2>{{ heading }}</h2>
+          <h2 id="editor-title">{{ heading }}</h2>
         </div>
         <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
       </header>
@@ -85,6 +84,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { vDialogFocus } from "../lib/dialogFocus.js";
 import { parseCoverUrls } from "../lib/cover.js";
 
 const props = defineProps({

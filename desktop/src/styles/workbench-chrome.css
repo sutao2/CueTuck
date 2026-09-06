@@ -468,7 +468,7 @@ body.theme-dark .primary-button { color: #202020; }
 .model-tag { max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 7px; border-radius: 5px; font-size: 10px; font-weight: 500; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
 
 .modal-layer { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; }
-.modal-backdrop { position: absolute; inset: 0; background: rgba(24, 30, 31, 0.38); }
+.modal-backdrop { position: absolute; inset: 0; background: #0005; backdrop-filter: blur(3px); }
 .modal {
   position: relative;
   z-index: 1;
@@ -478,7 +478,7 @@ body.theme-dark .primary-button { color: #202020; }
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--surface);
   box-shadow: var(--shadow-modal, 0 24px 80px rgba(20, 29, 30, 0.24));
 }
@@ -488,26 +488,53 @@ body.theme-dark .primary-button { color: #202020; }
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 20px;
+  padding: 20px 24px;
 }
+.modal-header > div { min-width: 0; }
 .modal-header { border-bottom: 1px solid var(--line); }
-.modal-footer { border-top: 1px solid var(--line); background: var(--toolbar); }
-.modal-kicker { margin: 0 0 4px; color: var(--accent); font-size: 9.5px; font-weight: 750; letter-spacing: 0.17em; }
-.modal-header h2 { margin: 0; font: 600 20px/1.2 var(--font-display); }
-.modal-close { border: 0; background: transparent; color: var(--muted); font-size: 20px; }
-.create-body { display: grid; gap: 14px; padding: 20px; min-height: 0; overflow: auto; }
+.modal-footer { border-top: 1px solid var(--line); background: var(--toolbar); padding-top: 14px; padding-bottom: 14px; }
+.modal-kicker { margin: 0 0 6px; color: var(--muted); font-size: 11px; font-weight: 400; overflow-wrap: anywhere; }
+.modal-header h2 { margin: 0; font: 600 19px/1.4 var(--font-display); overflow-wrap: anywhere; }
+.modal-close { width: 28px; height: 28px; flex: 0 0 28px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; }
+.modal-close:hover { background: var(--accent-soft); color: var(--text); }
+.modal:focus { outline: none; }
+.create-body { display: grid; align-content: start; gap: 18px; padding: 24px; min-height: 0; overflow: auto; overflow-wrap: anywhere; }
+.create-body > p { margin: 0; font-size: 12px; line-height: 1.7; color: var(--muted); }
+.modal [role="alert"] { margin: 0; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent); border-radius: 8px; color: var(--danger); background: color-mix(in srgb, var(--danger) 6%, var(--surface)); font-size: 12px; }
 .oauth-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.field { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
+.field { display: grid; min-width: 0; gap: 7px; color: var(--text); font-size: 12px; }
 .field input, .field textarea, .field select {
   width: 100%;
-  border: 1px solid var(--line);
+  min-width: 0;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
-  padding: 8px 10px;
+  padding: 9px 11px;
   background: var(--surface);
   color: var(--text);
 }
+.field textarea { resize: vertical; line-height: 1.7; }
+.field :is(input, textarea)::placeholder { color: var(--faint); }
+.modal button:disabled { cursor: not-allowed; opacity: .5; }
 .modal-actions { display: flex; gap: 8px; }
 .create-location { color: var(--faint); font-size: 11px; }
+.login-modal { width: min(420px, calc(100vw - 48px)); }
+.login-modal .modal-header { padding: 32px 32px 0; border: 0; align-items: flex-start; }
+.login-modal .modal-close { position: absolute; right: 14px; top: 14px; }
+.login-mark { width: 42px; height: 42px; display: grid; place-items: center; margin-bottom: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--sidebar); }
+.login-mark .app-icon { width: 22px; height: 22px; }
+.login-modal h2 { font-size: 23px; letter-spacing: -.5px; }
+.login-description { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.login-form { padding: 24px 32px 26px; gap: 16px; }
+.login-form .field input { height: 40px; }
+.login-submit { width: 100%; justify-content: center; min-height: 40px; margin-top: 4px; }
+.login-divider { display: flex; align-items: center; gap: 12px; color: var(--faint); font-size: 11px; }
+.login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.login-modal .oauth-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.login-modal .oauth-row .button { justify-content: center; }
+.login-form .login-privacy { display: flex; align-items: flex-start; gap: 6px; font-size: 10.5px; color: var(--faint); line-height: 1.6; }
+.login-privacy .app-icon { width: 13px; height: 13px; flex-shrink: 0; margin-top: 2px; }
+.login-later { border: 0; background: transparent; color: var(--muted); font-size: 11px; padding: 4px; }
+.login-later:hover { color: var(--text); text-decoration: underline; }
 
 .statusbar {
   height: var(--statusbar-height);

@@ -696,7 +696,7 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="login-reason"]').text()).toContain("发布需要登录");
     await w.get('[data-testid="login-email"]').setValue("dev@promptark.local");
     await w.get('[data-testid="login-password"]').setValue("devpass");
-    await w.get('[data-testid="login-submit"]').trigger("click");
+    await w.get('[data-testid="login-modal"] form').trigger("submit");
     await flushPromises();
     expect(w.get('[data-testid="publish-resume"]').exists()).toBe(true);
   });
@@ -714,7 +714,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="publish-prompt"]').trigger("click");
     await w.get('[data-testid="login-email"]').setValue("dev@promptark.local");
     await w.get('[data-testid="login-password"]').setValue("devpass");
-    await w.get('[data-testid="login-submit"]').trigger("click");
+    await w.get('[data-testid="login-modal"] form').trigger("submit");
     await flushPromises();
     expect(w.get('[data-testid="publish-submit"]').element.disabled).toBe(true);
     await w.get('[data-testid="publish-source"]').setValue(created.id);
@@ -735,7 +735,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="publish-prompt"]').trigger("click");
     await w.get('[data-testid="login-email"]').setValue("dev@promptark.local");
     await w.get('[data-testid="login-password"]').setValue("devpass");
-    await w.get('[data-testid="login-submit"]').trigger("click");
+    await w.get('[data-testid="login-modal"] form').trigger("submit");
     await flushPromises();
     await w.get('[data-testid="publish-source"]').setValue(created.id);
     await w.get('[data-testid="publish-submit"]').trigger("click");
