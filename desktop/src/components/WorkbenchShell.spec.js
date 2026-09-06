@@ -335,11 +335,11 @@ describe("WorkbenchShell", () => {
   it("uses mac chrome on macos", () => {
     const w = mount(WorkbenchShell, { props: { host: "macos" } });
     expect(w.get('[data-region="titlebar"]').classes()).toContain("host-mac");
-    expect(w.get('[data-region="titlebar"] kbd').text()).toBe("⌃Space");
+    expect(w.get('[data-testid="sidebar-search"]').attributes('title')).toContain("⌃Space");
     expect(w.find(".window-controls").exists()).toBe(false);
   });
 
-  it("keeps the sidebar toggle before branding outside the drag region", async () => {
+  it("keeps the sidebar toggle outside the drag region", async () => {
     const w = mount(WorkbenchShell, { props: { host: "macos" } });
     const toggle = w.get('[data-testid="toggle-sidebar"]');
     expect(w.get('.titlebar-left').element.firstElementChild).toBe(toggle.element);
@@ -351,6 +351,23 @@ describe("WorkbenchShell", () => {
     await toggle.trigger('click');
     expect(toggle.attributes('aria-expanded')).toBe('true');
     expect(w.emitted('open-launcher')).toBeUndefined();
+    w.unmount();
+  });
+
+  it("separates sidebar branding from window controls and keeps launcher search available", async () => {
+    const w = mount(WorkbenchShell, { props: { host: "macos" } });
+    expect(w.find('.titlebar .brand-name').exists()).toBe(false);
+    expect(w.get('.sidebar .brand-name').text()).toBe('提示方舟');
+    expect(w.get('.titlebar-center').text()).toContain('本地提示词');
+    expect(w.find('[data-testid="titlebar-search"]').exists()).toBe(false);
+    await w.get('[data-testid="sidebar-search"]').trigger('click');
+    expect(w.emitted('open-launcher')).toHaveLength(1);
+    await w.get('[data-testid="toggle-sidebar"]').trigger('click');
+    expect(w.get('.sidebar').isVisible()).toBe(false);
+    await w.get('[data-testid="titlebar-search"]').trigger('click');
+    expect(w.emitted('open-launcher')).toHaveLength(2);
+    await w.get('[data-testid="titlebar-settings"]').trigger('click');
+    expect(w.findComponent(SettingsModal).exists()).toBe(true);
     w.unmount();
   });
 

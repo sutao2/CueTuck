@@ -8,22 +8,25 @@
       data-tauri-drag-region
     >
       <div class="titlebar-left" data-tauri-drag-region>
-        <button type="button" class="sidebar-toggle" data-testid="toggle-sidebar" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!sidebarCollapsed" aria-controls="workbench-sidebar" @click="sidebarCollapsed = !sidebarCollapsed"><AppIcon name="teal" /></button>
-        <button type="button" class="app-mark" :aria-label="t('brand')">P</button>
-        <span class="brand-name">{{ t("brand") }}</span>
+        <button type="button" class="sidebar-toggle" data-testid="toggle-sidebar" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!sidebarCollapsed" aria-controls="workbench-sidebar" @click="sidebarCollapsed = !sidebarCollapsed"><AppIcon name="sidebar" /></button>
       </div>
       <div class="titlebar-center" data-tauri-drag-region>
-        <span>{{ locationLabel }}</span>
+        <AppIcon :name="space === 'local' ? 'folder' : 'square'" /><span data-tauri-drag-region>{{ locationLabel }}</span>
       </div>
       <div class="titlebar-right">
-        <button type="button" class="title-tool" :title="t('search')" @click="$emit('open-launcher')">
+        <button v-if="sidebarCollapsed" type="button" class="title-tool" data-testid="titlebar-search" :title="t('search')" @click="$emit('open-launcher')">
           <AppIcon name="search" /><span>{{ t("search") }}</span><kbd>{{ shortcutLabel }}</kbd>
         </button>
+        <button type="button" class="frame-icon-button" data-testid="titlebar-settings" :aria-label="t('settings')" :title="t('settings')" @click="settingsOpen = true"><AppIcon name="settings" /></button>
       </div>
     </header>
 
     <div class="workspace">
       <aside v-show="!sidebarCollapsed" id="workbench-sidebar" data-region="sidebar" class="sidebar">
+        <div class="sidebar-brand-row">
+          <span class="brand-name">{{ t("brand") }}</span>
+          <button type="button" class="frame-icon-button" data-testid="sidebar-search" :aria-label="t('search')" :title="`${t('search')} ${shortcutLabel}`" @click="$emit('open-launcher')"><AppIcon name="search" /></button>
+        </div>
         <div class="space-switch" role="tablist" aria-label="提示词空间">
           <button
             type="button"
