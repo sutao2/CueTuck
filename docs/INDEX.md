@@ -39,7 +39,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0013-oauth-google-github.md](architecture/decisions/0013-oauth-google-github.md) | 现行 | 接 Google / GitHub 登录前 | 选定 Google 与 GitHub；仍不接 QQ/LinuxDo |
 | [architecture/decisions/0014-full-product.md](architecture/decisions/0014-full-product.md) | 现行 | 问是否还按第一期冻结 | 剩余工作按完整产品排队 |
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 独立窗口偏上唤起、布局切换位置稳定、搜索竞态与复制/粘贴失败反馈 |
-| [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层与当前空间状态，无阶段占位 |
+| [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 工作台壳层、标题栏控件安全间距与稳定折叠入口 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
 | [specs/square/spec.md](specs/square/spec.md) | 目标 | 改广场浏览、下载或收藏 | 广场只读详情、重试与分类下载 |
 | [specs/collections/spec.md](specs/collections/spec.md) | 目标 | 做合集 | 合集编辑/删除与全库成员管理 |

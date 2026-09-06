@@ -339,6 +339,21 @@ describe("WorkbenchShell", () => {
     expect(w.find(".window-controls").exists()).toBe(false);
   });
 
+  it("keeps the sidebar toggle before branding outside the drag region", async () => {
+    const w = mount(WorkbenchShell, { props: { host: "macos" } });
+    const toggle = w.get('[data-testid="toggle-sidebar"]');
+    expect(w.get('.titlebar-left').element.firstElementChild).toBe(toggle.element);
+    expect(toggle.attributes('data-tauri-drag-region')).toBeUndefined();
+    expect(w.get('[data-region="titlebar"]').attributes('style')).toContain('--traffic-light-inset: 96px');
+    await toggle.trigger('click');
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(w.get('.titlebar-left').element.firstElementChild).toBe(toggle.element);
+    await toggle.trigger('click');
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+    expect(w.emitted('open-launcher')).toBeUndefined();
+    w.unmount();
+  });
+
   it("shows the same prompts as rows in list view", async () => {
     await createLocalPrompt({ title: "行视图A", content: "列表摘要" });
     const w = mount(WorkbenchShell);

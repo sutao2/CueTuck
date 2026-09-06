@@ -1,4 +1,4 @@
-export const MAC_TRAFFIC_LIGHT_INSET_PX = 78;
+export const MAC_TRAFFIC_LIGHT_INSET_PX = 96;
 
 const MAC_KEYS = {
   Control: "⌃",
