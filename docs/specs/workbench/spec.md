@@ -14,7 +14,21 @@
 
 ### Requirement: 专业桌面视觉
 
-视觉规则见 [ADR 0016](../../architecture/decisions/0016-workbench-frame-and-settings.md)。主窗口使用系统无衬线字体、统一线性图标和中性色表面。空间使用纵向导航，账号与偏好位于侧栏底部；内容工作面与侧栏有明确分区。标题、正文、辅助信息有清晰字号层级；筛选栏和卡片随可用宽度排列，状态栏不抢占内容注意力。
+主窗口视觉规则见 [ADR 0017](../../architecture/decisions/0017-screenshot-workbench-frame.md)，设置规则仍见 [ADR 0016](../../architecture/decisions/0016-workbench-frame-and-settings.md)。主窗口使用系统无衬线字体、统一线性图标和中性色表面。空间使用纵向导航，账号与偏好位于侧栏底部；内容工作面与侧栏有明确分区。标题、正文、辅助信息有清晰字号层级；筛选栏和卡片随可用宽度排列，状态栏不抢占内容注意力。
+
+#### Scenario: 截图参考的分栏框架
+
+- GIVEN 主窗口侧栏展开
+- WHEN 工作台显示
+- THEN 品牌与搜索位于侧栏首行，不占用窗口操作行；内容标题位于顶栏内容侧
+- AND 顶栏左区与侧栏同宽，分隔线纵向对齐；内容面没有外边距、圆角外框或阴影
+- AND 深色侧栏比内容面稍亮，浅色也保持清晰分区，不改变已保存的主题选择
+
+#### Scenario: 收起后仍可搜索
+
+- GIVEN 用户收起侧栏
+- WHEN 点击顶栏搜索按钮
+- THEN 唤起现有独立启动器，展开侧栏后搜索入口回到品牌行
 
 #### Scenario: 不同视图与窗口下保持一致
 
@@ -40,7 +54,7 @@
 
 - GIVEN 用户启动桌面应用
 - WHEN 主窗口显示
-- THEN 可见顶栏品牌与当前位置、侧栏、内容区与底栏
+- THEN 可见顶栏当前位置、带品牌的侧栏、内容区与底栏
 
 ### Requirement: 空间
 
@@ -103,14 +117,14 @@
 - GIVEN 用户在 macOS 打开桌面主窗口
 - WHEN 窗口显示
 - THEN 左上为系统红绿灯，可拖区域不与按钮重叠
-- AND 顶栏快捷键记号为 `⌃Space` 而不是 `Ctrl Space`
+- AND 搜索快捷键记号为 `⌃Space` 而不是 `Ctrl Space`
 - AND 不得出现 Windows 风格的右侧最小化 / 最大化 / 关闭
 
 #### Scenario: 标题栏折叠入口不跳位
 
 - GIVEN 主窗口有系统窗口按钮和侧栏折叠入口
 - WHEN 用户反复展开或收起侧栏，或缩窄窗口
-- THEN 折叠入口保持相同的左上角坐标，品牌位于其右侧，不依赖品牌显隐定位
+- THEN 折叠入口保持相同的左上角坐标，品牌位于侧栏首行，不依赖品牌显隐定位
 - AND macOS 顶栏内容从左侧 96 CSS 像素之后开始，系统按钮与应用按钮留有独立操作空间
 - AND 折叠按钮本身不是拖动区域，点击只切换侧栏，不启动窗口拖动
 
@@ -150,4 +164,5 @@
 | 本地收藏只含本机星标 | `WorkbenchShell.spec.js` shows only starred local prompts on the favorite tab；`localFavorites.test.js` toggles a local favorite id in settings |
 | 右键只提供已有动作 | `WorkbenchShell.spec.js` opens a context menu with existing local actions |
 | macOS 主窗口 | `WorkbenchShell.spec.js` uses mac chrome on macos；`windowChrome.test.js` gives traffic-light inset and glyph shortcut on macos |
-| 标题栏折叠入口不跳位 | `WorkbenchShell.spec.js` keeps the sidebar toggle before branding outside the drag region；Playwright 两态坐标与窄窗口测量 |
+| 标题栏折叠入口不跳位 | `WorkbenchShell.spec.js` keeps the sidebar toggle outside the drag region；Playwright 两态坐标与窄窗口测量 |
+| 截图参考框架 / 收起后搜索 | `WorkbenchShell.spec.js` separates sidebar branding from window controls and keeps launcher search available；Playwright 分隔线与主题测量 |
