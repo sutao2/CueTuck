@@ -1,8 +1,8 @@
 <template>
-  <div class="modal-layer" data-testid="settings-modal">
-    <div class="modal-backdrop" @click="$emit('cancel')"></div>
+  <div class="modal-layer" data-testid="settings-modal" @keydown.esc.stop.prevent="pendingAction ? pendingAction = null : requestClose()">
+    <div class="modal-backdrop" @click="requestClose"></div>
     <section class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <button type="button" class="modal-close settings-close" aria-label="关闭" @click="$emit('cancel')">×</button>
+      <button type="button" class="modal-close settings-close" aria-label="关闭" @click="requestClose">×</button>
       <div class="settings-body">
         <nav class="settings-nav" aria-labelledby="settings-title">
           <h2 id="settings-title">{{ uiText(uiLanguage, "settings") }}</h2>
@@ -19,6 +19,7 @@
           </button>
         </nav>
         <div :key="current" class="settings-content">
+          <fieldset class="settings-fields" :disabled="saving || loading">
           <section v-if="current === 'general'">
             <h3>常规</h3>
             <p>管理应用启动、托盘和快捷窗口的使用偏好。</p>
@@ -150,6 +151,7 @@
           <section v-else-if="current === 'shortcuts'">
             <h3>快捷键</h3>
             <p>登记全局组合以唤起独立启动器。与系统冲突时会提示，不会静默失效。</p>
+            <p class="save-mode-hint">修改后请点击「保存快捷键」。</p>
             <label class="field">
               <span>唤起快捷搜索</span>
               <input v-model="shortcut" placeholder="Control+Space">
@@ -204,6 +206,7 @@
           <section v-else-if="current === 'models'">
             <h3>AI 与模型</h3>
             <p>这些是本机目录、标签与建议，不会把提示词正文发到模型供应商。</p>
+            <p class="save-mode-hint">本页修改后请点击「保存本机模型偏好」。</p>
             <label class="field">
               <span>默认目标模型</span>
               <input v-model="defaultModel" data-testid="default-model" placeholder="本机目录名称">
@@ -268,7 +271,7 @@
             </label>
             <div class="modal-actions">
               <button type="button" class="button ghost-button" :disabled="dataBusy" @click="doBackup">备份库文件</button>
-              <button type="button" class="button primary-button" :disabled="dataBusy || !restorePath.trim()" @click="doRestore">恢复库文件</button>
+              <button type="button" class="button danger-button" :disabled="dataBusy || !restorePath.trim()" @click="pendingAction = 'restore'">恢复库文件</button>
             </div>
             <p v-if="backupPath" data-testid="backup-path">已备份到 {{ backupPath }}</p>
             <p v-if="dataError" data-testid="backup-error">{{ dataError }}</p>
@@ -299,7 +302,7 @@
             <p>选择适合你的主题、语言与内容密度。</p>
             <label class="field">
               <span>主题</span>
-              <select data-testid="theme-select" :value="theme" @change="$emit('theme', $event.target.value)">
+              <select data-testid="theme-select" :value="themeChoice" @change="saveTheme($event)">
                 <option value="light">浅色</option>
                 <option value="dark">深色</option>
                 <option value="system">跟随系统</option>
@@ -307,7 +310,7 @@
             </label>
             <label class="field">
               <span>界面语言</span>
-              <select data-testid="ui-language" :value="uiLanguage" @change="saveUiLanguage($event.target.value)">
+              <select data-testid="ui-language" :value="uiLanguage" @change="saveUiLanguage($event.target.value, $event)">
                 <option value="zh">中文</option>
                 <option value="en">English</option>
               </select>
@@ -318,7 +321,7 @@
             </label>
             <label class="field">
               <span>内容密度</span>
-              <select data-testid="density" :value="density" @change="saveDensity($event.target.value)">
+              <select data-testid="density" :value="density" @change="saveDensity($event.target.value, $event)">
                 <option value="comfortable">舒适</option>
                 <option value="compact">紧凑</option>
               </select>
@@ -341,7 +344,7 @@
             </label>
             <div class="setting-row">
               <span class="setting-copy"><strong>清除使用历史</strong><small>只删最近使用记录，不删提示词正文。</small></span>
-              <button type="button" class="button ghost-button" data-testid="clear-use-history" @click="clearHistory">清除</button>
+              <button type="button" class="button danger-button" data-testid="clear-use-history" @click="pendingAction = 'history'">清除</button>
             </div>
             <div class="setting-row" data-testid="keychain-row">
               <span class="setting-copy">
@@ -381,7 +384,21 @@
             <p v-if="releaseNotes" data-testid="release-notes">{{ releaseNotes }}</p>
             <p v-if="updateNote" data-testid="update-note">{{ updateNote }}</p>
           </section>
+          </fieldset>
         </div>
+      </div>
+      <footer class="settings-feedback" :class="{ error: feedbackError }" role="status" aria-live="polite" data-testid="settings-feedback">
+        {{ loading ? '正在读取设置…' : saving ? '正在保存…' : feedback || '开关与选择项即时保存；有保存按钮的表单需手动保存。' }}
+      </footer>
+      <div v-if="pendingAction" class="settings-confirm-layer">
+        <section class="settings-confirm" role="alertdialog" aria-modal="true" aria-labelledby="settings-confirm-title" aria-describedby="settings-confirm-copy" @keydown.tab="trapConfirmationFocus">
+          <h3 id="settings-confirm-title">{{ pendingAction === 'discard' ? '放弃未保存的修改？' : pendingAction === 'restore' ? '恢复数据库？' : '清除使用历史？' }}</h3>
+          <p id="settings-confirm-copy">{{ pendingAction === 'discard' ? '尚未保存的表单和导入文本将被丢弃，已经保存的设置不受影响。' : pendingAction === 'restore' ? `将使用 ${restorePath} 替换当前库。请先备份当前数据，此操作不是合并导入。` : '将清除最近使用记录与使用次数，不删除提示词正文。' }}</p>
+          <div class="modal-actions">
+            <button ref="confirmCancel" type="button" class="button" data-testid="cancel-settings-action" @click="pendingAction = null">{{ pendingAction === 'discard' ? '继续编辑' : '取消' }}</button>
+            <button type="button" class="button danger-button" data-testid="confirm-settings-action" @click="confirmAction">{{ pendingAction === 'discard' ? '放弃修改' : '确认执行' }}</button>
+          </div>
+        </section>
       </div>
     </section>
   </div>
@@ -389,7 +406,7 @@
 
 <script setup>
 import AppIcon from "./AppIcon.vue";
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { uiText } from "../platform/uiStrings.js";
 import {
   applyLocalImport,
@@ -432,6 +449,8 @@ function usesSystemKeychain() {
 }
 
 const uiLanguage = ref(props.language);
+const themeChoice = ref(props.theme);
+watch(() => props.theme, (value) => { themeChoice.value = value; });
 const pages = computed(() => [
   { id: "general", icon: "settings", label: uiText(uiLanguage.value, "settingsGeneral") },
   { id: "account", icon: "user", label: uiText(uiLanguage.value, "settingsAccount") },
@@ -497,10 +516,73 @@ const redeemCode = ref("");
 const displayName = ref("");
 const bio = ref("");
 const profileNote = ref("");
+const saving = ref(false);
+const loading = ref(true);
+const feedback = ref("");
+const feedbackError = ref(false);
+const pendingAction = ref(null);
+const confirmCancel = ref(null);
+const savedDrafts = ref({});
+let confirmationReturnFocus = null;
+const modelDraft = () => JSON.stringify([defaultModel.value, modelCatalog.value, customModels.value, showModelTags.value, variableHints.value]);
+const shortcutDraft = () => JSON.stringify([shortcut.value, newPromptShortcut.value, pasteRecentShortcut.value]);
+const profileDraft = () => JSON.stringify([displayName.value, bio.value]);
+const hasUnsaved = computed(() => !loading.value && (
+  modelDraft() !== savedDrafts.value.models || shortcutDraft() !== savedDrafts.value.shortcuts ||
+  profileDraft() !== savedDrafts.value.profile || Boolean(importText.value.trim())
+));
+
+function showFeedback(message, error = false) { feedback.value = message; feedbackError.value = error; }
+function requestClose() {
+  if (saving.value || loading.value || dataBusy.value || importBusy.value || billingBusy.value) return;
+  if (hasUnsaved.value) pendingAction.value = 'discard';
+  else emit('cancel');
+}
+watch(pendingAction, async (action) => {
+  if (action) {
+    confirmationReturnFocus = document.activeElement;
+    await nextTick();
+    confirmCancel.value?.focus();
+  } else if (confirmationReturnFocus?.isConnected) {
+    confirmationReturnFocus.focus();
+  }
+});
+function trapConfirmationFocus(event) {
+  const buttons = event.currentTarget.querySelectorAll('button');
+  if ((event.shiftKey && document.activeElement === buttons[0]) || (!event.shiftKey && document.activeElement === buttons[1])) {
+    event.preventDefault(); buttons[event.shiftKey ? 1 : 0].focus();
+  }
+}
+async function confirmAction() {
+  const action = pendingAction.value;
+  pendingAction.value = null;
+  if (action === 'discard') emit('cancel');
+  else if (action === 'restore') await doRestore();
+  else if (action === 'history') await clearHistory();
+}
+
+async function savePreference(key, state, value, event, apply) {
+  const previous = state.value;
+  if (saving.value) { if (event) event.target[event.target.type === 'checkbox' ? 'checked' : 'value'] = previous; return false; }
+  saving.value = true;
+  try {
+    await setLocalSetting(key, typeof value === 'boolean' ? (value ? '1' : '0') : value);
+    state.value = value;
+    apply?.();
+    showFeedback('已保存');
+    return true;
+  } catch (error) {
+    if (event) event.target[event.target.type === 'checkbox' ? 'checked' : 'value'] = previous;
+    showFeedback(`保存失败：${error.message || error}`, true);
+    return false;
+  } finally { saving.value = false; }
+}
 
 onMounted(loadSettings);
 
 async function loadSettings() {
+  loading.value = true;
+  try {
   const stored = await getLocalSetting("launcher_shortcut");
   if (stored) shortcut.value = stored;
   const storedNew = await getLocalSetting("new_prompt_shortcut");
@@ -543,22 +625,30 @@ async function loadSettings() {
     bio.value = profile?.bio ?? "";
     applyBilling(billing);
   }
+  savedDrafts.value = { models: modelDraft(), shortcuts: shortcutDraft(), profile: profileDraft() };
+  } catch (error) { showFeedback(`读取设置失败：${error.message || error}`, true); }
+  finally { loading.value = false; }
 }
 
 async function togglePref(key, event) {
   const enabled = event.target.checked;
+  const state = key === DESKTOP_PREF_KEYS.launchAtLogin ? launchAtLogin : key === DESKTOP_PREF_KEYS.minimizeToTray ? minimizeToTray : closeLauncherAfterUse;
+  const previous = state.value;
+  if (saving.value) { event.target.checked = previous; return; }
+  saving.value = true;
   prefError.value = "";
   try {
     await saveDesktopPref(key, enabled, props.host, setLocalSetting);
     if (key === DESKTOP_PREF_KEYS.launchAtLogin) launchAtLogin.value = enabled;
     if (key === DESKTOP_PREF_KEYS.minimizeToTray) minimizeToTray.value = enabled;
     if (key === DESKTOP_PREF_KEYS.closeLauncherAfterUse) closeLauncherAfterUse.value = enabled;
+    showFeedback('已保存');
   } catch (error) {
     prefError.value = error instanceof Error ? error.message : String(error);
-    event.target.checked = false;
-    if (key === DESKTOP_PREF_KEYS.launchAtLogin) launchAtLogin.value = false;
-    if (key === DESKTOP_PREF_KEYS.minimizeToTray) minimizeToTray.value = false;
-  }
+    event.target.checked = previous;
+    state.value = previous;
+    showFeedback(`保存失败：${prefError.value}`, true);
+  } finally { saving.value = false; }
 }
 
 async function runSyncNow() {
@@ -582,33 +672,27 @@ async function runSyncNow() {
 }
 
 async function toggleAutoDownload(event) {
-  autoDownload.value = event.target.checked;
-  await setLocalSetting("auto_download", autoDownload.value ? "1" : "0");
+  await savePreference("auto_download", autoDownload, event.target.checked, event);
 }
 
 async function saveUpdateChannel(event) {
-  updateChannel.value = event.target.value === "preview" ? "preview" : "stable";
-  await setLocalSetting("update_channel", updateChannel.value);
+  await savePreference("update_channel", updateChannel, event.target.value === "preview" ? "preview" : "stable", event);
 }
 
 async function saveSyncConflict(event) {
-  syncConflict.value = event.target.value === "keep_local" ? "keep_local" : "newer";
-  await setLocalSetting("sync_conflict", syncConflict.value);
+  await savePreference("sync_conflict", syncConflict, event.target.value === "keep_local" ? "keep_local" : "newer", event);
 }
 
 async function toggleSyncWifiImages(event) {
-  syncWifiImages.value = event.target.checked;
-  await setLocalSetting("sync_wifi_images", syncWifiImages.value ? "1" : "0");
+  await savePreference("sync_wifi_images", syncWifiImages, event.target.checked, event);
 }
 
 async function toggleAutoSyncQueue(event) {
-  autoSyncQueue.value = event.target.checked;
-  await setLocalSetting("auto_sync_queue", autoSyncQueue.value ? "1" : "0");
+  await savePreference("auto_sync_queue", autoSyncQueue, event.target.checked, event);
 }
 
 async function toggleAnonymousDownloadStats(event) {
-  anonymousDownloadStats.value = event.target.checked;
-  await setLocalSetting("anonymous_download_stats", anonymousDownloadStats.value ? "1" : "0");
+  await savePreference("anonymous_download_stats", anonymousDownloadStats, event.target.checked, event);
 }
 
 async function saveHttpProxy() {
@@ -656,6 +740,8 @@ async function runCheckUpdates() {
 }
 
 async function saveShortcut() {
+  if (saving.value) return;
+  saving.value = true;
   shortcutError.value = "";
   try {
     const invokeCombo = shortcut.value.trim() || DEFAULT_LAUNCHER_SHORTCUT;
@@ -683,9 +769,12 @@ async function saveShortcut() {
     });
     await setLocalSetting("new_prompt_shortcut", createCombo);
     await setLocalSetting("paste_recent_shortcut", pasteCombo);
+    savedDrafts.value.shortcuts = shortcutDraft();
+    showFeedback('快捷键已保存');
   } catch (error) {
     shortcutError.value = error instanceof Error ? error.message : String(error);
-  }
+    showFeedback(`保存失败，部分快捷键可能已生效，请重试：${shortcutError.value}`, true);
+  } finally { saving.value = false; }
 }
 
 async function doExport() {
@@ -740,10 +829,12 @@ async function doRestore() {
   try {
     await restoreLocalLibrary(restorePath.value.trim());
     dataError.value = "恢复完成。快捷键、代理和系统级偏好请重启应用后生效。";
+    showFeedback(dataError.value);
     await loadSettings();
     emit("imported");
   } catch (error) {
     dataError.value = error instanceof Error ? error.message : String(error);
+    showFeedback(`恢复失败：${dataError.value}`, true);
   } finally { dataBusy.value = false; }
 }
 
@@ -787,28 +878,31 @@ async function refreshAutoBackupNote() {
 }
 
 async function toggleSquareAccess(event) {
-  squareAccess.value = event.target.checked;
-  await setLocalSetting("square_access", squareAccess.value ? "1" : "0");
+  await savePreference("square_access", squareAccess, event.target.checked, event);
 }
 
 async function toggleKeepAuthorOnDownload(event) {
-  keepAuthorOnDownload.value = event.target.checked;
-  await setLocalSetting("keep_author_on_download", keepAuthorOnDownload.value ? "1" : "0");
+  await savePreference("keep_author_on_download", keepAuthorOnDownload, event.target.checked, event);
 }
 
 async function saveAuthorProfile() {
+  if (saving.value) return;
   profileNote.value = "";
   if (!props.session.loggedIn) {
     profileNote.value = "未登录不得写入";
     return;
   }
+  saving.value = true;
   try {
     const saved = await putMe({ displayName: displayName.value, bio: bio.value });
     displayName.value = saved.display_name ?? saved.displayName ?? displayName.value;
     bio.value = saved.bio ?? bio.value;
+    savedDrafts.value.profile = profileDraft();
+    showFeedback('作者资料已保存');
   } catch (error) {
     profileNote.value = error instanceof Error ? error.message : String(error);
-  }
+    showFeedback(`保存失败：${profileNote.value}`, true);
+  } finally { saving.value = false; }
 }
 
 function applyBilling(payload) {
@@ -855,34 +949,45 @@ async function runRedeem() {
   }
 }
 
-async function saveUiLanguage(value) {
-  uiLanguage.value = value;
-  await setLocalSetting("ui_language", value);
-  document.documentElement.lang = value === "en" ? "en" : "zh-CN";
-  emit("language", value);
+async function saveTheme(event) {
+  await savePreference('theme', themeChoice, event.target.value, event, () => emit('theme', themeChoice.value));
+}
+
+async function saveUiLanguage(value, event) {
+  await savePreference("ui_language", uiLanguage, value, event, () => {
+    document.documentElement.lang = value === "en" ? "en" : "zh-CN";
+    emit("language", value);
+  });
 }
 
 async function toggleBilingual(event) {
-  promptBilingual.value = event.target.checked;
-  await setLocalSetting("prompt_bilingual", promptBilingual.value ? "1" : "0");
+  await savePreference("prompt_bilingual", promptBilingual, event.target.checked, event);
 }
 
-async function saveDensity(value) {
-  density.value = value;
-  await setLocalSetting("density", value);
-  document.body.dataset.density = value;
+async function saveDensity(value, event) {
+  await savePreference("density", density, value, event, () => { document.body.dataset.density = value; });
 }
 
 async function saveModels() {
+  if (saving.value) return;
+  saving.value = true;
+  try {
   await setLocalSetting("default_model", defaultModel.value);
   await setLocalSetting("model_catalog", modelCatalog.value);
   await setLocalSetting("show_model_tags", showModelTags.value ? "1" : "0");
   await setLocalSetting("variable_hints", variableHints.value ? "1" : "0");
   await setLocalSetting("custom_models", customModels.value);
+  savedDrafts.value.models = modelDraft();
+  showFeedback('模型偏好已保存');
+  } catch (error) { showFeedback(`保存失败，部分偏好可能已保存，请重试：${error.message || error}`, true); }
+  finally { saving.value = false; }
 }
 
 async function clearHistory() {
-  await clearLocalPromptUse();
-  emit("history-cleared");
+  if (saving.value) return;
+  saving.value = true;
+  try { await clearLocalPromptUse(); emit("history-cleared"); showFeedback('使用历史已清除，提示词未删除'); }
+  catch (error) { showFeedback(`清除失败：${error.message || error}`, true); }
+  finally { saving.value = false; }
 }
 </script>

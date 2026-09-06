@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
     <header
       data-region="titlebar"
       class="titlebar"
@@ -10,6 +10,7 @@
       <div class="titlebar-left" data-tauri-drag-region>
         <button type="button" class="app-mark" :aria-label="t('brand')">P</button>
         <span class="brand-name">{{ t("brand") }}</span>
+        <button type="button" class="sidebar-toggle" data-testid="toggle-sidebar" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!sidebarCollapsed" aria-controls="workbench-sidebar" @click="sidebarCollapsed = !sidebarCollapsed"><AppIcon name="teal" /></button>
       </div>
       <div class="titlebar-center" data-tauri-drag-region>
         <span>{{ locationLabel }}</span>
@@ -22,7 +23,7 @@
     </header>
 
     <div class="workspace">
-      <aside data-region="sidebar" class="sidebar">
+      <aside v-show="!sidebarCollapsed" id="workbench-sidebar" data-region="sidebar" class="sidebar">
         <div class="space-switch" role="tablist" aria-label="提示词空间">
           <button
             type="button"
@@ -345,7 +346,7 @@
       :language="uiLanguage"
       @cancel="closeSettings"
       @language="applyUiLanguage"
-      @theme="applyTheme"
+      @theme="applyTheme($event, false)"
       @imported="refreshLocalSettings"
       @history-cleared="reloadPrompts"
       @login="openLogin('登录账号')"
@@ -453,7 +454,7 @@
 
 <script setup>
 import AppIcon from "./AppIcon.vue";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
@@ -501,6 +502,20 @@ const shortcutLabel = computed(() => formatShortcutLabel(DEFAULT_LAUNCHER_SHORTC
 const emit = defineEmits(["open-launcher", "library-changed"]);
 
 const space = ref("local");
+const sidebarCollapsed = ref(false);
+
+function handleWorkbenchShortcut(event) {
+  const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
+  if (!modifier || event.altKey || event.shiftKey || event.repeat) return;
+  if (creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
+  if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
+  const target = event.target;
+  if (event.key.toLowerCase() === 'b' && !settingsOpen.value && !target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
+    event.preventDefault(); sidebarCollapsed.value = !sidebarCollapsed.value;
+  }
+}
+onMounted(() => window.addEventListener('keydown', handleWorkbenchShortcut));
+onUnmounted(() => window.removeEventListener('keydown', handleWorkbenchShortcut));
 const selectedId = ref(null);
 const dark = ref(false);
 const view = ref("grid");
@@ -888,6 +903,7 @@ async function loadModelPrefs() {
   const storedLang = await getLocalSetting("ui_language");
   uiLanguage.value = storedLang === "en" ? "en" : "zh";
   document.documentElement.lang = uiLanguage.value === "en" ? "en" : "zh-CN";
+  document.body.dataset.density = (await getLocalSetting('density')) === 'compact' ? 'compact' : 'comfortable';
 }
 
 async function applyUiLanguage(next) {
@@ -1007,13 +1023,13 @@ function toggleTheme() {
   applyTheme(theme.value === "dark" ? "light" : "dark");
 }
 
-async function applyTheme(next) {
+async function applyTheme(next, persist = true) {
+  if (persist) await setLocalSetting("theme", next);
   theme.value = next;
   const prefersDark =
     typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-color-scheme: dark)")?.matches);
   dark.value = next === "dark" || (next === "system" && prefersDark);
   document.body.classList.toggle("theme-dark", dark.value);
-  await setLocalSetting("theme", next);
 }
 
 async function reloadPrompts() {
