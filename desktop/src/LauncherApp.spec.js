@@ -1,6 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as library from "./platform/library.js";
+import * as launcherWindow from "./platform/launcherWindow.js";
 import LauncherApp from "./LauncherApp.vue";
 import { createLocalPrompt, resetMemoryLibrary } from "./platform/library.js";
 import { resetSquare, setSquareTransport } from "./platform/square.js";
@@ -23,6 +24,31 @@ describe("LauncherApp", () => {
     await flushPromises();
     expect(w.find('[role="listbox"]').exists()).toBe(false);
     expect(w.get('[data-testid="launcher-chrome"]').classes()).toContain("is-collapsed");
+  });
+
+  it("only resizes when repeatedly typing, clearing and entering or leaving fill", async () => {
+    const resize = vi.spyOn(launcherWindow, "resizeLauncherWindow").mockResolvedValue();
+    const show = vi.spyOn(launcherWindow, "openLauncherWindow");
+    await createLocalPrompt({ title: "问候", content: "你好 {{姓名}}" });
+    const w = mount(LauncherApp);
+    await flushPromises();
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      await w.get("input").setValue("问候");
+      await flushPromises();
+      await w.get("input").setValue("");
+      await flushPromises();
+    }
+    await w.get("input").setValue("问候");
+    await flushPromises();
+    await w.get("input").trigger("keydown", { key: "Enter" });
+    await flushPromises();
+    await w.findAll("button").find((button) => button.text() === "返回").trigger("click");
+    await flushPromises();
+    expect(resize.mock.calls.map(([layout]) => layout)).toEqual([
+      "collapsed", "expanded", "collapsed", "expanded", "collapsed", "expanded", "collapsed", "expanded", "fill", "expanded",
+    ]);
+    expect(show).not.toHaveBeenCalled();
+    w.unmount();
   });
 
   it("does not request admin APIs while searching locally", async () => {

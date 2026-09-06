@@ -121,13 +121,17 @@ fn resize_launcher_window(app: &AppHandle, layout: &str) -> Result<(), String> {
     let window = app
         .get_webview_window(LAUNCHER_LABEL)
         .ok_or_else(|| "启动器窗口不存在".to_string())?;
+    let position = window.outer_position().map_err(|error| error.to_string())?;
     window
         .set_size(Size::Logical(LogicalSize::new(
             680.0,
             launcher_logical_height(layout),
         )))
         .map_err(|error| error.to_string())?;
-    let _ = window.center();
+    // Keep the search bar anchored, including after dragging and on macOS resize.
+    window
+        .set_position(position)
+        .map_err(|error| error.to_string())?;
     Ok(())
 }
 
@@ -143,6 +147,7 @@ fn show_launcher_window(app: &AppHandle) -> Result<(), String> {
         guard.mark_shown();
     }
     resize_launcher_window(app, "collapsed")?;
+    window.center().map_err(|error| error.to_string())?;
     window.show().map_err(|error| error.to_string())?;
     window.set_focus().map_err(|error| error.to_string())?;
     Ok(())

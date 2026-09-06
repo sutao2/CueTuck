@@ -38,6 +38,13 @@
 - AND 快捷键记号用 Mac 符号，不写 `Ctrl Space`
 - AND 仍是 label `launcher` 的独立窗口，不是主窗口覆盖层，也不画主窗口那种 Overlay 红绿灯
 
+#### Scenario: 输入与清空时位置稳定
+
+- GIVEN 启动器已唤起，用户可能已拖动窗口
+- WHEN 用户反复输入、清空查询，或进入和退出变量填写
+- THEN 只调整窗口高度，窗口左上角及搜索栏位置不随布局切换移动
+- AND 仅重新唤起窗口时执行居中，不在内容尺寸变化时重新居中
+
 ### Requirement: 附加全局快捷键
 
 M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新建提示词（打开本机新建）、快速粘贴最近使用（粘贴上一条已完成变量替换的提示词）。冲突时 MUST 提示失败，不得静默无效。启动器仍 MUST NOT 请求广场或管理接口。
@@ -142,6 +149,7 @@ M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新�
 |---|---|
 | 独立窗口 label | `desktop/src/platform/launcherWindow.test.js`；`launcher_label_is_stable` |
 | 空查询 | `LauncherApp.spec.js` hides results on empty query |
+| 输入与清空时位置稳定 | `launcherWindow.test.js` 原生命令保留左上角、仅唤起时居中的源码合同；`LauncherApp.spec.js` 连续输入/清空和填写返回的布局调用回归（非原生坐标实测） |
 | 输入即搜 | `LauncherApp.spec.js` lists a local title hit |
 | Enter 填写 | `LauncherApp.spec.js` opens fill step when Enter hits a variable prompt |
 | 直接复制 | `launcherKeyboard.test.js` activates default on Enter and copy on Ctrl+Enter |
