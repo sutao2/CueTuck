@@ -8,9 +8,9 @@
       data-tauri-drag-region
     >
       <div class="titlebar-left" data-tauri-drag-region>
+        <button type="button" class="sidebar-toggle" data-testid="toggle-sidebar" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!sidebarCollapsed" aria-controls="workbench-sidebar" @click="sidebarCollapsed = !sidebarCollapsed"><AppIcon name="teal" /></button>
         <button type="button" class="app-mark" :aria-label="t('brand')">P</button>
         <span class="brand-name">{{ t("brand") }}</span>
-        <button type="button" class="sidebar-toggle" data-testid="toggle-sidebar" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!sidebarCollapsed" aria-controls="workbench-sidebar" @click="sidebarCollapsed = !sidebarCollapsed"><AppIcon name="teal" /></button>
       </div>
       <div class="titlebar-center" data-tauri-drag-region>
         <span>{{ locationLabel }}</span>

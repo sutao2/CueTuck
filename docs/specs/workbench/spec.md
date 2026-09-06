@@ -106,6 +106,14 @@
 - AND 顶栏快捷键记号为 `⌃Space` 而不是 `Ctrl Space`
 - AND 不得出现 Windows 风格的右侧最小化 / 最大化 / 关闭
 
+#### Scenario: 标题栏折叠入口不跳位
+
+- GIVEN 主窗口有系统窗口按钮和侧栏折叠入口
+- WHEN 用户反复展开或收起侧栏，或缩窄窗口
+- THEN 折叠入口保持相同的左上角坐标，品牌位于其右侧，不依赖品牌显隐定位
+- AND macOS 顶栏内容从左侧 96 CSS 像素之后开始，系统按钮与应用按钮留有独立操作空间
+- AND 折叠按钮本身不是拖动区域，点击只切换侧栏，不启动窗口拖动
+
 ### Requirement: 底栏
 
 系统 MUST 显示本地库状态与本地条数，不将本地库就绪写成广场或同步已连接。
@@ -142,3 +150,4 @@
 | 本地收藏只含本机星标 | `WorkbenchShell.spec.js` shows only starred local prompts on the favorite tab；`localFavorites.test.js` toggles a local favorite id in settings |
 | 右键只提供已有动作 | `WorkbenchShell.spec.js` opens a context menu with existing local actions |
 | macOS 主窗口 | `WorkbenchShell.spec.js` uses mac chrome on macos；`windowChrome.test.js` gives traffic-light inset and glyph shortcut on macos |
+| 标题栏折叠入口不跳位 | `WorkbenchShell.spec.js` keeps the sidebar toggle before branding outside the drag region；Playwright 两态坐标与窄窗口测量 |

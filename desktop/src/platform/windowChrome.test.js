@@ -11,7 +11,7 @@ describe("window chrome", () => {
   });
 
   it("gives traffic-light inset and glyph shortcut on macos", () => {
-    expect(trafficLightInsetPx("macos")).toBe(78);
+    expect(trafficLightInsetPx("macos")).toBe(96);
     expect(formatShortcutLabel("Control+Space", "macos")).toBe("⌃Space");
   });
 
