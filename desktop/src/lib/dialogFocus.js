@@ -40,7 +40,18 @@ export const vDialogFocus = {
         items.find((node) => node.matches('input:not([type="file"]), textarea')) ?? element).focus();
     });
   },
-  updated(element, binding) { states.get(element).close = binding.value; },
+  updated(element, binding) {
+    states.get(element).close = binding.value;
+    queueMicrotask(() => {
+      const dialogs = document.querySelectorAll('[aria-modal="true"]');
+      const active = document.activeElement;
+      if (element.isConnected && dialogs[dialogs.length - 1] === element &&
+        (active === document.body || (element.contains(active) && active.matches(':disabled')))) {
+        // A changed step or a now-disabled submit button must not lose the dialog's keyboard scope.
+        element.focus();
+      }
+    });
+  },
   unmounted(element) {
     const state = states.get(element);
     element.removeEventListener('keydown', state.keydown);

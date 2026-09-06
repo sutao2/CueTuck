@@ -30,6 +30,13 @@
 - THEN 文字、边界、按钮和错误状态保持清晰，长内容不产生页面横向溢出
 - AND 不删除现有功能入口，不改变标题栏搜索和独立启动器
 
+#### Scenario: 清楚区分筛选无结果
+
+- GIVEN 当前已使用搜索、分类或模型筛选
+- WHEN 没有匹配的条目
+- THEN 显示「没有匹配的提示词」并建议调整筛选，不声称整个库为空
+- AND 卡片标题本身为键盘可操作的打开入口
+
 ### Requirement: 专业桌面视觉
 
 主窗口视觉规则见 [ADR 0017](../../architecture/decisions/0017-screenshot-workbench-frame.md)，设置规则仍见 [ADR 0016](../../architecture/decisions/0016-workbench-frame-and-settings.md)。主窗口使用系统无衬线字体、统一线性图标和中性色表面。空间使用纵向导航，账号与偏好位于侧栏底部；内容工作面与侧栏有明确分区。标题、正文、辅助信息有清晰字号层级；筛选栏和卡片随可用宽度排列，状态栏不抢占内容注意力。
@@ -174,6 +181,9 @@
 
 | 场景 | 测试 |
 |---|---|
+| 键盘进入与退出弹窗 | `LoginModal.spec.js` 焦点循环/归还；`SettingsInteraction.spec.js` 嵌套确认；`UsePromptModal.spec.js` 切步焦点；`CollectionDetailModal.spec.js` 按钮禁用后焦点保留 |
+| 所有内容面适配 | Playwright 十页设置 40 组、网格/列表 8 组和编辑器/登录/发布视口测量 |
+| 清楚区分筛选无结果 | `WorkbenchShell.spec.js` distinguishes a filtered empty result and exposes a keyboard-operable card title |
 | 打开应用 | `desktop/src/components/WorkbenchShell.spec.js` renders four chrome regions；renders prototype sidebar chrome |
 | 广场不可用时回到本地 | `desktop/src/components/WorkbenchShell.spec.js` 广场离线与重试场景 |
 | SQLite 就绪 | `desktop/src-tauri` `status_is_ready_after_initialize` |

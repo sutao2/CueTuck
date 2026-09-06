@@ -112,6 +112,7 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 
 | 场景 | 测试 |
 |---|---|
+| 提交反馈与重试 | `LoginModal.spec.js` 邮箱等待、防重复、失败保留输入与重试；浏览器隔离会话 Enter 提交 |
 | 本地不要求账号 | 本地 CRUD 与启动器既有测试 |
 | 发布触发 | `WorkbenchShell.spec.js` opens login from publish and resumes after success |
 | 令牌 | `session.test.js` does not persist refresh in web storage；`desktop/src-tauri` `refresh_goes_to_store_access_does_not`；`backend` `create_session_isolates_access_and_refresh` |

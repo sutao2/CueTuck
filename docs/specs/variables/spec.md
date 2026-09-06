@@ -46,6 +46,7 @@
 - WHEN 用户按 Enter
 - THEN 进入下一步
 - AND Shift+Enter 不前进，用于换行
+- AND 输入法组字中的 Enter 不前进；复制进行中不重复提交
 
 ### Requirement: 启动器填写
 

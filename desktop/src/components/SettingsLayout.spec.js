@@ -30,6 +30,9 @@ it("places multi-field account forms in full-width blocks", async () => {
   expect(blocks).toHaveLength(2);
   expect(blocks[0].get('[data-testid="author-display-name"]').exists()).toBe(true);
   expect(blocks[1].get('[data-testid="billing-redeem-code"]').exists()).toBe(true);
+  for (const selector of ['author-display-name', 'author-bio', 'billing-redeem-code']) {
+    expect(w.get(`[data-testid="${selector}"]`).element.closest('label').textContent.trim()).not.toBe('');
+  }
 });
 
 it("retains unsaved model fields when replacing the scrolling page", async () => {

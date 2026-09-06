@@ -11,19 +11,20 @@
       <div class="create-body">
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <div v-if="!prompt" class="create-type-grid">
-          <button type="button" class="create-type" :class="{ active: kind === 'prompt' }" @click="kind = 'prompt'">
+          <button type="button" class="create-type" :class="{ active: kind === 'prompt' }" :aria-pressed="kind === 'prompt'" @click="kind = 'prompt'">
             <strong>单个提示词</strong>
             <small>一条可直接使用的提示词。</small>
           </button>
-          <button type="button" class="create-type" :class="{ active: kind === 'collection' }" @click="kind = 'collection'">
+          <button type="button" class="create-type" :class="{ active: kind === 'collection' }" :aria-pressed="kind === 'collection'" @click="kind = 'collection'">
             <strong>提示词合集</strong>
             <small>同一主题下的一组提示词。</small>
           </button>
         </div>
         <label class="field">
           <span>{{ kind === "collection" ? "合集名称" : "标题" }}</span>
-          <input v-model="title" placeholder="例如：SaaS 官网生成器">
+          <input v-model="title" data-dialog-autofocus placeholder="例如：SaaS 官网生成器">
         </label>
+        <div class="editor-metadata" :class="{ 'single-field': kind === 'collection' }">
         <label v-if="kind === 'prompt'" class="field">
           <span>模型</span>
           <select data-testid="prompt-model" v-model="model">
@@ -43,6 +44,7 @@
             </optgroup>
           </select>
         </label>
+        </div>
         <label v-if="kind === 'prompt'" class="field">
           <span>提示词内容</span>
           <textarea v-model="content" rows="8" placeholder="在正文中输入 {{变量名}} 即可创建变量"></textarea>
@@ -74,7 +76,7 @@
         <div class="modal-actions">
           <button type="button" class="button ghost-button" @click="$emit('cancel')">取消</button>
           <button type="button" class="button primary-button" :disabled="busy || !title.trim()" @click="submit">
-            {{ kind === "collection" && !prompt ? "创建合集" : "保存" }}
+            {{ busy ? '正在保存…' : kind === "collection" && !prompt ? "创建合集" : "保存" }}
           </button>
         </div>
       </footer>
@@ -126,7 +128,7 @@ async function onCoverFiles(event) {
 }
 
 function submit() {
-  if (!title.value.trim()) return;
+  if (props.busy || !title.value.trim()) return;
   emit("save", {
     id: props.prompt?.id,
     kind: kind.value,

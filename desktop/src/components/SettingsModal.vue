@@ -65,19 +65,23 @@
             </div>
             <div class="setting-row setting-block">
               <span class="setting-copy"><strong>作者主页</strong><small>已登录可保存显示名与简介。</small></span>
-              <span class="setting-control author-profile">
+              <div class="setting-control author-profile">
+                <label class="profile-field"><span>显示名</span>
                 <input
                   data-testid="author-display-name"
                   :disabled="!session.loggedIn"
                   v-model="displayName"
                   placeholder="显示名"
                 >
+                </label>
+                <label class="profile-field"><span>简介</span>
                 <textarea
                   data-testid="author-bio"
                   :disabled="!session.loggedIn"
                   v-model="bio"
                   placeholder="简介"
                 ></textarea>
+                </label>
                 <button
                   type="button"
                   class="button primary-button"
@@ -88,9 +92,9 @@
                   保存
                 </button>
                 <small v-if="profileNote" data-testid="author-profile-note">{{ profileNote }}</small>
-              </span>
+              </div>
             </div>
-            <div class="setting-row">
+            <div class="setting-row publications-row">
               <span class="setting-copy"><strong>我的发布</strong><small>当前账号提交到广场的审核状态。</small></span>
               <span class="setting-control" data-testid="my-publications">
                 <template v-if="!session.loggedIn">未登录</template>
@@ -104,19 +108,21 @@
             </div>
             <div class="setting-row setting-block">
               <span class="setting-copy"><strong>账单</strong><small>预发可查状态、兑换码；只有测试密钥才跳转 Checkout。不是公开售卖。</small></span>
-              <span class="setting-control author-profile">
+              <div class="setting-control author-profile">
                 <span data-testid="billing-pro">{{ session.loggedIn ? (billingPro ? "Pro" : "未订阅") : "未登录" }}</span>
                 <small v-if="session.loggedIn && billingMock" data-testid="billing-mock">Mock · {{ billingMockPro ? "模拟 Pro" : "模拟未订阅" }}（不扣款，不改变真实权益）</small>
             <small v-if="billingNote" data-testid="billing-note">{{ billingNote }}</small>
             <span v-if="session.loggedIn && billingMock">
               <button v-for="(label, outcome) in { success: '模拟成功', failure: '模拟失败', cancel: '模拟取消', reset: '重置模拟' }" :key="outcome" type="button" :data-testid="`billing-mock-${outcome}`" :disabled="billingBusy" @click="runCheckout(outcome)">{{ label }}</button>
             </span>
+                <label class="profile-field"><span>兑换码</span>
                 <input
                   data-testid="billing-redeem-code"
                   :disabled="!session.loggedIn || billingMock || billingBusy"
                   v-model="redeemCode"
                   placeholder="兑换码"
                 >
+                </label>
                 <button
                   type="button"
                   class="button ghost-button"
@@ -136,7 +142,7 @@
                 >
                   前往支付
                 </button>
-              </span>
+              </div>
             </div>
             <label class="setting-row">
               <span class="setting-copy"><strong>下载时保留作者信息</strong><small>打开后，新下载的本地副本展示作者，不改正文。</small></span>
@@ -278,6 +284,7 @@
           </section>
           <section v-else-if="current === 'network'">
             <h3>网络与代理</h3>
+            <p>控制联网范围，以及桌面端使用的代理。</p>
             <label class="setting-row">
               <span class="setting-copy"><strong>允许访问提示词广场</strong><small>关闭后工作台不请求广场；启动器仍只搜本地。</small></span>
               <input type="checkbox" data-testid="square-access" :checked="squareAccess" @change="toggleSquareAccess">
@@ -329,6 +336,7 @@
           </section>
           <section v-else-if="current === 'privacy'">
             <h3>隐私与安全</h3>
+            <p>了解数据的保存方式，管理统计与使用记录。</p>
             <div class="setting-row">
               <span class="setting-copy"><strong>本地提示词默认不上传</strong><small>未点发布不得把本地正文送出。</small></span>
               <span class="setting-control">始终生效</span>
@@ -357,6 +365,7 @@
           </section>
           <section v-else-if="current === 'updates'" data-testid="settings-updates">
             <h3>更新</h3>
+            <p>管理版本、更新通道与发行说明。</p>
             <div class="setting-row">
               <span class="setting-copy"><strong>当前版本</strong><small>桌面包 {{ appVersion }}，与本机构建一致。</small></span>
               <button type="button" class="button ghost-button" data-testid="check-updates" @click="runCheckUpdates">检查更新</button>
