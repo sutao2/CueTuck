@@ -135,6 +135,19 @@ fn resize_launcher_window(app: &AppHandle, layout: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn launcher_show_position(
+    area: &tauri::PhysicalRect<i32, u32>,
+    scale: f64,
+) -> tauri::PhysicalPosition<i32> {
+    tauri::PhysicalPosition::new(
+        area.position.x + ((area.size.width as f64 - 680.0 * scale).max(0.0) / 2.0).round() as i32,
+        area.position.y
+            + ((area.size.height as f64 - launcher_logical_height("collapsed") * scale).max(0.0)
+                / 3.0)
+                .round() as i32,
+    )
+}
+
 fn show_launcher_window(app: &AppHandle) -> Result<(), String> {
     let window = app
         .get_webview_window(LAUNCHER_LABEL)
@@ -147,7 +160,13 @@ fn show_launcher_window(app: &AppHandle) -> Result<(), String> {
         guard.mark_shown();
     }
     resize_launcher_window(app, "collapsed")?;
-    window.center().map_err(|error| error.to_string())?;
+    if let Some(monitor) = window.current_monitor().map_err(|error| error.to_string())? {
+        window
+            .set_position(launcher_show_position(monitor.work_area(), monitor.scale_factor()))
+            .map_err(|error| error.to_string())?;
+    } else {
+        window.center().map_err(|error| error.to_string())?;
+    }
     window.show().map_err(|error| error.to_string())?;
     window.set_focus().map_err(|error| error.to_string())?;
     Ok(())
@@ -262,6 +281,20 @@ mod tests {
         assert!(!guard.in_grace_period());
         guard.mark_shown();
         assert!(guard.in_grace_period());
+    }
+
+    #[test]
+    fn palette_opens_above_center_on_scaled_and_offset_monitors() {
+        for (x, y, scale) in [(0, 0, 1.0), (0, 48, 2.0), (-2880, -1800, 2.0)] {
+            let area = tauri::PhysicalRect {
+                position: tauri::PhysicalPosition::new(x, y),
+                size: tauri::PhysicalSize::new((1440.0 * scale) as u32, (980.0 * scale) as u32),
+            };
+            assert_eq!(
+                super::launcher_show_position(&area, scale),
+                tauri::PhysicalPosition::new(x + (380.0 * scale) as i32, y + (300.0 * scale) as i32),
+            );
+        }
     }
 }
 

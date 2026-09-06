@@ -21,6 +21,7 @@
 - GIVEN 应用已运行且本地库已就绪
 - WHEN 用户按下已配置的全局快捷键
 - THEN 启动器窗口显示并聚焦搜索框
+- AND 在当前显示器工作区横向居中，顶部位于扣除收起高度后可用纵向空间的三分之一处；坐标按显示器缩放计算
 - AND 主窗口不必被提到前台
 
 #### Scenario: 关闭
@@ -43,7 +44,7 @@
 - GIVEN 启动器已唤起，用户可能已拖动窗口
 - WHEN 用户反复输入、清空查询，或进入和退出变量填写
 - THEN 只调整窗口高度，窗口左上角及搜索栏位置不随布局切换移动
-- AND 仅重新唤起窗口时执行居中，不在内容尺寸变化时重新居中
+- AND 仅重新唤起窗口时恢复默认偏上位置，不在内容尺寸变化时重新定位
 
 ### Requirement: 附加全局快捷键
 
@@ -149,11 +150,11 @@ M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新�
 |---|---|
 | 独立窗口 label | `desktop/src/platform/launcherWindow.test.js`；`launcher_label_is_stable` |
 | 空查询 | `LauncherApp.spec.js` hides results on empty query |
-| 输入与清空时位置稳定 | `launcherWindow.test.js` 原生命令保留左上角、仅唤起时居中的源码合同；`LauncherApp.spec.js` 连续输入/清空和填写返回的布局调用回归（非原生坐标实测） |
+| 输入与清空时位置稳定 | `launcherWindow.test.js` 原生命令保留左上角、仅唤起时定位的源码合同；`LauncherApp.spec.js` 连续输入/清空和填写返回的布局调用回归（非原生坐标实测） |
 | 输入即搜 | `LauncherApp.spec.js` lists a local title hit |
 | Enter 填写 | `LauncherApp.spec.js` opens fill step when Enter hits a variable prompt |
 | 直接复制 | `launcherKeyboard.test.js` activates default on Enter and copy on Ctrl+Enter |
-| 快捷键唤起 | `shortcut.test.js` persists after a successful register |
+| 快捷键唤起 | `shortcut.test.js` persists after a successful register；`palette_opens_above_center_on_scaled_and_offset_monitors` 定位计算 |
 | 新建提示词快捷键 | `shortcut.test.js` does not persist when an extra shortcut register throws；`open_new_prompt` 打开主窗口 |
 | 粘贴最近使用快捷键 | 同上 extras；启动器写入 `last_rendered_prompt` 后 `paste_recent_prompt` 粘贴 |
 | 关闭 / 失焦 | `desktop/src-tauri` `focus_grace_is_600ms`；Esc 走 `resetAndHide` |
