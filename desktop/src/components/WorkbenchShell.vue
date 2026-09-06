@@ -133,11 +133,6 @@
         </nav>
 
         <div class="sidebar-bottom">
-          <button type="button">
-            <span class="connection-dot offline"></span>
-            <span>本地模式</span>
-            <span class="sidebar-bottom-action">第一期</span>
-          </button>
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
             <span>⚙</span><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
           </button>

@@ -8,7 +8,7 @@
 
 ## Purpose
 
-主窗口的桌面工作台：顶栏、侧栏、内容区、底栏。第一期只启用本地空间。
+主窗口的桌面工作台：顶栏、侧栏、内容区、底栏；提供本地库与广场空间。
 
 ## Requirements
 
@@ -24,14 +24,13 @@
 
 ### Requirement: 空间
 
-系统 MUST 在侧栏顶部提供「提示词广场」与「本地提示词」两个空间入口。第一期选择广场时 MUST 说明在线能力未开放，并保持本地可用。
+系统 MUST 在侧栏顶部提供「提示词广场」与「本地提示词」两个空间入口。广场行为见 [广场规格](../square/spec.md)。侧栏 MUST NOT 显示固定的「本地模式 / 第一期」阶段占位。
 
-#### Scenario: 第一期点击广场
+#### Scenario: 广场不可用时回到本地
 
-- GIVEN 当前为第一期构建
+- GIVEN 广场请求失败
 - WHEN 用户点击「提示词广场」
-- THEN 不加载远端列表
-- AND 用户看到明确的未开放说明
+- THEN 用户看到明确的离线提示
 - AND 可一键回到本地
 
 ### Requirement: 侧栏分类
@@ -89,7 +88,7 @@
 
 ### Requirement: 底栏
 
-系统 MUST 显示本地库状态与本地条数。第一期不显示同步队列为「连接广场」。
+系统 MUST 显示本地库状态与本地条数，不将本地库就绪写成广场或同步已连接。
 
 #### Scenario: SQLite 就绪
 
@@ -115,7 +114,7 @@
 | 场景 | 测试 |
 |---|---|
 | 打开应用 | `desktop/src/components/WorkbenchShell.spec.js` renders four chrome regions；renders prototype sidebar chrome |
-| 第一期点击广场 | `desktop/src/components/WorkbenchShell.spec.js` keeps square offline on first phase |
+| 广场不可用时回到本地 | `desktop/src/components/WorkbenchShell.spec.js` 广场离线与重试场景 |
 | SQLite 就绪 | `desktop/src-tauri` `status_is_ready_after_initialize` |
 | 展开大分类 | `desktop/src/components/WorkbenchShell.spec.js` loads preset categories into the tree；`lists_children_under_software` |
 | 切换网格列表 | `WorkbenchShell.spec.js` shows the same prompts as rows in list view |

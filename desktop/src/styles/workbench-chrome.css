@@ -517,12 +517,13 @@ body.theme-dark .tree-row.active { background: #213b37; color: var(--accent-stro
 body.theme-dark .nav-count { background: #2a2e30; }
 body.theme-dark .offline-banner { background: #2a2418; border-color: #6b5a3a; color: #d8c39a; }
 
-.settings-modal { width: min(760px, calc(100vw - 48px)); }
-.settings-body { display: grid; grid-template-columns: 180px 1fr; min-height: 320px; }
-.settings-nav { display: grid; align-content: start; gap: 2px; padding: 12px; border-right: 1px solid var(--line); background: var(--sidebar); }
+.settings-modal { width: min(760px, calc(100vw - 48px)); height: min(600px, calc(100dvh - 48px)); display: flex; flex-direction: column; overflow: hidden; }
+.settings-modal > .modal-header { flex-shrink: 0; }
+.settings-body { display: grid; grid-template-columns: 180px minmax(0, 1fr); flex: 1; min-height: 0; }
+.settings-nav { display: grid; align-content: start; gap: 2px; padding: 12px; border-right: 1px solid var(--line); background: var(--sidebar); min-height: 0; overflow-y: auto; }
 .settings-nav button { text-align: left; border: 0; border-radius: 4px; background: transparent; padding: 8px 10px; color: var(--muted); }
 .settings-nav button.active { background: #dde7e4; color: var(--accent-strong); font-weight: 600; }
-.settings-content { padding: 18px 20px; }
+.settings-content { padding: 18px 20px; min-height: 0; min-width: 0; overflow: auto; overflow-wrap: anywhere; scrollbar-gutter: stable; }
 .settings-content h3 { margin: 0 0 8px; font: 600 16px/1.3 var(--font-display); }
 .settings-content textarea { width: 100%; margin: 8px 0; }
 .setting-row {
