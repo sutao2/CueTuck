@@ -17,7 +17,7 @@
     >
       <template v-if="step === 'search'">
         <div class="launcher-search-wrap">
-          <span class="brand-mark" aria-hidden="true"></span>
+          <img class="brand-mark" :src="appIcon" alt="" aria-hidden="true" draggable="false" />
           <input
             ref="inputEl"
             v-model="query"
@@ -84,7 +84,7 @@
 
       <template v-else>
         <div class="launcher-search-wrap launcher-fill-head">
-          <span class="brand-mark" aria-hidden="true"></span>
+          <img class="brand-mark" :src="appIcon" alt="" aria-hidden="true" draggable="false" />
           <div class="result-copy">
             <span class="row-title">{{ active?.title }}</span>
             <span class="row-desc">{{ variableNames.length ? '填写变量后生成最终提示词' : '确认正文后复制或粘贴' }}</span>
@@ -131,6 +131,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import appIcon from "./assets/app-icon.png";
 import { extractVariables, renderPrompt } from "./lib/renderPrompt.js";
 import { handleLauncherSearchKey } from "./platform/launcherKeyboard.js";
 import {
@@ -476,10 +477,9 @@ onUnmounted(() => {
 .brand-mark {
   width: 30px;
   height: 30px;
-  border: 1px solid color-mix(in srgb, white 52%, transparent);
-  border-radius: 10px;
-  background: var(--accent);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 35%, transparent);
+  display: block;
+  object-fit: contain;
+  user-select: none;
 }
 .launcher-search {
   width: 100%;
