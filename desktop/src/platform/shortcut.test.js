@@ -1,7 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
-import { registerLauncherShortcut } from "./shortcut.js";
+import { registerLauncherShortcut, setShortcutRecording } from "./shortcut.js";
 
 describe("registerLauncherShortcut", () => {
+  it("suppresses all application shortcuts during recording and restores callbacks afterward", async () => {
+    const callbacks = [];
+    const extra = vi.fn();
+    await registerLauncherShortcut("Control+Space", {
+      register: vi.fn(async (_, callback) => { callbacks.push(callback); }),
+      unregisterAll: vi.fn(), persist: vi.fn(),
+      extras: [{ combo: "Control+Alt+N", handler: extra }],
+    });
+    setShortcutRecording(true);
+    try {
+      await callbacks[0]({ state: "Pressed" });
+      await callbacks[1]({ state: "Pressed" });
+      expect(extra).not.toHaveBeenCalled();
+    } finally { setShortcutRecording(false); }
+    await callbacks[1]({ state: "Pressed" });
+    expect(extra).toHaveBeenCalledOnce();
+  });
   it("does not persist when register throws", async () => {
     const persist = vi.fn();
     await expect(

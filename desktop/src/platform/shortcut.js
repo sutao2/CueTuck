@@ -4,6 +4,9 @@ export const DEFAULT_LAUNCHER_SHORTCUT = "Control+Space";
 export const DEFAULT_NEW_PROMPT_SHORTCUT = "Control+Alt+N";
 export const DEFAULT_PASTE_RECENT_SHORTCUT = "Control+Shift+V";
 
+let recording = false;
+export function setShortcutRecording(value) { recording = value; }
+
 export async function registerLauncherShortcut(
   combo = DEFAULT_LAUNCHER_SHORTCUT,
   {
@@ -19,12 +22,13 @@ export async function registerLauncherShortcut(
   await plugin.unregisterAll();
   try {
     await plugin.register(combo, async (event) => {
+      if (recording) return;
       if (event?.state && event.state !== "Pressed") return;
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("toggle_launcher");
     });
     for (const extra of extras) {
-      await plugin.register(extra.combo, extra.handler);
+      await plugin.register(extra.combo, (event) => { if (!recording) return extra.handler(event); });
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

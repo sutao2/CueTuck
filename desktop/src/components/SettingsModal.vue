@@ -157,18 +157,18 @@
           <section v-else-if="current === 'shortcuts'">
             <h3>快捷键</h3>
             <p>登记全局组合以唤起独立启动器。与系统冲突时会提示，不会静默失效。</p>
-            <p class="save-mode-hint">修改后请点击「保存快捷键」。</p>
+            <p class="save-mode-hint">点击后按组合键，完成后保存。支持 Ctrl / Alt / Command 组合或 F1–F24；Tab 切换，Esc 取消。系统保留组合可能被拦截。</p>
             <label class="field">
               <span>唤起快捷搜索</span>
-              <input v-model="shortcut" placeholder="Control+Space">
+              <ShortcutInput v-model="shortcut" :host="host" data-testid="launcher-shortcut" />
             </label>
             <label class="field">
               <span>新建提示词</span>
-              <input v-model="newPromptShortcut" data-testid="new-prompt-shortcut" placeholder="Control+Alt+N">
+              <ShortcutInput v-model="newPromptShortcut" :host="host" data-testid="new-prompt-shortcut" />
             </label>
             <label class="field">
               <span>快速粘贴最近使用</span>
-              <input v-model="pasteRecentShortcut" data-testid="paste-recent-shortcut" placeholder="Control+Shift+V">
+              <ShortcutInput v-model="pasteRecentShortcut" :host="host" data-testid="paste-recent-shortcut" />
             </label>
             <div class="modal-actions">
               <button type="button" class="button primary-button" @click="saveShortcut">保存快捷键</button>
@@ -432,6 +432,7 @@ import {
   setLocalSetting,
 } from "../platform/library.js";
 import { DEFAULT_LAUNCHER_SHORTCUT, DEFAULT_NEW_PROMPT_SHORTCUT, DEFAULT_PASTE_RECENT_SHORTCUT, registerLauncherShortcut } from "../platform/shortcut.js";
+import ShortcutInput from "./ShortcutInput.vue";
 import pkg from "../../package.json";
 import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/desktopPrefs.js";
 import { listMyPublications } from "../platform/square.js";
@@ -764,6 +765,11 @@ async function saveShortcut() {
     const invokeCombo = shortcut.value.trim() || DEFAULT_LAUNCHER_SHORTCUT;
     const createCombo = newPromptShortcut.value.trim() || DEFAULT_NEW_PROMPT_SHORTCUT;
     const pasteCombo = pasteRecentShortcut.value.trim() || DEFAULT_PASTE_RECENT_SHORTCUT;
+    if (new Set([invokeCombo, createCombo, pasteCombo]).size !== 3) {
+      shortcutError.value = "三项快捷键不能使用相同组合，请重新录入。";
+      showFeedback(shortcutError.value, true);
+      return;
+    }
     await registerLauncherShortcut(invokeCombo, {
       extras: [
         {
