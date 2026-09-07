@@ -5,6 +5,18 @@ use tauri::{AppHandle, Emitter, LogicalSize, Manager, Size};
 pub const LAUNCHER_LABEL: &str = "launcher";
 const FOCUS_GRACE: Duration = Duration::from_millis(600);
 
+// Ported from the independent legacy launcher: activation is asynchronous on macOS.
+#[cfg(any(target_os = "macos", test))]
+fn wait_for_stable_focus(mut ready: impl FnMut() -> bool, mut sleep: impl FnMut(Duration)) -> Result<(), String> {
+    let mut stable = 0;
+    for observation in 0..20 {
+        stable = if ready() { stable + 1 } else { 0 };
+        if stable == 4 { return Ok(()); }
+        if observation < 19 { sleep(Duration::from_millis(25)); }
+    }
+    Err("等待原窗口恢复焦点超时".into())
+}
+
 #[derive(Default)]
 pub struct LauncherFocusGuard(Mutex<Option<Instant>>);
 
@@ -83,7 +95,7 @@ impl PreviousApplication {
                     .ok_or_else(|| format!("窗口 {label} 不可用"))?;
                 window.show().map_err(|error| error.to_string())?;
                 window.set_focus().map_err(|error| error.to_string())?;
-                Ok(())
+                wait_for_stable_focus(|| window.is_focused().unwrap_or(false), std::thread::sleep)
             }
             PreviousTarget::ExternalApplication(pid) => {
                 let application = NSRunningApplication::runningApplicationWithProcessIdentifier(pid)
@@ -95,8 +107,10 @@ impl PreviousApplication {
                 if !application.activateWithOptions(NSApplicationActivationOptions::empty()) {
                     return Err("无法恢复启动器打开前的应用".into());
                 }
-                let _ = NSWorkspace::sharedWorkspace();
-                Ok(())
+                wait_for_stable_focus(|| {
+                    application.isActive() && NSWorkspace::sharedWorkspace()
+                        .frontmostApplication().map(|frontmost| frontmost.processIdentifier()) == Some(pid)
+                }, std::thread::sleep)
             }
         }
     }
@@ -107,6 +121,15 @@ pub fn hide_launcher_window(app: &AppHandle) -> Result<(), String> {
         .get_webview_window(LAUNCHER_LABEL)
         .ok_or_else(|| "启动器窗口不存在".to_string())?;
     window.hide().map_err(|error| error.to_string())
+}
+
+// Temporary restoration after paste/selection must not clear the current draft.
+#[tauri::command]
+pub fn resume_launcher(app: AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window(LAUNCHER_LABEL).ok_or("启动器窗口不存在")?;
+    if let Some(guard) = app.try_state::<LauncherFocusGuard>() { guard.mark_shown(); }
+    window.show().map_err(|error| error.to_string())?;
+    window.set_focus().map_err(|error| error.to_string())
 }
 
 pub fn launcher_logical_height(layout: &str) -> f64 {
@@ -152,6 +175,9 @@ fn show_launcher_window(app: &AppHandle) -> Result<(), String> {
     let window = app
         .get_webview_window(LAUNCHER_LABEL)
         .ok_or_else(|| "启动器窗口不存在".to_string())?;
+    if window.is_visible().map_err(|error| error.to_string())? {
+        return resume_launcher(app.clone());
+    }
     #[cfg(target_os = "macos")]
     if let Some(previous) = app.try_state::<PreviousApplication>() {
         previous.remember_frontmost(app);
@@ -169,6 +195,7 @@ fn show_launcher_window(app: &AppHandle) -> Result<(), String> {
     }
     window.show().map_err(|error| error.to_string())?;
     window.set_focus().map_err(|error| error.to_string())?;
+    window.emit("launcher-shown", ()).map_err(|error| error.to_string())?;
     Ok(())
 }
 
@@ -179,17 +206,21 @@ pub fn show_launcher(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn hide_launcher(app: AppHandle) -> Result<(), String> {
-    hide_launcher_window(&app)
+    hide_launcher_window(&app)?;
+    app.emit_to(LAUNCHER_LABEL, "launcher-hidden", ()).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
 pub fn hide_launcher_if_idle(app: AppHandle) -> Result<bool, String> {
+    if app.get_webview_window(LAUNCHER_LABEL).is_some_and(|window| window.is_focused().unwrap_or(false)) {
+        return Ok(false);
+    }
     if let Some(guard) = app.try_state::<LauncherFocusGuard>() {
         if guard.in_grace_period() {
             return Ok(false);
         }
     }
-    hide_launcher_window(&app)?;
+    hide_launcher(app)?;
     Ok(true)
 }
 
@@ -204,7 +235,7 @@ pub fn toggle_launcher(app: AppHandle) -> Result<(), String> {
         .get_webview_window(LAUNCHER_LABEL)
         .ok_or_else(|| "启动器窗口不存在".to_string())?;
     if window.is_visible().map_err(|error| error.to_string())? {
-        hide_launcher_window(&app)
+        hide_launcher(app)
     } else {
         show_launcher_window(&app)
     }
@@ -225,13 +256,33 @@ pub fn open_new_prompt(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn paste_recent_prompt(app: AppHandle) -> Result<(), String> {
+    let result = paste_recent(&app).await;
+    if let Err(message) = &result {
+        resume_launcher(app.clone())?;
+        app.emit_to(LAUNCHER_LABEL, "launcher-feedback", message).map_err(|error| error.to_string())?;
+    }
+    result
+}
+
+async fn paste_recent(app: &AppHandle) -> Result<(), String> {
     let dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
-    let text = crate::local_database::get_setting_in_dir(&dir, "last_rendered_prompt").unwrap_or_default();
+    let text = crate::local_database::get_setting_in_dir(&dir, "last_rendered_prompt")?;
     if text.trim().is_empty() {
         return Err("没有最近使用的提示词".into());
     }
+    #[cfg(target_os = "macos")]
+    if !app.get_webview_window(LAUNCHER_LABEL).is_some_and(|window| window.is_visible().unwrap_or(false)) {
+        app.state::<PreviousApplication>().remember_frontmost(app);
+    }
     copy_text_to_clipboard(&text)?;
-    crate::commands::paste::paste_to_active_app(app).await
+    crate::commands::paste::paste_to_active_app(app.clone()).await
+        .map_err(|error| format!("已复制，未能粘贴：{error}"))
+}
+
+#[tauri::command]
+pub async fn copy_launcher_text(text: String) -> Result<(), String> {
+    if text.trim().is_empty() { return Err("提示词内容为空".into()); }
+    copy_text_to_clipboard(&text)
 }
 
 fn copy_text_to_clipboard(text: &str) -> Result<(), String> {
@@ -239,7 +290,7 @@ fn copy_text_to_clipboard(text: &str) -> Result<(), String> {
     {
         use std::io::Write;
         use std::process::{Command, Stdio};
-        let mut child = Command::new("pbcopy")
+        let mut child = Command::new("/usr/bin/pbcopy")
             .stdin(Stdio::piped())
             .spawn()
             .map_err(|error| error.to_string())?;
@@ -249,8 +300,8 @@ fn copy_text_to_clipboard(text: &str) -> Result<(), String> {
             .ok_or_else(|| "无法写入剪贴板".to_string())?
             .write_all(text.as_bytes())
             .map_err(|error| error.to_string())?;
-        child.wait().map_err(|error| error.to_string())?;
-        Ok(())
+        let status = child.wait().map_err(|error| error.to_string())?;
+        if status.success() { Ok(()) } else { Err(format!("系统剪贴板写入失败：{status}")) }
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -281,6 +332,21 @@ mod tests {
         assert!(!guard.in_grace_period());
         guard.mark_shown();
         assert!(guard.in_grace_period());
+    }
+
+    #[test]
+    fn focus_must_be_stable_before_pasting() {
+        let mut observations = [true, true, false, true, true, true, true].into_iter();
+        let mut sleeps = 0;
+        assert!(super::wait_for_stable_focus(|| observations.next().unwrap(), |_| sleeps += 1).is_ok());
+        assert_eq!(sleeps, 6);
+    }
+
+    #[test]
+    fn unready_target_times_out_without_proceeding() {
+        let mut sleeps = 0;
+        assert!(super::wait_for_stable_focus(|| false, |_| sleeps += 1).is_err());
+        assert_eq!(sleeps, 19);
     }
 
     #[test]

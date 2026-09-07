@@ -1,6 +1,14 @@
+export async function copyLauncherText(text) {
+  if (window.__TAURI_INTERNALS__ && /Mac/.test(navigator.userAgent)) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return invoke("copy_launcher_text", { text });
+  }
+  return navigator.clipboard.writeText(text);
+}
+
 export async function copyThenPaste(
   text,
-  { writeText = (value) => navigator.clipboard.writeText(value), invoke } = {},
+  { writeText = copyLauncherText, invoke } = {},
 ) {
   await writeText(text);
   const run = invoke ?? (async (command) => {
@@ -10,7 +18,7 @@ export async function copyThenPaste(
   try {
     await run("paste_to_active_app");
     return { ok: true };
-  } catch {
-    return { ok: false, message: "已复制，未能粘贴" };
+  } catch (error) {
+    return { ok: false, message: `已复制，未能粘贴：${error?.message || error}` };
   }
 }

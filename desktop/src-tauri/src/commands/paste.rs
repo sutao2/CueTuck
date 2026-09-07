@@ -9,13 +9,20 @@ fn read_selected_text<R: SelectedTextReader>(reader: &R) -> Result<String, Strin
 }
 
 #[tauri::command]
-pub fn capture_selected_text() -> Result<String, String> {
+pub async fn capture_selected_text(app: AppHandle) -> Result<String, String> {
     #[cfg(target_os = "macos")]
     {
-        return read_selected_text(&MacAccessibilitySelectedTextReader);
+        if !accessibility_trusted() { return Err("缺少 macOS 辅助功能权限，无法读取选中文本".into()); }
+        crate::commands::launcher::hide_launcher_window(&app)?;
+        let result = app.state::<crate::commands::launcher::PreviousApplication>()
+            .restore_previous(&app)
+            .and_then(|_| read_selected_text(&MacAccessibilitySelectedTextReader));
+        crate::commands::launcher::resume_launcher(app)?;
+        result
     }
     #[cfg(not(target_os = "macos"))]
     {
+        let _ = app;
         Err("当前平台暂不支持读取选中文本".into())
     }
 }
@@ -24,11 +31,7 @@ pub fn capture_selected_text() -> Result<String, String> {
 pub async fn paste_to_active_app(app: AppHandle) -> Result<(), String> {
     let result = paste_after_hiding(&app);
     if result.is_err() {
-        if let Some(guard) = app.try_state::<crate::commands::launcher::LauncherFocusGuard>() { guard.mark_shown(); }
-        if let Some(window) = app.get_webview_window("launcher") {
-            let _ = window.show();
-            let _ = window.set_focus();
-        }
+        let _ = crate::commands::launcher::resume_launcher(app);
     }
     result
 }
@@ -37,15 +40,16 @@ fn paste_after_hiding(app: &AppHandle) -> Result<(), String> {
     crate::commands::launcher::hide_launcher_window(app)?;
     #[cfg(target_os = "macos")]
     {
-        if let Some(previous) = app.try_state::<crate::commands::launcher::PreviousApplication>() {
-            previous.restore_previous(app)?;
-        }
+        app.state::<crate::commands::launcher::PreviousApplication>().restore_previous(app)?;
     }
     #[cfg(not(target_os = "macos"))]
     {
-        std::thread::sleep(std::time::Duration::from_millis(180));
+        // Do not inject into an arbitrary app without a verified target restore.
     }
-    send_paste_keystroke()
+    send_paste_keystroke()?;
+    // Allow the target to consume posted keys before the keep-open preference restores us.
+    std::thread::sleep(std::time::Duration::from_millis(150));
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
@@ -58,17 +62,7 @@ fn send_paste_keystroke() -> Result<(), String> {
 
 #[cfg(not(target_os = "macos"))]
 fn send_paste_keystroke() -> Result<(), String> {
-    use enigo::{Direction, Enigo, Key, Keyboard, Settings};
-
-    let mut enigo =
-        Enigo::new(&Settings::default()).map_err(|error| format!("初始化输入模拟失败: {error}"))?;
-    enigo
-        .key(Key::Control, Direction::Press)
-        .map_err(|error| error.to_string())?;
-    let typed = enigo.key(Key::Unicode('v'), Direction::Click);
-    let released = enigo.key(Key::Control, Direction::Release);
-    typed.map_err(|error| error.to_string())?;
-    released.map_err(|error| error.to_string())
+    Err("当前平台尚不支持可靠恢复原窗口，请手动粘贴已复制的内容".into())
 }
 
 #[cfg(target_os = "macos")]

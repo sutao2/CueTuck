@@ -56,6 +56,8 @@ pub fn run() {
             commands::desktop::apply_minimize_to_tray,
             commands::launcher::show_launcher,
             commands::launcher::hide_launcher,
+            commands::launcher::resume_launcher,
+            commands::launcher::copy_launcher_text,
             commands::launcher::hide_launcher_if_idle,
             commands::launcher::resize_launcher,
             commands::launcher::toggle_launcher,

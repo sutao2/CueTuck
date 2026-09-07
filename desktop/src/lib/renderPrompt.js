@@ -15,6 +15,7 @@ export function renderPrompt(content, values = {}) {
     const name = raw.trim();
     if (!name) return original;
     const value = values[name];
+    if (!Object.hasOwn(values, name)) return `{{${name}}}`;
     if (value == null || value === "") return `{{${name}}}`;
     return String(value);
   });
