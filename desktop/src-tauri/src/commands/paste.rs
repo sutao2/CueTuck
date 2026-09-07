@@ -42,10 +42,6 @@ fn paste_after_hiding(app: &AppHandle) -> Result<(), String> {
     {
         app.state::<crate::commands::launcher::PreviousApplication>().restore_previous(app)?;
     }
-    #[cfg(not(target_os = "macos"))]
-    {
-        // Do not inject into an arbitrary app without a verified target restore.
-    }
     send_paste_keystroke()?;
     // Allow the target to consume posted keys before the keep-open preference restores us.
     std::thread::sleep(std::time::Duration::from_millis(150));
@@ -62,6 +58,7 @@ fn send_paste_keystroke() -> Result<(), String> {
 
 #[cfg(not(target_os = "macos"))]
 fn send_paste_keystroke() -> Result<(), String> {
+    // Do not inject into an arbitrary app without a verified target restore.
     Err("当前平台尚不支持可靠恢复原窗口，请手动粘贴已复制的内容".into())
 }
 

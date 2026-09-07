@@ -120,6 +120,12 @@ it("does not fill prototype properties, and treats values as literal text", () =
   expect(renderPrompt("{{x}}", { x: "$& {{x}}\n" })).toBe("$& {{x}}\n");
 });
 
+it("updates preview for special variable names without Vue or object prototype collisions", async () => {
+  const w = await open("{{__proto__}} {{constructor}} {{toString}} {{__v_isReactive}}");
+  for (const field of w.findAll("textarea")) await field.setValue("literal");
+  expect(w.get(".preview").text()).toBe("literal literal literal literal");
+});
+
 it("handles PageUp on a short list without a negative selection and mouse click opens the same preview", async () => {
   await library.createLocalPrompt({ title: "测试 A", content: "A" });
   await library.createLocalPrompt({ title: "测试 B", content: "B" });
@@ -155,6 +161,18 @@ it("copies directly, respects auto-close, and rejects empty content", async () =
   expect(writeText).toHaveBeenCalledTimes(2);
 });
 
+it("copies a single variable with Enter and preserves its draft if hiding fails", async () => {
+  const w = await open("{{单项}}");
+  await library.setLocalSetting("close_launcher_after_use", "1");
+  vi.spyOn(windows, "launcherCommand").mockRejectedValue(new Error("窗口不可用"));
+  await w.get("textarea").setValue("单项文本");
+  await w.get("textarea").trigger("keydown", { key: "Enter" });
+  await flushPromises();
+  expect(writeText).toHaveBeenCalledExactlyOnceWith("单项文本");
+  expect(w.get("textarea").element.value).toBe("单项文本");
+  expect(w.text()).toContain("已复制；窗口恢复失败");
+});
+
 it("resets on native hide/show, restores focus/theme, and releases event listeners", async () => {
   let shown, hidden, notice;
   const cleanup = vi.fn();
@@ -177,6 +195,22 @@ it("resets on native hide/show, restores focus/theme, and releases event listene
   expect(w.get(".launcher-stage").classes()).not.toContain("is-collapsed");
   w.unmount();
   expect(cleanup).toHaveBeenCalledTimes(1);
+});
+
+it("restores the current field when native focus arrives after the shown event", async () => {
+  const w = await open();
+  const field = w.findAll("textarea")[1];
+  field.element.focus();
+  field.element.blur();
+  window.dispatchEvent(new Event("focus"));
+  await flushPromises();
+  expect(document.activeElement).toBe(field.element);
+  await button(w, "返回").trigger("click");
+  await flushPromises();
+  w.get("input").element.blur();
+  window.dispatchEvent(new Event("focus"));
+  await flushPromises();
+  expect(document.activeElement).toBe(w.get("input").element);
 });
 
 it("ignores native hide/blur while copying, then returns after paste when keep-open is enabled", async () => {

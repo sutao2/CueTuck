@@ -97,7 +97,7 @@
               <p class="fill-hint">Enter 下一项 / 最后一项复制 · Shift + Enter 换行<br>{{ copyChord }} 随时复制 · 留空保留占位符</p>
               <label v-for="(name, index) in variableNames" :key="name" class="field">
                 <span>{{ name }}</span>
-                <textarea v-model="values[name]" rows="2" :placeholder="`填写 ${name}`" :disabled="busy" @focus="focusedVariable = name" @keydown="onVariableKey($event, index)"></textarea>
+                <textarea :value="values.get(name) ?? ''" rows="2" :placeholder="`填写 ${name}`" :disabled="busy" @input="values.set(name, $event.target.value)" @focus="focusedVariable = name" @keydown="onVariableKey($event, index)"></textarea>
               </label>
               <button
                 v-if="canReadSelected"
@@ -159,7 +159,7 @@ const results = ref([]);
 const selectedIndex = ref(0);
 const step = ref("search");
 const active = ref(null);
-const values = reactive(Object.create(null));
+const values = reactive(new Map());
 const feedback = ref("");
 const useBusy = ref(false);
 const selectionBusy = ref(false);
@@ -171,7 +171,7 @@ let blurTimer;
 const canReadSelected = !!window.__TAURI_INTERNALS__ && supportsSelectedText();
 
 const variableNames = computed(() => extractVariables(active.value?.content ?? ""));
-const preview = computed(() => renderPrompt(active.value?.content ?? "", values));
+const preview = computed(() => renderPrompt(active.value?.content ?? "", Object.fromEntries(values)));
 const isCollapsed = computed(() => step.value === "search" && !query.value.trim() && !feedback.value);
 const launcherLayout = computed(() =>
   step.value === "fill" ? "fill" : isCollapsed.value ? "collapsed" : "expanded",
@@ -236,9 +236,9 @@ async function activate(row, mode) {
   if (!row || busy.value) return;
   feedback.value = "";
   active.value = row;
-  for (const key of Object.keys(values)) delete values[key];
+  values.clear();
   if (mode === "copy") {
-    copyRendered(mode);
+    copyRendered();
     return;
   }
   step.value = "fill";
@@ -302,8 +302,8 @@ async function finishUse(text, id, result, pasteRequested) {
     closeAfter = await getLocalSetting("close_launcher_after_use") !== "0";
   } catch (error) { feedback.value += `；保存使用记录失败：${error.message || error}`; }
   if (result.ok && closeAfter) {
-    resetState();
     await launcherCommand("hide_launcher");
+    resetState();
   } else if (pasteRequested) {
     await launcherCommand("resume_launcher");
   }
@@ -343,7 +343,7 @@ async function readSelected() {
   selectionBusy.value = true;
   try {
     const selected = await launcherCommand("capture_selected_text");
-    if (selected?.trim()) { values[name] = selected; feedback.value = `已填入 ${name}`; }
+    if (selected?.trim()) { values.set(name, selected); feedback.value = `已填入 ${name}`; }
     else feedback.value = "原窗口没有可读取的选区；已保留原内容。";
   } catch (error) {
     feedback.value = error instanceof Error ? error.message : String(error);
@@ -365,6 +365,11 @@ async function onBlur() {
   } catch (error) { feedback.value = `隐藏窗口失败：${error}`; }
 }
 
+function onFocus() {
+  clearTimeout(blurTimer);
+  if (!busy.value) focusCurrent();
+}
+
 function resetState() {
   clearTimeout(blurTimer);
   searchRequest += 1;
@@ -375,7 +380,7 @@ function resetState() {
   selectedIndex.value = 0;
   step.value = "search";
   active.value = null;
-  for (const key of Object.keys(values)) delete values[key];
+  values.clear();
 }
 
 async function resetAndHide() {
@@ -403,6 +408,7 @@ onMounted(async () => {
   document.body.classList.add("launcher-page");
   applyHostChrome(document.body, props.host);
   window.addEventListener("blur", onBlur);
+  window.addEventListener("focus", onFocus);
   inputEl.value?.focus();
   try {
     unlisten = await listenLauncherLifecycle(onShown, () => { if (!busy.value) resetState(); }, (event) => { feedback.value = event.payload; });
@@ -417,6 +423,7 @@ onUnmounted(() => {
   clearTimeout(blurTimer);
   unlisten();
   window.removeEventListener("blur", onBlur);
+  window.removeEventListener("focus", onFocus);
   document.body.classList.remove("launcher-page");
 });
 </script>
@@ -638,6 +645,7 @@ onUnmounted(() => {
   color: var(--muted);
   font-size: 11px;
 }
+.field > span { overflow-wrap: anywhere; }
 .field textarea {
   width: 100%;
   min-height: 62px;

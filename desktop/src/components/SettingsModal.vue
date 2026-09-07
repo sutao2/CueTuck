@@ -43,7 +43,7 @@
               >
             </label>
             <label class="setting-row">
-              <span class="setting-copy"><strong>使用后自动关闭快捷窗口</strong><small>完成粘贴后收起启动器。</small></span>
+              <span class="setting-copy"><strong>使用后自动关闭快捷窗口</strong><small>复制或粘贴成功后收起启动器，失败时保留填写内容。</small></span>
               <input
                 type="checkbox"
                 data-testid="close-launcher-after-use"
