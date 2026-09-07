@@ -43,11 +43,34 @@ export function getAdminSession() {
   };
 }
 
-function applySession(result, fallbackEmail) {
+async function applySession(result, fallbackEmail, signal) {
+  if (signal?.aborted) throw new Error('已取消');
   if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
-  accessToken = result.access_token ?? result.accessToken ?? null;
-  accountEmail = result.email ?? fallbackEmail ?? null;
+  accessToken = null;
+  accountEmail = null;
+  const candidate = result.access_token ?? result.accessToken;
+  if (!candidate) throw new Error('登录响应无效');
+  let email = result.email ?? fallbackEmail;
+  if (!testTransport) {
+    const response = await fetch(`${API_BASE}/v1/admin/me`, { headers: { authorization: `Bearer ${candidate}` }, signal });
+    if (!response.ok) throw new Error(response.status === 403 ? '该账号不是管理员' : '无法验证管理员身份，请重新登录');
+    const account = await response.json();
+    if (account.role !== 'admin') throw new Error('该账号不是管理员');
+    email = account.email;
+  }
+  if (signal?.aborted) throw new Error('已取消');
+  accessToken = candidate;
+  accountEmail = email;
   return { email: accountEmail, accessToken };
+}
+
+export async function logoutAdmin() {
+  const token = accessToken;
+  accessToken = null;
+  accountEmail = null;
+  if (!token || testTransport) return true;
+  try { return (await fetch(`${API_BASE}/v1/session`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } })).ok; }
+  catch { return false; }
 }
 
 export async function listOAuthProviders() {
@@ -94,7 +117,7 @@ export async function loginAdminOAuth(provider, { signal } = {}) {
   } else {
     result = await pollBrowserOAuth(name, signal);
   }
-  return applySession(result, null);
+  return applySession(result, null, signal);
 }
 
 async function pollBrowserOAuth(provider, signal) {

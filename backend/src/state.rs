@@ -29,12 +29,22 @@ impl AppState {
                 Err(_) => None,
             }
         };
+        let existing_oauth = pg.oauth_config("google").await.map_err(|_| "read OAuth configuration")?.is_some()
+            || pg.oauth_config("github").await.map_err(|_| "read OAuth configuration")?.is_some();
+        let key_file = std::env::var("PROMPTARK_OAUTH_KEY_FILE").unwrap_or_else(|_| ".promptark/oauth.key".into());
+        let key = crate::oauth_admin::load_key(std::path::Path::new(&key_file), existing_oauth)?;
+        let mut oauth = OAuthSettings::default();
+        if std::env::var("PROMPTARK_OAUTH_STATE_SECRET").or_else(|_| std::env::var("PL_OAUTH_STATE_SECRET")).is_err() {
+            use sha2::Digest;
+            oauth.state_secret = format!("{:x}", sha2::Sha256::digest([b"oauth-state:".as_slice(), &key].concat()));
+        }
         let state = Self {
             db: Some(pg),
             billing_mock: std::env::var("PROMPTARK_BILLING_MOCK").ok().as_deref() == Some("1"),
             redis,
             media: media::MediaConfig::from_env(),
-            oauth: OAuthSettings::default(),
+            oauth,
+            oauth_config: std::sync::Arc::new(crate::oauth_admin::ConfigStore::new(key)),
             ..Self::default()
         };
         let email =

@@ -20,8 +20,10 @@ redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 rusty-s3 = "0.5"
 url = "2"
 urlencoding = "2"
+ring = "0.17"
 
 [dev-dependencies]
+tempfile = "3"
 http-body-util = "0.1"
 tower = { version = "0.5", features = ["util"] }
 hmac = "0.12"

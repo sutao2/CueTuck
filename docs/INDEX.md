@@ -49,7 +49,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 紧凑登录与提交反馈；Refresh 进钥匙串 |
 | [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 十页统一排版、字段标签、保存反馈与固定布局 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
-| [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 独立管理端；审核事务与重复操作保护 |
+| [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 侧栏管理台、OAuth 配置与管理员权限 |
 | [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 账号隔离、保存重试与复制失败反馈；不进桌面包 |
 | [specs/mcp/spec.md](specs/mcp/spec.md) | 目标 | 做本机 MCP | stdio 只读搜索、分页与参数校验 |
 | [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 完整分类/合集/成员/软删除往返与时间归一化 |
@@ -101,6 +101,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-09-07-scrollbars-focus.md](plans/2026-09-07-scrollbars-focus.md) | 现行 | 统一桌面滚动条及控件描边 | 双窗口滚动样式、安全间距与单层键盘焦点 |
 | [plans/2026-09-07-category-actions.md](plans/2026-09-07-category-actions.md) | 现行 | 修复分类新建和删除 | 明确入口、重复校验、内容保留与删除同步 |
 | [plans/2026-09-07-custom-root-categories.md](plans/2026-09-07-custom-root-categories.md) | 现行 | 新增本地大分类 | 可选父级、两级关系往返与广场隔离 |
+| [plans/2026-09-07-admin-oauth-settings.md](plans/2026-09-07-admin-oauth-settings.md) | 现行 | 管理端配置第三方登录 | Google/GitHub 热配置、密钥保护与管理台视觉整理 |
 | [plans/2026-08-22-m1-desktop-skeleton.md](plans/2026-08-22-m1-desktop-skeleton.md) | 归档 | 查 M1 怎么做的 | M1 逐步实现计划 |
 | [plans/2026-08-22-m2-local-workbench.md](plans/2026-08-22-m2-local-workbench.md) | 归档 | 查 M2 怎么做的 | M2 逐步实现计划 |
 | [plans/2026-08-23-m3-launcher.md](plans/2026-08-23-m3-launcher.md) | 归档 | 查 M3 怎么做的 | M3 逐步实现计划 |

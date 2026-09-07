@@ -17,6 +17,8 @@ const REQUIRED = [
   { method: "GET", path: "/v1/admin/users", auth: "admin" },
   { method: "GET", path: "/v1/admin/settings", auth: "admin" },
   { method: "PUT", path: "/v1/admin/settings", auth: "admin" },
+  { method: "GET", path: "/v1/admin/oauth", auth: "admin" },
+  { method: "PUT", path: "/v1/admin/oauth/{provider}", auth: "admin" },
 ];
 
 describe("admin OpenAPI mapping", () => {

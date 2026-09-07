@@ -235,6 +235,17 @@ impl Pg {
         Ok(())
     }
 
+    pub async fn oauth_config(&self, provider: &str) -> Result<Option<String>, StatusCode> {
+        sqlx::query_scalar(&format!("SELECT value FROM {} WHERE key=$1", self.t("settings")))
+            .bind(format!("oauth_provider_{provider}")).fetch_optional(&self.pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    }
+
+    pub async fn set_oauth_config(&self, provider: &str, value: &str) -> Result<(), StatusCode> {
+        sqlx::query(&format!("INSERT INTO {} (key,value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", self.t("settings")))
+            .bind(format!("oauth_provider_{provider}")).bind(value).execute(&self.pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(())
+    }
+
     pub async fn get_profile(&self, email: &str) -> Result<crate::me::MeProfile, StatusCode> {
         let row = sqlx::query(&format!(
             "SELECT email, display_name, bio FROM {} WHERE email = $1",

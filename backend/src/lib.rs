@@ -3,6 +3,7 @@ mod me;
 mod library;
 mod billing;
 mod oauth;
+mod oauth_admin;
 mod password;
 mod postgres;
 mod state;
@@ -36,6 +37,7 @@ pub struct AppState {
     db: Option<Pg>,
     redis: Option<redis::aio::ConnectionManager>,
     pub oauth: OAuthSettings,
+    oauth_config: Arc<oauth_admin::ConfigStore>,
     pub media: Option<media::MediaConfig>,
     oauth_flows: Arc<Mutex<HashMap<String, String>>>,
     profiles: Arc<Mutex<HashMap<String, (Option<String>, Option<String>)>>>,
@@ -64,6 +66,7 @@ impl Default for AppState {
             db: None,
             redis: None,
             oauth: OAuthSettings::default(),
+            oauth_config: Arc::new(oauth_admin::ConfigStore::default()),
             media: None,
             oauth_flows: Arc::new(Mutex::new(HashMap::new())),
             profiles: Arc::new(Mutex::new(HashMap::new())),
@@ -347,6 +350,8 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/favorites", get(list_favorites))
         .route("/v1/favorites/:id", put(put_favorite).delete(delete_favorite))
         .route("/v1/admin/me", get(get_admin_me))
+        .route("/v1/admin/oauth", get(oauth_admin::list))
+        .route("/v1/admin/oauth/:provider", put(oauth_admin::update))
         .route("/v1/admin/publications", get(list_admin_publications))
         .route(
             "/v1/admin/publications/:id/approve",

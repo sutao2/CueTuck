@@ -57,29 +57,21 @@ pub struct ProviderConfig {
 }
 
 impl ProviderConfig {
+    pub(crate) fn configured(name: &str, client_id: String, client_secret: String, redirect_uri: String) -> Self {
+        let github = name == "github";
+        Self {
+            client_id, client_secret, redirect_uri,
+            authorization_uri: if github { "https://github.com/login/oauth/authorize" } else { "https://accounts.google.com/o/oauth2/v2/auth" }.into(),
+            token_uri: if github { "https://github.com/login/oauth/access_token" } else { "https://oauth2.googleapis.com/token" }.into(),
+            user_info_uri: if github { "https://api.github.com/user" } else { "https://openidconnect.googleapis.com/v1/userinfo" }.into(),
+            emails_uri: github.then(|| "https://api.github.com/user/emails".into()),
+            scope: if github { "read:user user:email" } else { "openid email profile" }.into(),
+        }
+    }
     fn from_env() -> HashMap<String, ProviderConfig> {
         let mut map = HashMap::new();
-        if let Some(google) = load_provider(
-            "google",
-            "https://accounts.google.com/o/oauth2/v2/auth",
-            "https://oauth2.googleapis.com/token",
-            "https://openidconnect.googleapis.com/v1/userinfo",
-            None,
-            "http://localhost:8787/v1/session/oauth/callback",
-            "openid email profile",
-        ) {
-            map.insert("google".into(), google);
-        }
-        if let Some(github) = load_provider(
-            "github",
-            "https://github.com/login/oauth/authorize",
-            "https://github.com/login/oauth/access_token",
-            "https://api.github.com/user",
-            Some("https://api.github.com/user/emails"),
-            "http://localhost:8787/v1/session/oauth/callback",
-            "read:user user:email",
-        ) {
-            map.insert("github".into(), github);
+        for name in crate::oauth_admin::PROVIDERS {
+            if let Some(config) = load_provider(name) { map.insert(name.into(), config); }
         }
         map
     }
@@ -92,15 +84,7 @@ fn env_pair(promptark: &str, legacy: &str) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-fn load_provider(
-    name: &str,
-    authorization_uri: &str,
-    token_uri: &str,
-    user_info_uri: &str,
-    emails_uri: Option<&str>,
-    default_redirect: &str,
-    scope: &str,
-) -> Option<ProviderConfig> {
+fn load_provider(name: &str) -> Option<ProviderConfig> {
     let prefix = name.to_uppercase();
     let client_id = env_pair(
         &format!("PROMPTARK_{prefix}_CLIENT_ID"),
@@ -110,20 +94,11 @@ fn load_provider(
         &format!("PROMPTARK_{prefix}_CLIENT_SECRET"),
         &format!("PL_{prefix}_CLIENT_SECRET"),
     )?;
-    Some(ProviderConfig {
-        client_id,
-        client_secret,
-        authorization_uri: authorization_uri.into(),
-        token_uri: token_uri.into(),
-        user_info_uri: user_info_uri.into(),
-        emails_uri: emails_uri.map(str::to_string),
-        redirect_uri: env_pair(
+    Some(ProviderConfig::configured(name, client_id, client_secret, env_pair(
             &format!("PROMPTARK_{prefix}_REDIRECT_URI"),
             &format!("PL_{prefix}_REDIRECT_URI"),
         )
-        .unwrap_or_else(|| default_redirect.into()),
-        scope: scope.into(),
-    })
+        .unwrap_or_else(|| "http://localhost:8787/v1/session/oauth/callback".into())))
 }
 
 #[derive(Clone)]
@@ -153,12 +128,6 @@ struct OAuthState {
     response_mode: String,
     web_message_origin: String,
     flow_id: String,
-}
-
-pub fn enabled_providers(settings: &OAuthSettings) -> Vec<String> {
-    let mut names: Vec<_> = settings.providers.keys().cloned().collect();
-    names.sort();
-    names
 }
 
 fn sign(secret: &str, payload: &str) -> String {
@@ -221,8 +190,12 @@ fn require_origin(settings: &OAuthSettings, origin: &str) -> Result<String, Stat
     }
 }
 
-pub async fn list_providers(State(state): State<AppState>) -> Json<Value> {
-    Json(json!({ "items": enabled_providers(&state.oauth) }))
+pub async fn list_providers(State(state): State<AppState>) -> Result<Json<Value>, StatusCode> {
+    let mut items = Vec::new();
+    for provider in crate::oauth_admin::PROVIDERS {
+        if state.runtime_provider(provider).await?.is_some() { items.push(provider); }
+    }
+    Ok(Json(json!({ "items": items })))
 }
 
 pub async fn start(
@@ -231,12 +204,7 @@ pub async fn start(
     Query(query): Query<OAuthStartQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let provider = provider.to_lowercase();
-    let config = state
-        .oauth
-        .providers
-        .get(&provider)
-        .cloned()
-        .ok_or(StatusCode::NOT_FOUND)?;
+    let config = state.runtime_provider(&provider).await?.ok_or(StatusCode::NOT_FOUND)?;
     let mode = query.response_mode.unwrap_or_default();
     if !mode.is_empty() && mode != "web_message" && mode != "browser" {
         return Err(StatusCode::BAD_REQUEST);
@@ -326,16 +294,12 @@ async fn fetch_user(
     provider: &str,
     code: &str,
 ) -> Result<OAuthUser, StatusCode> {
+    let config = state.runtime_provider(provider).await?.ok_or(StatusCode::NOT_FOUND)?;
     if let Some(user) = state.oauth.mock_users.get(code).cloned() {
         return Ok(user);
     }
-    let config = state
-        .oauth
-        .providers
-        .get(provider)
-        .cloned()
-        .ok_or(StatusCode::NOT_FOUND)?;
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder().user_agent("PromptArk/0.1")
+        .timeout(std::time::Duration::from_secs(20)).build().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let token_response: Value = client
         .post(&config.token_uri)
         .header(reqwest::header::ACCEPT, "application/json")
@@ -382,7 +346,11 @@ async fn fetch_user(
         .and_then(Value::as_str)
         .unwrap_or("")
         .to_string();
-    if email.is_empty() && provider == "github" {
+    if provider == "google" && profile.get("email_verified") != Some(&Value::Bool(true)) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    if provider == "github" {
+        email.clear();
         if let Some(uri) = &config.emails_uri {
             let emails: Value = client
                 .get(uri)
@@ -397,7 +365,7 @@ async fn fetch_user(
             if let Some(items) = emails.as_array() {
                 email = items
                     .iter()
-                    .find(|item| item.get("primary") == Some(&Value::Bool(true)))
+                    .find(|item| item.get("primary") == Some(&Value::Bool(true)) && item.get("verified") == Some(&Value::Bool(true)))
                     .and_then(|item| item.get("email"))
                     .and_then(Value::as_str)
                     .unwrap_or("")
@@ -413,4 +381,42 @@ async fn fetch_user(
         provider_uid: uid,
         email,
     })
+}
+
+#[cfg(test)]
+mod profile_tests {
+    use super::*;
+    use axum::{http::HeaderMap, routing::{get, post}, Router};
+
+    async fn provider_server(profile: Value, emails: Value) -> (String, tokio::task::JoinHandle<()>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let router = Router::new()
+            .route("/token", post(|| async { Json(json!({ "access_token": "test-token" })) }))
+            .route("/profile", get(move |headers: HeaderMap| { let profile = profile.clone(); async move {
+                assert_eq!(headers["user-agent"], "PromptArk/0.1"); Json(profile)
+            }}))
+            .route("/emails", get(move || { let emails = emails.clone(); async move { Json(emails) } }));
+        let task = tokio::spawn(async move { axum::serve(listener, router).await.unwrap(); });
+        (base, task)
+    }
+
+    #[tokio::test]
+    async fn oauth_accounts_require_verified_provider_emails() {
+        for (provider, profile, emails, expected) in [
+            ("google", json!({"sub":"1","email":"admin@example.com","email_verified":false}), json!([]), None),
+            ("google", json!({"sub":"1","email":"admin@example.com","email_verified":true}), json!([]), Some("admin@example.com")),
+            ("github", json!({"id":1,"email":"unverified@example.com"}), json!([{"primary":true,"verified":false,"email":"unverified@example.com"}]), None),
+            ("github", json!({"id":1,"email":"unverified@example.com"}), json!([{"primary":true,"verified":true,"email":"verified@example.com"}]), Some("verified@example.com")),
+        ] {
+            let (base, task) = provider_server(profile, emails).await;
+            let mut state = AppState::default();
+            let mut config = ProviderConfig::configured(provider, "id".into(), "secret".into(), "http://localhost/callback".into());
+            config.token_uri = format!("{base}/token"); config.user_info_uri = format!("{base}/profile"); config.emails_uri = Some(format!("{base}/emails"));
+            state.oauth.providers.insert(provider.into(), config);
+            let user = fetch_user(&state, provider, "code").await;
+            assert_eq!(user.ok().map(|user| user.email), expected.map(str::to_string));
+            task.abort();
+        }
+    }
 }
