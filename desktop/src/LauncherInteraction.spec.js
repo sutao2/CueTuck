@@ -28,6 +28,20 @@ async function open(content = "{{姓名}} / {{任务}} / {{姓名}}") {
 }
 const button = (w, text) => w.findAll("button").find((b) => b.text() === text);
 
+it("opens and fills every anonymous slot in the screenshot, then copies on the last Enter", async () => {
+  const w = await open("Sql {} dejk fer {}. hdjjf dev {} jhdfhk sd");
+  const fields = w.findAll("textarea");
+  expect(fields).toHaveLength(3);
+  for (let index = 0; index < fields.length; index++) {
+    expect(document.activeElement).toBe(fields[index].element);
+    await fields[index].setValue(["A", "B", "C"][index]);
+    await fields[index].trigger("keydown", { key: "Enter" });
+  }
+  await flushPromises();
+  expect(w.get(".preview").text()).toBe("Sql A dejk fer B. hdjjf dev C jhdfhk sd");
+  expect(writeText).toHaveBeenCalledExactlyOnceWith("Sql A dejk fer B. hdjjf dev C jhdfhk sd");
+});
+
 it("focuses variables, advances with Enter and copies only on the last field", async () => {
   const w = await open();
   const fields = w.findAll("textarea");

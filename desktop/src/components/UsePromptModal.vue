@@ -12,7 +12,7 @@
       <div class="create-body">
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <template v-if="step === 'variable'">
-          <p class="use-hint">填写后进入下一步。未填会在最终文本里保留变量名。</p>
+          <p class="use-hint">填写后进入下一步。未填会在最终文本里保留原占位符。</p>
           <label class="field">
             <span data-testid="use-variable">{{ currentName }}</span>
             <textarea

@@ -7,13 +7,28 @@
 
 ## Purpose
 
-从正文解析 `{{变量名}}`，在使用前逐步填写并生成最终文本。不单独维护变量列表。
+从正文解析 `{{变量名}}` 和匿名空位 `{}`，在使用前逐步填写并生成最终文本。不单独维护变量列表。
 
 ## Requirements
 
 ### Requirement: 解析规则
 
 系统 MUST 把 `{{` 与 `}}` 之间的 trim 后文本当作变量名。同名变量 MUST 只填写一次。空名称 MUST 忽略。
+
+非代码区域的单花括号空位 `{}`（也允许内部空格或 Tab）MUST 按出现顺序独立填写，显示「占位符 N」，不得把全部空位替换成同一个值，自动名称不得与显式变量名冲突。代码围栏、行内代码、引号字符串、嵌套对象或转义中的匿名空位 MUST 保留原文；明确的 `{{名称}}` 保持原有语义。无法自动区分未标记代码中的顶层 `{}` 与用户空位，字面用途应使用代码标记或反斜杠转义。
+
+#### Scenario: 匿名空位
+
+- GIVEN 正文为 `Sql {} dejk fer {}. hdjjf dev {} jhdfhk sd`
+- WHEN 用户分别填写三个空位为 A、B、C
+- THEN 展示三个独立字段，预览和复制为 `Sql A dejk fer B. hdjjf dev C jhdfhk sd`
+- AND 跳过一项时只保留该项原始花括号，不改变后续空位编号
+
+#### Scenario: 代码与对象字面量
+
+- GIVEN 正文含行内代码、代码围栏、JSON 对象内空对象或转义花括号
+- WHEN 提取匿名空位
+- THEN 不为这些字面内容新增字段，也不改写正文
 
 #### Scenario: 重复变量
 
@@ -24,7 +39,7 @@
 
 #### Scenario: 无变量
 
-- GIVEN 正文不含 `{{`
+- GIVEN 正文不含受支持的命名变量或匿名空位
 - WHEN 用户使用该提示词
 - THEN 跳过填写，直接进入预览或复制
 
@@ -64,6 +79,8 @@
 
 未填写的变量 MUST 在最终文本中保留 `{{名称}}` 或替换为空字符串。选定一种行为后不得混用。本仓库选定：**未填保留 `{{名称}}`**，以便用户发现漏填。
 
+匿名空位未填时 MUST 保留原始 `{}` 或 `{ }`，不把自动字段标签写入正文。
+
 #### Scenario: 漏填
 
 - GIVEN 变量「受众」未填
@@ -85,6 +102,8 @@
 
 | 场景 | 测试 |
 |---|---|
+| 匿名空位 | `renderPrompt.test.js` 截图正文与漏填回归；`LauncherInteraction.spec.js` 最后一项 Enter 复制；`UsePromptModal.spec.js` 主窗口逐项填写 |
+| 代码与对象字面量 | `desktop/src/lib/renderPrompt.test.js` preserves code, nested JSON, quoted/escaped braces and empty double braces |
 | 重复变量 | `desktop/src/lib/renderPrompt.test.js` dedupes repeated variables |
 | 无变量 | `desktop/src/components/UsePromptModal.spec.js` skips fill and previews when the prompt has no variables |
 | 逐步填写 | `desktop/src/components/UsePromptModal.spec.js` asks for one variable at a time then previews the filled text |

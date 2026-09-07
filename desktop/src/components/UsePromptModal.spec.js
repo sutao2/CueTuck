@@ -3,6 +3,20 @@ import { describe, expect, it, vi } from "vitest";
 import UsePromptModal from "./UsePromptModal.vue";
 
 describe("UsePromptModal", () => {
+  it("fills anonymous slots independently in the main-window wizard", async () => {
+    const w = mount(UsePromptModal, {
+      props: { prompt: { title: "Mysql", content: "Sql {} dejk fer {}. hdjjf dev {} jhdfhk sd" } },
+    });
+    for (const [index, value] of ["A", "B", "C"].entries()) {
+      expect(w.get('[data-testid="use-variable"]').text()).toBe(`占位符 ${index + 1}`);
+      await w.get('[data-testid="use-value"]').setValue(value);
+      await w.get('[data-testid="use-next"]').trigger("click");
+    }
+    expect(w.get('[data-testid="use-preview"]').text()).toBe("Sql A dejk fer B. hdjjf dev C jhdfhk sd");
+    await w.get('[data-testid="use-next"]').trigger("click");
+    expect(w.emitted("copied")[0][0]).toBe("Sql A dejk fer B. hdjjf dev C jhdfhk sd");
+    w.unmount();
+  });
   it('keeps keyboard focus inside when the last variable becomes a preview', async () => {
     const w = mount(UsePromptModal, { attachTo: document.body, props: { prompt: { title: 'Focus', content: '{{产品}}' } } });
     await flushPromises();
