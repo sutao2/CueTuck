@@ -1,10 +1,12 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as library from "./platform/library.js";
 import * as launcherWindow from "./platform/launcherWindow.js";
 import LauncherApp from "./LauncherApp.vue";
 import { createLocalPrompt, resetMemoryLibrary } from "./platform/library.js";
 import { resetSquare, setSquareTransport } from "./platform/square.js";
+
+enableAutoUnmount(afterEach);
 
 describe("LauncherApp", () => {
   afterEach(() => { vi.restoreAllMocks(); delete navigator.clipboard; });

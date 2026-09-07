@@ -45,7 +45,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/square/spec.md](specs/square/spec.md) | 目标 | 改广场浏览、下载或收藏 | 广场只读详情、重试与分类下载 |
 | [specs/collections/spec.md](specs/collections/spec.md) | 目标 | 做合集 | 合集编辑/删除与全库成员管理 |
 | [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 两级分类 |
-| [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析 |
+| [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析、字面值与特殊名称隔离 |
 | [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 紧凑登录与提交反馈；Refresh 进钥匙串 |
 | [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 十页统一排版、字段标签、保存反馈与固定布局 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
@@ -92,7 +92,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
 | [plans/2026-09-05-functional-repair.md](plans/2026-09-05-functional-repair.md) | 现行 | 修复分类与跨端功能缺口 | 功能复审队首；旧计划关闭不等于验收完成 |
-| [plans/2026-09-07-launcher-audit.md](plans/2026-09-07-launcher-audit.md) | 现行 | 修复启动器核心流程 | 搜索、占位符、回车、焦点、原生复制/粘贴逐项验收 |
+| [plans/2026-09-07-launcher-audit.md](plans/2026-09-07-launcher-audit.md) | 现行 | 修复或复验启动器 | 核心修复与逐项验收；辅助功能成功路径待授权复验 |
 | [plans/2026-08-22-m1-desktop-skeleton.md](plans/2026-08-22-m1-desktop-skeleton.md) | 归档 | 查 M1 怎么做的 | M1 逐步实现计划 |
 | [plans/2026-08-22-m2-local-workbench.md](plans/2026-08-22-m2-local-workbench.md) | 归档 | 查 M2 怎么做的 | M2 逐步实现计划 |
 | [plans/2026-08-23-m3-launcher.md](plans/2026-08-23-m3-launcher.md) | 归档 | 查 M3 怎么做的 | M3 逐步实现计划 |

@@ -11,6 +11,9 @@ export async function copyThenPaste(
   { writeText = copyLauncherText, invoke } = {},
 ) {
   await writeText(text);
+  if (!invoke && !window.__TAURI_INTERNALS__) {
+    return { ok: false, message: "已复制，未能粘贴：浏览器预览不支持向其他窗口粘贴，请手动粘贴或使用桌面端。" };
+  }
   const run = invoke ?? (async (command) => {
     const { invoke: tauriInvoke } = await import("@tauri-apps/api/core");
     return tauriInvoke(command);
