@@ -127,6 +127,38 @@
 
 ## 测试映射
 
+### Requirement: 管理台登录配置
+
+管理端 MUST 使用侧栏区分内容审核、用户、第三方登录与站点设置，登录后确认管理员角色再显示管理界面。Google / GitHub MUST 可配置启用状态、Client ID、Client Secret 与回调地址。配置持久化并立即用于后续 OAuth 请求；数据库配置优先于环境变量，未保存时兼容既有环境配置。
+
+#### Scenario: 保存登录配置
+
+- GIVEN 已登录管理员填写完整凭据与 HTTPS 回调（本机 loopback 可用 HTTP）
+- WHEN 保存并启用提供商
+- THEN 后续提供商列表与授权跳转使用新配置，无需重启；重启后配置仍在
+- AND 页面只提示配置已保存，真实授权须另行验证
+
+#### Scenario: 密钥保护
+
+- GIVEN 某提供商已保存 Client Secret
+- WHEN 查询、修改其他字段或关闭后重新打开页面
+- THEN 响应只返回 `secret_configured`，不含密钥或密文；空白密钥输入保留原值，保存成功清空输入
+- AND 数据库保存 AEAD 密文，独立服务器密钥文件不进入前端、同步或版本库
+
+#### Scenario: 配置校验与权限
+
+- GIVEN 未登录、普通用户或无效参数（未知提供商、不安全回调、启用时缺字段）
+- WHEN 读取或保存管理配置
+- THEN 拒绝请求且不更改配置；前端失败保留输入、可重试，提交中禁止重复保存
+
+#### Scenario: 停用
+
+- GIVEN 管理员停用已配置的提供商
+- WHEN 后续请求提供商列表或发起该授权
+- THEN 列表不含该项、授权请求被拒绝；邮箱登录仍可用
+
+回归：`backend` OAuth 配置接口、加密及 Postgres 重启测试；`admin-web` 管理身份与配置页测试。
+
 | 场景 | 测试 |
 |---|---|
 | 管理合同 | `adminContract.test.js` lists `/v1/admin` paths with admin auth |

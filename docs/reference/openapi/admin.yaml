@@ -45,7 +45,95 @@ paths:
     put:
       operationId: putAdminSettings
       summary: 保存运行时设置
+  /v1/admin/oauth:
+    get:
+      operationId: listAdminOAuthProviders
+      summary: 读取 Google 与 GitHub 的脱敏配置（仅管理员）
+      responses:
+        '200':
+          description: 不返回 Client Secret 或密文
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OAuthProviderView'
+        '401':
+          description: 未登录
+        '403':
+          description: 非管理员
+  /v1/admin/oauth/{provider}:
+    put:
+      operationId: updateAdminOAuthProvider
+      summary: 保存提供商配置并立即生效
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google, github]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [enabled, client_id, redirect_uri]
+              properties:
+                enabled:
+                  type: boolean
+                client_id:
+                  type: string
+                  maxLength: 1024
+                client_secret:
+                  type: string
+                  maxLength: 4096
+                  writeOnly: true
+                  description: 空白或省略保留原密钥；启用时必须已有或提交密钥
+                redirect_uri:
+                  type: string
+                  maxLength: 2048
+                  description: HTTPS，loopback 可用 HTTP；以 /v1/session/oauth/callback 结尾，无用户信息、查询参数或片段
+      responses:
+        '200':
+          description: 保存成功（不代表真实授权已验收）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthProviderView'
+        '400':
+          description: 字段或提供商无效；JSON message 为错误提示
+        '401':
+          description: 未登录
+        '403':
+          description: 非管理员
+        '500':
+          description: 配置持久化或密钥解密失败，不返回敏感内容
 components:
+  schemas:
+    OAuthProviderView:
+      type: object
+      required: [provider, enabled, client_id, redirect_uri, secret_configured, source]
+      properties:
+        provider:
+          type: string
+          enum: [google, github]
+        enabled:
+          type: boolean
+        client_id:
+          type: string
+        redirect_uri:
+          type: string
+        secret_configured:
+          type: boolean
+        source:
+          type: string
+          enum: [database, environment, none]
   securitySchemes:
     bearer:
       type: http

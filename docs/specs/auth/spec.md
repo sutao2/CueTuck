@@ -81,6 +81,17 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 
 系统 MUST 在凭据已配置时提供 Google 与 GitHub 授权码登录。未配置的提供商 MUST 不可用。不得发假的提供商请求。
 
+提供商的管理端配置、启停及密钥保护见[管理台规格](../admin/spec.md)。账号关联 MUST 使用提供商已验证的邮箱；GitHub 使用已验证的主邮箱，Google 检查 `email_verified`，不得把未验证邮箱关联到已有管理员账号。
+
+#### Scenario: 提供商邮箱校验
+
+- GIVEN Google 未确认邮箱，或 GitHub 没有已验证的主邮箱
+- WHEN 完成授权码交换并读取个人资料
+- THEN 登录失败，不用该邮箱关联本地账号；GitHub 请求带应用 User-Agent
+- AND 有已验证邮箱时继续原有会话流程
+
+回归：`oauth::profile_tests::oauth_accounts_require_verified_provider_emails` 使用本机模拟提供商。
+
 #### Scenario: 已配置则跳转授权
 
 - GIVEN Google 客户端凭据已配置

@@ -14,6 +14,26 @@ async fn postgres_state() -> Option<AppState> {
 }
 
 #[tokio::test]
+async fn admin_oauth_configuration_is_encrypted_and_survives_new_process_state() {
+    let state = postgres_state().await.expect("local Postgres required");
+    state.db.as_ref().unwrap().upsert_account("oauth-admin@example.com", Some("test-password"), "admin").await.unwrap();
+    let session = state.issue_session("oauth-admin@example.com".into()).await.unwrap();
+    let router = app(state.clone());
+    let response = router.oneshot(Request::builder().method("PUT").uri("/v1/admin/oauth/google")
+        .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token)).header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(serde_json::json!({ "enabled": true, "client_id": "persisted-client", "client_secret": "persisted-secret", "redirect_uri": "http://localhost:8787/v1/session/oauth/callback" }).to_string())).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let stored = state.db.as_ref().unwrap().oauth_config("google").await.unwrap().unwrap();
+    assert!(!stored.contains("persisted-secret"));
+    let restarted = AppState { db: state.db.clone(), oauth_config: std::sync::Arc::new(crate::oauth_admin::ConfigStore::new(state.oauth_config.key)), ..AppState::default() };
+    let config = restarted.runtime_provider("google").await.unwrap().unwrap();
+    assert_eq!(config.client_id, "persisted-client");
+    assert_eq!(config.client_secret, "persisted-secret");
+    let wrong_key = AppState { db: state.db.clone(), ..AppState::default() };
+    assert!(wrong_key.runtime_provider("google").await.is_err());
+}
+
+#[tokio::test]
 async fn collection_members_survive_publication_review_and_restart() {
     let state = postgres_state().await.expect("local Postgres required");
     let publication = Publication { id: "collection-test".into(), source_id: "local".into(), status: "pending".into(),

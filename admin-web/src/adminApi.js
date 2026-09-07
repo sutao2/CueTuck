@@ -18,8 +18,9 @@ async function request(kind, extra = {}) {
   }
   const { accessToken } = getAdminSession();
   if (!accessToken) throw new Error("需要先登录");
-  const path =
-    kind === "list"
+  const path = kind === 'getOAuth' ? '/v1/admin/oauth'
+    : kind === 'putOAuth' ? `/v1/admin/oauth/${encodeURIComponent(extra.provider)}`
+    : kind === "list"
       ? "/v1/admin/publications"
       : kind === "users"
         ? "/v1/admin/users"
@@ -28,17 +29,21 @@ async function request(kind, extra = {}) {
           : `/v1/admin/publications/${extra.id}/${kind === "approve" ? "approve" : "reject"}`;
   const headers = { authorization: `Bearer ${accessToken}` };
   const init = { method: "GET", headers };
-  if (kind === "putSettings") {
+  if (kind === "putSettings" || kind === 'putOAuth') {
     init.method = "PUT";
     headers["content-type"] = "application/json";
-    init.body = JSON.stringify({ square_public: extra.square_public });
-  } else if (kind !== "list" && kind !== "users" && kind !== "getSettings") {
+    init.body = JSON.stringify(kind === 'putOAuth' ? extra.config : { square_public: extra.square_public });
+  } else if (kind !== "list" && kind !== "users" && kind !== "getSettings" && kind !== 'getOAuth') {
     init.method = "POST";
   }
   const response = await fetch(`${API_BASE}${path}`, init);
   if (response.status === 403) throw new Error("需要管理员账号");
+  if (response.status === 401) throw new Error('登录已失效，请退出后重新登录');
   if (response.status === 409) throw new Error("该投稿已有其他审核结果，请刷新审核列表");
-  if (!response.ok) throw new Error("管理请求失败");
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.message || "管理请求失败，请稍后重试");
+  }
   return response.json();
 }
 
@@ -65,3 +70,6 @@ export function getAdminSettings() {
 export function putAdminSettings(squarePublic) {
   return request("putSettings", { square_public: squarePublic });
 }
+
+export function getOAuthSettings() { return request('getOAuth'); }
+export function putOAuthSettings(provider, config) { return request('putOAuth', { provider, config }); }
