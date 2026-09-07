@@ -39,6 +39,14 @@
 
 ### Requirement: 专业桌面视觉
 
+应用身份图标 MUST 使用青绿色底座与白色折纸方舟的同源资源；生成源图与操作记录见 [图标计划](../../plans/2026-09-07-app-icon.md)。桌面 PNG、ICO、ICNS 与启动器品牌图不得各自采用不同标记，不替换功能性线性图标。
+
+#### Scenario: 应用图标一致
+
+- GIVEN 应用打包资源与启动器已加载
+- WHEN 查看桌面应用图标或启动器搜索栏
+- THEN 使用同一方舟标记，图标透明角保留；启动器品牌占位尺寸和原键盘行为不变
+
 主窗口视觉规则见 [ADR 0017](../../architecture/decisions/0017-screenshot-workbench-frame.md)，设置规则仍见 [ADR 0016](../../architecture/decisions/0016-workbench-frame-and-settings.md)。主窗口使用系统无衬线字体、统一线性图标和中性色表面。空间使用纵向导航，账号与偏好位于侧栏底部；内容工作面与侧栏有明确分区。标题、正文、辅助信息有清晰字号层级；筛选栏和卡片随可用宽度排列，状态栏不抢占内容注意力。
 
 #### Scenario: 截图参考的分栏框架
