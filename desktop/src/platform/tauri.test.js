@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { createLocalPrompt, listLocalPrompts, addPromptToCollection, exportLocalSyncChanges, applyLocalSyncChanges } from "./library.js";
+import { createLocalCategory, deleteLocalCategory, createLocalPrompt, listLocalPrompts, addPromptToCollection, exportLocalSyncChanges, applyLocalSyncChanges } from "./library.js";
 import { invokeCommand } from "./tauri.js";
 import { downloadSquareItem, fetchSquareContent, resetSquare, setSquareContentTransport } from "./square.js";
 
@@ -34,6 +34,10 @@ it("sends category and collection arguments in the native command schema", async
   expect(invoke).toHaveBeenLastCalledWith("list_local_prompts", { query: "", categoryId: "cat-image" });
   await addPromptToCollection("p", "c");
   expect(invoke).toHaveBeenLastCalledWith("add_prompt_to_local_collection", { promptId: "p", collectionId: "c" });
+  await createLocalCategory({ name: '分类', parentId: 'cat-office' });
+  expect(invoke).toHaveBeenLastCalledWith('create_local_category', { name: '分类', parentId: 'cat-office' });
+  await deleteLocalCategory('custom');
+  expect(invoke).toHaveBeenLastCalledWith('delete_local_category', { id: 'custom' });
 });
 
 it("converts auth arguments without rewriting nested sync payloads", async () => {

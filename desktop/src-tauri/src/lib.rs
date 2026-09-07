@@ -33,6 +33,7 @@ pub fn run() {
             commands::database::delete_local_prompt,
             commands::database::list_local_categories,
             commands::database::create_local_category,
+            commands::database::delete_local_category,
             commands::database::record_local_prompt_use,
             commands::database::create_local_collection,
             commands::database::list_local_collections,

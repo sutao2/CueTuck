@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static LAST_TIMESTAMP: AtomicU64 = AtomicU64::new(0);
 
-pub use categories::{create_category_in_dir, list_categories_in_dir, CategoryRecord};
+pub use categories::{create_category_in_dir, delete_category_in_dir, list_categories_in_dir, CategoryRecord};
 pub use collections::{
     remove_prompt_from_collection_in_dir, update_collection_in_dir, delete_collection_in_dir,
     add_prompt_to_collection_in_dir, collection_member_count, create_collection_in_dir,
@@ -157,6 +157,10 @@ pub fn initialize_in_dir(dir: &Path) -> Result<String, String> {
             connection.execute(&format!("ALTER TABLE {table} ADD COLUMN updated_at TEXT NOT NULL DEFAULT '0'"), [])
                 .map_err(|error| error.to_string())?;
         }
+    }
+    if !table_columns(&connection, "categories")?.iter().any(|column| column == "deleted_at") {
+        connection.execute("ALTER TABLE categories ADD COLUMN deleted_at TEXT", [])
+            .map_err(|error| error.to_string())?;
     }
     seed_system_categories(&connection)?;
     for table in ["prompts", "collections", "categories", "settings"] {

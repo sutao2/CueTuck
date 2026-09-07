@@ -14,11 +14,12 @@ pub struct CategoryRecord {
 }
 
 pub fn list_categories_in_dir(dir: &Path) -> Result<Vec<CategoryRecord>, String> {
-    let connection = Connection::open(dir.join("promptark.sqlite")).map_err(|error| error.to_string())?;
+    let connection =
+        Connection::open(dir.join("promptark.sqlite")).map_err(|error| error.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT id, parent_id, name, icon, is_system, sort_order
-             FROM categories
+             FROM categories WHERE deleted_at IS NULL
              ORDER BY CASE WHEN parent_id IS NULL THEN 0 ELSE 1 END, sort_order, name",
         )
         .map_err(|error| error.to_string())?;
@@ -48,16 +49,27 @@ pub fn create_category_in_dir(
     if title.is_empty() {
         return Err("分类名称不能为空".to_string());
     }
-    let connection = Connection::open(dir.join("promptark.sqlite")).map_err(|error| error.to_string())?;
+    let mut connection =
+        Connection::open(dir.join("promptark.sqlite")).map_err(|error| error.to_string())?;
+    let connection = connection
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(|e| e.to_string())?;
     let parent: (Option<String>,) = connection
         .query_row(
-            "SELECT parent_id FROM categories WHERE id = ?1",
+            "SELECT parent_id FROM categories WHERE id = ?1 AND deleted_at IS NULL",
             [parent_id],
             |row| Ok((row.get(0)?,)),
         )
         .map_err(|_| "大分类不存在".to_string())?;
     if parent.0.is_some() {
         return Err("小分类下不能再创建子分类".to_string());
+    }
+    let duplicate: bool = connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM categories WHERE parent_id=?1 AND trim(name)=?2 AND deleted_at IS NULL)",
+        rusqlite::params![parent_id, title], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+    if duplicate {
+        return Err("该大分类下已有同名分类".into());
     }
     let sort_order: i64 = connection
         .query_row(
@@ -74,6 +86,7 @@ pub fn create_category_in_dir(
             rusqlite::params![id, parent_id, title, sort_order, super::now_millis()],
         )
         .map_err(|error| error.to_string())?;
+    connection.commit().map_err(|e| e.to_string())?;
     Ok(CategoryRecord {
         id,
         parent_id: Some(parent_id.to_string()),
@@ -82,4 +95,38 @@ pub fn create_category_in_dir(
         is_system: false,
         sort_order,
     })
+}
+
+pub fn delete_category_in_dir(dir: &Path, id: &str) -> Result<(), String> {
+    let mut connection =
+        Connection::open(dir.join("promptark.sqlite")).map_err(|e| e.to_string())?;
+    let transaction = connection
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(|e| e.to_string())?;
+    let (system, parent): (bool, Option<String>) = transaction
+        .query_row(
+            "SELECT is_system, parent_id FROM categories WHERE id=?1 AND deleted_at IS NULL",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|_| "分类不存在".to_string())?;
+    if system || parent.is_none() {
+        return Err("系统分类不能删除".into());
+    }
+    let timestamp = super::now_millis();
+    transaction
+        .execute(
+            "UPDATE categories SET deleted_at=?2, updated_at=?2 WHERE id=?1",
+            rusqlite::params![id, timestamp],
+        )
+        .map_err(|e| e.to_string())?;
+    for table in ["prompts", "collections"] {
+        transaction
+            .execute(
+                &format!("UPDATE {table} SET category_id=NULL, updated_at=?2 WHERE category_id=?1"),
+                rusqlite::params![id, timestamp],
+            )
+            .map_err(|e| e.to_string())?;
+    }
+    transaction.commit().map_err(|e| e.to_string())
 }

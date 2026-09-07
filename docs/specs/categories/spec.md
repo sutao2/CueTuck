@@ -43,6 +43,31 @@
 - THEN 树中「办公效率」下出现「周报」
 - AND `is_system` 为假
 
+#### Scenario: 新建入口与校验
+
+- GIVEN 用户处于本地空间的全库、大分类或小分类
+- WHEN 点击新建分类
+- THEN 弹窗可选择大分类；当前小分类只用于默认选择其父类，不创建第三级
+- AND 空白或同一父类下去除首尾空白后的同名分类被拒绝；提交中禁止重复提交和关闭，失败保留输入
+- AND 广场没有本地分类新增/删除入口，全部折叠明确命名而不使用减号表示
+
+### Requirement: 删除自定义分类
+
+#### Scenario: 删除但保留内容
+
+- GIVEN 自定义小分类含提示词及合集
+- WHEN 用户点击该分类删除入口并确认
+- THEN 该分类软删除，所属提示词与合集移至未分类，正文与合集成员关系保持不变
+- AND 若正在查看该分类则转到未分类并刷新数量；取消确认或写入失败不改数据
+- AND 系统预置分类不能删除，原生命令同样拒绝
+
+#### Scenario: 删除不复活
+
+- GIVEN 分类已经删除
+- WHEN 重启、导出或进行云同步
+- THEN 分类列表与导出不包含该分类，同步保留删除墓碑；另一端收到删除也清空该分类的内容归属
+- AND 旧库兼容增加分类删除时间，不丢失原有数据
+
 ### Requirement: 筛选
 
 选中大分类 MUST 列出其下全部小分类的提示词与合集。选中小分类 MUST 只列出该小分类。
@@ -84,6 +109,9 @@
 | 场景 | 测试 |
 |---|---|
 | 空库首次打开 | `desktop/src-tauri` `seeds_ten_system_categories` |
-| 拒绝第三级 | `desktop/src-tauri` `rejects_grandchild_under_frontend`；`library.test.js` rejects a third-level category；`WorkbenchShell.spec.js` refuses a third-level category from a child |
+| 拒绝第三级 | `desktop/src-tauri` `rejects_grandchild_under_frontend`；`library.test.js` rejects a third-level category；UI 创建同父类的兄弟分类 |
 | 本地新增小分类 | `desktop/src-tauri` `creates_user_child_under_office`；`library.test.js` adds a user child category under a parent；`WorkbenchShell.spec.js` adds a local child category under the selected parent |
 | 选中大分类 | `desktop/src-tauri` `selecting_parent_lists_child_prompts` |
+| 新建入口与校验 | `CategoryActions.spec.js` 全库入口、父分类、同名、IME 与防重复提交；`categoryActions.test.js` 空白与同级同名 |
+| 删除但保留内容 | `CategoryActions.spec.js` 确认/取消/失败/数量；`categoryActions.test.js` 内容与合集成员；Rust `category_delete_rolls_back_when_content_update_fails` |
+| 删除不复活 | `categoryActions.test.js` 删除墓碑与导出；Rust `category_delete_preserves_content_and_syncs_without_resurrection` |

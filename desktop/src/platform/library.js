@@ -279,7 +279,7 @@ export async function listLocalCategories() {
   if (isTauri()) {
     return tauriInvoke("list_local_categories");
   }
-  return memoryCategories;
+  return memoryCategories.filter(row => !row.deleted_at);
 }
 
 export async function createLocalCategory({ name, parentId } = {}) {
@@ -288,10 +288,11 @@ export async function createLocalCategory({ name, parentId } = {}) {
   if (isTauri()) {
     return tauriInvoke("create_local_category", { name: title, parentId });
   }
-  const parent = memoryCategories.find((row) => row.id === parentId);
+  const parent = memoryCategories.find((row) => row.id === parentId && !row.deleted_at);
   if (!parent) throw new Error("大分类不存在");
   if (parent.parent_id) throw new Error("小分类下不能再创建子分类");
-  const siblings = memoryCategories.filter((row) => row.parent_id === parentId);
+  const siblings = memoryCategories.filter((row) => row.parent_id === parentId && !row.deleted_at);
+  if (siblings.some(row => row.name.trim() === title)) throw new Error("该大分类下已有同名分类");
   const row = {
     id: nextMemoryId("cat-user"),
     parent_id: parentId,
@@ -303,6 +304,18 @@ export async function createLocalCategory({ name, parentId } = {}) {
   };
   memoryCategories.push(row);
   return row;
+}
+
+export async function deleteLocalCategory(id) {
+  if (isTauri()) return tauriInvoke('delete_local_category', { id });
+  const category = memoryCategories.find(row => row.id === id && !row.deleted_at);
+  if (!category) throw new Error('分类不存在');
+  if (category.is_system || !category.parent_id) throw new Error('系统分类不能删除');
+  const timestamp = nextTimestamp();
+  category.deleted_at = category.updated_at = timestamp;
+  for (const row of [...memoryPrompts, ...memoryCollections]) {
+    if (row.category_id === id) { row.category_id = null; row.updated_at = timestamp; }
+  }
 }
 
 export async function createLocalCollection({
@@ -463,10 +476,14 @@ export async function applyLocalSyncChanges(items, { keepLocal = false } = {}) {
       }
       const row = { ...existing, ...payload, id: item.id, updated_at: String(timestampMillis(item.updated_at)) };
       if (kind === "category") row.is_system = false;
-      else row.deleted_at = item.deleted_at ?? null;
+      row.deleted_at = item.deleted_at ?? null;
       if (existing) Object.assign(existing, row);
       else tables[kind].push(row);
     }
+  }
+  const deletedCategories = new Set(tables.category.filter(row => row.deleted_at).map(row => row.id));
+  for (const row of [...tables.prompt, ...tables.collection]) {
+    if (deletedCategories.has(row.category_id)) row.category_id = null;
   }
   memoryCategories = tables.category;
   memoryCollections = tables.collection;
@@ -485,7 +502,7 @@ export async function exportLocalLibrary() {
       version: 2,
       prompts: memoryPrompts.filter((row) => !row.deleted_at),
       collections: memoryCollections.filter((row) => !row.deleted_at),
-      categories: memoryCategories,
+      categories: memoryCategories.filter(row => !row.deleted_at),
     },
     null,
     2,

@@ -55,21 +55,11 @@
         <div class="sidebar-toolbar">
           <span>{{ space === "local" ? t("myCategories") : t("exploreCategories") }}</span>
           <div>
-            <button type="button" class="mini-button" title="全部折叠" @click="collapseAll">−</button>
-            <button type="button" class="mini-button" data-testid="add-category" title="新建小分类" @click="startAddCategory">＋</button>
+            <button type="button" class="mini-button category-collapse" title="全部折叠" @click="collapseAll">折叠</button>
+            <button v-if="space === 'local'" type="button" class="mini-button" data-testid="add-category" title="新建小分类" aria-label="新建小分类" @click="startAddCategory">＋</button>
           </div>
         </div>
 
-        <div v-if="addingCategoryId" class="add-category">
-          <input
-            v-model="newCategoryName"
-            data-testid="new-category-name"
-            placeholder="小分类名称"
-            @keydown.enter.prevent="confirmAddCategory"
-          >
-          <button type="button" data-testid="confirm-category" @click="confirmAddCategory">添加</button>
-        </div>
-        <p v-if="categoryError" data-testid="category-error">{{ categoryError }}</p>
         <nav class="category-tree" aria-label="提示词分类">
           <button
             type="button"
@@ -97,9 +87,8 @@
               <span v-if="space === 'local'" class="tree-count">{{ categoryCount(group.id) }}</span>
             </button>
             <div class="tree-children">
+              <div v-for="child in group.children" :key="child.id" v-show="space === 'local' || child.is_system" class="tree-child-row">
               <button
-                v-for="child in group.children"
-                :key="child.id"
                 type="button"
                 class="tree-row child"
                 :class="{ active: selectedId === child.id }"
@@ -108,6 +97,9 @@
                 <span>{{ child.name }}</span>
                 <span v-if="space === 'local'" class="tree-count">{{ categoryCount(child.id) }}</span>
               </button>
+              <button v-if="space === 'local' && !child.is_system" type="button" class="category-delete"
+                :aria-label="`删除分类 ${child.name}`" :title="`删除分类 ${child.name}`" @click="startDeleteCategory(child)">×</button>
+              </div>
             </div>
           </div>
         </nav>
@@ -309,6 +301,36 @@
       </main>
     </div>
 
+    <div v-if="addingCategoryId || deletingCategory" class="modal-layer">
+      <div class="modal-backdrop" @click="closeCategoryDialog"></div>
+      <section v-dialog-focus="closeCategoryDialog" class="modal category-modal" :role="deletingCategory ? 'alertdialog' : 'dialog'" aria-modal="true" aria-labelledby="category-dialog-title" :aria-busy="categoryBusy">
+        <header class="modal-header">
+          <h2 id="category-dialog-title">{{ deletingCategory ? '删除分类' : '新建小分类' }}</h2>
+          <button type="button" class="modal-close" aria-label="关闭分类窗口" :disabled="categoryBusy" @click="closeCategoryDialog">×</button>
+        </header>
+        <div class="create-body">
+          <p v-if="deletingCategory">删除「{{ deletingCategory.name }}」？该分类中的提示词和合集会移到“未分类”，不会删除正文或合集成员。</p>
+          <template v-else>
+            <label class="field"><span>所属大分类</span>
+              <select v-model="addingCategoryId" data-testid="category-parent" :disabled="categoryBusy">
+                <option v-for="group in categoryGroups" :key="group.id" :value="group.id">{{ group.name }}</option>
+              </select>
+            </label>
+            <label class="field"><span>分类名称</span>
+              <input v-model="newCategoryName" data-testid="new-category-name" placeholder="小分类名称" :disabled="categoryBusy"
+                @keydown.enter.prevent="!$event.isComposing && !$event.repeat && confirmAddCategory()">
+            </label>
+          </template>
+          <p v-if="categoryError" role="alert" data-testid="category-error">{{ categoryError }}</p>
+        </div>
+        <footer class="modal-footer">
+          <button type="button" class="button ghost-button" :data-dialog-autofocus="deletingCategory ? '' : undefined" :disabled="categoryBusy" @click="closeCategoryDialog">取消</button>
+          <button v-if="deletingCategory" type="button" class="button danger-button" data-testid="confirm-delete-category" :disabled="categoryBusy" @click="confirmDeleteCategory">{{ categoryBusy ? '正在删除…' : '删除分类' }}</button>
+          <button v-else type="button" class="button primary-button" data-testid="confirm-category" :disabled="categoryBusy || !newCategoryName.trim()" @click="confirmAddCategory">{{ categoryBusy ? '正在创建…' : '创建分类' }}</button>
+        </footer>
+      </section>
+    </div>
+
     <CreatePromptModal
       v-if="creating || editing"
       :prompt="editing"
@@ -485,6 +507,7 @@ import {
   deleteLocalCollection,
   buildCategoryTree,
   createLocalCategory,
+  deleteLocalCategory,
   createLocalCollection,
   createLocalPrompt,
   deleteLocalPrompt,
@@ -527,6 +550,7 @@ const sidebarCollapsed = ref(false);
 function handleWorkbenchShortcut(event) {
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
   if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
+  if (addingCategoryId.value || deletingCategory.value) return;
   if (creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
   if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
   if (event.key.toLowerCase() === 'f' && !settingsOpen.value && !publishResume.value) {
@@ -561,6 +585,8 @@ const collections = ref([]);
 const allLocalItems = ref([]);
 const categoryGroups = ref([]);
 const addingCategoryId = ref("");
+const deletingCategory = ref(null);
+const categoryBusy = ref(false);
 const newCategoryName = ref("");
 const categoryError = ref("");
 const theme = ref("light");
@@ -686,33 +712,60 @@ function categoryById(id) {
 }
 
 function startAddCategory() {
+  if (space.value !== 'local') return;
   categoryError.value = "";
   addingCategoryId.value = "";
   const current = categoryById(selectedId.value);
-  if (!current) {
-    categoryError.value = "请先选中一个大分类";
-    return;
-  }
-  if (current.parent_id) {
-    categoryError.value = "小分类下不能再创建子分类";
-    return;
-  }
-  addingCategoryId.value = current.id;
+  addingCategoryId.value = current?.parent_id || current?.id || categoryGroups.value[0]?.id || '';
   newCategoryName.value = "";
 }
 
 async function confirmAddCategory() {
+  if (categoryBusy.value || !addingCategoryId.value) return;
+  categoryBusy.value = true;
   categoryError.value = "";
   try {
-    await createLocalCategory({ name: newCategoryName.value, parentId: addingCategoryId.value });
-    addingCategoryId.value = "";
-    newCategoryName.value = "";
-    categoryGroups.value = buildCategoryTree(await listLocalCategories());
-    const parent = categoryGroups.value.find((group) => group.id === selectedId.value);
-    if (parent) parent.open = true;
+    const created = await createLocalCategory({ name: newCategoryName.value, parentId: addingCategoryId.value });
+    await refreshCategoryTree(created.parent_id);
+    await selectCategory(created.id);
+    addingCategoryId.value = '';
   } catch (error) {
     categoryError.value = error instanceof Error ? error.message : String(error);
-  }
+  } finally { categoryBusy.value = false; }
+}
+
+function closeCategoryDialog() {
+  if (categoryBusy.value) return;
+  addingCategoryId.value = '';
+  deletingCategory.value = null;
+  categoryError.value = '';
+}
+
+function startDeleteCategory(category) {
+  if (space.value !== 'local' || category.is_system) return;
+  categoryError.value = '';
+  deletingCategory.value = category;
+}
+
+async function refreshCategoryTree(openParent) {
+  const openIds = new Set(categoryGroups.value.filter(group => group.open).map(group => group.id));
+  categoryGroups.value = buildCategoryTree(await listLocalCategories());
+  for (const group of categoryGroups.value) group.open = group.id === openParent || openIds.has(group.id);
+}
+
+async function confirmDeleteCategory() {
+  if (categoryBusy.value || !deletingCategory.value) return;
+  categoryBusy.value = true;
+  categoryError.value = '';
+  try {
+    const id = deletingCategory.value.id;
+    await deleteLocalCategory(id);
+    await refreshCategoryTree();
+    if (selectedId.value === id) selectedId.value = '__uncategorized__';
+    await reloadPrompts();
+    deletingCategory.value = null;
+  } catch (error) { categoryError.value = error instanceof Error ? error.message : String(error); }
+  finally { categoryBusy.value = false; }
 }
 
 function openLogin(reason) {

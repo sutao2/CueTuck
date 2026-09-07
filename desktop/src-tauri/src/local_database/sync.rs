@@ -56,6 +56,7 @@ fn schema(kind: &str) -> Option<(&'static str, &'static str, &'static [&'static 
                 "is_system",
                 "sort_order",
                 "updated_at",
+                "deleted_at",
             ],
         )),
         "collection" => Some((
@@ -269,9 +270,9 @@ pub fn apply_sync_changes(
                 "updated_at".into(),
                 json!(super::timestamp_ms(&item.updated_at).to_string()),
             );
-            if kind == "prompt" || kind == "collection" {
+            if kind == "prompt" || kind == "collection" || kind == "category" {
                 payload.insert("deleted_at".into(), json!(item.deleted_at));
-                if !payload.contains_key("title") && item.deleted_at.is_some() {
+                if kind != "category" && !payload.contains_key("title") && item.deleted_at.is_some() {
                     payload.insert("title".into(), json!(""));
                 }
             }
@@ -301,6 +302,9 @@ pub fn apply_sync_changes(
             let placeholders = vec!["?"; fields.len()].join(",");
             transaction.execute(&format!("INSERT INTO {table} ({}) VALUES ({placeholders}) ON CONFLICT({key}) DO UPDATE SET {updates}", fields.join(",")), params_from_iter(values)).map_err(|e| e.to_string())?;
         }
+    }
+    for table in ["prompts", "collections"] {
+        transaction.execute(&format!("UPDATE {table} SET category_id=NULL WHERE category_id IN (SELECT id FROM categories WHERE deleted_at IS NOT NULL)"), []).map_err(|e| e.to_string())?;
     }
     transaction.commit().map_err(|e| e.to_string())?;
     for item in items {
