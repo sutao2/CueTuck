@@ -531,6 +531,7 @@ onUnmounted(() => {
 .launcher-list {
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
   padding: 8px;
 }
 .group-title {
@@ -648,7 +649,7 @@ onUnmounted(() => {
   height: 100%;
 }
 .form-layout.preview-only { grid-template-columns: minmax(0, 1fr); }
-.variable-form { overflow: auto; padding: 2px 4px 8px 2px; }
+.variable-form { overflow: auto; scrollbar-gutter: stable; padding: 2px 12px 8px 2px; }
 .form-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
 .form-heading > span { font-size: 10px; color: var(--muted); }
 .preview-pane { min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; border-left: 1px solid var(--line); padding-left: 20px; }
@@ -684,6 +685,7 @@ onUnmounted(() => {
   margin: 0;
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
   padding: 10px;
   border-radius: 8px;
   background: var(--bg);
