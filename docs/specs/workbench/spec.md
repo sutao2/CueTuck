@@ -39,6 +39,14 @@
 
 ### Requirement: 专业桌面视觉
 
+#### Scenario: 桌面滚动区域与组合控件
+
+- GIVEN 主窗口或独立启动器含超出可视区域的内容
+- WHEN 查看浅色/深色下的侧栏、内容区、设置、编辑表单、结果列表或预览并滚动
+- THEN 使用共用细圆角滑块与透明轨道；保留滚轮、拖动和键盘滚动，内容与滚动条之间留有间距
+- AND 支持的宿主预留稳定滚动槽，内容溢出不使字段宽度跳变；不支持自定义样式的宿主保留原生可用滚动条
+- AND 搜索与模型筛选只有外层单一焦点提示，不叠加原生控件描边；模型选项仍支持原生键盘选择
+
 应用身份图标 MUST 使用青绿色底座与白色折纸方舟的同源资源；生成源图与操作记录见 [图标计划](../../plans/2026-09-07-app-icon.md)。桌面 PNG、ICO、ICNS 与启动器品牌图不得各自采用不同标记，不替换功能性线性图标。
 
 #### Scenario: 应用图标一致
@@ -212,3 +220,4 @@
 | 标题栏折叠入口不跳位 | `WorkbenchShell.spec.js` keeps the sidebar toggle outside the drag region；Playwright 两态坐标与窄窗口测量 |
 | 截图参考框架 / 右上角固定搜索 | `WorkbenchShell.spec.js` 软件内搜索聚焦、两空间与宿主键盘回归；Playwright 点击与真实按键 |
 | 启动器快捷键标签同步 | `WorkbenchShell.spec.js` 保存值回读；`SettingsInteraction.spec.js` 保存成功/失败与底栏即时同步 |
+| 桌面滚动区域与组合控件 | [滚动条验收计划](../../plans/2026-09-07-scrollbars-focus.md) 浏览器与原生隔离包检查 |

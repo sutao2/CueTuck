@@ -98,6 +98,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-09-07-launcher-compact-dismiss.md](plans/2026-09-07-launcher-compact-dismiss.md) | 现行 | 调整启动器密度、位置及复制后抢焦点 | 填写与结果等高、稳定上方锚点与完成后退场 |
 | [plans/2026-09-07-shortcut-recorder.md](plans/2026-09-07-shortcut-recorder.md) | 现行 | 修复快捷键无法按键录入 | 三项组合录制、取消导航与全局回调保护 |
 | [plans/2026-09-07-search-entrypoints.md](plans/2026-09-07-search-entrypoints.md) | 现行 | 修复搜索入口混淆及快捷键显示 | 软件内搜索聚焦与启动器保存值即时同步 |
+| [plans/2026-09-07-scrollbars-focus.md](plans/2026-09-07-scrollbars-focus.md) | 现行 | 统一桌面滚动条及控件描边 | 双窗口滚动样式、安全间距与单层键盘焦点 |
 | [plans/2026-08-22-m1-desktop-skeleton.md](plans/2026-08-22-m1-desktop-skeleton.md) | 归档 | 查 M1 怎么做的 | M1 逐步实现计划 |
 | [plans/2026-08-22-m2-local-workbench.md](plans/2026-08-22-m2-local-workbench.md) | 归档 | 查 M2 怎么做的 | M2 逐步实现计划 |
 | [plans/2026-08-23-m3-launcher.md](plans/2026-08-23-m3-launcher.md) | 归档 | 查 M3 怎么做的 | M3 逐步实现计划 |
