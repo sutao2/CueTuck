@@ -469,14 +469,15 @@ describe("WorkbenchShell", () => {
     expect(w.text()).toContain("周报");
   });
 
-  it("refuses a third-level category from a child", async () => {
+  it("defaults to a sibling category when creating from a child", async () => {
     const w = mount(WorkbenchShell);
     await flushPromises();
     const frontend = w.findAll(".tree-row.child").find((row) => row.text().includes("前端工程"));
     await frontend.trigger("click");
     await w.get('[data-testid="add-category"]').trigger("click");
-    expect(w.get('[data-testid="category-error"]').text()).toContain("小分类下不能再创建子分类");
-    expect(w.find('[data-testid="new-category-name"]').exists()).toBe(false);
+    expect(w.get('[data-testid="category-parent"]').element.value).toBe('cat-software');
+    expect(w.find('[data-testid="new-category-name"]').exists()).toBe(true);
+    w.unmount();
   });
 
   it("downloads a square prompt without login as source=downloaded", async () => {

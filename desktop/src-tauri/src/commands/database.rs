@@ -1,7 +1,7 @@
 use crate::local_database::{
     add_prompt_to_collection_in_dir, apply_import_json_in_dir, backup_library_in_dir,
     clear_prompt_use_in_dir, count_local_prompts_in_dir, create_category_in_dir,
-    create_collection_in_dir, create_prompt_in_dir_with_model, delete_prompt_in_dir,
+    create_collection_in_dir, create_prompt_in_dir_with_model, delete_prompt_in_dir, delete_category_in_dir,
     import_downloaded_prompt_with_metadata, export_library_json_in_dir, export_library_zip_in_dir,
     get_setting_in_dir, list_categories_in_dir, list_collection_members_in_dir,
     list_collections_in_dir, list_prompts_in_dir, preview_import_json_in_dir,
@@ -155,6 +155,11 @@ pub fn create_local_category(
     parent_id: String,
 ) -> Result<CategoryRecord, String> {
     create_category_in_dir(&data_dir(&app)?, &name, &parent_id)
+}
+
+#[tauri::command]
+pub fn delete_local_category(app: AppHandle, id: String) -> Result<(), String> {
+    delete_category_in_dir(&data_dir(&app)?, &id)
 }
 
 #[tauri::command]

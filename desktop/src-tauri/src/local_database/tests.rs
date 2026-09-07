@@ -13,6 +13,56 @@ use super::{
 };
 
 #[test]
+fn category_delete_preserves_content_and_syncs_without_resurrection() {
+    use super::{delete_category_in_dir, apply_sync_changes, export_sync_changes, export_library_json_in_dir};
+    let a = tempfile::tempdir().unwrap();
+    let b = tempfile::tempdir().unwrap();
+    initialize_in_dir(a.path()).unwrap();
+    initialize_in_dir(b.path()).unwrap();
+    let category = create_category_in_dir(a.path(), "周报", "cat-office").unwrap();
+    assert!(create_category_in_dir(a.path(), " 周报 ", "cat-office").unwrap_err().contains("同名"));
+    assert!(create_category_in_dir(a.path(), "周报", "cat-image").is_ok());
+    let collection = create_collection_in_dir(a.path(), "合集", Some(&category.id), "none", None).unwrap();
+    let prompt = create_prompt_in_dir(a.path(), "正文", "保留", Some(&category.id)).unwrap();
+    add_prompt_to_collection_in_dir(a.path(), &prompt.id, &collection.id).unwrap();
+    let before = export_sync_changes(a.path()).unwrap();
+    apply_sync_changes(b.path(), &before, false).unwrap();
+    assert!(delete_category_in_dir(a.path(), "cat-office").unwrap_err().contains("系统"));
+    assert!(delete_category_in_dir(a.path(), "cat-software-0").unwrap_err().contains("系统"));
+    assert!(delete_category_in_dir(a.path(), "missing").is_err());
+    delete_category_in_dir(a.path(), &category.id).unwrap();
+    initialize_in_dir(a.path()).unwrap();
+    assert!(!list_categories_in_dir(a.path()).unwrap().iter().any(|c| c.id == category.id));
+    assert!(list_prompts_in_dir(a.path(), "", None).unwrap()[0].category_id.is_none());
+    assert!(list_collections_in_dir(a.path(), "", None).unwrap()[0].category_id.is_none());
+    assert_eq!(list_collection_members_in_dir(a.path(), &collection.id).unwrap()[0].content, "保留");
+    let exported: serde_json::Value = serde_json::from_str(&export_library_json_in_dir(a.path()).unwrap()).unwrap();
+    assert!(!exported["categories"].as_array().unwrap().iter().any(|c| c["id"] == category.id));
+    let tombstones: Vec<_> = export_sync_changes(a.path()).unwrap().into_iter().filter(|c| c.kind == "category" && c.deleted_at.is_some()).collect();
+    assert_eq!(tombstones.len(), 1);
+    apply_sync_changes(b.path(), &tombstones, false).unwrap();
+    apply_sync_changes(b.path(), &before, false).unwrap();
+    assert!(!list_categories_in_dir(b.path()).unwrap().iter().any(|c| c.id == category.id));
+    assert!(list_prompts_in_dir(b.path(), "", None).unwrap()[0].category_id.is_none());
+    assert!(list_collections_in_dir(b.path(), "", None).unwrap()[0].category_id.is_none());
+    assert!(create_category_in_dir(a.path(), "周报", "cat-office").is_ok());
+}
+
+#[test]
+fn category_delete_rolls_back_when_content_update_fails() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let category = create_category_in_dir(dir.path(), "周报", "cat-office").unwrap();
+    create_prompt_in_dir(dir.path(), "正文", "保留", Some(&category.id)).unwrap();
+    create_collection_in_dir(dir.path(), "合集", Some(&category.id), "none", None).unwrap();
+    let connection = rusqlite::Connection::open(dir.path().join("promptark.sqlite")).unwrap();
+    connection.execute_batch("CREATE TRIGGER reject_category_change BEFORE UPDATE ON collections BEGIN SELECT RAISE(ABORT, 'test failure'); END;").unwrap();
+    assert!(super::delete_category_in_dir(dir.path(), &category.id).is_err());
+    assert!(list_categories_in_dir(dir.path()).unwrap().iter().any(|c| c.id == category.id));
+    assert_eq!(list_prompts_in_dir(dir.path(), "", None).unwrap()[0].category_id.as_deref(), Some(category.id.as_str()));
+}
+
+#[test]
 fn sync_round_trip_restores_categories_collections_members_models_and_deletions() {
     use super::{apply_sync_changes, export_sync_changes};
     let a = tempfile::tempdir().unwrap();

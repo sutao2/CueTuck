@@ -170,30 +170,12 @@ body.theme-dark .app-shell {
   color: var(--muted);
 }
 .mini-button:hover { background: rgba(0, 0, 0, 0.055); color: var(--text); }
-.add-category {
-  display: flex;
-  gap: 6px;
-  padding: 4px 10px 8px;
-}
-.add-category input {
-  min-width: 0;
-  flex: 1;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 4px 6px;
-}
-.add-category button {
-  border: 0;
-  border-radius: 4px;
-  padding: 4px 8px;
-  background: var(--accent);
-  color: #fff;
-}
-[data-testid="category-error"] {
-  margin: 0 12px 8px;
-  color: var(--danger);
-  font-size: 11px;
-}
+.mini-button.category-collapse { width: auto; padding: 0 5px; font-size: 10px; }
+.modal.category-modal { width: min(420px, calc(100vw - 48px)); }
+.tree-child-row { display: flex; align-items: center; min-width: 0; }
+.tree-child-row .tree-row { min-width: 0; flex: 1; }
+.category-delete { flex: 0 0 24px; height: 24px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 16px; }
+.category-delete:hover { color: var(--danger); background: var(--accent-soft); }
 
 .category-tree { min-height: 0; overflow-y: auto; padding: 0 10px 12px; }
 .tree-row {
