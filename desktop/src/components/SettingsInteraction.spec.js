@@ -55,6 +55,35 @@ it("rejects duplicate recordings before touching native registration and Escape 
   expect(w.get('[data-testid="shortcut-error"]').text()).toContain("相同组合");
 });
 
+it.each(['none', 'registration', 'extra-setting'])("updates the workbench shortcut only after registration and persistence (failure: %s)", async (failure) => {
+  await library.setLocalSetting('launcher_shortcut', 'Control+Alt+K');
+  const setSetting = library.setLocalSetting;
+  vi.spyOn(library, 'setLocalSetting').mockImplementation(async (key, value) => {
+    if (failure === 'extra-setting' && key === 'new_prompt_shortcut') throw new Error('disk full');
+    return setSetting(key, value);
+  });
+  vi.spyOn(shortcuts, 'registerLauncherShortcut').mockImplementation(async value => {
+    if (failure === 'registration') throw new Error('快捷键冲突');
+    await library.setLocalSetting('launcher_shortcut', value);
+  });
+  w = mount(WorkbenchShell, { props: { host: 'macos' } });
+  await flushPromises();
+  await w.get('[data-testid="open-settings"]').trigger('click');
+  await flushPromises();
+  await w.get('[data-settings-page="shortcuts"]').trigger('click');
+  const input = w.get('[data-testid="launcher-shortcut"]');
+  await input.trigger('focus');
+  await input.trigger('keydown', { key: 'j', code: 'KeyJ', ctrlKey: true, altKey: true });
+  await input.trigger('blur');
+  expect(w.get('.status-button').text()).toContain('⌃⌥K');
+  await w.findAll('button').find(b => b.text() === '保存快捷键').trigger('click');
+  await flushPromises();
+  expect(w.get('.status-button').text()).toContain(failure === 'registration' ? '⌃⌥K' : '⌃⌥J');
+  expect(w.findComponent(SettingsModal).text()).toContain(failure === 'none' ? '快捷键已保存' : '保存失败');
+  expect(w.findComponent(SettingsModal).exists()).toBe(true);
+  expect(w.get('[data-testid="titlebar-search"]').text()).toBe('搜索⌘F');
+});
+
 it('keeps Escape and Tab in the innermost confirmation without discarding drafts', async () => {
   w = mount(SettingsModal, { attachTo: document.body });
   await flushPromises();

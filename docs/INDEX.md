@@ -40,7 +40,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0013-oauth-google-github.md](architecture/decisions/0013-oauth-google-github.md) | 现行 | 接 Google / GitHub 登录前 | 选定 Google 与 GitHub；仍不接 QQ/LinuxDo |
 | [architecture/decisions/0014-full-product.md](architecture/decisions/0014-full-product.md) | 现行 | 问是否还按第一期冻结 | 剩余工作按完整产品排队 |
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 完整键盘填写、窗口生命周期、复制与原应用粘贴 |
-| [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 截图框架、常驻搜索、全桌面弹窗与键盘一致性 |
+| [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 软件内搜索与启动器分离、保存快捷键同步及桌面框架 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
 | [specs/square/spec.md](specs/square/spec.md) | 目标 | 改广场浏览、下载或收藏 | 广场只读详情、重试与分类下载 |
 | [specs/collections/spec.md](specs/collections/spec.md) | 目标 | 做合集 | 合集编辑/删除与全库成员管理 |
@@ -97,6 +97,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-09-07-anonymous-placeholders.md](plans/2026-09-07-anonymous-placeholders.md) | 现行 | 修复空花括号无法填写 | 截图回归、匿名空位逐项填写与代码边界 |
 | [plans/2026-09-07-launcher-compact-dismiss.md](plans/2026-09-07-launcher-compact-dismiss.md) | 现行 | 调整启动器密度、位置及复制后抢焦点 | 填写与结果等高、稳定上方锚点与完成后退场 |
 | [plans/2026-09-07-shortcut-recorder.md](plans/2026-09-07-shortcut-recorder.md) | 现行 | 修复快捷键无法按键录入 | 三项组合录制、取消导航与全局回调保护 |
+| [plans/2026-09-07-search-entrypoints.md](plans/2026-09-07-search-entrypoints.md) | 现行 | 修复搜索入口混淆及快捷键显示 | 软件内搜索聚焦与启动器保存值即时同步 |
 | [plans/2026-08-22-m1-desktop-skeleton.md](plans/2026-08-22-m1-desktop-skeleton.md) | 归档 | 查 M1 怎么做的 | M1 逐步实现计划 |
 | [plans/2026-08-22-m2-local-workbench.md](plans/2026-08-22-m2-local-workbench.md) | 归档 | 查 M2 怎么做的 | M2 逐步实现计划 |
 | [plans/2026-08-23-m3-launcher.md](plans/2026-08-23-m3-launcher.md) | 归档 | 查 M3 怎么做的 | M3 逐步实现计划 |

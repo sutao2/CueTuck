@@ -349,7 +349,8 @@ describe("WorkbenchShell", () => {
   it("uses mac chrome on macos", () => {
     const w = mount(WorkbenchShell, { props: { host: "macos" } });
     expect(w.get('[data-region="titlebar"]').classes()).toContain("host-mac");
-    expect(w.get('[data-testid="sidebar-search"]').attributes('title')).toContain("⌃Space");
+    expect(w.get('[data-testid="sidebar-search"]').attributes('title')).toContain("⌘F");
+    expect(w.get('.status-button').text()).toContain("⌃Space");
     expect(w.find(".window-controls").exists()).toBe(false);
   });
 
@@ -368,24 +369,64 @@ describe("WorkbenchShell", () => {
     w.unmount();
   });
 
-  it("separates sidebar branding from window controls and keeps launcher search available", async () => {
-    const w = mount(WorkbenchShell, { props: { host: "macos" } });
+  it("separates in-app search from the launcher in both spaces and sidebar states", async () => {
+    const w = mount(WorkbenchShell, { props: { host: "macos" }, attachTo: document.body });
+    await flushPromises();
     expect(w.find('.titlebar .brand-name').exists()).toBe(false);
     expect(w.get('.sidebar .brand-name').text()).toBe('提示方舟');
     expect(w.get('.titlebar-center').text()).toContain('本地提示词');
-    expect(w.get('[data-testid="titlebar-search"]').text()).toBe('搜索⌃Space');
+    expect(w.get('[data-testid="titlebar-search"]').text()).toBe('搜索⌘F');
     expect(w.find('[data-testid="titlebar-settings"]').exists()).toBe(false);
     await w.get('[data-testid="titlebar-search"]').trigger('click');
-    expect(w.emitted('open-launcher')).toHaveLength(1);
+    expect(document.activeElement).toBe(w.get('.inline-search input').element);
+    w.get('.inline-search input').element.blur();
     await w.get('[data-testid="sidebar-search"]').trigger('click');
-    expect(w.emitted('open-launcher')).toHaveLength(2);
+    expect(document.activeElement).toBe(w.get('.inline-search input').element);
+    await w.get('[data-space="square"]').trigger('click');
+    await flushPromises();
+    w.get('.inline-search input').element.blur();
     await w.get('[data-testid="toggle-sidebar"]').trigger('click');
     expect(w.get('.sidebar').isVisible()).toBe(false);
     await w.get('[data-testid="titlebar-search"]').trigger('click');
-    expect(w.emitted('open-launcher')).toHaveLength(3);
+    expect(document.activeElement).toBe(w.get('.inline-search input').element);
+    expect(w.emitted('open-launcher')).toBeUndefined();
+    await w.get('.status-button').trigger('click');
+    expect(w.emitted('open-launcher')).toHaveLength(1);
     await w.get('[data-testid="toggle-sidebar"]').trigger('click');
     await w.get('[data-testid="open-settings"]').trigger('click');
     expect(w.findComponent(SettingsModal).exists()).toBe(true);
+    w.unmount();
+  });
+
+  it.each([['macos', 'metaKey', '⌘F'], ['windows', 'ctrlKey', 'Ctrl F']])("focuses existing search on %s without stealing dialog or composing input", async (host, modifier, label) => {
+    const w = mount(WorkbenchShell, { props: { host }, attachTo: document.body });
+    await flushPromises();
+    const input = w.get('.inline-search input');
+    await input.setValue('existing query');
+    input.element.blur();
+    await w.trigger('keydown', { key: 'f', [modifier]: true });
+    expect(document.activeElement).toBe(input.element);
+    expect(input.element.value).toBe('existing query');
+    expect(input.element.selectionStart).toBe(0);
+    expect(input.element.selectionEnd).toBe('existing query'.length);
+    expect(w.get('.inline-search kbd').text()).toBe(label);
+    input.element.blur();
+    await w.trigger('keydown', { key: 'f', [modifier]: true, isComposing: true });
+    expect(document.activeElement).not.toBe(input.element);
+    await w.get('[data-testid="open-settings"]').trigger('click');
+    await flushPromises();
+    await w.trigger('keydown', { key: 'f', [modifier]: true });
+    expect(document.activeElement).not.toBe(input.element);
+    expect(w.emitted('open-launcher')).toBeUndefined();
+    w.unmount();
+  });
+
+  it("reads the saved launcher shortcut instead of hardcoding its default", async () => {
+    await setLocalSetting('launcher_shortcut', 'Control+Alt+K');
+    const w = mount(WorkbenchShell, { props: { host: 'macos' } });
+    await flushPromises();
+    expect(w.get('.status-button').text()).toBe('启动器 ⌃⌥K');
+    expect(w.get('[data-testid="titlebar-search"]').text()).toBe('搜索⌘F');
     w.unmount();
   });
 
