@@ -47,7 +47,7 @@
         </div>
         <label v-if="kind === 'prompt'" class="field">
           <span>提示词内容</span>
-          <textarea v-model="content" rows="8" placeholder="在正文中输入 {{变量名}} 即可创建变量"></textarea>
+          <textarea v-model="content" rows="8" placeholder="输入 {} 创建独立占位符，或 {{变量名}} 创建同名共用的变量"></textarea>
         </label>
         <label v-else class="field">
           <span>封面</span>
