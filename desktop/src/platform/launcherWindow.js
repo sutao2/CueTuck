@@ -3,7 +3,7 @@ export const LAUNCHER_WIDTH = 680;
 export const LAUNCHER_HEIGHTS = {
   collapsed: 80,
   expanded: 500,
-  fill: 420,
+  fill: 500,
 };
 
 export function launcherHeightFor(layout) {

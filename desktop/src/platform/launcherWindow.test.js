@@ -12,7 +12,8 @@ describe("launcher window", () => {
   it("sizes the palette like the old independent window", () => {
     expect(launcherHeightFor("collapsed")).toBe(80);
     expect(launcherHeightFor("expanded")).toBe(500);
-    expect(launcherHeightFor("fill")).toBe(420);
+    expect(launcherHeightFor("fill")).toBe(500);
+    expect(launcherHeightFor("fill")).toBe(launcherHeightFor("expanded"));
   });
 
   it("preserves the native top-left during resize and positions only on show", () => {
