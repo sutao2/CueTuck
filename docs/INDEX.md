@@ -44,7 +44,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
 | [specs/square/spec.md](specs/square/spec.md) | 目标 | 改广场浏览、下载或收藏 | 广场只读详情、重试与分类下载 |
 | [specs/collections/spec.md](specs/collections/spec.md) | 目标 | 做合集 | 合集编辑/删除与全库成员管理 |
-| [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 两级分类、新建校验与安全删除 |
+| [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 自定义大/小分类、新建校验与安全删除 |
 | [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析、字面值与特殊名称隔离 |
 | [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 紧凑登录与提交反馈；Refresh 进钥匙串 |
 | [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 十页统一排版、字段标签、保存反馈与固定布局 |
@@ -100,6 +100,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-09-07-search-entrypoints.md](plans/2026-09-07-search-entrypoints.md) | 现行 | 修复搜索入口混淆及快捷键显示 | 软件内搜索聚焦与启动器保存值即时同步 |
 | [plans/2026-09-07-scrollbars-focus.md](plans/2026-09-07-scrollbars-focus.md) | 现行 | 统一桌面滚动条及控件描边 | 双窗口滚动样式、安全间距与单层键盘焦点 |
 | [plans/2026-09-07-category-actions.md](plans/2026-09-07-category-actions.md) | 现行 | 修复分类新建和删除 | 明确入口、重复校验、内容保留与删除同步 |
+| [plans/2026-09-07-custom-root-categories.md](plans/2026-09-07-custom-root-categories.md) | 现行 | 新增本地大分类 | 可选父级、两级关系往返与广场隔离 |
 | [plans/2026-08-22-m1-desktop-skeleton.md](plans/2026-08-22-m1-desktop-skeleton.md) | 归档 | 查 M1 怎么做的 | M1 逐步实现计划 |
 | [plans/2026-08-22-m2-local-workbench.md](plans/2026-08-22-m2-local-workbench.md) | 归档 | 查 M2 怎么做的 | M2 逐步实现计划 |
 | [plans/2026-08-23-m3-launcher.md](plans/2026-08-23-m3-launcher.md) | 归档 | 查 M3 怎么做的 | M3 逐步实现计划 |

@@ -282,17 +282,19 @@ export async function listLocalCategories() {
   return memoryCategories.filter(row => !row.deleted_at);
 }
 
-export async function createLocalCategory({ name, parentId } = {}) {
+export async function createLocalCategory({ name, parentId = null } = {}) {
   const title = String(name ?? "").trim();
   if (!title) throw new Error("分类名称不能为空");
   if (isTauri()) {
     return tauriInvoke("create_local_category", { name: title, parentId });
   }
-  const parent = memoryCategories.find((row) => row.id === parentId && !row.deleted_at);
-  if (!parent) throw new Error("大分类不存在");
-  if (parent.parent_id) throw new Error("小分类下不能再创建子分类");
+  if (parentId !== null) {
+    const parent = memoryCategories.find((row) => row.id === parentId && !row.deleted_at);
+    if (!parent) throw new Error("大分类不存在");
+    if (parent.parent_id) throw new Error("小分类下不能再创建子分类");
+  }
   const siblings = memoryCategories.filter((row) => row.parent_id === parentId && !row.deleted_at);
-  if (siblings.some(row => row.name.trim() === title)) throw new Error("该大分类下已有同名分类");
+  if (siblings.some(row => row.name.trim() === title)) throw new Error("同一级已有同名分类");
   const row = {
     id: nextMemoryId("cat-user"),
     parent_id: parentId,
@@ -310,7 +312,8 @@ export async function deleteLocalCategory(id) {
   if (isTauri()) return tauriInvoke('delete_local_category', { id });
   const category = memoryCategories.find(row => row.id === id && !row.deleted_at);
   if (!category) throw new Error('分类不存在');
-  if (category.is_system || !category.parent_id) throw new Error('系统分类不能删除');
+  if (category.is_system) throw new Error('系统分类不能删除');
+  if (memoryCategories.some(row => row.parent_id === id && !row.deleted_at)) throw new Error('请先删除该大分类下的小分类');
   const timestamp = nextTimestamp();
   category.deleted_at = category.updated_at = timestamp;
   for (const row of [...memoryPrompts, ...memoryCollections]) {
@@ -448,7 +451,9 @@ export async function applyLocalSyncChanges(items, { keepLocal = false } = {}) {
   const settings = { ...memorySettings };
   const stamps = { ...memorySettingStamps };
   for (const kind of ["category", "collection", "prompt", "setting"]) {
-    for (const item of items.filter((row) => row.kind === kind)) {
+    const ordered = items.filter((row) => row.kind === kind);
+    if (kind === 'category') ordered.sort((a, b) => Number(a.payload?.parent_id != null) - Number(b.payload?.parent_id != null));
+    for (const item of ordered) {
       const payload = item.payload;
       if (!item.id || !payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("同步记录格式错误");
       validatePayload(payload);
@@ -469,18 +474,19 @@ export async function applyLocalSyncChanges(items, { keepLocal = false } = {}) {
       if (existing && ((keepLocal && kind === "prompt") || timestampMillis(existing.updated_at) >= timestampMillis(item.updated_at))) continue;
       if (kind === "category") {
         if (existing?.is_system) continue;
-        if (!payload.name?.trim() || !tables.category.some((row) => row.id === payload.parent_id && !row.parent_id)) throw new Error("同步分类无效");
+        if (!payload.name?.trim() || (payload.parent_id != null && !tables.category.some((row) => row.id === payload.parent_id && !row.parent_id))) throw new Error("同步分类无效");
       }
       for (const [field, target] of [["category_id", "category"], ["collection_id", "collection"]]) {
         if (payload[field] != null && !tables[target].some((row) => row.id === payload[field])) throw new Error(`同步记录引用不存在的 ${field}`);
       }
       const row = { ...existing, ...payload, id: item.id, updated_at: String(timestampMillis(item.updated_at)) };
-      if (kind === "category") row.is_system = false;
+      if (kind === "category") { row.is_system = false; row.parent_id = payload.parent_id ?? null; }
       row.deleted_at = item.deleted_at ?? null;
       if (existing) Object.assign(existing, row);
       else tables[kind].push(row);
     }
   }
+  if (tables.category.some(row => row.parent_id != null && !tables.category.some(parent => parent.id === row.parent_id && parent.parent_id == null && (row.deleted_at || !parent.deleted_at)))) throw new Error('同步分类层级无效');
   const deletedCategories = new Set(tables.category.filter(row => row.deleted_at).map(row => row.id));
   for (const row of [...tables.prompt, ...tables.collection]) {
     if (deletedCategories.has(row.category_id)) row.category_id = null;
@@ -547,6 +553,9 @@ function prepareImport(json, timestamp) {
     if (!mapped) throw new Error(`导入记录引用不存在的 ${kind}`);
     return mapped;
   };
+  for (const row of file.categories) {
+    if (!systemIds.has(row.id) && row.parent_id == null) rootIds.add(row.id);
+  }
   const changes = [];
   for (const [kind, key] of groups) {
     for (const row of file[key]) {
@@ -554,7 +563,8 @@ function prepareImport(json, timestamp) {
       const id = maps[kind].get(row.id) ?? crypto.randomUUID();
       const payload = { ...row, id, updated_at: timestamp, deleted_at: null };
       if (kind === "category") {
-        if (!rootIds.has(row.parent_id)) throw new Error("导入小分类必须属于系统大分类");
+        if (row.parent_id != null && !rootIds.has(row.parent_id)) throw new Error("导入小分类必须属于大分类，最多两级");
+        payload.parent_id = reference("category", row.parent_id);
         payload.is_system = false;
       } else {
         payload.title = row.title.trim();

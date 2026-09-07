@@ -111,7 +111,12 @@ fn prepare_import(raw: &str, timestamp: &str) -> Result<(ImportPreview, Vec<supe
             payload["updated_at"] = json!(timestamp);
             payload["deleted_at"] = Value::Null;
             if kind == "category" {
-                if !super::SYSTEM_CATEGORIES.iter().any(|(id, _, _)| row["parent_id"] == *id) { return Err("导入小分类必须属于系统大分类".into()); }
+                if !row["parent_id"].is_null()
+                    && !super::SYSTEM_CATEGORIES.iter().any(|(id, _, _)| row["parent_id"] == *id)
+                    && !file.categories.iter().any(|parent| parent["id"] == row["parent_id"] && parent["parent_id"].is_null() && !system_ids.iter().any(|id| parent["id"] == *id)) {
+                    return Err("导入小分类必须属于大分类，最多两级".into());
+                }
+                payload["parent_id"] = reference("category", &row["parent_id"])?;
                 payload["is_system"] = json!(0);
             } else {
                 payload["title"] = json!(row["title"].as_str().unwrap().trim());

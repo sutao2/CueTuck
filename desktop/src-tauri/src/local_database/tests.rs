@@ -13,15 +13,82 @@ use super::{
 };
 
 #[test]
+fn custom_root_categories_round_trip_and_delete_safely() {
+    use super::{apply_sync_changes, export_sync_changes, export_library_json_in_dir, apply_import_json_in_dir, delete_category_in_dir};
+    let a = tempfile::tempdir().unwrap();
+    let b = tempfile::tempdir().unwrap();
+    initialize_in_dir(a.path()).unwrap();
+    initialize_in_dir(b.path()).unwrap();
+    let root = create_category_in_dir(a.path(), " 我的项目 ", None).unwrap();
+    assert!(root.parent_id.is_none());
+    assert!(!root.is_system);
+    assert!(create_category_in_dir(a.path(), "我的项目", None).unwrap_err().contains("同名"));
+    assert!(create_category_in_dir(a.path(), "软件开发", None).unwrap_err().contains("同名"));
+    let child = create_category_in_dir(a.path(), "发布", Some(&root.id)).unwrap();
+    assert!(create_category_in_dir(a.path(), "三级", Some(&child.id)).is_err());
+    let collection = create_collection_in_dir(a.path(), "合集", Some(&root.id), "none", None).unwrap();
+    let prompt = create_prompt_in_dir(a.path(), "成员", "保留", Some(&child.id)).unwrap();
+    add_prompt_to_collection_in_dir(a.path(), &prompt.id, &collection.id).unwrap();
+    create_prompt_in_dir(a.path(), "根内容", "保留", Some(&root.id)).unwrap();
+    assert_eq!(list_prompts_in_dir(a.path(), "", Some(&root.id)).unwrap().len(), 2);
+    let mut snapshot = export_sync_changes(a.path()).unwrap();
+    snapshot.reverse();
+    apply_sync_changes(b.path(), &snapshot, false).unwrap();
+    assert_eq!(list_categories_in_dir(b.path()).unwrap().iter().find(|c| c.id == child.id).unwrap().parent_id.as_deref(), Some(root.id.as_str()));
+    let mut file: serde_json::Value = serde_json::from_str(&export_library_json_in_dir(a.path()).unwrap()).unwrap();
+    file["categories"].as_array_mut().unwrap().reverse();
+    apply_import_json_in_dir(b.path(), &file.to_string()).unwrap();
+    let categories = list_categories_in_dir(b.path()).unwrap();
+    let copied_child = categories.iter().find(|c| c.name == "发布" && c.id != child.id).unwrap();
+    let copied_root = categories.iter().find(|c| Some(&c.id) == copied_child.parent_id.as_ref()).unwrap();
+    assert_ne!(copied_root.id, root.id);
+    assert_eq!(copied_root.name, "我的项目");
+    assert!(copied_root.parent_id.is_none());
+    let copies = list_prompts_in_dir(b.path(), "", Some(&copied_root.id)).unwrap();
+    assert_eq!(copies.len(), 2);
+    let copied_member = copies.iter().find(|p| p.title == "成员").unwrap();
+    let copied_collection = list_collections_in_dir(b.path(), "", Some(&copied_root.id)).unwrap();
+    assert_eq!(copied_member.collection_id.as_deref(), Some(copied_collection[0].id.as_str()));
+    assert!(delete_category_in_dir(a.path(), &root.id).unwrap_err().contains("先删除"));
+    delete_category_in_dir(a.path(), &child.id).unwrap();
+    delete_category_in_dir(a.path(), &root.id).unwrap();
+    assert!(list_prompts_in_dir(a.path(), "", None).unwrap().iter().all(|p| p.category_id.is_none()));
+    assert!(create_category_in_dir(a.path(), "失效父级", Some(&root.id)).is_err());
+    let mut deleted = export_sync_changes(a.path()).unwrap();
+    deleted.reverse();
+    apply_sync_changes(b.path(), &deleted, false).unwrap();
+    apply_sync_changes(b.path(), &snapshot, false).unwrap();
+    assert!(!list_categories_in_dir(b.path()).unwrap().iter().any(|c| c.id == root.id || c.id == child.id));
+}
+
+#[test]
+fn custom_root_categories_reject_invalid_imports_and_sync_atomically() {
+    use super::{apply_sync_changes, SyncChange, export_library_json_in_dir, apply_import_json_in_dir};
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let root = create_category_in_dir(dir.path(), "项目", None).unwrap();
+    let child = create_category_in_dir(dir.path(), "发布", Some(&root.id)).unwrap();
+    let before = export_library_json_in_dir(dir.path()).unwrap();
+    let change = SyncChange { id: root.id.clone(), kind: "category".into(), payload: serde_json::json!({ "name": "项目", "parent_id": "cat-office" }), updated_at: super::now_millis(), deleted_at: None };
+    assert!(apply_sync_changes(dir.path(), &[change], false).unwrap_err().contains("层级"));
+    assert_eq!(export_library_json_in_dir(dir.path()).unwrap(), before);
+    let mut file: serde_json::Value = serde_json::from_str(&before).unwrap();
+    file["categories"].as_array_mut().unwrap().push(serde_json::json!({ "id": "third", "name": "三级", "parent_id": child.id }));
+    assert!(preview_import_json_in_dir(dir.path(), &file.to_string()).is_err());
+    assert!(apply_import_json_in_dir(dir.path(), &file.to_string()).is_err());
+    assert_eq!(export_library_json_in_dir(dir.path()).unwrap(), before);
+}
+
+#[test]
 fn category_delete_preserves_content_and_syncs_without_resurrection() {
     use super::{delete_category_in_dir, apply_sync_changes, export_sync_changes, export_library_json_in_dir};
     let a = tempfile::tempdir().unwrap();
     let b = tempfile::tempdir().unwrap();
     initialize_in_dir(a.path()).unwrap();
     initialize_in_dir(b.path()).unwrap();
-    let category = create_category_in_dir(a.path(), "周报", "cat-office").unwrap();
-    assert!(create_category_in_dir(a.path(), " 周报 ", "cat-office").unwrap_err().contains("同名"));
-    assert!(create_category_in_dir(a.path(), "周报", "cat-image").is_ok());
+    let category = create_category_in_dir(a.path(), "周报", Some("cat-office")).unwrap();
+    assert!(create_category_in_dir(a.path(), " 周报 ", Some("cat-office")).unwrap_err().contains("同名"));
+    assert!(create_category_in_dir(a.path(), "周报", Some("cat-image")).is_ok());
     let collection = create_collection_in_dir(a.path(), "合集", Some(&category.id), "none", None).unwrap();
     let prompt = create_prompt_in_dir(a.path(), "正文", "保留", Some(&category.id)).unwrap();
     add_prompt_to_collection_in_dir(a.path(), &prompt.id, &collection.id).unwrap();
@@ -45,14 +112,14 @@ fn category_delete_preserves_content_and_syncs_without_resurrection() {
     assert!(!list_categories_in_dir(b.path()).unwrap().iter().any(|c| c.id == category.id));
     assert!(list_prompts_in_dir(b.path(), "", None).unwrap()[0].category_id.is_none());
     assert!(list_collections_in_dir(b.path(), "", None).unwrap()[0].category_id.is_none());
-    assert!(create_category_in_dir(a.path(), "周报", "cat-office").is_ok());
+    assert!(create_category_in_dir(a.path(), "周报", Some("cat-office")).is_ok());
 }
 
 #[test]
 fn category_delete_rolls_back_when_content_update_fails() {
     let dir = tempfile::tempdir().unwrap();
     initialize_in_dir(dir.path()).unwrap();
-    let category = create_category_in_dir(dir.path(), "周报", "cat-office").unwrap();
+    let category = create_category_in_dir(dir.path(), "周报", Some("cat-office")).unwrap();
     create_prompt_in_dir(dir.path(), "正文", "保留", Some(&category.id)).unwrap();
     create_collection_in_dir(dir.path(), "合集", Some(&category.id), "none", None).unwrap();
     let connection = rusqlite::Connection::open(dir.path().join("promptark.sqlite")).unwrap();
@@ -69,7 +136,7 @@ fn sync_round_trip_restores_categories_collections_members_models_and_deletions(
     let b = tempfile::tempdir().unwrap();
     initialize_in_dir(a.path()).unwrap();
     initialize_in_dir(b.path()).unwrap();
-    let category = create_category_in_dir(a.path(), "我的图片", "cat-image").unwrap();
+    let category = create_category_in_dir(a.path(), "我的图片", Some("cat-image")).unwrap();
     let collection = create_collection_in_dir(a.path(), "灵感", Some(&category.id), "single", Some("[\"cover.png\"]")).unwrap();
     let prompt = create_prompt_in_dir_with_model(a.path(), "人像", "正文", Some(&category.id), Some("Flux")).unwrap();
     add_prompt_to_collection_in_dir(a.path(), &prompt.id, &collection.id).unwrap();
@@ -161,7 +228,7 @@ fn json_transfer_preserves_structure_as_new_copies_and_rejects_partial_imports()
     use super::{apply_import_json_in_dir, export_library_json_in_dir};
     let dir = tempfile::tempdir().unwrap();
     initialize_in_dir(dir.path()).unwrap();
-    let category = create_category_in_dir(dir.path(), "自定义图片", "cat-image").unwrap();
+    let category = create_category_in_dir(dir.path(), "自定义图片", Some("cat-image")).unwrap();
     let collection = create_collection_in_dir(dir.path(), "合集", Some(&category.id), "single", Some("[\"one.png\"]")).unwrap();
     let prompt = create_prompt_in_dir_with_model(dir.path(), "成员", "正文", Some(&category.id), Some("Flux")).unwrap();
     add_prompt_to_collection_in_dir(dir.path(), &prompt.id, &collection.id).unwrap();
@@ -386,7 +453,7 @@ async fn lists_children_under_software() {
 async fn creates_user_child_under_office() {
     let dir = tempfile::tempdir().unwrap();
     initialize_in_dir(dir.path()).unwrap();
-    let created = create_category_in_dir(dir.path(), "周报", "cat-office").unwrap();
+    let created = create_category_in_dir(dir.path(), "周报", Some("cat-office")).unwrap();
     assert_eq!(created.name, "周报");
     assert_eq!(created.parent_id.as_deref(), Some("cat-office"));
     assert!(!created.is_system);
@@ -403,7 +470,7 @@ async fn creates_user_child_under_office() {
 async fn rejects_grandchild_under_frontend() {
     let dir = tempfile::tempdir().unwrap();
     initialize_in_dir(dir.path()).unwrap();
-    let error = create_category_in_dir(dir.path(), "再下一层", "cat-software-1").unwrap_err();
+    let error = create_category_in_dir(dir.path(), "再下一层", Some("cat-software-1")).unwrap_err();
     assert!(error.contains("小分类下不能再创建子分类"));
     assert!(!list_categories_in_dir(dir.path())
         .unwrap()

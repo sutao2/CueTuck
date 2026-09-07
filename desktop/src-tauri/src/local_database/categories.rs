@@ -43,7 +43,7 @@ pub fn list_categories_in_dir(dir: &Path) -> Result<Vec<CategoryRecord>, String>
 pub fn create_category_in_dir(
     dir: &Path,
     name: &str,
-    parent_id: &str,
+    parent_id: Option<&str>,
 ) -> Result<CategoryRecord, String> {
     let title = name.trim();
     if title.is_empty() {
@@ -54,26 +54,28 @@ pub fn create_category_in_dir(
     let connection = connection
         .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(|e| e.to_string())?;
-    let parent: (Option<String>,) = connection
-        .query_row(
-            "SELECT parent_id FROM categories WHERE id = ?1 AND deleted_at IS NULL",
-            [parent_id],
-            |row| Ok((row.get(0)?,)),
-        )
-        .map_err(|_| "大分类不存在".to_string())?;
-    if parent.0.is_some() {
-        return Err("小分类下不能再创建子分类".to_string());
+    if let Some(parent_id) = parent_id {
+        let parent: (Option<String>,) = connection
+            .query_row(
+                "SELECT parent_id FROM categories WHERE id = ?1 AND deleted_at IS NULL",
+                [parent_id],
+                |row| Ok((row.get(0)?,)),
+            )
+            .map_err(|_| "大分类不存在".to_string())?;
+        if parent.0.is_some() {
+            return Err("小分类下不能再创建子分类".to_string());
+        }
     }
     let duplicate: bool = connection.query_row(
-        "SELECT EXISTS(SELECT 1 FROM categories WHERE parent_id=?1 AND trim(name)=?2 AND deleted_at IS NULL)",
+        "SELECT EXISTS(SELECT 1 FROM categories WHERE parent_id IS ?1 AND trim(name)=?2 AND deleted_at IS NULL)",
         rusqlite::params![parent_id, title], |row| row.get(0),
     ).map_err(|e| e.to_string())?;
     if duplicate {
-        return Err("该大分类下已有同名分类".into());
+        return Err("同一级已有同名分类".into());
     }
     let sort_order: i64 = connection
         .query_row(
-            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM categories WHERE parent_id = ?1",
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM categories WHERE parent_id IS ?1",
             [parent_id],
             |row| row.get(0),
         )
@@ -89,7 +91,7 @@ pub fn create_category_in_dir(
     connection.commit().map_err(|e| e.to_string())?;
     Ok(CategoryRecord {
         id,
-        parent_id: Some(parent_id.to_string()),
+        parent_id: parent_id.map(str::to_string),
         name: title.to_string(),
         icon: None,
         is_system: false,
@@ -103,15 +105,25 @@ pub fn delete_category_in_dir(dir: &Path, id: &str) -> Result<(), String> {
     let transaction = connection
         .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(|e| e.to_string())?;
-    let (system, parent): (bool, Option<String>) = transaction
+    let system: bool = transaction
         .query_row(
-            "SELECT is_system, parent_id FROM categories WHERE id=?1 AND deleted_at IS NULL",
+            "SELECT is_system FROM categories WHERE id=?1 AND deleted_at IS NULL",
             [id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| row.get(0),
         )
         .map_err(|_| "分类不存在".to_string())?;
-    if system || parent.is_none() {
+    if system {
         return Err("系统分类不能删除".into());
+    }
+    let has_children: bool = transaction
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM categories WHERE parent_id=?1 AND deleted_at IS NULL)",
+            [id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    if has_children {
+        return Err("请先删除该大分类下的小分类".into());
     }
     let timestamp = super::now_millis();
     transaction

@@ -36,6 +36,8 @@ it("sends category and collection arguments in the native command schema", async
   expect(invoke).toHaveBeenLastCalledWith("add_prompt_to_local_collection", { promptId: "p", collectionId: "c" });
   await createLocalCategory({ name: '分类', parentId: 'cat-office' });
   expect(invoke).toHaveBeenLastCalledWith('create_local_category', { name: '分类', parentId: 'cat-office' });
+  await createLocalCategory({ name: '大分类' });
+  expect(invoke).toHaveBeenLastCalledWith('create_local_category', { name: '大分类', parentId: null });
   await deleteLocalCategory('custom');
   expect(invoke).toHaveBeenLastCalledWith('delete_local_category', { id: 'custom' });
 });
