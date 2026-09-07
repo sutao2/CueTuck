@@ -135,7 +135,7 @@ pub fn resume_launcher(app: AppHandle) -> Result<(), String> {
 pub fn launcher_logical_height(layout: &str) -> f64 {
     match layout {
         "collapsed" => 80.0,
-        "fill" => 520.0,
+        "fill" => 420.0,
         _ => 500.0,
     }
 }
@@ -165,8 +165,8 @@ fn launcher_show_position(
     tauri::PhysicalPosition::new(
         area.position.x + ((area.size.width as f64 - 680.0 * scale).max(0.0) / 2.0).round() as i32,
         area.position.y
-            + ((area.size.height as f64 - launcher_logical_height("collapsed") * scale).max(0.0)
-                / 3.0)
+            + ((area.size.height as f64 - launcher_logical_height("expanded") * scale).max(0.0)
+                / 4.0)
                 .round() as i32,
     )
 }
@@ -205,13 +205,26 @@ pub fn show_launcher(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn hide_launcher(app: AppHandle) -> Result<(), String> {
+pub async fn hide_launcher(app: AppHandle) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    let return_focus = app.get_webview_window(LAUNCHER_LABEL)
+        .is_some_and(|window| window.is_visible().unwrap_or(false) && window.is_focused().unwrap_or(false));
     hide_launcher_window(&app)?;
-    app.emit_to(LAUNCHER_LABEL, "launcher-hidden", ()).map_err(|error| error.to_string())
+    app.emit_to(LAUNCHER_LABEL, "launcher-hidden", ()).map_err(|error| error.to_string())?;
+    // A dismiss is not a paste: restore only if we still owned focus, never reopen on failure.
+    #[cfg(target_os = "macos")]
+    if return_focus {
+        if let Some(previous) = app.try_state::<PreviousApplication>() {
+            if let Err(error) = previous.restore_previous(&app) {
+                eprintln!("Launcher dismissed without restoring target: {error}");
+            }
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]
-pub fn hide_launcher_if_idle(app: AppHandle) -> Result<bool, String> {
+pub async fn hide_launcher_if_idle(app: AppHandle) -> Result<bool, String> {
     if app.get_webview_window(LAUNCHER_LABEL).is_some_and(|window| window.is_focused().unwrap_or(false)) {
         return Ok(false);
     }
@@ -220,7 +233,7 @@ pub fn hide_launcher_if_idle(app: AppHandle) -> Result<bool, String> {
             return Ok(false);
         }
     }
-    hide_launcher(app)?;
+    hide_launcher(app).await?;
     Ok(true)
 }
 
@@ -230,12 +243,12 @@ pub fn resize_launcher(app: AppHandle, layout: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn toggle_launcher(app: AppHandle) -> Result<(), String> {
+pub async fn toggle_launcher(app: AppHandle) -> Result<(), String> {
     let window = app
         .get_webview_window(LAUNCHER_LABEL)
         .ok_or_else(|| "启动器窗口不存在".to_string())?;
     if window.is_visible().map_err(|error| error.to_string())? {
-        hide_launcher(app)
+        hide_launcher(app).await
     } else {
         show_launcher_window(&app)
     }
@@ -323,7 +336,7 @@ mod tests {
     fn palette_heights_match_old_window() {
         assert_eq!(super::launcher_logical_height("collapsed"), 80.0);
         assert_eq!(super::launcher_logical_height("expanded"), 500.0);
-        assert_eq!(super::launcher_logical_height("fill"), 520.0);
+        assert_eq!(super::launcher_logical_height("fill"), 420.0);
     }
 
     #[test]
@@ -358,9 +371,20 @@ mod tests {
             };
             assert_eq!(
                 super::launcher_show_position(&area, scale),
-                tauri::PhysicalPosition::new(x + (380.0 * scale) as i32, y + (300.0 * scale) as i32),
+                tauri::PhysicalPosition::new(x + (380.0 * scale) as i32, y + (120.0 * scale) as i32),
             );
         }
+    }
+
+    #[test]
+    fn palette_reserves_expanded_space_on_small_screens() {
+        let area = tauri::PhysicalRect {
+            position: tauri::PhysicalPosition::new(0, 24),
+            size: tauri::PhysicalSize::new(1280, 696),
+        };
+        let position = super::launcher_show_position(&area, 1.0);
+        assert_eq!(position.y, 73);
+        assert!(position.y + 500 <= 720);
     }
 }
 

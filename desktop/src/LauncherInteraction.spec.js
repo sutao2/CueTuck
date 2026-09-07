@@ -28,6 +28,53 @@ async function open(content = "{{姓名}} / {{任务}} / {{姓名}}") {
 }
 const button = (w, text) => w.findAll("button").find((b) => b.text() === text);
 
+it("does not focus an initially hidden native window, but focuses explicit show and error resume", async () => {
+  let shown, hidden, notice;
+  vi.spyOn(windows, "listenLauncherLifecycle").mockImplementation(async (...handlers) => {
+    [shown, hidden, notice] = handlers;
+    return () => {};
+  });
+  vi.spyOn(windows, "resizeLauncherWindow").mockResolvedValue();
+  vi.spyOn(library, "getLocalSetting").mockResolvedValue("0");
+  const focus = vi.spyOn(HTMLElement.prototype, "focus");
+  window.__TAURI_INTERNALS__ = {};
+  const w = mount(LauncherApp, { attachTo: document.body });
+  await flushPromises();
+  expect(focus).not.toHaveBeenCalled();
+  await shown();
+  expect(document.activeElement).toBe(w.get("input").element);
+  hidden();
+  w.get("input").element.blur();
+  notice({ payload: "没有最近使用的提示词" });
+  await flushPromises();
+  expect(document.activeElement).toBe(w.get("input").element);
+  expect(w.text()).toContain("没有最近使用的提示词");
+});
+
+it("never refocuses a hidden launcher after copy, Escape or a late focus event", async () => {
+  let shown;
+  vi.spyOn(windows, "listenLauncherLifecycle").mockImplementation(async (handler) => { shown = handler; return () => {}; });
+  const command = vi.spyOn(windows, "launcherCommand").mockResolvedValue();
+  const w = await open("{}");
+  await library.setLocalSetting("close_launcher_after_use", "1");
+  const focus = vi.spyOn(HTMLElement.prototype, "focus");
+  await w.get("textarea").setValue("完成");
+  await w.get("textarea").trigger("keydown", { key: "Enter" });
+  await flushPromises();
+  window.dispatchEvent(new Event("focus"));
+  await flushPromises();
+  expect(command).toHaveBeenCalledExactlyOnceWith("hide_launcher");
+  expect(focus).not.toHaveBeenCalled();
+  await shown();
+  expect(document.activeElement).toBe(w.get("input").element);
+  focus.mockClear();
+  await w.get("main").trigger("keydown", { key: "Escape" });
+  await flushPromises();
+  window.dispatchEvent(new Event("focus"));
+  await flushPromises();
+  expect(focus).not.toHaveBeenCalled();
+});
+
 it("opens and fills every anonymous slot in the screenshot, then copies on the last Enter", async () => {
   const w = await open("Sql {} dejk fer {}. hdjjf dev {} jhdfhk sd");
   const fields = w.findAll("textarea");
