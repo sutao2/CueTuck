@@ -87,37 +87,39 @@
           <img class="brand-mark" :src="appIcon" alt="" aria-hidden="true" draggable="false" />
           <div class="result-copy">
             <span class="row-title">{{ active?.title }}</span>
-            <span class="row-desc">{{ variableNames.length ? '填写变量后生成最终提示词' : '确认正文后复制或粘贴' }}</span>
+            <span class="row-desc">{{ variableNames.length ? '填写内容，预览后复制' : '确认正文后复制或粘贴' }}</span>
           </div>
-          <span class="pill">{{ variableNames.length ? '变量' : '预览' }}</span>
+          <span class="pill">{{ variableNames.length ? `${variableNames.length} 个变量` : '预览' }}</span>
         </div>
         <div class="launcher-list launcher-fill-body">
           <div class="form-layout" :class="{ 'preview-only': !variableNames.length }">
             <form v-if="variableNames.length" ref="formEl" class="stack variable-form" @submit.prevent="copyRendered">
-              <p class="fill-hint">Enter 下一项 / 最后一项复制 · Shift + Enter 换行<br>{{ copyChord }} 随时复制 · 留空保留占位符</p>
+              <div class="form-heading"><h3>填写变量</h3><span>留空保留占位符</span></div>
               <label v-for="(name, index) in variableNames" :key="name" class="field">
                 <span>{{ name }}</span>
-                <textarea :value="values.get(name) ?? ''" rows="2" :placeholder="`填写 ${name}`" :disabled="busy" @input="values.set(name, $event.target.value)" @focus="focusedVariable = name" @keydown="onVariableKey($event, index)"></textarea>
+                <textarea :value="values.get(name) ?? ''" rows="1" :placeholder="`填写 ${name}`" :disabled="busy" @input="values.set(name, $event.target.value)" @focus="focusedVariable = name" @keydown="onVariableKey($event, index)"></textarea>
               </label>
               <button
                 v-if="canReadSelected"
                 type="button"
                 data-testid="read-selected"
-                class="ghost"
+                class="ghost selection-action"
+                :title="`填入 ${focusedVariable}`"
                 :disabled="busy"
                 @click="readSelected"
               >
-                读取原窗口选区 → {{ focusedVariable }}
+                填入原窗口选中文字
               </button>
             </form>
-            <section class="stack">
-              <h3>预览最终提示词</h3>
+            <section class="stack preview-pane">
+              <h3>实时预览</h3>
               <pre class="preview code">{{ preview }}</pre>
               <p v-if="feedback" role="status" data-testid="launcher-feedback">{{ feedback }}</p>
             </section>
           </div>
         </div>
         <footer class="launcher-foot launcher-fill-foot">
+          <div class="fill-keys" :title="`${copyChord} 随时复制 · Esc 关闭`"><span><kbd>↵</kbd> {{ variableNames.length ? '下一项 / 末项复制' : '复制' }}</span><span v-if="variableNames.length"><kbd>⇧↵</kbd> 换行</span></div>
           <div class="launcher-actions">
             <button type="button" class="ghost" :disabled="busy" @click="backToSearch">返回</button>
             <button ref="copyButton" type="button" class="primary" :disabled="busy" @click="copyRendered">复制</button>
@@ -169,6 +171,7 @@ let searchRequest = 0;
 let disposed = false;
 let unlisten = () => {};
 let blurTimer;
+let hidden = !!window.__TAURI_INTERNALS__;
 const canReadSelected = !!window.__TAURI_INTERNALS__ && supportsSelectedText();
 
 const variableNames = computed(() => extractVariables(active.value?.content ?? ""));
@@ -257,7 +260,7 @@ async function backToSearch() {
 
 async function focusCurrent() {
   await nextTick();
-  if (disposed) return;
+  if (disposed || hidden) return;
   if (step.value === "search") inputEl.value?.focus();
   else if (variableNames.value.length) {
     const index = Math.max(0, variableNames.value.indexOf(focusedVariable.value));
@@ -304,9 +307,11 @@ async function finishUse(text, id, result, pasteRequested) {
   } catch (error) { feedback.value += `；保存使用记录失败：${error.message || error}`; }
   if (result.ok && closeAfter) {
     await launcherCommand("hide_launcher");
+    hidden = true;
     resetState();
   } else if (pasteRequested) {
     await launcherCommand("resume_launcher");
+    hidden = false;
   }
   return text;
 }
@@ -355,10 +360,10 @@ async function readSelected() {
 }
 
 async function onBlur() {
-  if (!window.__TAURI_INTERNALS__ || busy.value || disposed) return;
+  if (!window.__TAURI_INTERNALS__ || busy.value || disposed || hidden) return;
   try {
-    const hidden = await launcherCommand("hide_launcher_if_idle");
-    if (hidden) resetState();
+    const didHide = await launcherCommand("hide_launcher_if_idle");
+    if (didHide) { hidden = true; resetState(); }
     else {
       clearTimeout(blurTimer);
       blurTimer = setTimeout(() => { if (!document.hasFocus()) onBlur(); }, 650);
@@ -388,8 +393,8 @@ async function resetAndHide() {
   if (busy.value) return;
   try {
     await launcherCommand("hide_launcher");
+    hidden = true;
     resetState();
-    await focusCurrent();
   } catch (error) { feedback.value = `隐藏窗口失败：${error}`; }
 }
 
@@ -400,6 +405,7 @@ async function refreshTheme() {
 
 async function onShown() {
   if (busy.value || disposed) return;
+  hidden = false;
   resetState();
   await focusCurrent();
   try { await refreshTheme(); } catch (error) { feedback.value = `读取主题失败：${error}`; }
@@ -410,9 +416,13 @@ onMounted(async () => {
   applyHostChrome(document.body, props.host);
   window.addEventListener("blur", onBlur);
   window.addEventListener("focus", onFocus);
-  inputEl.value?.focus();
+  focusCurrent();
   try {
-    unlisten = await listenLauncherLifecycle(onShown, () => { if (!busy.value) resetState(); }, (event) => { feedback.value = event.payload; });
+    unlisten = await listenLauncherLifecycle(onShown, () => { hidden = true; if (!busy.value) resetState(); }, (event) => {
+      hidden = false;
+      feedback.value = event.payload;
+      focusCurrent();
+    });
     if (disposed) { unlisten(); return; }
     await refreshTheme();
   } catch (error) { feedback.value = `启动器初始化失败：${error}`; }
@@ -612,31 +622,42 @@ onUnmounted(() => {
 .launcher-fill-head {
   position: absolute;
   inset: 0 0 auto;
-  height: 70px;
+  height: 58px;
+  min-height: 58px;
 }
 .launcher-fill-body {
   position: absolute;
-  inset: 70px 0 52px;
-  padding: 12px;
+  inset: 58px 0 50px;
+  padding: 16px;
+  overflow: hidden;
 }
 .launcher-fill-foot {
   position: absolute;
   inset: auto 0 0;
-  height: 52px;
+  height: 50px;
+  justify-content: space-between;
+  gap: 12px;
 }
+.launcher-fill-foot .launcher-actions { width: auto; flex-wrap: nowrap; gap: 6px; }
+.fill-keys { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 10px; }
+.fill-keys span { white-space: nowrap; }
 .form-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  gap: 20px;
   height: 100%;
 }
 .form-layout.preview-only { grid-template-columns: minmax(0, 1fr); }
 .variable-form { overflow: auto; padding: 2px 4px 8px 2px; }
-.fill-hint { margin: 0 0 4px; font-size: 11px; line-height: 1.6; color: var(--muted); }
+.form-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+.form-heading > span { font-size: 10px; color: var(--muted); }
+.preview-pane { min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; border-left: 1px solid var(--line); padding-left: 20px; }
+.preview-only .preview-pane { border-left: 0; padding-left: 0; }
+.selection-action { justify-self: start; font-size: 11px; padding-left: 0; }
 .stack {
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
 }
 .field {
@@ -648,18 +669,20 @@ onUnmounted(() => {
 .field > span { overflow-wrap: anywhere; }
 .field textarea {
   width: 100%;
-  min-height: 62px;
-  resize: vertical;
+  height: 44px;
+  min-height: 44px;
+  resize: none;
+  line-height: 24px;
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 8px 10px;
-  background: var(--bg);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: var(--surface);
 }
 .preview,
 .code {
   margin: 0;
-  max-height: 280px;
+  min-height: 0;
   overflow: auto;
   padding: 10px;
   border-radius: 8px;
@@ -667,6 +690,7 @@ onUnmounted(() => {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 12px;
+  line-height: 1.7;
 }
 h3 {
   margin: 0;

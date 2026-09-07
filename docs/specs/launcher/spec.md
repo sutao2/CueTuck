@@ -21,7 +21,7 @@
 - GIVEN 应用已运行且本地库已就绪
 - WHEN 用户按下已配置的全局快捷键
 - THEN 启动器窗口显示并聚焦搜索框
-- AND 在当前显示器工作区横向居中，顶部位于扣除收起高度后可用纵向空间的三分之一处；坐标按显示器缩放计算
+- AND 在当前显示器工作区横向居中，顶部位于扣除展开高度后剩余纵向空间的四分之一处；坐标按显示器缩放计算，剩余空间不足时从工作区顶部展开
 - AND 主窗口不必被提到前台
 
 #### Scenario: 关闭
@@ -117,6 +117,15 @@ M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新�
 
 ### Requirement: 粘贴到活动应用
 
+#### Scenario: 紧凑填写与完成后退场
+
+- GIVEN 用户从其他应用唤起启动器并进入填写
+- WHEN 展示 0、3 或超过一屏的变量
+- THEN 填写窗为 680 × 420 逻辑像素，紧凑双栏中字段和预览可独立滚动，底部操作始终可见；无变量时正文通栏
+- WHEN 回车复制成功且使用后关闭开启
+- THEN 隐藏窗口后不再给内部 DOM 聚焦，迟到的 focus 事件不得唤回窗口；下次显式唤起才恢复聚焦
+- AND macOS 在主动关闭且启动器仍聚焦时归还原应用，不主动展示无关主窗口；失焦关闭不抢回用户刚切换的应用，原目标退出也不重新弹出启动器
+
 填写页 MUST 明确区分复制与粘贴，默认 Enter 只复制，不向外部应用注入按键。macOS 原生启动器的复制 MUST 使用系统剪贴板桥接并检查写入结果；浏览器仅使用自身剪贴板能力。无正文不得执行空复制或覆盖最近文本。
 
 #### Scenario: 占位符逐项输入
@@ -187,6 +196,7 @@ macOS MUST 连续确认原窗口焦点稳定后再发送按键；超时、目标
 
 | 场景 | 测试 |
 |---|---|
+| 紧凑填写与完成后退场 | `LauncherInteraction.spec.js` 隐藏后不聚焦、初始隐藏与显式恢复；`launcherWindow.test.js` 紧凑高度；`palette_reserves_expanded_space_on_small_screens` 小屏定位；原生验收边界见 `plans/2026-09-07-launcher-compact-dismiss.md` |
 | 独立窗口 label | `desktop/src/platform/launcherWindow.test.js`；`launcher_label_is_stable` |
 | 空查询 | `LauncherApp.spec.js` hides results on empty query |
 | 输入与清空时位置稳定 | `launcherWindow.test.js` 原生命令保留左上角、仅唤起时定位的源码合同；`LauncherApp.spec.js` 连续输入/清空和填写返回的布局调用回归（非原生坐标实测） |
