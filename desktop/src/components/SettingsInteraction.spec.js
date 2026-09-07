@@ -3,6 +3,7 @@ import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import SettingsModal from "./SettingsModal.vue";
 import WorkbenchShell from "./WorkbenchShell.vue";
 import * as library from "../platform/library.js";
+import * as shortcuts from "../platform/shortcut.js";
 
 let w;
 beforeEach(() => { library.resetMemoryLibrary(); });
@@ -12,6 +13,47 @@ async function settings(page) {
   await flushPromises();
   await w.get(`[data-settings-page="${page}"]`).trigger("click");
 }
+
+it("records three shortcuts and persists the standard values only on explicit save", async () => {
+  const register = vi.spyOn(shortcuts, "registerLauncherShortcut").mockImplementation(async value => {
+    await library.setLocalSetting("launcher_shortcut", value);
+  });
+  await settings("shortcuts");
+  for (const [id, code] of [["launcher-shortcut", "KeyJ"], ["new-prompt-shortcut", "KeyN"], ["paste-recent-shortcut", "KeyV"]]) {
+    const input = w.get(`[data-testid="${id}"]`);
+    await input.trigger("focus");
+    await input.trigger("keydown", { key: code.slice(3), code, metaKey: true, shiftKey: true });
+    await input.trigger("blur");
+  }
+  expect(register).not.toHaveBeenCalled();
+  await w.findAll("button").find(b => b.text() === "保存快捷键").trigger("click");
+  await flushPromises();
+  expect(register).toHaveBeenCalledWith("Shift+Super+J", expect.any(Object));
+  expect(await library.getLocalSetting("new_prompt_shortcut")).toBe("Shift+Super+N");
+  expect(await library.getLocalSetting("paste_recent_shortcut")).toBe("Shift+Super+V");
+  expect(w.text()).toContain("快捷键已保存");
+  w.unmount();
+  await settings("shortcuts");
+  expect(w.get('[data-testid="launcher-shortcut"]').element.value).toBe("⇧⌘J");
+});
+
+it("rejects duplicate recordings before touching native registration and Escape keeps settings open", async () => {
+  const register = vi.spyOn(shortcuts, "registerLauncherShortcut").mockResolvedValue();
+  await settings("shortcuts");
+  const input = w.get('[data-testid="new-prompt-shortcut"]');
+  await input.trigger("focus");
+  await input.trigger("keydown", { key: " ", code: "Space", ctrlKey: true });
+  await input.trigger("keydown", { key: "Escape" });
+  expect(input.element.value).toBe("⌃⌥N");
+  expect(w.emitted("cancel")).toBeUndefined();
+  await input.trigger("focus");
+  await input.trigger("keydown", { key: " ", code: "Space", ctrlKey: true });
+  await input.trigger("blur");
+  await w.findAll("button").find(b => b.text() === "保存快捷键").trigger("click");
+  await flushPromises();
+  expect(register).not.toHaveBeenCalled();
+  expect(w.get('[data-testid="shortcut-error"]').text()).toContain("相同组合");
+});
 
 it('keeps Escape and Tab in the innermost confirmation without discarding drafts', async () => {
   w = mount(SettingsModal, { attachTo: document.body });

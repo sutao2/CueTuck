@@ -96,6 +96,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-09-07-app-icon.md](plans/2026-09-07-app-icon.md) | 现行 | 更换应用图标 | 方舟品牌源图、桌面打包资源与小尺寸验收 |
 | [plans/2026-09-07-anonymous-placeholders.md](plans/2026-09-07-anonymous-placeholders.md) | 现行 | 修复空花括号无法填写 | 截图回归、匿名空位逐项填写与代码边界 |
 | [plans/2026-09-07-launcher-compact-dismiss.md](plans/2026-09-07-launcher-compact-dismiss.md) | 现行 | 调整启动器密度、位置及复制后抢焦点 | 填写与结果等高、稳定上方锚点与完成后退场 |
+| [plans/2026-09-07-shortcut-recorder.md](plans/2026-09-07-shortcut-recorder.md) | 现行 | 修复快捷键无法按键录入 | 三项组合录制、取消导航与全局回调保护 |
 | [plans/2026-08-22-m1-desktop-skeleton.md](plans/2026-08-22-m1-desktop-skeleton.md) | 归档 | 查 M1 怎么做的 | M1 逐步实现计划 |
 | [plans/2026-08-22-m2-local-workbench.md](plans/2026-08-22-m2-local-workbench.md) | 归档 | 查 M2 怎么做的 | M2 逐步实现计划 |
 | [plans/2026-08-23-m3-launcher.md](plans/2026-08-23-m3-launcher.md) | 归档 | 查 M3 怎么做的 | M3 逐步实现计划 |

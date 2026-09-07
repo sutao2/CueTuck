@@ -121,6 +121,15 @@ M8 起快捷键页 MUST 另有：新建提示词、快速粘贴最近使用。�
 
 #### Scenario: 保存快捷键
 
+- GIVEN 用户聚焦任一快捷键录入框
+- WHEN 按下修饰键与字母、数字、空格等主键的组合，或单独功能键
+- THEN 自动录入标准组合，macOS 显示对应符号，不要求手打组合字符串
+- AND 录制期间阻止本应用全局快捷键动作；单独修饰键、输入法组字和普通裸字母不覆盖原组合
+- AND Tab/Shift+Tab 正常移动焦点，Esc 恢复本次聚焦前的组合并结束录制，不关闭设置；失焦与卸载解除保护
+- AND 三项重复组合在注册前拒绝，系统保留键被系统拦截时不得声称已录入或已生效
+
+#### Scenario: 注册快捷键
+
 - GIVEN 用户在快捷键页录制新组合
 - WHEN 系统注册成功
 - THEN 该组合能唤起启动器
@@ -449,7 +458,8 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 十类都在 | `WorkbenchShell.spec.js` lists ten settings categories |
 | 缺少的页不得消失 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check |
 | 开机启动 | `desktopPrefs.test.js` persists launch at login on macos / windows / linux；`WorkbenchShell.spec.js` saves launch at login on macos / windows without claiming nsis / linux without claiming release qa；`windowChrome.test.js` treats Linux as linux |
-| 保存快捷键 | `shortcut.test.js` does not persist when register throws |
+| 保存快捷键 | `ShortcutInput.spec.js` 物理组合、输入过滤、Tab/Esc；`SettingsInteraction.spec.js` 三项录入保存和重复冲突；`shortcut.test.js` 录制期间回调保护 |
+| 注册快捷键 | `shortcut.test.js` does not persist when register throws |
 | 新建与粘贴快捷键可见 | `WorkbenchShell.spec.js` shows new and paste shortcut rows |
 | 导入预览 | `desktop/src-tauri` `import_preview_does_not_write`；`library.test.js` previews import without writing |
 | 备份恢复 | `desktop/src-tauri` `restore_replaces_library`、`failed_restore_leaves_library`；`library.test.js` rejects sqlite file backup in the browser memory library |
