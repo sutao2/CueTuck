@@ -1,6 +1,7 @@
 const ZH = {
   brand: "提示方舟",
   search: "搜索",
+  launcher: "启动器",
   login: "登录",
   loggedIn: "已登录",
   square: "提示词广场",
@@ -56,6 +57,7 @@ const ZH = {
 const EN = {
   brand: "PromptArk",
   search: "Search",
+  launcher: "Launcher",
   login: "Sign in",
   loggedIn: "Signed in",
   square: "Prompt Square",

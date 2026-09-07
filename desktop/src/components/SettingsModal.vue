@@ -159,7 +159,7 @@
             <p>登记全局组合以唤起独立启动器。与系统冲突时会提示，不会静默失效。</p>
             <p class="save-mode-hint">点击后按组合键，完成后保存。支持 Ctrl / Alt / Command 组合或 F1–F24；Tab 切换，Esc 取消。系统保留组合可能被拦截。</p>
             <label class="field">
-              <span>唤起快捷搜索</span>
+              <span>唤起启动器</span>
               <ShortcutInput v-model="shortcut" :host="host" data-testid="launcher-shortcut" />
             </label>
             <label class="field">
@@ -453,7 +453,7 @@ const props = defineProps({
   session: { type: Object, default: () => ({ loggedIn: false, email: "" }) },
   language: { type: String, default: "zh" },
 });
-const emit = defineEmits(["cancel", "theme", "imported", "login", "logout", "history-cleared", "language"]);
+const emit = defineEmits(["cancel", "theme", "imported", "login", "logout", "history-cleared", "language", "launcher-shortcut-saved"]);
 
 function usesSystemKeychain() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -790,6 +790,7 @@ async function saveShortcut() {
         },
       ],
     });
+    emit('launcher-shortcut-saved', invokeCombo);
     await setLocalSetting("new_prompt_shortcut", createCombo);
     await setLocalSetting("paste_recent_shortcut", pasteCombo);
     savedDrafts.value.shortcuts = shortcutDraft();

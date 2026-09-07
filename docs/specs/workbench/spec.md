@@ -28,7 +28,7 @@
 - GIVEN 浅色或深色桌面，普通或小视口
 - WHEN 查看卡片/列表、空态、详情和十个设置页
 - THEN 文字、边界、按钮和错误状态保持清晰，长内容不产生页面横向溢出
-- AND 不删除现有功能入口，不改变标题栏搜索和独立启动器
+- AND 不删除现有功能入口，软件内搜索与独立启动器按各自合同工作
 
 #### Scenario: 清楚区分筛选无结果
 
@@ -61,8 +61,16 @@
 
 - GIVEN 侧栏展开或收起
 - WHEN 点击顶栏搜索按钮
-- THEN 唤起现有独立启动器，右上角始终展示搜索图标、文字和宿主快捷键
+- THEN 聚焦当前本地库或广场已有的搜索框，保留当前查询与筛选，不另开搜索窗或唤起启动器
+- AND 顶部、侧栏与内容框的提示对应软件内搜索 Cmd+F（macOS）/ Ctrl+F（其他系统），组合键同样聚焦搜索框；弹窗打开或输入法组字时不抢焦点
 - AND 右上角不展示设置图标；设置仍可通过侧栏入口或设置快捷键打开，侧栏品牌行搜索保留
+
+#### Scenario: 启动器快捷键标签同步
+
+- GIVEN 用户已保存自定义启动器快捷键
+- WHEN 打开主窗口或在设置中重新完成启动器注册与保存
+- THEN 底栏「启动器」显示实际保存的宿主格式快捷键，保存后立即更新，无需重启
+- AND 未保存的草稿或注册失败不覆盖标签；点击底栏仍唤起原生独立启动器
 
 #### Scenario: 不同视图与窗口下保持一致
 
@@ -151,7 +159,7 @@
 - GIVEN 用户在 macOS 打开桌面主窗口
 - WHEN 窗口显示
 - THEN 左上为系统红绿灯，可拖区域不与按钮重叠
-- AND 搜索快捷键记号为 `⌃Space` 而不是 `Ctrl Space`
+- AND 软件内搜索记号为 `⌘F`，启动器默认记号为 `⌃Space`，自定义组合也用 Mac 符号
 - AND 不得出现 Windows 风格的右侧最小化 / 最大化 / 关闭
 
 #### Scenario: 标题栏折叠入口不跳位
@@ -202,4 +210,5 @@
 | 右键只提供已有动作 | `WorkbenchShell.spec.js` opens a context menu with existing local actions |
 | macOS 主窗口 | `WorkbenchShell.spec.js` uses mac chrome on macos；`windowChrome.test.js` gives traffic-light inset and glyph shortcut on macos |
 | 标题栏折叠入口不跳位 | `WorkbenchShell.spec.js` keeps the sidebar toggle outside the drag region；Playwright 两态坐标与窄窗口测量 |
-| 截图参考框架 / 右上角固定搜索 | `WorkbenchShell.spec.js` separates sidebar branding from window controls and keeps launcher search available；Playwright 分隔线与主题测量 |
+| 截图参考框架 / 右上角固定搜索 | `WorkbenchShell.spec.js` 软件内搜索聚焦、两空间与宿主键盘回归；Playwright 点击与真实按键 |
+| 启动器快捷键标签同步 | `WorkbenchShell.spec.js` 保存值回读；`SettingsInteraction.spec.js` 保存成功/失败与底栏即时同步 |

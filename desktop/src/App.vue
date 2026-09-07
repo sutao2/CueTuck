@@ -50,7 +50,7 @@ onMounted(async () => {
         ],
       });
     } catch {
-      /* 冲突时仍可用顶栏搜索按钮 */
+      /* 冲突时仍可用底栏启动器按钮 */
     }
   } catch {
     databaseStatus.value = "failed";

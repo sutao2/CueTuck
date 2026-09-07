@@ -14,8 +14,8 @@
         <AppIcon :name="space === 'local' ? 'folder' : 'square'" /><span data-tauri-drag-region>{{ locationLabel }}</span>
       </div>
       <div class="titlebar-right">
-        <button type="button" class="title-tool" data-testid="titlebar-search" :title="t('search')" @click="$emit('open-launcher')">
-          <AppIcon name="search" /><span>{{ t("search") }}</span><kbd>{{ shortcutLabel }}</kbd>
+        <button type="button" class="title-tool" data-testid="titlebar-search" :title="`${t('search')} ${searchShortcutLabel}`" @click="focusSearch">
+          <AppIcon name="search" /><span>{{ t("search") }}</span><kbd>{{ searchShortcutLabel }}</kbd>
         </button>
       </div>
     </header>
@@ -24,7 +24,7 @@
       <aside v-show="!sidebarCollapsed" id="workbench-sidebar" data-region="sidebar" class="sidebar">
         <div class="sidebar-brand-row">
           <span class="brand-name">{{ t("brand") }}</span>
-          <button type="button" class="frame-icon-button" data-testid="sidebar-search" :aria-label="t('search')" :title="`${t('search')} ${shortcutLabel}`" @click="$emit('open-launcher')"><AppIcon name="search" /></button>
+          <button type="button" class="frame-icon-button" data-testid="sidebar-search" :aria-label="t('search')" :title="`${t('search')} ${searchShortcutLabel}`" @click="focusSearch"><AppIcon name="search" /></button>
         </div>
         <div class="space-switch" role="tablist" aria-label="提示词空间">
           <button
@@ -170,13 +170,14 @@
           <label class="inline-search">
             <AppIcon name="search" />
             <input
+              ref="searchInput"
               v-model="query"
               type="search"
               :aria-label="space === 'square' ? '搜索标题、标签或作者' : '搜索标题或正文'"
               :placeholder="space === 'square' ? '搜索标题、标签或作者' : '搜索标题或正文'"
               @input="space === 'square' ? loadSquare() : reloadPrompts()"
             >
-            <kbd>/</kbd>
+            <kbd>{{ searchShortcutLabel }}</kbd>
           </label>
           <div class="filter-tabs" role="tablist">
             <button
@@ -354,6 +355,7 @@
       @theme="applyTheme($event, false)"
       @imported="refreshLocalSettings"
       @history-cleared="reloadPrompts"
+      @launcher-shortcut-saved="launcherShortcut = $event"
       @login="openLogin('登录账号')"
       @logout="logoutFromSettings"
     />
@@ -451,7 +453,7 @@
       <span class="status-item muted-status">{{ t("moreActions") }}</span>
       <span class="status-sep"></span>
       <button type="button" class="status-button" @click="$emit('open-launcher')">
-        <AppIcon name="search" /> 快捷搜索 <kbd>{{ shortcutLabel }}</kbd>
+        <AppIcon name="search" /> {{ t("launcher") }} <kbd>{{ shortcutLabel }}</kbd>
       </button>
     </footer>
   </div>
@@ -503,7 +505,19 @@ const props = defineProps({
   host: { type: String, default: () => detectHost() },
 });
 const trafficInset = computed(() => trafficLightInsetPx(props.host));
-const shortcutLabel = computed(() => formatShortcutLabel(DEFAULT_LAUNCHER_SHORTCUT, props.host));
+const launcherShortcut = ref(DEFAULT_LAUNCHER_SHORTCUT);
+const shortcutLabel = computed(() => formatShortcutLabel(launcherShortcut.value, props.host));
+const searchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'macos' ? 'Super+F' : 'Control+F', props.host));
+const searchInput = ref(null);
+
+function focusSearch() {
+  searchInput.value?.focus();
+  searchInput.value?.select();
+}
+
+async function loadLauncherShortcut() {
+  launcherShortcut.value = (await getLocalSetting('launcher_shortcut')) || DEFAULT_LAUNCHER_SHORTCUT;
+}
 
 const emit = defineEmits(["open-launcher", "library-changed"]);
 
@@ -512,9 +526,12 @@ const sidebarCollapsed = ref(false);
 
 function handleWorkbenchShortcut(event) {
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
-  if (!modifier || event.altKey || event.shiftKey || event.repeat) return;
+  if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
   if (creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
   if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
+  if (event.key.toLowerCase() === 'f' && !settingsOpen.value && !publishResume.value) {
+    event.preventDefault(); focusSearch(); return;
+  }
   const target = event.target;
   if (event.key.toLowerCase() === 'b' && !settingsOpen.value && !target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
     event.preventDefault(); sidebarCollapsed.value = !sidebarCollapsed.value;
@@ -1002,6 +1019,7 @@ async function closeSettings() {
 }
 
 async function refreshLocalSettings() {
+  await loadLauncherShortcut();
   categoryGroups.value = buildCategoryTree(await listLocalCategories());
   if (selectedId.value && selectedId.value !== "__uncategorized__" && !categoryById(selectedId.value)) selectedId.value = null;
   const storedTheme = (await getLocalSetting("theme")) || "light";
@@ -1184,6 +1202,7 @@ function editOpenedCollection() {
 
 onMounted(async () => {
   applyHostChrome(document.body, props.host);
+  await loadLauncherShortcut();
   const stored = await getLocalSetting("theme");
   if (stored === "dark" || stored === "light" || stored === "system") {
     await applyTheme(stored);
