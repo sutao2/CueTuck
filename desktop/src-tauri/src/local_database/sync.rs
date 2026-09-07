@@ -166,7 +166,9 @@ pub fn apply_sync_changes(
     let transaction = connection.transaction().map_err(|e| e.to_string())?;
     for kind in ["category", "collection", "prompt", "setting"] {
         let (table, key, columns) = schema(kind).unwrap();
-        for item in items.iter().filter(|item| item.kind == kind) {
+        let mut ordered: Vec<_> = items.iter().filter(|item| item.kind == kind).collect();
+        if kind == "category" { ordered.sort_by_key(|item| !item.payload["parent_id"].is_null()); }
+        for item in ordered {
             let id = if kind == "setting" {
                 item.id.strip_prefix("setting:").unwrap_or("")
             } else {
@@ -227,16 +229,16 @@ pub fn apply_sync_changes(
                 if system == Some(true) {
                     continue;
                 }
-                let parent = item.payload["parent_id"]
-                    .as_str()
-                    .ok_or("同步小分类缺少大分类")?;
-                let valid: bool = transaction
+                let valid = if item.payload["parent_id"].is_null() { true } else {
+                    let parent = item.payload["parent_id"].as_str().ok_or("同步分类无效")?;
+                    transaction
                     .query_row(
                         "SELECT EXISTS(SELECT 1 FROM categories WHERE id=?1 AND parent_id IS NULL)",
                         [parent],
                         |row| row.get(0),
                     )
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e| e.to_string())?
+                };
                 if !valid
                     || item.payload["name"]
                         .as_str()
@@ -278,6 +280,7 @@ pub fn apply_sync_changes(
             }
             if kind == "category" {
                 payload.insert("is_system".into(), json!(0));
+                payload.insert("parent_id".into(), item.payload["parent_id"].clone());
             }
             let fields: Vec<_> = columns
                 .iter()
@@ -303,6 +306,13 @@ pub fn apply_sync_changes(
             transaction.execute(&format!("INSERT INTO {table} ({}) VALUES ({placeholders}) ON CONFLICT({key}) DO UPDATE SET {updates}", fields.join(",")), params_from_iter(values)).map_err(|e| e.to_string())?;
         }
     }
+    let invalid_tree: bool = transaction.query_row(
+        "SELECT EXISTS(SELECT 1 FROM categories child LEFT JOIN categories parent ON parent.id=child.parent_id
+         WHERE child.parent_id IS NOT NULL AND (parent.id IS NULL OR parent.parent_id IS NOT NULL
+         OR (child.deleted_at IS NULL AND parent.deleted_at IS NOT NULL)))",
+        [], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+    if invalid_tree { return Err("同步分类层级无效".into()); }
     for table in ["prompts", "collections"] {
         transaction.execute(&format!("UPDATE {table} SET category_id=NULL WHERE category_id IN (SELECT id FROM categories WHERE deleted_at IS NOT NULL)"), []).map_err(|e| e.to_string())?;
     }

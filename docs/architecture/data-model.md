@@ -17,7 +17,7 @@
 | title | 标题 |
 | summary | 列表摘要 |
 | content | 正文，变量以 `{{名称}}` 写在正文里 |
-| category_id | 小分类，可空表示未分类 |
+| category_id | 大分类或小分类，可空表示未分类 |
 | collection_id | 所属合集，可空 |
 | model | 适用模型标签，本地可空 |
 | source | `local` / `downloaded` |
@@ -42,7 +42,7 @@
 | is_system | 系统预置分类 |
 | sort_order | 排序 |
 | updated_at | Unix 毫秒时间，旧分类初始化为 0 |
-| deleted_at | 可空；自定义小分类的同步删除墓碑，删除时所属内容转未分类 |
+| deleted_at | 可空；自定义分类的同步删除墓碑，行为见分类规格 |
 
 只允许两级：大分类 → 小分类。小分类不得再有子节点。
 
@@ -53,7 +53,7 @@
 | id | UUID |
 | title | 名称 |
 | description | 简介 |
-| category_id | 归属小分类 |
+| category_id | 归属大分类或小分类，可空 |
 | cover_type | `none` / `single` / `grid` |
 | cover_json | 封面资源引用 |
 | created_at / updated_at | 时间 |

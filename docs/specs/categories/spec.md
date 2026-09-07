@@ -7,7 +7,7 @@
 
 ## Purpose
 
-用固定两级分类组织本地内容。广场发布时必须映射到系统大分类（M5）。本地允许用户新增小分类。
+用最多两级分类组织本地内容。本地允许用户新增大分类及小分类；广场仅展示系统分类，发布分类映射见[发布规格](../publish/spec.md)。
 
 ## Requirements
 
@@ -47,11 +47,25 @@
 
 - GIVEN 用户处于本地空间的全库、大分类或小分类
 - WHEN 点击新建分类
-- THEN 弹窗可选择大分类；当前小分类只用于默认选择其父类，不创建第三级
+- THEN 弹窗可选择“无（新建大分类）”或已有大分类；全库默认无父级，当前小分类只用于默认选择其父类，不创建第三级
 - AND 空白或同一父类下去除首尾空白后的同名分类被拒绝；提交中禁止重复提交和关闭，失败保留输入
 - AND 广场没有本地分类新增/删除入口，全部折叠明确命名而不使用减号表示
 
 ### Requirement: 删除自定义分类
+
+#### Scenario: 自定义大分类完整使用
+
+- GIVEN 用户在本地全库点击新建分类
+- WHEN 选择无父级并输入名称
+- THEN 新建非系统大分类，可直接存放内容或新增小分类；同级重名被拒绝
+- AND 导出导入及乱序同步仍保留大分类、子分类和内容的关联，不允许第三级
+
+#### Scenario: 删除自定义大分类
+
+- GIVEN 自定义大分类仍有未删除的小分类
+- WHEN 尝试删除
+- THEN 拒绝并提示先删除小分类，不修改数据
+- AND 无子分类的大分类可确认删除，其直接内容移到未分类
 
 #### Scenario: 删除但保留内容
 
@@ -115,3 +129,5 @@
 | 新建入口与校验 | `CategoryActions.spec.js` 全库入口、父分类、同名、IME 与防重复提交；`categoryActions.test.js` 空白与同级同名 |
 | 删除但保留内容 | `CategoryActions.spec.js` 确认/取消/失败/数量；`categoryActions.test.js` 内容与合集成员；Rust `category_delete_rolls_back_when_content_update_fails` |
 | 删除不复活 | `categoryActions.test.js` 删除墓碑与导出；Rust `category_delete_preserves_content_and_syncs_without_resurrection` |
+| 自定义大分类完整使用 | `CategoryActions.spec.js` 大分类与子分类新建、广场隔离；`categoryActions.test.js` 乱序同步与导入；Rust `custom_root_categories_round_trip_and_delete_safely` |
+| 删除自定义大分类 | `CategoryActions.spec.js` 子分类删除保护；Rust `custom_root_categories_round_trip_and_delete_safely`；`custom_root_categories_reject_invalid_imports_and_sync_atomically` 校验事务回滚 |

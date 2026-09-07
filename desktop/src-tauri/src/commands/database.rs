@@ -152,9 +152,9 @@ pub fn list_local_categories(app: AppHandle) -> Result<Vec<CategoryRecord>, Stri
 pub fn create_local_category(
     app: AppHandle,
     name: String,
-    parent_id: String,
+    parent_id: Option<String>,
 ) -> Result<CategoryRecord, String> {
-    create_category_in_dir(&data_dir(&app)?, &name, &parent_id)
+    create_category_in_dir(&data_dir(&app)?, &name, parent_id.as_deref())
 }
 
 #[tauri::command]
