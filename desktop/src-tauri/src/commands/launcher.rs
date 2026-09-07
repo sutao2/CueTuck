@@ -135,7 +135,6 @@ pub fn resume_launcher(app: AppHandle) -> Result<(), String> {
 pub fn launcher_logical_height(layout: &str) -> f64 {
     match layout {
         "collapsed" => 80.0,
-        "fill" => 420.0,
         _ => 500.0,
     }
 }
@@ -336,7 +335,8 @@ mod tests {
     fn palette_heights_match_old_window() {
         assert_eq!(super::launcher_logical_height("collapsed"), 80.0);
         assert_eq!(super::launcher_logical_height("expanded"), 500.0);
-        assert_eq!(super::launcher_logical_height("fill"), 420.0);
+        assert_eq!(super::launcher_logical_height("fill"), 500.0);
+        assert_eq!(super::launcher_logical_height("fill"), super::launcher_logical_height("expanded"));
     }
 
     #[test]
