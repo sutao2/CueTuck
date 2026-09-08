@@ -270,7 +270,7 @@
             :data-layout="view"
           >
             <article
-              v-for="item in displayedItems"
+              v-for="item in pagedItems"
               :key="item.kind + item.id"
               class="prompt-card"
               :class="{ collection: item.kind === 'collection', 'as-row': view === 'list' }"
@@ -336,6 +336,11 @@
             <button v-if="hasContentFilter" type="button" class="button" @click="clearFilters()">清除筛选</button>
             <button v-else-if="space === 'local' && sortTab === '全部'" type="button" class="button" @click="creating = true">新建提示词</button>
           </div>
+          <nav v-if="pageCount > 1 && !squareLoading" class="browse-pagination" aria-label="提示词分页">
+            <button type="button" class="button" :disabled="browsePage === 1" @click="browsePage--">上一页</button>
+            <span role="status">第 {{ browsePage }} / {{ pageCount }} 页 · 每页 48 条</span>
+            <button type="button" class="button" :disabled="browsePage === pageCount" @click="browsePage++">下一页</button>
+          </nav>
           </template>
         </section>
       </main>
@@ -847,6 +852,10 @@ const displayedItems = computed(() => {
   if (!modelFilter.value) return rows;
   return rows.filter((item) => item.kind === "prompt" && item.model === modelFilter.value);
 });
+const browsePage = ref(1);
+const pageCount = computed(() => Math.max(1, Math.ceil(displayedItems.value.length / 48)));
+const pagedItems = computed(() => displayedItems.value.slice((browsePage.value - 1) * 48, browsePage.value * 48));
+watch([displayedItems, space, query, selectedId, modelFilter, sortTab], () => { browsePage.value = 1; });
 const filterTabs = computed(() =>
   space.value === "square"
     ? [
@@ -1783,6 +1792,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.browse-pagination { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 24px 0; color: var(--muted); font-size: 12px; }
 .publication-files { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 20px 0; }
 .publication-files legend { font-size: 13px; font-weight: 600; padding: 0 6px; }
 .publication-file { display: flex; gap: 12px; align-items: center; padding: 12px 0; }

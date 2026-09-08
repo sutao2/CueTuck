@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-08-prompt-corpus.md](plans/2026-09-08-prompt-corpus.md) | 进行中 | 批量筛选公开提示词 | 许可元数据与纯正文分离、万条级候选筛选及有界列表渲染 |
 | [plans/2026-09-08-clear-prompt-content.md](plans/2026-09-08-clear-prompt-content.md) | 验收 | 清空本机内容与关闭演示回填 | 已备份清空广场/本地、保留账号设置；禁用重启回填 |
 | [plans/2026-09-08-launcher-preferences.md](plans/2026-09-08-launcher-preferences.md) | 验收 | 设置启动器大小与行为 | 四项偏好及恢复默认；425 项前端、75 项原生通过，调试包已构建 |
 | [plans/2026-09-08-launcher-refinement.md](plans/2026-09-08-launcher-refinement.md) | 验收 | 启动器尺寸与主题完善 | 紧凑尺寸/系统主题、419 项前端与 74 项原生测试；调试包已更新 |
