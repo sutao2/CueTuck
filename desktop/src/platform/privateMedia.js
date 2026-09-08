@@ -47,6 +47,15 @@ export async function downloadPrivateAsset(reference, token) {
   validateReferences([reference]);
   if (native()) return invokeCommand('download_private_asset', { access_token: token, reference });
   const response = await fetch(`${base}/v1/media/${reference.media_id}/content`, { headers: { Authorization: `Bearer ${token}` }, redirect: 'error', signal: AbortSignal.timeout(45000) });
+  return readAsset(response, reference);
+}
+export async function downloadPublishedAsset(itemId, reference, token) {
+  validateReferences([reference]);
+  if (native()) return invokeCommand('download_published_asset', { item_id: itemId, access_token: token || null, reference });
+  const response = await fetch(`${base}/v1/square/items/${encodeURIComponent(itemId)}/assets/${reference.id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, redirect: 'error', signal: AbortSignal.timeout(45000) });
+  return readAsset(response, reference);
+}
+async function readAsset(response, reference) {
   check(response);
   const reader = response.body.getReader(); const bytes = new Uint8Array(reference.size); let offset = 0;
   try {

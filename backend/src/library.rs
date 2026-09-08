@@ -24,9 +24,9 @@ pub(crate) fn validate_changes(items: &[LibraryChange]) -> Result<(), StatusCode
     Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct AssetReference {
+pub struct AssetReference {
     pub id: String,
     pub media_id: String,
     pub name: String,

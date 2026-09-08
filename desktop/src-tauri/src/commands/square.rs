@@ -20,6 +20,8 @@ pub struct SquareContentResponse {
     kind: String,
     #[serde(default)]
     members: Vec<serde_json::Value>,
+    #[serde(default)]
+    asset_refs: Vec<super::media::Reference>,
 }
 
 fn prompt_kind() -> String { "prompt".into() }
@@ -50,12 +52,14 @@ pub async fn list_square_items(
     query: Option<String>,
     model: Option<String>,
     category_id: Option<String>,
+    access_token: Option<String>,
 ) -> Result<Vec<serde_json::Value>, String> {
     let client = crate::http::client()?;
     let sort = sort.unwrap_or_else(|| "推荐".into());
     let query = query.unwrap_or_default();
     let model = model.unwrap_or_default();
     let mut request = client.get(format!("{}/v1/square/items", api_base()));
+    if let Some(token) = access_token { request = request.bearer_auth(token); }
     if let Some(category) = category_id {
         request = request.query(&[("category_id", category)]);
     }
@@ -80,10 +84,11 @@ pub async fn list_square_items(
 }
 
 #[tauri::command]
-pub async fn get_square_content(id: String) -> Result<SquareContentResponse, String> {
+pub async fn get_square_content(id: String, access_token: Option<String>) -> Result<SquareContentResponse, String> {
     let client = crate::http::client()?;
-    let response = client
-        .get(format!("{}/v1/square/items/{}/content", api_base(), id))
+    let mut request = client.get(format!("{}/v1/square/items/{}/content", api_base(), id));
+    if let Some(token) = access_token { request = request.bearer_auth(token); }
+    let response = request
         .send()
         .await
         .map_err(|error| error.to_string())?;
@@ -117,6 +122,7 @@ pub async fn create_publication(
     model: Option<String>,
     kind: Option<String>,
     members: Option<Vec<serde_json::Value>>,
+    asset_refs: Option<Vec<super::media::Reference>>,
 ) -> Result<serde_json::Value, String> {
     if source_id.trim().is_empty() {
         return Err("未选择本地内容".to_string());
@@ -133,6 +139,7 @@ pub async fn create_publication(
             "model": model,
             "kind": kind.unwrap_or_else(prompt_kind),
             "members": members.unwrap_or_default(),
+            "asset_refs": asset_refs.unwrap_or_default(),
         }))
         .send()
         .await

@@ -10,6 +10,7 @@ const openapiPath = resolve(
 );
 
 const REQUIRED = [
+  { method: "GET", path: "/v1/admin/publications/{id}/assets/{asset_id}", auth: "admin" },
   { method: "GET", path: "/v1/admin/overview", auth: "admin" },
   { method: "POST", path: "/v1/admin/catalog/{kind}/{id}/migrate", auth: "admin" },
   { method: "GET", path: "/v1/admin/audit", auth: "admin" },

@@ -86,6 +86,7 @@ export async function publishWithQueue(payload) {
         model: payload.model,
         sourceKind: payload.kind,
         members: payload.members,
+        assetRefs: payload.assetRefs,
       }, email);
       return { queued: true };
     }
@@ -130,6 +131,7 @@ async function runJob(job) {
       model: job.model,
       kind: job.sourceKind,
       members: job.members,
+      assetRefs: job.assetRefs,
     });
     return;
   }

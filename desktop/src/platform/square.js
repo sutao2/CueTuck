@@ -1,5 +1,6 @@
 import { applyLocalImport, importDownloadedPrompt, getLocalSetting, listLocalCategories, listLocalPrompts } from "./library.js";
 import { getSession } from "./session.js";
+import { downloadPublishedAsset, validateReferences } from './privateMedia.js';
 
 let testTransport = null;
 let testContentTransport = null;
@@ -69,13 +70,14 @@ export function setDownloadStatsTransport(transport) {
 export async function listSquareItems({ sort = "推荐", query = "", model = "", categoryId = null } = {}) {
   if (testTransport) return testTransport({ sort, query, model, ...(categoryId ? { categoryId } : {}) });
   if (isTauri()) {
-    return tauriInvoke("list_square_items", { sort, query, model, category_id: categoryId });
+    return tauriInvoke("list_square_items", { sort, query, model, category_id: categoryId, access_token: getSession().accessToken || null });
   }
   try {
     const params = new URLSearchParams({ sort, q: query });
     if (model) params.set("model", model);
     if (categoryId) params.set("category_id", categoryId);
-    const response = await fetch(`${apiBase()}/v1/square/items?${params}`);
+    const token = getSession().accessToken;
+    const response = await fetch(`${apiBase()}/v1/square/items?${params}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     if (!response.ok) throw new Error("广场暂时不可用");
     const payload = await response.json();
     return payload.items ?? [];
@@ -87,10 +89,11 @@ export async function listSquareItems({ sort = "推荐", query = "", model = "",
 export async function fetchSquareContent(id) {
   if (testContentTransport) return testContentTransport(id);
   if (isTauri()) {
-    return tauriInvoke("get_square_content", { id });
+    return tauriInvoke("get_square_content", { id, access_token: getSession().accessToken || null });
   }
   try {
-    const response = await fetch(`${apiBase()}/v1/square/items/${encodeURIComponent(id)}/content`);
+    const token = getSession().accessToken;
+    const response = await fetch(`${apiBase()}/v1/square/items/${encodeURIComponent(id)}/content`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     if (!response.ok) throw new Error("广场暂时不可用");
     return response.json();
   } catch {
@@ -110,10 +113,12 @@ async function downloadNewSquareItem(id) {
   const existing = (await listLocalPrompts()).find(row => row.remote_id === id);
   if (existing) return existing;
   const payload = await fetchSquareContent(id);
+  const refs = validateReferences(payload.asset_refs ?? []);
   const localCategoryIds = new Set((await listLocalCategories()).map(category => category.id));
   const localCategory = id => localCategoryIds.has(id) ? id : null;
   let row;
   if (payload.kind === "collection") {
+    if (refs.length) throw new Error('合集附件格式暂不支持，请更新客户端');
     if (!Array.isArray(payload.members) || !payload.members.length) throw new Error("该合集缺少成员快照，暂时无法下载");
     if (payload.members.some((member) => !member?.title?.trim() || !member?.content?.trim())) throw new Error("合集成员快照不完整");
     const keepAuthor = (await getLocalSetting("keep_author_on_download")) === "1";
@@ -126,6 +131,16 @@ async function downloadNewSquareItem(id) {
         author: keepAuthor ? payload.author : null,
       })),
     }));
+  } else if (refs.length) {
+    const assets = [];
+    const token = getSession().accessToken;
+    for (const reference of refs) assets.push({ ...await downloadPublishedAsset(id, reference, token), id: crypto.randomUUID() });
+    const keepAuthor = (await getLocalSetting('keep_author_on_download')) === '1';
+    row = await applyLocalImport(JSON.stringify({ version: 2, prompts: [{
+      title: payload.title, content: payload.content ?? '', category_id: localCategory(payload.category_id),
+      model: payload.model, source: 'downloaded', remote_id: payload.id ?? id,
+      author: keepAuthor ? payload.author : null, assets,
+    }] }));
   } else {
     row = await importDownloadedPrompt({
       title: payload.title,
@@ -164,10 +179,11 @@ async function recordAnonymousDownload(id) {
   }
 }
 
-export async function createPublication({ sourceId, title, content, categoryId, model, kind, members } = {}) {
+export async function createPublication({ sourceId, title, content, categoryId, model, kind, members, assetRefs } = {}) {
   const id = String(sourceId ?? "").trim();
   if (!id) throw new Error("未选择本地内容");
-  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}), ...(kind ? { kind } : {}), ...(members ? { members } : {}) });
+  if (assetRefs) validateReferences(assetRefs);
+  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}), ...(kind ? { kind } : {}), ...(members ? { members } : {}), ...(assetRefs ? { assetRefs } : {}) });
   if (isTauri()) {
     return tauriInvoke("create_publication", {
       source_id: id,
@@ -178,6 +194,7 @@ export async function createPublication({ sourceId, title, content, categoryId, 
       model: model ?? null,
       kind: kind ?? "prompt",
       members: members ?? [],
+      asset_refs: assetRefs ?? [],
     });
   }
   const token = getSession().accessToken;
@@ -189,7 +206,7 @@ export async function createPublication({ sourceId, title, content, categoryId, 
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ source_id: id, title, content, category_id: categoryId, model, kind, members }),
+      body: JSON.stringify({ source_id: id, title, content, category_id: categoryId, model, kind, members, ...(assetRefs ? { asset_refs: assetRefs } : {}) }),
     });
     if (!response.ok) throw new Error("发布失败");
     return response.json();

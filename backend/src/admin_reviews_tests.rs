@@ -25,7 +25,7 @@ async fn fixture() -> (AppState, String, String) {
 }
 async fn publication(state: &AppState, id: &str) {
     state
-        .insert_publication(&Publication {
+        .insert_publication(&Publication { asset_refs: vec![],
             id: id.into(),
             source_id: format!("local-{id}"),
             status: "pending".into(),

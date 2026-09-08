@@ -36,7 +36,7 @@ async fn admin_oauth_configuration_is_encrypted_and_survives_new_process_state()
 #[tokio::test]
 async fn collection_members_survive_publication_review_and_restart() {
     let state = postgres_state().await.expect("local Postgres required");
-    let publication = Publication { id: "collection-test".into(), source_id: "local".into(), status: "pending".into(),
+    let publication = Publication { asset_refs: vec![], id: "collection-test".into(), source_id: "local".into(), status: "pending".into(),
         title: Some("合集".into()), content: None, author_email: Some("dev@promptark.local".into()),
         category_id: Some("cat-image".into()), model: None, kind: "collection".into(),
         members: vec![PublishedPrompt { title: "成员".into(), content: "原始正文".into(), category_id: Some("cat-image-0".into()), model: Some("Flux".into()) }] };
@@ -58,7 +58,7 @@ async fn collection_members_survive_publication_review_and_restart() {
 async fn review_is_atomic_and_concurrent_decisions_cannot_overwrite_each_other() {
     let state = postgres_state().await.expect("local Postgres required");
     let pg = state.db.as_ref().unwrap();
-    let publication = Publication { id: "atomic-review".into(), source_id: "local".into(), status: "pending".into(),
+    let publication = Publication { asset_refs: vec![], id: "atomic-review".into(), source_id: "local".into(), status: "pending".into(),
         title: Some("fail-listing".into()), content: Some("正文".into()), author_email: None,
         category_id: None, model: None, kind: "prompt".into(), members: vec![] };
     state.insert_publication(&publication).await.unwrap();

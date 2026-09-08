@@ -22,7 +22,7 @@ it("sends a whole downloaded collection to the native transactional import", asy
 it("reads native square detail without invoking the download write command", async () => {
   window.__TAURI_INTERNALS__ = {};
   await fetchSquareContent("sq-1");
-  expect(invoke).toHaveBeenCalledExactlyOnceWith("get_square_content", { id: "sq-1" });
+  expect(invoke).toHaveBeenCalledExactlyOnceWith("get_square_content", { id: "sq-1", accessToken: null });
 });
 
 it("sends category and collection arguments in the native command schema", async () => {

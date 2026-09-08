@@ -31,6 +31,7 @@ pub fn run() {
             commands::database::export_local_prompt_asset,
             commands::media::upload_private_asset,
             commands::media::download_private_asset,
+            commands::media::download_published_asset,
             commands::media::hash_private_asset,
             commands::database::import_downloaded_prompt,
             commands::database::upsert_synced_local_prompt,

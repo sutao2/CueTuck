@@ -324,6 +324,12 @@ pub async fn download(
 ) -> Result<Response, StatusCode> {
     let email = crate::require_user(&state, &headers).await?;
     let row = owned(&state, &email, &id).await?;
+    let response = verified_response(&state, &row).await?;
+    crate::require_user(&state, &headers).await?;
+    Ok(response)
+}
+
+async fn verified_response(state: &AppState, row: &sqlx::postgres::PgRow) -> Result<Response, StatusCode> {
     let size: i64 = row.get("size");
     if !(0..=MAX_FILE as i64).contains(&size) {
         return Err(StatusCode::BAD_GATEWAY);
@@ -365,7 +371,6 @@ pub async fn download(
         .get::<Option<String>, _>("content_type")
         .ok_or(StatusCode::BAD_GATEWAY)?;
     validate_file(&name, &mime, &bytes).map_err(|_| StatusCode::BAD_GATEWAY)?;
-    crate::require_user(&state, &headers).await?;
     Ok((
         [
             ("content-type", "application/octet-stream".to_string()),
@@ -382,4 +387,39 @@ pub async fn download(
         bytes,
     )
         .into_response())
+}
+
+pub(crate) async fn public_references(state: &AppState, id: &str) -> Result<Vec<crate::library::AssetReference>, StatusCode> {
+    let Some(pg) = &state.db else { return Ok(vec![]) };
+    let value: Option<serde_json::Value> = sqlx::query_scalar(&format!("SELECT p.asset_refs FROM {} p JOIN {} s ON s.id=p.id WHERE p.id=$1 AND p.status='approved' AND s.visibility='online'", pg.t("publications"), pg.t("square_items")))
+        .bind(id).fetch_optional(&pg.pool).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    serde_json::from_value(value.unwrap_or_else(|| serde_json::json!([]))).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn publication_asset_row(state: &AppState, id: &str, asset_id: &str, public: bool) -> Result<sqlx::postgres::PgRow, StatusCode> {
+    let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let row = sqlx::query(&format!("SELECT author_email,asset_refs FROM {} WHERE id=$1", pg.t("publications")))
+        .bind(id).fetch_optional(&pg.pool).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?.ok_or(StatusCode::NOT_FOUND)?;
+    let refs: Vec<crate::library::AssetReference> = if public { public_references(state, id).await? }
+        else { serde_json::from_value(row.get("asset_refs")).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? };
+    let selected = refs.iter().find(|file| file.id == asset_id).ok_or(StatusCode::NOT_FOUND)?;
+    owned(state, &row.get::<String,_>("author_email"), &selected.media_id).await
+}
+
+pub async fn public_asset(State(state): State<AppState>, Path((id, asset_id)): Path<(String,String)>, headers: axum::http::HeaderMap) -> Result<Response, StatusCode> {
+    if !state.square_public().await? { crate::require_user(&state, &headers).await?; }
+    let row = publication_asset_row(&state, &id, &asset_id, true).await?;
+    let response = verified_response(&state, &row).await?;
+    if !state.square_public().await? { crate::require_user(&state, &headers).await?; }
+    publication_asset_row(&state, &id, &asset_id, true).await?;
+    Ok(response)
+}
+
+pub async fn review_asset(State(state): State<AppState>, Path((id, asset_id)): Path<(String,String)>, headers: axum::http::HeaderMap) -> Result<Response, StatusCode> {
+    crate::require_staff(&state, &headers).await?;
+    let row = publication_asset_row(&state, &id, &asset_id, false).await?;
+    let response = verified_response(&state, &row).await?;
+    crate::require_staff(&state, &headers).await?;
+    publication_asset_row(&state, &id, &asset_id, false).await?;
+    Ok(response)
 }
