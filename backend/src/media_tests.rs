@@ -72,7 +72,7 @@ async fn publication_files_require_selected_scope_review_and_online_visibility()
 }
 
 #[tokio::test]
-async fn publication_files_reject_foreign_forged_and_collection_references() {
+async fn publication_files_reject_foreign_forged_and_unassigned_references() {
     let (state,a,b,_admin,reference,_id,_store,_server) = public_fixture().await;
     let body = json!({"source_id":"another","title":"测试","content":"正文","asset_refs":[reference]});
     assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&b,body.clone()).await.0,StatusCode::NOT_FOUND);
@@ -80,6 +80,38 @@ async fn publication_files_reject_foreign_forged_and_collection_references() {
     assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,forged).await.0,StatusCode::NOT_FOUND);
     let mut collection = body; collection["kind"] = json!("collection"); collection["members"] = json!([{"title":"member","content":"body"}]);
     assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,collection).await.0,StatusCode::BAD_REQUEST);
+}
+#[tokio::test]
+async fn collection_files_validate_member_scope_and_keep_manual_review() {
+    let (state,a,b,admin,reference,_id,_store,_server) = public_fixture().await;
+    let body = json!({"kind":"collection","source_id":"collection-source","title":"合集文件","content":"摘要","asset_refs":[reference],
+        "members":[{"title":"第一篇","content":"正文一","asset_ids":[reference["id"]]},{"title":"第二篇","content":"正文二"}]});
+    // Invalid association requests must fail before storing any snapshot.
+    let pg = state.db.as_ref().unwrap();
+    let before: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM {}",pg.t("publications"))).fetch_one(&pg.pool).await.unwrap();
+    for ids in [json!([]),json!(["unknown"]),json!([reference["id"],reference["id"]])] {
+        let mut bad = body.clone(); bad["members"][0]["asset_ids"] = ids;
+        assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,bad).await.0,StatusCode::BAD_REQUEST);
+    }
+    let mut duplicate = body.clone(); duplicate["members"][1]["asset_ids"] = json!([reference["id"]]);
+    assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,duplicate).await.0,StatusCode::BAD_REQUEST);
+    assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&b,body.clone()).await.0,StatusCode::NOT_FOUND);
+    let mut forged = body.clone(); forged["asset_refs"][0]["sha256"] = json!("0".repeat(64));
+    assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,forged).await.0,StatusCode::NOT_FOUND);
+    let after: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM {}",pg.t("publications"))).fetch_one(&pg.pool).await.unwrap();
+    assert_eq!(before,after);
+    let (status, publication) = crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,body.clone()).await;
+    assert_eq!(status,StatusCode::OK); assert_eq!(publication["status"],"pending"); assert_eq!(publication["members"][0]["asset_ids"],body["members"][0]["asset_ids"]);
+    let id = publication["id"].as_str().unwrap();
+    let public = format!("/v1/square/items/{id}/assets/{}",reference["id"].as_str().unwrap());
+    assert_eq!(get(&state,"",&public).await.status(),StatusCode::NOT_FOUND);
+    assert_eq!(get(&state,&admin,&format!("/v1/admin/publications/{id}/assets/{}",reference["id"].as_str().unwrap())).await.status(),StatusCode::OK);
+    assert_eq!(crate::admin_security_tests::request(&state,"POST",&format!("/v1/admin/publications/{id}/approve"),&admin,json!({})).await.0,StatusCode::OK);
+    let (_,content) = crate::admin_security_tests::request(&state,"GET",&format!("/v1/square/items/{id}/content"),"",json!(null)).await;
+    assert_eq!(content["members"],publication["members"]); assert_eq!(content["asset_refs"],body["asset_refs"]);
+    assert_eq!(get(&state,"",&public).await.status(),StatusCode::OK);
+    sqlx::query(&format!("UPDATE {} SET visibility='offline' WHERE id=$1",pg.t("square_items"))).bind(id).execute(&pg.pool).await.unwrap();
+    assert_eq!(get(&state,"",&public).await.status(),StatusCode::NOT_FOUND);
 }
 impl Drop for Server {
     fn drop(&mut self) {

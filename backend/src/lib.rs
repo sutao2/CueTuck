@@ -151,6 +151,8 @@ pub struct SessionResponse {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PublishedPrompt {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub asset_ids: Vec<String>,
     pub title: String,
     pub content: String,
     pub category_id: Option<String>,
@@ -697,8 +699,15 @@ async fn create_publication(
         kind: body.kind,
         members: body.members,
     };
+    if publication.kind == "collection" {
+        let expected: std::collections::HashSet<_> = publication.asset_refs.iter().map(|file| &file.id).collect();
+        let mut assigned = std::collections::HashSet::new();
+        for id in publication.members.iter().flat_map(|member| &member.asset_ids) {
+            if !expected.contains(id) || !assigned.insert(id) { return Err(StatusCode::BAD_REQUEST); }
+        }
+        if assigned != expected { return Err(StatusCode::BAD_REQUEST); }
+    }
     if !publication.asset_refs.is_empty() {
-        if publication.kind != "prompt" { return Err(StatusCode::BAD_REQUEST); }
         let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
         library::validate_asset_refs(pg, publication.author_email.as_deref().unwrap(), &[library::LibraryChange {
             id: publication.id.clone(), kind: "prompt".into(), payload: serde_json::json!({"asset_refs":publication.asset_refs}), updated_at:"0".into(), deleted_at:None,

@@ -139,6 +139,33 @@ mod tests {
         assert!(validate(&total).is_err());
     }
     #[test]
+    fn collection_import_keeps_file_ownership_and_rolls_back_all_members_on_failure() {
+        let dir = tempfile::tempdir().unwrap(); super::super::initialize_in_dir(dir.path()).unwrap();
+        let first = file("first.txt", b"first", "text/plain");
+        let second = file("second.txt", b"second", "text/plain");
+        let snapshot = serde_json::json!({"version":2,"collections":[{"id":"download","title":"collection"}],"prompts":[
+            {"title":"first","content":"body one","collection_id":"download","assets":[first]},
+            {"title":"second","content":"body two","collection_id":"download","assets":[second]},
+        ]}).to_string();
+        let conn = Connection::open(dir.path().join("promptark.sqlite")).unwrap();
+        conn.execute_batch("CREATE TRIGGER fail_second BEFORE INSERT ON prompt_assets WHEN NEW.name='second.txt' BEGIN SELECT RAISE(ABORT,'test failure'); END;").unwrap();
+        assert!(super::super::apply_import_json_in_dir(dir.path(), &snapshot).is_err());
+        for table in ["prompts","collections","prompt_assets"] {
+            assert_eq!(conn.query_row(&format!("SELECT count(*) FROM {table}"),[],|row| row.get::<_,i64>(0)).unwrap(),0);
+        }
+        conn.execute_batch("DROP TRIGGER fail_second;").unwrap();
+        super::super::apply_import_json_in_dir(dir.path(), &snapshot).unwrap();
+        let rows = super::super::list_prompts_in_dir(dir.path(), "", None).unwrap();
+        assert_eq!(rows.len(),2);
+        for row in rows {
+            let assets = list(dir.path(), &row.id).unwrap();
+            assert_eq!(assets.len(),1); assert_eq!(assets[0].name,format!("{}.txt",row.title));
+            let collection: String = conn.query_row("SELECT collection_id FROM prompts WHERE id=?1",[&row.id],|r| r.get(0)).unwrap();
+            assert_ne!(collection,"download");
+            assert_eq!(conn.query_row("SELECT title FROM collections WHERE id=?1",[collection],|r| r.get::<_,String>(0)).unwrap(),"collection");
+        }
+    }
+    #[test]
     fn local_exports_roundtrip_but_sync_cannot_read_or_replace_assets() {
         let dir = tempfile::tempdir().unwrap(); super::super::initialize_in_dir(dir.path()).unwrap();
         let assets = vec![file("private.txt", b"private-file-content", "text/plain")];

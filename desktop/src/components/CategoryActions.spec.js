@@ -59,6 +59,7 @@ it('hides custom root trees in the square and never publishes private category I
   await wrapper.get('[data-testid="publish-prompt"]').trigger('click');
   await flushPromises();
   await wrapper.get('[data-testid="publish-source"]').setValue(collection.id);
+  await flushPromises();
   await wrapper.get('[data-testid="publish-submit"]').trigger('click');
   await flushPromises();
   expect(publish).toHaveBeenCalledWith(expect.objectContaining({ members: [expect.objectContaining({ category_id: null })] }));

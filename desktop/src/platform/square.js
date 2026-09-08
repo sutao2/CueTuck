@@ -1,6 +1,6 @@
 import { applyLocalImport, importDownloadedPrompt, getLocalSetting, listLocalCategories, listLocalPrompts } from "./library.js";
 import { getSession } from "./session.js";
-import { downloadPublishedAsset, validateReferences } from './privateMedia.js';
+import { downloadPublishedAsset, validateReferences, validateCollectionAssets } from './privateMedia.js';
 
 let testTransport = null;
 let testContentTransport = null;
@@ -118,9 +118,9 @@ async function downloadNewSquareItem(id) {
   const localCategory = id => localCategoryIds.has(id) ? id : null;
   let row;
   if (payload.kind === "collection") {
-    if (refs.length) throw new Error('合集附件格式暂不支持，请更新客户端');
-    if (!Array.isArray(payload.members) || !payload.members.length) throw new Error("该合集缺少成员快照，暂时无法下载");
-    if (payload.members.some((member) => !member?.title?.trim() || !member?.content?.trim())) throw new Error("合集成员快照不完整");
+    validateCollectionAssets(payload.members, refs);
+    const assets = new Map(), token = getSession().accessToken;
+    for (const reference of refs) assets.set(reference.id, { ...await downloadPublishedAsset(id, reference, token), id: crypto.randomUUID() });
     const keepAuthor = (await getLocalSetting("keep_author_on_download")) === "1";
     row = await applyLocalImport(JSON.stringify({
       version: 2,
@@ -129,6 +129,7 @@ async function downloadNewSquareItem(id) {
         title: member.title, content: member.content, category_id: localCategory(member.category_id), model: member.model,
         collection_id: "download", source: "downloaded", remote_id: payload.id ?? id,
         author: keepAuthor ? payload.author : null,
+        assets: (member.asset_ids ?? []).map(id => assets.get(id)),
       })),
     }));
   } else if (refs.length) {
@@ -183,6 +184,7 @@ export async function createPublication({ sourceId, title, content, categoryId, 
   const id = String(sourceId ?? "").trim();
   if (!id) throw new Error("未选择本地内容");
   if (assetRefs) validateReferences(assetRefs);
+  if (kind === 'collection') validateCollectionAssets(members, assetRefs ?? []);
   if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}), ...(kind ? { kind } : {}), ...(members ? { members } : {}), ...(assetRefs ? { assetRefs } : {}) });
   if (isTauri()) {
     return tauriInvoke("create_publication", {
