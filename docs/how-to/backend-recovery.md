@@ -33,3 +33,5 @@ cargo test --lib isolated_postgres_restore -- --ignored
 测试新建随机 `security_…` schema，写入合成账号、公开快照及随机密钥加密的样本。仅 dump 该 schema，经内存传递给独立随机 `recovery_…` 数据库的 `pg_restore`。核对账号正/误密码、关键表数量、快照和正/误密钥，最后仅移除本次创建的 schema 与临时库。无真实业务备份、密钥或原始内容输出。失败时检查是否留有本次临时对象，不能用通配符批量删除旧对象。
 
 此演练证明数据库逻辑恢复和配套加密材料可用，**不替代正式环境的对象存储、外部身份提供商、邮件与部署切换演练**。
+
+开发容器共享内存较小时，`pg_dump` 的目录查询也可能触发并行查询内存不足。演练仅对子进程传入 `PGOPTIONS=-c max_parallel_workers_per_gather=0`，不修改服务器全局参数，不删除已有业务数据。失败诊断包含该合成 dump 的 stderr。

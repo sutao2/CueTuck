@@ -18,9 +18,7 @@ fn client() -> Result<reqwest::Client, String> {
     crate::http::client_builder()?.redirect(reqwest::redirect::Policy::none())
         .timeout(Duration::from_secs(45)).build().map_err(|_| "附件服务连接失败".into())
 }
-fn base() -> String {
-    std::env::var("PROMPTARK_API_BASE").unwrap_or_else(|_| "http://127.0.0.1:8787".into())
-}
+use crate::api_config::api_base as base;
 fn status(code: reqwest::StatusCode) -> Result<(), String> {
     if code.is_success() { return Ok(()); }
     Err(match code.as_u16() {
@@ -45,7 +43,7 @@ pub async fn upload_private_asset(access_token: String, asset: Asset) -> Result<
     let sha256 = format!("{:x}", Sha256::digest(&bytes));
     let part = reqwest::multipart::Part::bytes(bytes).file_name(asset.name.clone())
         .mime_str(&asset.mime).map_err(|_| "附件类型无效")?;
-    let response = client()?.post(format!("{}/v1/media/upload", base())).bearer_auth(access_token)
+    let response = client()?.post(format!("{}/v1/media/upload", base()?)).bearer_auth(access_token)
         .multipart(reqwest::multipart::Form::new().part("file", part)).send().await.map_err(|_| "附件上传连接失败，请重试")?;
     status(response.status())?;
     let value: serde_json::Value = response.json().await.map_err(|_| "附件上传响应无效")?;
@@ -62,13 +60,13 @@ fn valid_media_id(id: &str) -> bool {
 
 #[tauri::command]
 pub async fn download_private_asset(access_token: String, reference: Reference) -> Result<Asset, String> {
-    let url = format!("{}/v1/media/{}/content", base(), reference.media_id);
+    let url = format!("{}/v1/media/{}/content", base()?, reference.media_id);
     download(url, Some(access_token), reference).await
 }
 
 #[tauri::command]
 pub async fn download_published_asset(item_id: String, access_token: Option<String>, reference: Reference) -> Result<Asset, String> {
-    let mut url = reqwest::Url::parse(&base()).map_err(|_| "附件服务地址无效")?;
+    let mut url = reqwest::Url::parse(&base()?).map_err(|_| "附件服务地址无效")?;
     url.path_segments_mut().map_err(|_| "附件服务地址无效")?.extend(["v1", "square", "items", &item_id, "assets", &reference.id]);
     download(url.to_string(), access_token, reference).await
 }

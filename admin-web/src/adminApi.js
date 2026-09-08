@@ -1,6 +1,7 @@
+import { apiBase } from "../../shared/apiBase.js";
 import { expireAdminSession, getAdminSession } from "./session.js";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
+const API_BASE = apiBase();
 
 let testTransport = null;
 

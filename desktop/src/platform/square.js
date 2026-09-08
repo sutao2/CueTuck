@@ -16,9 +16,7 @@ function isTauri() {
 
 import { invokeCommand as tauriInvoke } from "./tauri.js";
 
-function apiBase() {
-  return "http://127.0.0.1:8787";
-}
+import { apiBase } from '../../../shared/apiBase.js';
 
 export function resetSquare() {
   testTransport = null;

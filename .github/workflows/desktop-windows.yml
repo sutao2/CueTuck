@@ -30,7 +30,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: desktop
-          args: --bundles nsis
+          args: --bundles nsis --config src-tauri/tauri.local.conf.json
       - uses: actions/upload-artifact@v4
         with:
           name: promptark-windows-nsis

@@ -3,7 +3,7 @@
       <div class="settings-window-drag" data-tauri-drag-region aria-hidden="true"></div>
       <div class="settings-body" :inert="pendingAction ? '' : undefined">
         <nav class="settings-nav" aria-labelledby="settings-title">
-          <button ref="returnButton" type="button" class="settings-return" aria-label="返回应用" :disabled="saving || loading || dataBusy || importBusy || billingBusy || logoutBusy" @click="requestClose"><span aria-hidden="true">←</span> 返回应用</button>
+          <button ref="returnButton" type="button" class="settings-return" aria-label="返回应用" :disabled="saving || loading || dataBusy || importBusy || billingBusy || logoutBusy || syncBusy" @click="requestClose"><span aria-hidden="true">←</span> 返回应用</button>
           <label class="settings-search"><AppIcon name="search" /><input v-model="settingsQuery" type="search" aria-label="搜索设置" placeholder="搜索设置…" @keydown.esc.stop="clearSearchOrReturn" /></label>
           <h2 id="settings-title">{{ uiText(uiLanguage, "settings") }}</h2>
           <button
