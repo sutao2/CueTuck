@@ -219,12 +219,24 @@ paths:
   /v1/media/upload:
     post:
       operationId: uploadMedia
-      summary: 登录后上传对象到 MinIO
+      summary: 登录后上传私有附件到 MinIO
+      description: multipart 单个 file，单文件最多 5 MiB、整请求 6 MiB；文件名称/类型/内容必须匹配附件白名单。账号配额 256 个对象及 100 MiB，上传中预留也计入。返回 id、name、mime、size、sha256、url（相对鉴权 API 路径，不是存储签名链接）；不公开、不自动关联提示词。参数错误 400、类型不支持 415、超限 413、配额不足 409、依赖不可用 503、存储传输失败 502。
   /v1/media/{id}/url:
     get:
       operationId: mediaUrl
-      security: []
-      summary: 对象预签名 GET
+      summary: 所有者获取私有附件 API 路径
+      description: 必须有效 Access 且是所有者；其他账号（含管理员）、不存在或上传未完成均 404；无效会话 401。返回 url 为 /v1/media/{id}/content，访问仍需 Access，不产生预签名链接。旧缺元数据对象 409，不删除旧文件。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /v1/media/{id}/content:
+    get:
+      operationId: downloadPrivateMedia
+      summary: 所有者下载已验证的私有附件字节
+      description: 同 mediaUrl 的鉴权；后端限时代理并验证大小及 SHA-256，返回 attachment、nosniff、no-store，损坏或超限存储响应为 502。不接受远程 URL，不把存储响应头透传给客户端。
       parameters:
         - name: id
           in: path

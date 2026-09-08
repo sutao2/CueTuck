@@ -9,6 +9,8 @@ mod oauth_verification_tests;
 #[cfg(test)]
 mod admin_operations_tests;
 mod media;
+#[cfg(test)]
+mod media_tests;
 mod me;
 mod library;
 mod billing;
@@ -390,8 +392,9 @@ pub fn app(state: AppState) -> Router {
             get(oauth::poll_session),
         )
         .route("/v1/session/oauth/:provider", get(oauth::start))
-        .route("/v1/media/upload", post(media::upload))
-        .route("/v1/media/:id/url", get(media::signed_url))
+        .route("/v1/media/upload", post(media::upload).layer(axum::extract::DefaultBodyLimit::max(6 * 1024 * 1024)))
+        .route("/v1/media/:id/url", get(media::private_url))
+        .route("/v1/media/:id/content", get(media::download))
         .route("/v1/square/items", get(list_square_items))
         .route("/v1/square/items/:id/downloads", post(square_downloads::record))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
