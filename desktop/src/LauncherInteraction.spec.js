@@ -258,6 +258,33 @@ it("resets on native hide/show, restores focus/theme, and releases event listene
   expect(cleanup).toHaveBeenCalledTimes(1);
 });
 
+it("follows system theme live without overriding explicit preference and removes its listener", async () => {
+  const media = { matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() };
+  vi.stubGlobal("matchMedia", vi.fn(() => media));
+  try {
+    let shown;
+    vi.spyOn(windows, "listenLauncherLifecycle").mockImplementation(async (handler) => { shown = handler; return () => {}; });
+    await library.setLocalSetting("theme", "system");
+    const w = await open();
+    expect(document.body.classList.contains("theme-dark")).toBe(true);
+    const changed = media.addEventListener.mock.calls[0][1];
+    media.matches = false;
+    changed();
+    expect(document.body.classList.contains("theme-dark")).toBe(false);
+    await library.setLocalSetting("theme", "dark");
+    await shown();
+    changed();
+    expect(document.body.classList.contains("theme-dark")).toBe(true);
+    await library.setLocalSetting("theme", "light");
+    await shown();
+    media.matches = true;
+    changed();
+    expect(document.body.classList.contains("theme-dark")).toBe(false);
+    w.unmount();
+    expect(media.removeEventListener).toHaveBeenCalledWith("change", changed);
+  } finally { vi.unstubAllGlobals(); }
+});
+
 it("restores the current field when native focus arrives after the shown event", async () => {
   const w = await open();
   const field = w.findAll("textarea")[1];

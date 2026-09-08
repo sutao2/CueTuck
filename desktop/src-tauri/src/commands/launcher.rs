@@ -134,8 +134,8 @@ pub fn resume_launcher(app: AppHandle) -> Result<(), String> {
 
 pub fn launcher_logical_height(layout: &str) -> f64 {
     match layout {
-        "collapsed" => 80.0,
-        _ => 500.0,
+        "collapsed" => 64.0,
+        _ => 420.0,
     }
 }
 
@@ -146,7 +146,7 @@ fn resize_launcher_window(app: &AppHandle, layout: &str) -> Result<(), String> {
     let position = window.outer_position().map_err(|error| error.to_string())?;
     window
         .set_size(Size::Logical(LogicalSize::new(
-            680.0,
+            620.0,
             launcher_logical_height(layout),
         )))
         .map_err(|error| error.to_string())?;
@@ -162,7 +162,7 @@ fn launcher_show_position(
     scale: f64,
 ) -> tauri::PhysicalPosition<i32> {
     tauri::PhysicalPosition::new(
-        area.position.x + ((area.size.width as f64 - 680.0 * scale).max(0.0) / 2.0).round() as i32,
+        area.position.x + ((area.size.width as f64 - 620.0 * scale).max(0.0) / 2.0).round() as i32,
         area.position.y
             + ((area.size.height as f64 - launcher_logical_height("expanded") * scale).max(0.0)
                 / 4.0)
@@ -332,10 +332,10 @@ mod tests {
     }
 
     #[test]
-    fn palette_heights_match_old_window() {
-        assert_eq!(super::launcher_logical_height("collapsed"), 80.0);
-        assert_eq!(super::launcher_logical_height("expanded"), 500.0);
-        assert_eq!(super::launcher_logical_height("fill"), 500.0);
+    fn palette_heights_keep_search_and_fill_compact() {
+        assert_eq!(super::launcher_logical_height("collapsed"), 64.0);
+        assert_eq!(super::launcher_logical_height("expanded"), 420.0);
+        assert_eq!(super::launcher_logical_height("fill"), 420.0);
         assert_eq!(super::launcher_logical_height("fill"), super::launcher_logical_height("expanded"));
     }
 
@@ -371,7 +371,7 @@ mod tests {
             };
             assert_eq!(
                 super::launcher_show_position(&area, scale),
-                tauri::PhysicalPosition::new(x + (380.0 * scale) as i32, y + (120.0 * scale) as i32),
+                tauri::PhysicalPosition::new(x + (410.0 * scale) as i32, y + (140.0 * scale) as i32),
             );
         }
     }
@@ -383,8 +383,8 @@ mod tests {
             size: tauri::PhysicalSize::new(1280, 696),
         };
         let position = super::launcher_show_position(&area, 1.0);
-        assert_eq!(position.y, 73);
-        assert!(position.y + 500 <= 720);
+        assert_eq!(position.y, 93);
+        assert!(position.y + 420 <= 720);
     }
 }
 

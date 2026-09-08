@@ -398,9 +398,15 @@ async function resetAndHide() {
   } catch (error) { feedback.value = `隐藏窗口失败：${error}`; }
 }
 
+let themePreference = "light";
+let systemTheme;
+function applyLauncherTheme() {
+  if (!disposed) document.body.classList.toggle("theme-dark", themePreference === "dark" ||
+    (themePreference === "system" && Boolean(systemTheme?.matches)));
+}
 async function refreshTheme() {
-  const theme = await getLocalSetting("theme");
-  if (!disposed) document.body.classList.toggle("theme-dark", theme === "dark");
+  themePreference = await getLocalSetting("theme");
+  applyLauncherTheme();
 }
 
 async function onShown() {
@@ -414,6 +420,8 @@ async function onShown() {
 onMounted(async () => {
   document.body.classList.add("launcher-page");
   applyHostChrome(document.body, props.host);
+  systemTheme = window.matchMedia?.("(prefers-color-scheme: dark)");
+  systemTheme?.addEventListener("change", applyLauncherTheme);
   window.addEventListener("blur", onBlur);
   window.addEventListener("focus", onFocus);
   focusCurrent();
@@ -433,6 +441,7 @@ onUnmounted(() => {
   searchRequest += 1;
   clearTimeout(blurTimer);
   unlisten();
+  systemTheme?.removeEventListener("change", applyLauncherTheme);
   window.removeEventListener("blur", onBlur);
   window.removeEventListener("focus", onFocus);
   document.body.classList.remove("launcher-page");
@@ -453,7 +462,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
-  border-radius: 18px;
+  border-radius: 14px;
   overflow: hidden;
   background: var(--surface);
   box-shadow:
@@ -468,33 +477,33 @@ onUnmounted(() => {
   position: relative;
 }
 .launcher-search-wrap {
-  min-height: 70px;
+  min-height: 60px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  padding: 0 16px;
+  gap: 10px;
+  padding: 0 14px;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
 }
 .launcher-stage.is-collapsed .launcher-search-wrap {
-  min-height: 80px;
+  min-height: 64px;
   border-bottom: 0;
 }
 .brand-mark {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   display: block;
   object-fit: contain;
   user-select: none;
 }
 .launcher-search {
   width: 100%;
-  height: 48px;
+  height: 42px;
   border: 0;
   background: transparent;
   appearance: none;
   -webkit-appearance: none;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
   outline: none;
 }
@@ -540,7 +549,7 @@ onUnmounted(() => {
 }
 .result-row {
   width: 100%;
-  min-height: 58px;
+  min-height: 52px;
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
@@ -596,7 +605,7 @@ onUnmounted(() => {
 .launcher-foot {
   display: flex;
   align-items: center;
-  min-height: 46px;
+  min-height: 42px;
   padding: 0 12px;
   border-top: 1px solid var(--line);
   color: var(--muted);
@@ -622,19 +631,19 @@ onUnmounted(() => {
 .launcher-fill-head {
   position: absolute;
   inset: 0 0 auto;
-  height: 58px;
-  min-height: 58px;
+  height: 54px;
+  min-height: 54px;
 }
 .launcher-fill-body {
   position: absolute;
-  inset: 58px 0 50px;
-  padding: 16px;
+  inset: 54px 0 48px;
+  padding: 14px;
   overflow: hidden;
 }
 .launcher-fill-foot {
   position: absolute;
   inset: auto 0 0;
-  height: 50px;
+  height: 48px;
   justify-content: space-between;
   gap: 12px;
 }
@@ -644,14 +653,14 @@ onUnmounted(() => {
 .form-layout {
   display: grid;
   grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
-  gap: 20px;
+  gap: 14px;
   height: 100%;
 }
 .form-layout.preview-only { grid-template-columns: minmax(0, 1fr); }
 .variable-form { overflow: auto; scrollbar-gutter: stable; padding: 2px 12px 8px 2px; }
 .form-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
 .form-heading > span { font-size: 11px; color: var(--muted); }
-.preview-pane { min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; border-left: 1px solid var(--line); padding-left: 20px; }
+.preview-pane { min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; border-left: 1px solid var(--line); padding-left: 14px; }
 .preview-only .preview-pane { border-left: 0; padding-left: 0; }
 .selection-action { justify-self: start; font-size: 11px; padding-left: 0; }
 .stack {
