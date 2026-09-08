@@ -1,5 +1,5 @@
 <template>
-    <section v-page-focus="requestClose" class="workspace-page editor-page" data-testid="prompt-editor" role="region" aria-labelledby="editor-title" :aria-busy="busy || assetBusy" @paste="assetPanel?.paste($event)" @dragover="assetPanel?.dragover($event)" @drop="assetPanel?.drop($event)">
+    <section v-page-focus="requestClose" class="workspace-page editor-page" data-testid="prompt-editor" role="region" aria-labelledby="editor-title" :aria-busy="busy || assetBusy" @keydown="onSaveKeydown" @paste="assetPanel?.paste($event)" @dragover="assetPanel?.dragover($event)" @drop="assetPanel?.drop($event)">
       <header class="modal-header">
         <div>
           <h2 id="editor-title">{{ heading }}</h2>
@@ -171,7 +171,7 @@ async function onCoverFiles(event) {
 }
 
 function submit() {
-  if (props.busy || assetBusy.value || assetLoading.value || assetError.value || !title.value.trim()) return;
+  if (confirmDiscard.value || props.busy || assetBusy.value || assetLoading.value || assetError.value || !title.value.trim()) return;
   emit("save", {
     id: props.prompt?.id,
     kind: kind.value,
@@ -183,5 +183,12 @@ function submit() {
     coverType: coverType.value,
     coverUrls: coverType.value === "none" ? [] : coverUrls.value,
   });
+}
+
+function onSaveKeydown(event) {
+  if (event.isComposing || event.key.toLowerCase() !== 's' || !(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (!event.repeat) submit();
 }
 </script>
