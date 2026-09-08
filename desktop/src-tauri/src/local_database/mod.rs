@@ -6,7 +6,7 @@ mod collections;
 mod prompts;
 pub mod assets;
 mod settings;
-mod sync;
+pub(crate) mod sync;
 pub use sync::{apply_sync_changes, export_sync_changes, SyncChange};
 
 use rusqlite::Connection;

@@ -6,9 +6,10 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-08-private-media.md](plans/2026-09-08-private-media.md) | 现行 | P1 附件传输基础 | 私有上传、鉴权下载和真实 MinIO 往返已验；客户端接入待做 |
+| [plans/2026-09-08-private-media.md](plans/2026-09-08-private-media.md) | 现行 | P1 附件传输基础 | 私有上传、鉴权下载和真实 MinIO 往返已验 |
+| [plans/2026-09-08-private-asset-sync.md](plans/2026-09-08-private-asset-sync.md) | 现行 | P1b 私有附件手动同步 | 已验显式选择、私有引用、重试复用与本地补齐；公开投稿待做 |
 | [specs/media/spec.md](specs/media/spec.md) | 现行 | 附件传输权限合同 | 上传不等于公开，下载须所有者会话 |
-| [plans/2026-09-08-local-completion.md](plans/2026-09-08-local-completion.md) | 目标 | 不依赖外部凭据的后续完善 | P0、P1a 已验；附件引用与客户端接入、MCP、可靠性及发行准备待做 |
+| [plans/2026-09-08-local-completion.md](plans/2026-09-08-local-completion.md) | 目标 | 不依赖外部凭据的后续完善 | P0、P1a/b 已验；公开附件、MCP、可靠性及发行准备待做 |
 | [plans/2026-09-08-download-feedback.md](plans/2026-09-08-download-feedback.md) | 现行 | 下载反馈与重复下载 | 来源 ID 持久状态、入口防重复与固定轻提示 |
 | [plans/2026-09-08-disable-worklog-gate.md](plans/2026-09-08-disable-worklog-gate.md) | 现行 | 关闭 WorkLog 提交拦截 | 用户明确停用本仓库 IDE 评审钩子，保留测试与 CI |
 | [plans/2026-09-08-community-import.md](plans/2026-09-08-community-import.md) | 现行 | 导入公开提示词样本 | 有来源许可的本机追加导入与参考图 |

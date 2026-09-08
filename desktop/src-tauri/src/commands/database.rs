@@ -38,13 +38,15 @@ pub fn export_local_prompt_asset(app: AppHandle, prompt_id: String, asset_id: St
 }
 
 #[tauri::command]
-pub fn export_local_sync_changes(app: AppHandle) -> Result<Vec<crate::local_database::SyncChange>, String> {
-    crate::local_database::export_sync_changes(&data_dir(&app)?)
+pub fn export_local_sync_changes(app: AppHandle, include_assets: Option<bool>) -> Result<Vec<crate::local_database::SyncChange>, String> {
+    if include_assets.unwrap_or(false) { crate::local_database::sync::export_with_assets(&data_dir(&app)?, true) }
+    else { crate::local_database::export_sync_changes(&data_dir(&app)?) }
 }
 
 #[tauri::command]
-pub fn apply_local_sync_changes(app: AppHandle, items: Vec<crate::local_database::SyncChange>, keep_local: bool) -> Result<(), String> {
-    crate::local_database::apply_sync_changes(&data_dir(&app)?, &items, keep_local)
+pub fn apply_local_sync_changes(app: AppHandle, items: Vec<crate::local_database::SyncChange>, keep_local: bool, include_assets: Option<bool>) -> Result<(), String> {
+    if include_assets.unwrap_or(false) { crate::local_database::sync::apply_with_assets(&data_dir(&app)?, &items, keep_local, false, true) }
+    else { crate::local_database::apply_sync_changes(&data_dir(&app)?, &items, keep_local) }
 }
 
 #[tauri::command]

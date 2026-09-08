@@ -144,7 +144,7 @@ paths:
     put:
       operationId: putLibraryChanges
       summary: 推送账号库变更
-      description: 支持 prompt、collection、category、setting；payload 为对象，updated_at 为非负整数字符串，按归一化后的时间较新者胜。非法批次整体拒绝。
+      description: 支持 prompt、collection、category、setting；payload 为对象，updated_at 为非负整数字符串，按归一化后的时间较新者胜。prompt 可带 asset_refs 数组，每项 id（本地附件 UUID）、media_id、name、mime、size、sha256，最多 12 项 / 20 MiB；全部元数据须匹配当前账号 ready 私有媒体，否则整批拒绝（404，不泄露他人对象）。不接受原始 assets 文件字节；其他 kind 不接受 asset_refs。正文更新省略 asset_refs 时保留服务器已有引用。非法格式 400、数量/总量超限 413。
   /v1/favorites:
     get:
       operationId: listFavorites
@@ -220,7 +220,7 @@ paths:
     post:
       operationId: uploadMedia
       summary: 登录后上传私有附件到 MinIO
-      description: multipart 单个 file，单文件最多 5 MiB、整请求 6 MiB；文件名称/类型/内容必须匹配附件白名单。账号配额 256 个对象及 100 MiB，上传中预留也计入。返回 id、name、mime、size、sha256、url（相对鉴权 API 路径，不是存储签名链接）；不公开、不自动关联提示词。参数错误 400、类型不支持 415、超限 413、配额不足 409、依赖不可用 503、存储传输失败 502。
+      description: multipart 单个 file，单文件最多 5 MiB、整请求 6 MiB；文件名称/类型/内容必须匹配附件白名单。账号配额 256 个对象及 100 MiB，上传中预留也计入。同账号同文件名/类型/大小/SHA-256 的完成对象复用 id，不重复占配额；相同内容仍在上传中则 409，其他账号不复用。返回 id、name、mime、size、sha256、url（相对鉴权 API 路径，不是存储签名链接）；不公开、不自动关联提示词。参数错误 400、类型不支持 415、超限 413、配额不足 409、依赖不可用 503、存储传输失败 502。
   /v1/media/{id}/url:
     get:
       operationId: mediaUrl

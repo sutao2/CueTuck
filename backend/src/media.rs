@@ -76,7 +76,7 @@ impl MediaConfig {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct MediaUpload {
     pub id: String,
     pub url: String,
@@ -143,7 +143,7 @@ pub(crate) async fn reserve(
     owner: &str,
     key: &str,
     file: &MediaUpload,
-) -> Result<(), StatusCode> {
+) -> Result<Option<MediaUpload>, StatusCode> {
     let mut tx = pg
         .pool
         .begin()
@@ -158,6 +158,15 @@ pub(crate) async fn reserve(
     .fetch_one(&mut *tx)
     .await
     .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    let existing = sqlx::query(&format!("SELECT id,ready FROM {} WHERE owner_email=$1 AND file_name=$2 AND content_type=$3 AND size=$4 AND sha256=$5 ORDER BY ready DESC LIMIT 1", pg.t("media_objects")))
+        .bind(owner).bind(&file.name).bind(&file.mime).bind(file.size as i64).bind(&file.sha256)
+        .fetch_optional(&mut *tx).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    if let Some(row) = existing {
+        if !row.get::<bool, _>("ready") { return Err(StatusCode::CONFLICT); }
+        let id: String = row.get("id");
+        return Ok(Some(MediaUpload { url: format!("/v1/media/{id}/content"), id,
+            name: file.name.clone(), mime: file.mime.clone(), size: file.size, sha256: file.sha256.clone() }));
+    }
     let usage = sqlx::query(&format!("SELECT COUNT(*) AS count, COALESCE(SUM(size),0)::BIGINT AS bytes FROM {} WHERE owner_email=$1", pg.t("media_objects")))
         .bind(owner).fetch_one(&mut *tx).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     if usage.get::<i64, _>("count") >= 256
@@ -170,7 +179,8 @@ pub(crate) async fn reserve(
         .execute(&mut *tx).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     tx.commit()
         .await
-        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    Ok(None)
 }
 
 pub async fn upload(
@@ -218,7 +228,10 @@ pub async fn upload(
     };
     let (bucket, creds) = media.bucket()?;
     let client = storage_client()?;
-    reserve(pg, &email, &key, &result).await?;
+    if let Some(existing) = reserve(pg, &email, &key, &result).await? {
+        crate::require_user(&state, &headers).await?;
+        return Ok(Json(existing));
+    }
     let put = bucket.put_object(Some(&creds), &key);
     let url = put.sign(Duration::from_secs(60));
     let transfer = async {

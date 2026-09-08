@@ -117,6 +117,10 @@
 
 ## 测试映射
 
+### 私有附件手动补齐
+
+附件同步 MUST 遵循 [P1b 实施计划](../../plans/2026-09-08-private-asset-sync.md) 的场景。只有本次显式勾选才传输文件；默认正文同步不包含附件字节且不能清空云端引用。附件采用补齐合并，不传播删除；本机文件不得因远端未包含而被删除。失败不得落地部分附件或声称完成。
+
 | 场景 | 测试 |
 |---|---|
 | 登录后立即同步 | `WorkbenchShell.spec.js` pushes the local library to the account when signed in and syncing now；`librarySync.test.js` puts the local prompt onto the account library when signed in |

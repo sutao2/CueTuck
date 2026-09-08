@@ -1,7 +1,7 @@
 <template>
   <section class="attachments" data-testid="attachments" :aria-busy="working" @dragover="dragover" @drop="drop" @paste="paste">
     <header class="attachments-heading">
-      <div><h3>图片与附件 <span>{{ modelValue.length }}</span></h3><p>仅保存在本机，随本地备份保留；不会自动同步或发布。</p></div>
+      <div><h3>图片与附件 <span>{{ modelValue.length }}</span></h3><p>默认保存在本机，随备份保留；可在设置中手动同步私有附件，不会自动公开。</p></div>
       <button v-if="!readonly" class="button" type="button" :disabled="disabled || working" @click="picker.click()">＋ 添加文件</button>
       <input v-if="!readonly" ref="picker" hidden type="file" multiple :accept="ASSET_ACCEPT" data-testid="asset-picker" @change="selectFiles">
     </header>

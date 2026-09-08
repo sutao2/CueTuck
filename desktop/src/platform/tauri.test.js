@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createLocalCategory, deleteLocalCategory, createLocalPrompt, listLocalPrompts, addPromptToCollection, exportLocalSyncChanges, applyLocalSyncChanges } from "./library.js";
 import { invokeCommand } from "./tauri.js";
+import { assetHash } from './privateMedia.js';
 import { downloadSquareItem, fetchSquareContent, resetSquare, setSquareContentTransport } from "./square.js";
 
 const invoke = vi.hoisted(() => vi.fn(async () => []));
@@ -52,7 +53,15 @@ it("uses native snapshot commands including tombstones and keep-local", async ()
   window.__TAURI_INTERNALS__ = {};
   const items = [{ id: "p", kind: "prompt", payload: { collection_id: "col" }, updated_at: "2", deleted_at: "2" }];
   await exportLocalSyncChanges();
-  expect(invoke).toHaveBeenLastCalledWith("export_local_sync_changes", undefined);
+  expect(invoke).toHaveBeenLastCalledWith("export_local_sync_changes", { includeAssets: false });
   await applyLocalSyncChanges(items, { keepLocal: true });
-  expect(invoke).toHaveBeenLastCalledWith("apply_local_sync_changes", { items, keepLocal: true });
+  expect(invoke).toHaveBeenLastCalledWith("apply_local_sync_changes", { items, keepLocal: true, includeAssets: false });
+  await exportLocalSyncChanges({ includeAssets: true });
+  expect(invoke).toHaveBeenLastCalledWith("export_local_sync_changes", { includeAssets: true });
+  await applyLocalSyncChanges(items, { includeAssets: true });
+  expect(invoke).toHaveBeenLastCalledWith("apply_local_sync_changes", { items, keepLocal: false, includeAssets: true });
+  const asset = { id: 'a', name: 'a.txt', mime: 'text/plain', data: '' };
+  invoke.mockResolvedValueOnce('native-sha256');
+  expect(await assetHash(asset)).toBe('native-sha256');
+  expect(invoke).toHaveBeenLastCalledWith('hash_private_asset', { asset });
 });

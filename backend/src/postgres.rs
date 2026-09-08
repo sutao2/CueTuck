@@ -399,6 +399,7 @@ impl Pg {
         items: &[crate::library::LibraryChange],
     ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
         crate::library::validate_changes(items)?;
+        crate::library::validate_asset_refs(self, email, items).await?;
         let mut transaction = self
             .pool
             .begin()
@@ -411,7 +412,9 @@ impl Pg {
                  VALUES ($1,$2,$3,$4,$5,$6)
                  ON CONFLICT (owner_email, id) DO UPDATE SET
                    kind = EXCLUDED.kind,
-                   payload = EXCLUDED.payload,
+                   payload = CASE WHEN NOT (EXCLUDED.payload::jsonb ? 'asset_refs') AND {0}.kind = 'prompt' AND EXCLUDED.kind = 'prompt' AND {0}.payload::jsonb ? 'asset_refs'
+                     THEN (EXCLUDED.payload::jsonb || jsonb_build_object('asset_refs', {0}.payload::jsonb->'asset_refs'))::text
+                     ELSE EXCLUDED.payload END,
                    updated_at = EXCLUDED.updated_at,
                    deleted_at = EXCLUDED.deleted_at
                  WHERE (CASE WHEN {0}.updated_at ~ '^[0-9]{{1,16}}$' THEN
