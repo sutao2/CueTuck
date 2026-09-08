@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 
 describe("CollectionDetailModal", () => {
-  it('retains dialog focus after adding disables the submit button', async () => {
+  it('retains page focus after confirmed membership disables the submit button', async () => {
     const w = mount(CollectionDetailModal, { attachTo: document.body, props: {
       collection: { id: 'c', title: 'Collection' }, prompts: [{ id: 'p', title: 'Prompt' }],
     } });
@@ -11,6 +11,8 @@ describe("CollectionDetailModal", () => {
     const add = w.findAll('button').find(button => button.text() === '加入合集');
     add.element.focus();
     await add.trigger('click');
+    expect(w.get('select').element.value).toBe('p');
+    await w.setProps({ prompts: [{ id: 'p', title: 'Prompt', collection_id: 'c' }] });
     await flushPromises();
     expect(document.activeElement).toBe(w.get('[role="region"]').element);
     await w.get('[role="region"]').trigger('keydown', { key: 'Escape' });

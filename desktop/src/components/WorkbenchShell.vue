@@ -386,12 +386,16 @@
     />
     <CollectionDetailModal
       v-if="openedCollection"
+      :key="openedCollection.id"
       v-show="!editing && !creating && !using && !loginReason"
       :collection="openedCollection"
       :members="collectionMembers"
       :prompts="collectionCandidates"
       :error="collectionError"
       :busy="collectionBusy"
+      :loading="collectionLoading"
+      :ready="collectionReady"
+      @retry="openCollection(openedCollection)"
       @cancel="openedCollection = null"
       @add="addToOpenedCollection"
       @remove-member="removeFromOpenedCollection"
@@ -714,6 +718,10 @@ const editorPage = ref(null), loginPage = ref(null);
 const pendingNavigation = ref(null);
 const collectionError = ref("");
 const collectionBusy = ref(false);
+const collectionLoading = ref(false);
+const collectionReady = ref(false);
+let collectionRequest = 0;
+onUnmounted(() => { ++collectionRequest; });
 const collectionCandidates = ref([]);
 const settingsOpen = ref(false);
 const settingsPage = ref('general');
@@ -1082,8 +1090,9 @@ function notifyOperation(text, success, kind = 'download', retry = false) {
 async function refreshOperationView() {
   if (openedCollection.value) {
     const id = openedCollection.value.id;
+    const request = collectionRequest;
     const updated = (await listLocalCollections({ query: '', categoryId: null })).find(item => item.id === id);
-    if (updated && openedCollection.value?.id === id) {
+    if (updated && openedCollection.value?.id === id && request === collectionRequest) {
       if (!await openCollection(updated)) throw Error(collectionError.value);
     }
   }
@@ -1096,7 +1105,7 @@ async function retryOperationRefresh() {
   operationRefreshBusy.value = true;
   try {
     await refreshOperationView();
-    if (operationNotice.value === notice) notifyOperation('已刷新，本次没有重复保存或复制。', true, notice.kind);
+    if (operationNotice.value === notice) notifyOperation('已刷新，本次没有重复执行已完成的操作。', true, notice.kind);
   } catch (error) {
     if (operationNotice.value === notice) notifyOperation(`刷新仍失败：${error.message || error}。已完成的操作不会重复执行。`, false, notice.kind, true);
   } finally { operationRefreshBusy.value = false; }
@@ -1666,35 +1675,53 @@ function openItem(item) {
 }
 
 async function openCollection(collection) {
+  const request = ++collectionRequest;
+  const isCurrent = () => request === collectionRequest && openedCollection.value?.id === collection.id;
   openedCollection.value = collection;
   collectionError.value = "";
+  collectionLoading.value = true;
+  collectionReady.value = false;
+  collectionMembers.value = [];
+  collectionCandidates.value = [];
   try {
-    [collectionMembers.value, collectionCandidates.value] = await Promise.all([
+    const [members, candidates] = await Promise.all([
       listCollectionMembers(collection.id), listLocalPrompts({ query: "", categoryId: null }),
     ]);
+    if (!isCurrent()) return false;
+    collectionMembers.value = members;
+    collectionCandidates.value = candidates;
+    collectionReady.value = true;
     return true;
-  } catch (error) { collectionError.value = `读取失败：${error.message || error}`; return false; }
+  } catch (error) {
+    if (isCurrent()) collectionError.value = `读取失败：${error.message || error}`;
+    return false;
+  } finally { if (isCurrent()) collectionLoading.value = false; }
 }
 
 async function addToOpenedCollection(promptId) {
-  if (collectionBusy.value) return;
-  collectionBusy.value = true;
-  try {
-    await addPromptToCollection(promptId, openedCollection.value.id);
-    await openCollection(openedCollection.value);
-    await reloadPrompts();
-  } catch (error) { collectionError.value = `加入失败：${error.message || error}`; }
-  finally { collectionBusy.value = false; }
+  await changeCollectionMember(promptId, true);
 }
 
 async function removeFromOpenedCollection(promptId) {
-  if (collectionBusy.value) return;
+  await changeCollectionMember(promptId, false);
+}
+
+async function changeCollectionMember(promptId, adding) {
+  if (collectionBusy.value || !collectionReady.value || !openedCollection.value) return;
   collectionBusy.value = true;
+  collectionError.value = "";
+  let written = false;
+  const completed = adding ? '已加入合集' : '已移出合集';
   try {
-    await removePromptFromCollection(promptId, openedCollection.value.id);
-    await openCollection(openedCollection.value);
+    await (adding ? addPromptToCollection : removePromptFromCollection)(promptId, openedCollection.value.id);
+    written = true;
+    notifyOperation(`${completed}。`, true, 'collection');
+    if (!await openCollection(openedCollection.value)) throw new Error(collectionError.value);
     await reloadPrompts();
-  } catch (error) { collectionError.value = `移除失败：${error.message || error}`; }
+  } catch (error) {
+    if (written) notifyOperation(`${completed}，但刷新失败：${error.message || error}`, false, 'collection', true);
+    else collectionError.value = `${adding ? '加入' : '移除'}失败：${error.message || error}`;
+  }
   finally { collectionBusy.value = false; }
 }
 

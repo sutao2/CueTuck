@@ -1,5 +1,5 @@
 <template>
-    <section v-page-focus="() => !busy && $emit('cancel')" class="workspace-page" data-testid="collection-detail" role="region" aria-labelledby="collection-title" :aria-busy="busy">
+    <section v-page-focus="() => !busy && $emit('cancel')" class="workspace-page" data-testid="collection-detail" role="region" aria-labelledby="collection-title" :aria-busy="busy || loading">
       <header class="modal-header">
         <div>
           <p class="modal-kicker">提示词合集</p>
@@ -9,6 +9,9 @@
       </header>
       <div class="create-body" :inert="busy ? '' : undefined">
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
+        <p v-if="loading" role="status" class="use-hint">正在读取合集…</p>
+        <button v-else-if="!ready" type="button" class="button ghost-button" data-testid="retry-collection-load" :disabled="busy" @click="$emit('retry')">重新读取</button>
+        <template v-if="ready">
         <div v-if="collection.cover_type === 'single' && singleCover" class="cover-single">
           <img :src="singleCover" alt="">
         </div>
@@ -37,12 +40,13 @@
             </option>
           </select>
         </label>
+        </template>
       </div>
       <footer class="modal-footer">
-        <button type="button" class="button ghost-button" data-testid="edit-collection" :disabled="busy" @click="$emit('edit')">编辑合集</button>
+        <button type="button" class="button ghost-button" data-testid="edit-collection" :disabled="busy || !ready" @click="$emit('edit')">编辑合集</button>
         <div class="modal-actions">
           <button type="button" class="button ghost-button" :disabled="busy" @click="$emit('cancel')">返回</button>
-          <button type="button" class="button primary-button" :disabled="busy || !selectedPromptId" @click="add">
+          <button type="button" class="button primary-button" :disabled="busy || !ready || !selectedPromptId" @click="add">
             加入合集
           </button>
         </div>
@@ -51,7 +55,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { vPageFocus } from "../lib/pageFocus.js";
 import { coverSlots, parseCoverUrls } from "../lib/cover.js";
 
@@ -61,18 +65,22 @@ const props = defineProps({
   prompts: { type: Array, default: () => [] },
   error: { type: String, default: "" },
   busy: { type: Boolean, default: false },
+  loading: { type: Boolean, default: false },
+  ready: { type: Boolean, default: true },
 });
-const emit = defineEmits(["cancel", "add", "open", "use", "remove-member", "edit"]);
+const emit = defineEmits(["cancel", "add", "open", "use", "remove-member", "edit", "retry"]);
 const selectedPromptId = ref("");
 const available = computed(() =>
   props.prompts.filter((prompt) => prompt.collection_id !== props.collection.id),
 );
 const coverCells = computed(() => coverSlots(props.collection.cover_json, 9));
 const singleCover = computed(() => parseCoverUrls(props.collection.cover_json)[0] || "");
+watch([() => props.ready, available], () => {
+  if (props.ready && !available.value.some(prompt => prompt.id === selectedPromptId.value)) selectedPromptId.value = "";
+});
 
 function add() {
-  if (props.busy || !selectedPromptId.value) return;
+  if (props.busy || !props.ready || !selectedPromptId.value) return;
   emit("add", selectedPromptId.value);
-  selectedPromptId.value = "";
 }
 </script>
