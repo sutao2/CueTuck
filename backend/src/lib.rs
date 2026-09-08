@@ -1,9 +1,57 @@
+mod admin_operations;
+mod admin_catalog_migration;
+mod oauth_verification;
+mod admin_notifications;
+#[cfg(test)]
+mod admin_notifications_tests;
+#[cfg(test)]
+mod oauth_verification_tests;
+#[cfg(test)]
+mod admin_operations_tests;
 mod media;
 mod me;
 mod library;
 mod billing;
 mod oauth;
 mod oauth_admin;
+mod admin_security;
+mod admin_users;
+mod auth_limits;
+mod admin_reviews;
+mod admin_content;
+mod admin_catalog;
+mod admin_risk;
+mod admin_moderation;
+mod outbound;
+mod ai_transport;
+mod admin_ai;
+mod mail_transport;
+mod admin_mail;
+mod identity;
+mod admin_site;
+mod admin_mock_billing;
+#[cfg(test)]
+mod admin_mock_billing_tests;
+#[cfg(test)]
+mod admin_site_tests;
+#[cfg(test)]
+mod identity_tests;
+#[cfg(test)]
+mod admin_mail_tests;
+#[cfg(test)]
+mod admin_ai_tests;
+#[cfg(test)]
+mod admin_moderation_tests;
+#[cfg(test)]
+mod admin_risk_tests;
+#[cfg(test)]
+mod admin_security_tests;
+#[cfg(test)]
+mod admin_reviews_tests;
+#[cfg(test)]
+mod admin_content_tests;
+#[cfg(test)]
+mod admin_catalog_tests;
 mod password;
 mod postgres;
 mod state;
@@ -50,6 +98,7 @@ pub struct AppState {
     webhook_secret: Option<String>,
     billing_mock: bool,
     mock_pro_accounts: Arc<Mutex<HashSet<String>>>,
+    auth_limits: Arc<auth_limits::AuthLimits>,
 }
 
 impl Default for AppState {
@@ -79,6 +128,7 @@ impl Default for AppState {
             webhook_secret: None,
             billing_mock: false,
             mock_pro_accounts: Arc::new(Mutex::new(HashSet::new())),
+            auth_limits: Arc::new(auth_limits::AuthLimits::default()),
         }
     }
 }
@@ -108,6 +158,8 @@ fn prompt_kind() -> String { "prompt".into() }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SquareItem {
+    #[serde(default)]
+    pub reference: Option<serde_json::Value>,
     pub id: String,
     pub title: String,
     pub kind: String,
@@ -124,6 +176,8 @@ pub struct SquareItem {
 
 #[derive(Serialize, Deserialize)]
 pub struct SquareContentResponse {
+    #[serde(default)]
+    pub reference: Option<serde_json::Value>,
     pub id: String,
     pub title: String,
     pub content: String,
@@ -173,6 +227,7 @@ impl Publication {
         if title.is_empty() || (self.kind == "collection" && self.members.is_empty())
             || (self.kind == "prompt" && self.content.is_none()) { return None; }
         Some(SquareItem {
+            reference: None,
             id: self.id.clone(), title: title.into(), kind: self.kind.clone(), excerpt: None,
             model: self.model.clone(), category_id: self.category_id.clone(),
             member_count: (self.kind == "collection").then_some(self.members.len() as i64),
@@ -190,12 +245,8 @@ pub struct SquareListQuery {
 }
 
 fn system_category(id: &str) -> Option<&str> {
-    for (parent, children) in [
-        ("cat-software", 4), ("cat-image", 3), ("cat-video", 2),
-        ("cat-office", 3), ("cat-writing", 3), ("cat-product", 3),
-        ("cat-marketing", 3), ("cat-data", 3), ("cat-education", 3), ("cat-life", 3),
-    ] {
-        if id == parent || (0..children).any(|index| id == format!("{parent}-{index}")) {
+    for &(parent, _, children) in admin_content::CATEGORIES {
+        if id == parent || (0..children.len()).any(|index| id == format!("{parent}-{index}")) {
             return Some(parent);
         }
     }
@@ -293,6 +344,7 @@ impl AppState {
     pub fn seed_square_demo(&self) {
         *self.items.lock().expect("items") = vec![
             SquareItem {
+                reference: None,
                 id: "sq-1".into(),
                 title: "自然光群像".into(),
                 kind: "prompt".into(),
@@ -304,6 +356,7 @@ impl AppState {
                 members: vec![],
             },
             SquareItem {
+                reference: None,
                 id: "col-portrait".into(),
                 title: "人像灵感合集".into(),
                 kind: "collection".into(),
@@ -322,6 +375,13 @@ pub fn app(state: AppState) -> Router {
     Router::new()
         .route("/v1/health", get(health))
         .route("/v1/session", post(create_session).delete(delete_session))
+        .route("/v1/session/identity/options", get(identity::options))
+        .route("/v1/session/identity/request", post(identity::request_code))
+        .route("/v1/session/identity/confirm", post(identity::confirm))
+        .route("/v1/admin/identity/policy", get(identity::get_policy).put(identity::save_policy))
+        .route("/v1/admin/identity/invitations", get(identity::invitations).post(identity::invite))
+        .route("/v1/admin/identity/invitations/:id/revoke", post(identity::revoke_invite))
+        .route("/v1/admin/users/:email/password-reset", post(identity::admin_reset))
         .route("/v1/session/refresh", post(refresh_session))
         .route("/v1/session/oauth/providers", get(oauth::list_providers))
         .route("/v1/session/oauth/callback", get(oauth::callback))
@@ -339,6 +399,24 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/publications", post(create_publication))
         .route("/v1/publications/mine", get(list_my_publications))
         .route("/v1/me", get(me::get_me).put(me::put_me))
+        .route("/v1/square/catalog", get(admin_catalog::public))
+        .route("/v1/admin/catalog/:kind", get(admin_catalog::list).post(admin_catalog::create))
+        .route("/v1/admin/catalog/:kind/:id", put(admin_catalog::save).delete(admin_catalog::delete))
+        .route("/v1/reports", get(admin_risk::mine).post(admin_risk::create))
+        .route("/v1/admin/reports", get(admin_risk::list))
+        .route("/v1/admin/reports/export", get(admin_risk::export))
+        .route("/v1/admin/reports/:id", get(admin_risk::detail).put(admin_risk::update))
+        .route("/v1/admin/safety-rules", get(admin_risk::rules).put(admin_risk::save_rules))
+        .route("/v1/admin/safety-rules/test", post(admin_risk::test_rules))
+        .route("/v1/admin/moderation", get(admin_moderation::get).put(admin_moderation::save))
+        .route("/v1/admin/ai/config", get(admin_ai::get).put(admin_ai::save))
+        .route("/v1/admin/ai/history", get(admin_ai::history))
+        .route("/v1/admin/ai/test", post(admin_ai::test))
+        .route("/v1/admin/mail/config", get(admin_mail::get).put(admin_mail::save))
+        .route("/v1/admin/mail/test", post(admin_mail::test))
+        .route("/v1/admin/mail/deliveries", get(admin_mail::list))
+        .route("/v1/admin/mail/deliveries/:id", get(admin_mail::detail))
+        .route("/v1/admin/mail/deliveries/:id/retry", post(admin_mail::retry))
         .route("/v1/billing/status", get(billing::status))
         .route("/v1/billing/redeem", post(billing::redeem))
         .route("/v1/billing/checkout", post(billing::checkout))
@@ -350,9 +428,16 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/favorites", get(list_favorites))
         .route("/v1/favorites/:id", put(put_favorite).delete(delete_favorite))
         .route("/v1/admin/me", get(get_admin_me))
+        .route("/v1/admin/security", get(admin_security::view))
+        .route("/v1/admin/security/password", put(admin_security::change_password))
+        .route("/v1/admin/security/sessions", axum::routing::delete(admin_security::revoke_sessions))
         .route("/v1/admin/oauth", get(oauth_admin::list))
         .route("/v1/admin/oauth/:provider", put(oauth_admin::update))
         .route("/v1/admin/publications", get(list_admin_publications))
+        .route("/v1/admin/reviews", get(admin_reviews::list))
+        .route("/v1/admin/reviews/batch", post(admin_reviews::batch))
+        .route("/v1/admin/content", get(admin_content::list))
+        .route("/v1/admin/content/:id", get(admin_content::detail).put(admin_content::save))
         .route(
             "/v1/admin/publications/:id/approve",
             post(approve_publication),
@@ -361,8 +446,30 @@ pub fn app(state: AppState) -> Router {
             "/v1/admin/publications/:id/reject",
             post(reject_publication),
         )
-        .route("/v1/admin/users", get(list_admin_users))
+        .route("/v1/admin/users", get(admin_users::list))
+        .route("/v1/admin/users/:email", get(admin_users::detail))
+        .route("/v1/admin/users/:email/actions", post(admin_users::action))
         .route("/v1/admin/settings", get(get_admin_settings).put(put_admin_settings))
+        .route("/v1/admin/site", get(admin_site::get).put(admin_site::put))
+        .route("/v1/site", get(admin_site::public))
+        .route("/v1/admin/overview", get(admin_operations::overview))
+        .route("/v1/admin/audit", get(admin_operations::audit_list))
+        .route("/v1/admin/audit/export", get(admin_operations::audit_export))
+        .route("/v1/admin/system", get(admin_operations::system))
+        .route("/v1/admin/notifications/config", get(admin_notifications::get_config).put(admin_notifications::save_config))
+        .route("/v1/admin/notifications/test", post(admin_notifications::test))
+        .route("/v1/admin/notifications/deliveries", get(admin_notifications::list))
+        .route("/v1/admin/notifications/deliveries/:id", get(admin_notifications::detail))
+        .route("/v1/admin/notifications/deliveries/:id/retry", post(admin_notifications::retry))
+        .route("/v1/admin/oauth/:provider/verify", post(oauth_verification::start))
+        .route("/v1/admin/catalog/:kind/:id/migrate", post(admin_catalog_migration::migrate))
+        .route("/v1/admin/mock-billing/actions", post(admin_mock_billing::change))
+        .route("/v1/admin/mock-billing/batches", get(admin_mock_billing::list_batches).post(admin_mock_billing::create_batch))
+        .route("/v1/admin/mock-billing/batches/:id", get(admin_mock_billing::batch_detail).put(admin_mock_billing::update_batch))
+        .route("/v1/admin/mock-billing/:kind", get(admin_mock_billing::list))
+        .route("/v1/billing/mock/redeem", post(admin_mock_billing::redeem))
+        .layer(middleware::from_fn_with_state(state.clone(), auth_limits::guard))
+        .layer(middleware::from_fn_with_state(state.clone(), admin_operations::failure_log))
         .layer(middleware::from_fn(allow_local_preview_cors))
         .with_state(state)
 }
@@ -411,12 +518,22 @@ fn apply_cors(headers: &mut HeaderMap, origin: Option<&str>) {
 }
 
 async fn health(State(state): State<AppState>) -> Json<serde_json::Value> {
-    let postgres = state.ping_db().await;
-    let redis = state.ping_redis().await;
-    let minio = match &state.media {
-        Some(media) => media.ping().await,
-        None => false,
-    };
+    let timeout = std::time::Duration::from_secs(3);
+    let (postgres, redis, minio) = tokio::join!(
+        tokio::time::timeout(timeout, state.ping_db()),
+        tokio::time::timeout(timeout, state.ping_redis()),
+        tokio::time::timeout(timeout, async {
+            match &state.media {
+                Some(media) => media.ping().await,
+                None => false,
+            }
+        })
+    );
+    let (postgres, redis, minio) = (
+        postgres.unwrap_or(false),
+        redis.unwrap_or(false),
+        minio.unwrap_or(false),
+    );
     Json(serde_json::json!({
         "postgres": postgres,
         "redis": redis,
@@ -431,6 +548,11 @@ async fn create_session(
     let email = body.email.trim().to_string();
     if email.is_empty() || body.password.is_empty() {
         return Err(StatusCode::BAD_REQUEST);
+    }
+    if body.password.len() > 512 || email.len() > 254 { return Err(StatusCode::BAD_REQUEST); }
+    state.limit_account_auth(&email).await?;
+    if let Some(pg) = &state.db {
+        return Ok(Json(pg.password_session(&email, &body.password).await?));
     }
     state.verify_login(&email, &body.password).await?;
     Ok(Json(state.issue_session(email).await?))
@@ -449,8 +571,7 @@ async fn refresh_session(
     if !presented.starts_with("ref.") {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let email = state.rotate_refresh(&presented).await?;
-    Ok(Json(state.issue_session(email).await?))
+    Ok(Json(state.renew_session(&presented).await?))
 }
 
 async fn delete_session(State(state): State<AppState>, headers: HeaderMap) -> StatusCode {
@@ -471,38 +592,38 @@ async fn list_square_items(
     State(state): State<AppState>,
     headers: HeaderMap,
     Query(query): Query<SquareListQuery>,
-) -> Json<SquareListResponse> {
-    let square_public = state.square_public().await.unwrap_or(true);
-    if !square_public {
-        return Json(SquareListResponse { items: vec![] });
+) -> Result<Json<SquareListResponse>, StatusCode> {
+    let square_public = state.square_public().await?;
+    if !square_public && optional_access_email(&state, &headers).await.is_none() {
+        return Ok(Json(SquareListResponse { items: vec![] }));
     }
     let sort = query.sort.unwrap_or_default();
     let needle = query.q.unwrap_or_default().trim().to_lowercase();
     let model = query.model.unwrap_or_default();
-    let mut items = state
-        .all_items()
-        .await
-        .unwrap_or_default()
+    let latest = matches!(sort.as_str(), "latest" | "最新");
+    let categories = if let Some(pg) = &state.db { pg.catalog_entries("categories",false).await? } else { admin_catalog::seed_categories() };
+    let source = if let Some(pg) = &state.db { pg.list_visible_items(latest).await? } else { state.all_items().await? };
+    let mut items = source
         .into_iter()
         .filter(|item| needle.is_empty() || item.title.to_lowercase().contains(&needle))
         .filter(|item| model.is_empty() || item.model.as_deref() == Some(model.as_str()))
         .filter(|item| match query.category_id.as_deref().filter(|id| !id.is_empty()) {
             None => true,
             Some(id) => item.category_id.as_deref() == Some(id)
-                || item.category_id.as_deref().and_then(system_category) == Some(id),
+                || categories.iter().any(|category| item.category_id.as_deref()==Some(&category.id) && category.parent_id.as_deref()==Some(id)),
         })
         .collect::<Vec<_>>();
     if sort == "favorites" || sort == "收藏" {
         let Some(email) = optional_access_email(&state, &headers).await else {
-            return Json(SquareListResponse { items: vec![] });
+            return Ok(Json(SquareListResponse { items: vec![] }));
         };
         let ids = state.favorite_ids(&email).await.unwrap_or_default();
         items.retain(|item| ids.iter().any(|id| id == &item.id));
-        return Json(SquareListResponse { items });
+        return Ok(Json(SquareListResponse { items }));
     }
     let counts = state.download_counts().await.unwrap_or_default();
-    apply_preview_sort(&mut items, &sort, &counts);
-    Json(SquareListResponse { items })
+    if !(latest && state.db.is_some()) { apply_preview_sort(&mut items, &sort, &counts); }
+    Ok(Json(SquareListResponse { items }))
 }
 
 fn apply_preview_sort(items: &mut [SquareItem], sort: &str, counts: &HashMap<String, i64>) {
@@ -538,7 +659,7 @@ async fn create_publication(
         return Err(StatusCode::BAD_REQUEST);
     }
     let category_id = body.category_id.filter(|id| !id.is_empty());
-    if category_id.as_deref().is_some_and(|id| system_category(id).is_none()) {
+    if state.db.is_none() && category_id.as_deref().is_some_and(|id| system_category(id).is_none()) {
         return Err(StatusCode::BAD_REQUEST);
     }
     if !matches!(body.kind.as_str(), "prompt" | "collection")
@@ -547,7 +668,7 @@ async fn create_publication(
             || body.members.is_empty()
             || body.members.iter().any(|member| member.title.trim().is_empty()
                 || member.content.trim().is_empty()
-                || member.category_id.as_deref().is_some_and(|id| system_category(id).is_none())))) {
+                || (state.db.is_none() && member.category_id.as_deref().is_some_and(|id| system_category(id).is_none()))))) {
         return Err(StatusCode::BAD_REQUEST);
     }
     let publication = Publication {
@@ -562,6 +683,11 @@ async fn create_publication(
         kind: body.kind,
         members: body.members,
     };
+    if let Some(pg)=&state.db {
+        let publication=pg.moderate_publication(&publication,&bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?).await?;
+        // The snapshot is already durable. A failed external check must not turn a successful submission into a retry/duplicate.
+        return Ok(Json(admin_ai::screen_publication(&state,&publication).await.unwrap_or(publication)));
+    }
     state.insert_publication(&publication).await?;
     Ok(Json(publication))
 }
@@ -569,11 +695,10 @@ async fn create_publication(
 async fn list_my_publications(
     State(state): State<AppState>,
     headers: HeaderMap,
-) -> Result<Json<AdminPublicationList>, StatusCode> {
+) -> Result<Json<serde_json::Value>, StatusCode> {
     let email = require_user(&state, &headers).await?;
-    Ok(Json(AdminPublicationList {
-        items: state.publications_for(&email).await?,
-    }))
+    if let Some(pg) = &state.db { return Ok(Json(pg.author_reviews(&email).await?)); }
+    Ok(Json(serde_json::json!({"items":state.publications_for(&email).await?})))
 }
 
 pub(crate) async fn require_user(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
@@ -636,8 +761,22 @@ async fn delete_favorite(
 
 async fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
     let email = require_user(state, headers).await?;
-    if state.role_of(&email).await? != "admin" {
+    if !matches!(state.role_of(&email).await?.as_str(), "admin" | "owner") {
         return Err(StatusCode::FORBIDDEN);
+    }
+    Ok(email)
+}
+
+async fn require_staff(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
+    let email = require_user(state, headers).await?;
+    if !admin_users::staff(&state.role_of(&email).await?) { return Err(StatusCode::FORBIDDEN); }
+    Ok(email)
+}
+
+async fn require_configuration_admin(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {
+    let email = require_admin(state, headers).await?;
+    if state.role_of(&email).await? != "owner" && state.db.as_ref().is_some() {
+        if state.db.as_ref().unwrap().has_owner().await? { return Err(StatusCode::FORBIDDEN); }
     }
     Ok(email)
 }
@@ -645,17 +784,18 @@ async fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<String, 
 async fn get_admin_me(
     State(state): State<AppState>,
     headers: HeaderMap,
-) -> Result<Json<AdminMe>, StatusCode> {
-    let email = require_admin(&state, &headers).await?;
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let email = require_staff(&state, &headers).await?;
     let role = state.role_of(&email).await?;
-    Ok(Json(AdminMe { email, role }))
+    let configuration = require_configuration_admin(&state, &headers).await.is_ok();
+    Ok(Json(serde_json::json!({"email":email,"role":role,"permissions":{"users":role=="admin" || role=="owner","configuration":configuration,"roles":role=="owner"}})))
 }
 
 async fn list_admin_publications(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<AdminPublicationList>, StatusCode> {
-    require_admin(&state, &headers).await?;
+    require_staff(&state, &headers).await?;
     Ok(Json(AdminPublicationList {
         items: state.pending_publications().await?,
     }))
@@ -666,22 +806,24 @@ async fn approve_publication(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<Publication>, StatusCode> {
-    set_publication_status(&state, &headers, &id, "approved").await
+    set_publication_status(&state, &headers, &id, "approved", None).await
 }
 
 async fn reject_publication(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(id): Path<String>,
+    body: Option<Json<admin_reviews::RejectReason>>,
 ) -> Result<Json<Publication>, StatusCode> {
-    set_publication_status(&state, &headers, &id, "rejected").await
+    let reason = match &body { Some(Json(body)) => admin_reviews::validate_reason(&body.reason)?, None => "旧客户端未提供原因" };
+    set_publication_status(&state, &headers, &id, "rejected", Some(reason)).await
 }
 
 async fn get_admin_settings(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<AdminSettings>, StatusCode> {
-    require_admin(&state, &headers).await?;
+    require_configuration_admin(&state, &headers).await?;
     Ok(Json(AdminSettings {
         square_public: state.square_public().await?,
     }))
@@ -692,19 +834,11 @@ async fn put_admin_settings(
     headers: HeaderMap,
     Json(body): Json<AdminSettings>,
 ) -> Result<Json<AdminSettings>, StatusCode> {
-    require_admin(&state, &headers).await?;
-    state.set_square_public(body.square_public).await?;
+    let actor=require_configuration_admin(&state, &headers).await?;
+    if let Some(pg)=&state.db {
+        pg.save_site(&actor,&bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?,None,body.square_public).await?;
+    } else { state.set_square_public(body.square_public).await?; }
     Ok(Json(body))
-}
-
-async fn list_admin_users(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-) -> Result<Json<AdminUserList>, StatusCode> {
-    require_admin(&state, &headers).await?;
-    Ok(Json(AdminUserList {
-        items: state.list_users().await?,
-    }))
 }
 
 async fn set_publication_status(
@@ -712,15 +846,22 @@ async fn set_publication_status(
     headers: &HeaderMap,
     id: &str,
     status: &str,
+    reason: Option<&str>,
 ) -> Result<Json<Publication>, StatusCode> {
-    require_admin(state, headers).await?;
+    let actor = require_staff(state, headers).await?;
+    if let Some(pg) = &state.db {
+        let token = bearer_token(headers).ok_or(StatusCode::UNAUTHORIZED)?;
+        return Ok(Json(pg.review_publication(id, status, reason, Some((&actor, &token))).await?));
+    }
     Ok(Json(state.set_publication_status(id, status).await?))
 }
 
 async fn get_square_item(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<SquareItem>, StatusCode> {
+    if !state.square_public().await? { require_user(&state, &headers).await?; }
     state
         .get_item(&id)
         .await?
@@ -730,10 +871,13 @@ async fn get_square_item(
 
 async fn get_square_item_content(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<SquareContentResponse>, StatusCode> {
+    if !state.square_public().await? { require_user(&state, &headers).await?; }
     let item = state.get_item(&id).await?.ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(SquareContentResponse {
+        reference: item.reference,
         id: item.id,
         title: item.title,
         content: item.content.unwrap_or_default(),
@@ -921,6 +1065,7 @@ mod tests {
     #[tokio::test]
     async fn lists_square_items_without_login() {
         let app = app(AppState::with_square_items(vec![SquareItem {
+            reference: None,
             id: "sq-1".into(),
             title: "自然光群像".into(),
             kind: "prompt".into(),
@@ -955,6 +1100,7 @@ mod tests {
     #[tokio::test]
     async fn allows_admin_web_preview_cors() {
         let app = app(AppState::with_square_items(vec![SquareItem {
+            reference: None,
             id: "sq-1".into(),
             title: "自然光群像".into(),
             kind: "prompt".into(),
@@ -986,6 +1132,7 @@ mod tests {
     #[tokio::test]
     async fn allows_web_preview_cors() {
         let app = app(AppState::with_square_items(vec![SquareItem {
+            reference: None,
             id: "sq-1".into(),
             title: "自然光群像".into(),
             kind: "prompt".into(),
@@ -1017,6 +1164,7 @@ mod tests {
     #[tokio::test]
     async fn serves_square_item_content_without_login() {
         let app = app(AppState::with_square_items(vec![SquareItem {
+            reference: None,
             id: "sq-1".into(),
             title: "自然光群像".into(),
             kind: "prompt".into(),
@@ -1048,6 +1196,7 @@ mod tests {
     #[tokio::test]
     async fn serves_square_item_without_login() {
         let app = app(AppState::with_square_items(vec![SquareItem {
+            reference: None,
             id: "sq-1".into(),
             title: "自然光群像".into(),
             kind: "prompt".into(),
@@ -1094,6 +1243,7 @@ mod tests {
     async fn sorts_recommended_latest_and_hot_apart() {
         let app = app(AppState::with_square_items(vec![
             SquareItem {
+                reference: None,
                 id: "a".into(),
                 title: "Beta".into(),
                 kind: "prompt".into(),
@@ -1105,6 +1255,7 @@ mod tests {
                 members: vec![],
             },
             SquareItem {
+                reference: None,
                 id: "b".into(),
                 title: "Alpha".into(),
                 kind: "prompt".into(),
@@ -1116,6 +1267,7 @@ mod tests {
                 members: vec![],
             },
             SquareItem {
+                reference: None,
                 id: "c".into(),
                 title: "Gamma".into(),
                 kind: "prompt".into(),

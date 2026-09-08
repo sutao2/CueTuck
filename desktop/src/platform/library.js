@@ -1,4 +1,5 @@
 import { serializeCoverUrls } from "../lib/cover.js";
+import { validateAssets, resetMemoryAssets, memoryAssets, storeMemoryAssets } from './assets.js';
 
 const TONES = {
   软件开发: { icon: "</>", tone: "blue" },
@@ -58,6 +59,7 @@ function nextMemoryId(prefix) {
 }
 
 export function resetMemoryLibrary() {
+  resetMemoryAssets();
   memoryPrompts = [];
   memoryCollections = [];
   memorySettings = { theme: "light" };
@@ -127,7 +129,9 @@ function isTauri() {
 
 import { invokeCommand as tauriInvoke } from "./tauri.js";
 
-export async function createLocalPrompt({ title, content, categoryId = null, source = "local", model = null } = {}) {
+export async function createLocalPrompt({ title, content, categoryId = null, source = "local", model = null, assets } = {}) {
+  if (assets !== undefined) validateAssets(assets);
+  if (isTauri() && assets !== undefined) return tauriInvoke('save_local_prompt_with_assets', { id: null, title, content, category_id: categoryId, model, assets });
   if (isTauri()) {
     return tauriInvoke("create_local_prompt", {
       title,
@@ -150,6 +154,10 @@ export async function createLocalPrompt({ title, content, categoryId = null, sou
     updated_at: nextTimestamp(),
   };
   memoryPrompts.unshift(row);
+  if (assets !== undefined) {
+    storeMemoryAssets(row.id, assets);
+    row.asset_count = assets.length; row.image_count = assets.filter(a => a.mime.startsWith('image/')).length;
+  }
   return row;
 }
 
@@ -235,7 +243,9 @@ export async function importDownloadedPrompt({ title, content, remoteId = null, 
   return row;
 }
 
-export async function updateLocalPrompt({ id, title, content, categoryId = null, model } = {}) {
+export async function updateLocalPrompt({ id, title, content, categoryId = null, model, assets } = {}) {
+  if (assets !== undefined) validateAssets(assets);
+  if (isTauri() && assets !== undefined) return tauriInvoke('save_local_prompt_with_assets', { id, title, content, category_id: categoryId, model, assets });
   if (isTauri()) {
     return tauriInvoke("update_local_prompt", {
       id,
@@ -252,6 +262,10 @@ export async function updateLocalPrompt({ id, title, content, categoryId = null,
   row.category_id = categoryId;
   if (model !== undefined) row.model = model;
   row.updated_at = nextTimestamp();
+  if (assets !== undefined) {
+    storeMemoryAssets(id, assets);
+    row.asset_count = assets.length; row.image_count = assets.filter(a => a.mime.startsWith('image/')).length;
+  }
   return row;
 }
 
@@ -454,8 +468,9 @@ export async function applyLocalSyncChanges(items, { keepLocal = false } = {}) {
     const ordered = items.filter((row) => row.kind === kind);
     if (kind === 'category') ordered.sort((a, b) => Number(a.payload?.parent_id != null) - Number(b.payload?.parent_id != null));
     for (const item of ordered) {
-      const payload = item.payload;
-      if (!item.id || !payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("同步记录格式错误");
+      if (!item.id || !item.payload || typeof item.payload !== "object" || Array.isArray(item.payload)) throw new Error("同步记录格式错误");
+      const payload = { ...item.payload };
+      delete payload.assets; delete payload.asset_count; delete payload.image_count;
       validatePayload(payload);
       if (kind === "setting") {
         const key = item.id.replace(/^setting:/, "");
@@ -506,7 +521,7 @@ export async function exportLocalLibrary() {
   return JSON.stringify(
     {
       version: 2,
-      prompts: memoryPrompts.filter((row) => !row.deleted_at),
+      prompts: memoryPrompts.filter((row) => !row.deleted_at).map(row => ({ ...row, assets: memoryAssets(row.id) })),
       collections: memoryCollections.filter((row) => !row.deleted_at),
       categories: memoryCategories.filter(row => !row.deleted_at),
     },
@@ -540,6 +555,7 @@ function prepareImport(json, timestamp) {
       const title = kind === "category" ? row?.name : row?.title;
       if (!row || typeof row !== "object" || Array.isArray(row) || typeof title !== "string" || !title.trim()) throw new Error("导入记录缺少名称");
       validatePayload(row);
+      if (kind === 'prompt') validateAssets(row.assets ?? []);
       if (kind === "category" && !row.id) throw new Error("分类缺少 id");
       if (row.id) {
         if (maps[kind].has(row.id)) throw new Error("导入记录 id 重复");
@@ -601,6 +617,12 @@ export async function applyLocalImport(json) {
   const preview = previewImportJson(json);
   const { changes } = prepareImport(json, nextTimestamp());
   await applyLocalSyncChanges(changes);
+  for (const change of changes.filter(c => c.kind === 'prompt')) {
+    const assets = change.payload.assets ?? [];
+    storeMemoryAssets(change.id, assets);
+    const row = memoryPrompts.find(p => p.id === change.id);
+    row.asset_count = assets.length; row.image_count = assets.filter(a => a.mime.startsWith('image/')).length;
+  }
   return preview;
 }
 

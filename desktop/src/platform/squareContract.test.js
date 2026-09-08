@@ -10,6 +10,10 @@ const openapiPath = resolve(
 );
 
 const REQUIRED = [
+  { method: "GET", path: "/v1/site", auth: "none" },
+  { method: "GET", path: "/v1/reports", auth: "user" },
+  { method: "POST", path: "/v1/reports", auth: "user" },
+  { method: "GET", path: "/v1/square/catalog", auth: "none" },
   { method: "GET", path: "/v1/square/items", auth: "none" },
   { method: "GET", path: "/v1/square/items/{id}", auth: "none" },
   { method: "GET", path: "/v1/square/items/{id}/content", auth: "none" },
@@ -17,11 +21,15 @@ const REQUIRED = [
   { method: "POST", path: "/v1/session", auth: "none" },
   { method: "DELETE", path: "/v1/session", auth: "user" },
   { method: "POST", path: "/v1/session/refresh", auth: "none" },
+  { method: "GET", path: "/v1/session/identity/options", auth: "none" },
+  { method: "POST", path: "/v1/session/identity/request", auth: "none" },
+  { method: "POST", path: "/v1/session/identity/confirm", auth: "none" },
   { method: "GET", path: "/v1/me", auth: "user" },
   { method: "PUT", path: "/v1/me", auth: "user" },
   { method: "GET", path: "/v1/billing/status", auth: "user" },
   { method: "POST", path: "/v1/billing/redeem", auth: "user" },
   { method: "POST", path: "/v1/billing/checkout", auth: "user" },
+  { method: "POST", path: "/v1/billing/mock/redeem", auth: "user" },
   { method: "POST", path: "/v1/billing/webhook", auth: "none" },
   { method: "GET", path: "/v1/library/changes", auth: "user" },
   { method: "PUT", path: "/v1/library/changes", auth: "user" },

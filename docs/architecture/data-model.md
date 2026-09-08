@@ -65,15 +65,17 @@
 
 可选。第一期列表筛选以分类和全文搜索为主；标签表可在 M2 计划里决定是否落地。
 
-### assets
+### prompt_assets
 
 | 列 | 说明 |
 |---|---|
 | id | UUID |
-| owner_type | `prompt` / `collection` |
-| owner_id | 所属 id |
-| local_path | 本机路径 |
-| mime_type | 类型 |
+| prompt_id | 所属提示词 id |
+| name / mime | 安全显示名与允许的文件类型 |
+| data | SQLite BLOB，受单文件及总容量限制 |
+| position | 用户添加顺序 |
+
+文件与正文同事务保存，列表只查询文件/图片数量，打开资料时才读取数据。数据库快照包含文件；云同步与发布不导出本表。合集封面仍沿用 cover_json，不迁移旧封面。
 
 ### settings
 

@@ -6,6 +6,11 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-08-disable-worklog-gate.md](plans/2026-09-08-disable-worklog-gate.md) | 现行 | 关闭 WorkLog 提交拦截 | 用户明确停用本仓库 IDE 评审钩子，保留测试与 CI |
+| [plans/2026-09-08-community-import.md](plans/2026-09-08-community-import.md) | 现行 | 导入公开提示词样本 | 有来源许可的本机追加导入与参考图 |
+| [plans/2026-09-08-detail-image-preview.md](plans/2026-09-08-detail-image-preview.md) | 现行 | 查看详情样图排版 | 两张摄影样图、来源与限宽阅读；349 项测试及 macOS 构建 |
+| [plans/2026-09-08-browse-refinement.md](plans/2026-09-08-browse-refinement.md) | 现行 | 优化广场与本地浏览 | 准确计数与标题、筛选恢复和合并页头；347 项测试及原生广场验收 |
+| [plans/2026-09-08-client-assets.md](plans/2026-09-08-client-assets.md) | 现行 | 图片附件和列表优化 | 本地附件、预览备份与云端隔离；343 项前端测试和 macOS 构建验收 |
 | [../README.md](../README.md) | 现行 | 人第一次进仓库 | 产品一句话与入口 |
 | [../backend/README.md](../backend/README.md) | 现行 | 跑 M5 API | 本仓库会话服务 |
 | [../admin-web/README.md](../admin-web/README.md) | 现行 | 跑管理台预览 | 独立 admin-web；不进桌面包 |
@@ -16,6 +21,26 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [../.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) | 现行 | 开 PR | PR 文档检查清单 |
 | [README.md](README.md) | 现行 | 问文档体系怎么运转 | 体系总说明 |
 | [INDEX.md](INDEX.md) | 现行 | 每次查文档 | 本表 |
+| [plans/2026-09-08-workspace-pages.md](plans/2026-09-08-workspace-pages.md) | 现行 | 减少客户端弹窗 | 页面化已验收；333 项测试与真实 macOS 返回验证，待提交评审门禁 |
+| [architecture/decisions/0020-workspace-pages.md](architecture/decisions/0020-workspace-pages.md) | 现行 | 决定弹窗与页面边界 | 编辑、详情、登录等页面化，仅必要确认使用对话框 |
+| [plans/2026-09-08-desktop-refinement.md](plans/2026-09-08-desktop-refinement.md) | 现行 | 查全客户端视觉细化验收 | 统一主壳、弹窗、设置与启动器；328 项测试及浏览器/原生检查 |
+| [plans/2026-09-08-settings-page.md](plans/2026-09-08-settings-page.md) | 现行 | 查设置页面验收 | 全窗口设置、主题卡、搜索与返回；328 项测试及桌面包验收 |
+| [architecture/decisions/0019-settings-page.md](architecture/decisions/0019-settings-page.md) | 现行 | 修改设置呈现方式 | 取代固定弹窗，采用应用内完整设置页面 |
+| [plans/2026-09-08-client-polish.md](plans/2026-09-08-client-polish.md) | 现行 | 优化客户端日常操作 | 账号入口等六项已实现，325 项测试及原生账号入口已验 |
+| [plans/2026-09-08-sidebar-resize.md](plans/2026-09-08-sidebar-resize.md) | 现行 | 修复客户端侧栏拖拽 | 有界调宽与折叠保留，浏览器及真实桌面已验 |
+| [plans/2026-09-07-admin-risk.md](plans/2026-09-07-admin-risk.md) | 目标 | 实现举报与安全规则 | 举报事务闭环、受限导出和可测试规则 |
+| [plans/2026-09-07-admin-moderation.md](plans/2026-09-07-admin-moderation.md) | 目标 | 实现自动审核 | 发布限额、真实初筛、转人工与原子上架 |
+| [plans/2026-09-07-admin-ai.md](plans/2026-09-07-admin-ai.md) | 目标 | 实现 AI 模型与审核 Skills | 加密配置、有界外部调用、版本化路由和人工降级 |
+| [plans/2026-09-07-admin-mail.md](plans/2026-09-07-admin-mail.md) | 目标 | 实现邮件服务 | 加密 SMTP、显式测试、持久化投递和重试 |
+| [plans/2026-09-08-admin-identity.md](plans/2026-09-08-admin-identity.md) | 目标 | 实现注册、邀请与找回 | 一次性邮箱验证、角色保护、注册门禁与三端入口 |
+| [plans/2026-09-08-admin-site.md](plans/2026-09-08-admin-site.md) | 目标 | 实现站点配置和公告 | 版本化配置、真实投稿门禁、跨端公告 |
+| [plans/2026-09-08-admin-mock-billing.md](plans/2026-09-08-admin-mock-billing.md) | 目标 | 实现模拟账单管理 | 独立持久化、幂等订单、测试兑换码 |
+| [plans/2026-09-08-admin-operations.md](plans/2026-09-08-admin-operations.md) | 目标 | 实现概览、审计和系统状态 | 真实口径、失败追踪、限时探测和隔离恢复 |
+| [plans/2026-09-08-admin-catalog-migration.md](plans/2026-09-08-admin-catalog-migration.md) | 目标 | 迁移字典引用 | 公开元数据迁移、历史重定向与并发保护 |
+| [plans/2026-09-08-admin-oauth-verification.md](plans/2026-09-08-admin-oauth-verification.md) | 目标 | 验证登录配置 | 版本化重认证、一次性真实授权与失败状态 |
+| [plans/2026-09-08-admin-notifications.md](plans/2026-09-08-admin-notifications.md) | 目标 | 高风险通知与日志策略 | 加密渠道、持久化去重、失败重试与显式清理 |
+| [plans/2026-09-08-admin-acceptance.md](plans/2026-09-08-admin-acceptance.md) | 目标 | 完整管理台最终验收 | 本地全端已验；真实外部验证与 Git 门禁待完成 |
+| [how-to/backend-recovery.md](how-to/backend-recovery.md) | 现行 | 备份或恢复后端实例 | 配套密钥/对象存储、隔离数据库恢复演练 |
 | [constitution.md](constitution.md) | 现行 | 改原则或开新模块前 | 非协商约束 |
 | [product/prd.md](product/prd.md) | 现行 | 问范围、做什么、不做什么 | 完整产品需求 |
 | [product/roadmap.md](product/roadmap.md) | 现行 | 问进度或下一步里程碑 | 里程碑与完成标准 |
@@ -28,7 +53,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0004-documentation-system.md](architecture/decisions/0004-documentation-system.md) | 现行 | 改文档规则时 | 文档组合方案 |
 | [architecture/decisions/0005-ui-source-prompt-ark-prototype.md](architecture/decisions/0005-ui-source-prompt-ark-prototype.md) | 归档 | 追溯主窗口设计源 | 已被 ADR 0015 取代 |
 | [architecture/decisions/0015-workbench-visual-system.md](architecture/decisions/0015-workbench-visual-system.md) | 归档 | 追溯首次视觉优化 | 已被 ADR 0016 取代 |
-| [architecture/decisions/0016-workbench-frame-and-settings.md](architecture/decisions/0016-workbench-frame-and-settings.md) | 现行 | 改工作台框架与设置排版 | Codex 风格方向、纵向导航与分组表单 |
+| [architecture/decisions/0016-workbench-frame-and-settings.md](architecture/decisions/0016-workbench-frame-and-settings.md) | 归档 | 追溯固定设置弹窗 | 主工作台由 0017、设置由 0019 取代 |
 | [architecture/decisions/0017-screenshot-workbench-frame.md](architecture/decisions/0017-screenshot-workbench-frame.md) | 现行 | 对齐用户 Codex 主窗口截图 | 窗口操作与品牌分行、直线分栏、侧栏搜索与主题层级 |
 | [architecture/decisions/0006-plan-altitude.md](architecture/decisions/0006-plan-altitude.md) | 现行 | 想一次写完所有逐步任务时 | 计划只写一层深 |
 | [architecture/decisions/0007-sqlite-access.md](architecture/decisions/0007-sqlite-access.md) | 现行 | 改本地库访问方式时 | rusqlite 而不是 plugin-sql |
@@ -39,6 +64,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0012-postgres-backend.md](architecture/decisions/0012-postgres-backend.md) | 现行 | 接 Postgres、Redis、MinIO 或改口令存储时 | 预发存本机 `promptark` 库；Argon2id |
 | [architecture/decisions/0013-oauth-google-github.md](architecture/decisions/0013-oauth-google-github.md) | 现行 | 接 Google / GitHub 登录前 | 选定 Google 与 GitHub；仍不接 QQ/LinuxDo |
 | [architecture/decisions/0014-full-product.md](architecture/decisions/0014-full-product.md) | 现行 | 问是否还按第一期冻结 | 剩余工作按完整产品排队 |
+| [architecture/decisions/0018-admin-fixed-roles.md](architecture/decisions/0018-admin-fixed-roles.md) | 现行 | 改管理角色和用户操作 | 固定角色、显式 owner 迁移和最后所有者保护 |
 | [specs/launcher/spec.md](specs/launcher/spec.md) | 目标 | 做启动器 | 完整键盘填写、窗口生命周期、复制与原应用粘贴 |
 | [specs/workbench/spec.md](specs/workbench/spec.md) | 目标 | 做主窗口壳 | 软件内搜索与启动器分离、保存快捷键同步及桌面框架 |
 | [specs/library/spec.md](specs/library/spec.md) | 目标 | 做本地 CRUD | 本地提示词 |
@@ -46,14 +72,14 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/collections/spec.md](specs/collections/spec.md) | 目标 | 做合集 | 合集编辑/删除与全库成员管理 |
 | [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 自定义大/小分类、新建校验与安全删除 |
 | [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析、字面值与特殊名称隔离 |
-| [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 紧凑登录与提交反馈；Refresh 进钥匙串 |
-| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 十页统一排版、字段标签、保存反馈与固定布局 |
+| [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 邮箱验证、注册门禁和找回；Refresh 进钥匙串 |
+| [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 十页完整设置页面、搜索、主题卡与保存反馈 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
-| [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 侧栏管理台、OAuth 配置与管理员权限 |
+| [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 身份/内容/审核/站点运营、权限与真实消费者 |
 | [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 账号隔离、保存重试与复制失败反馈；不进桌面包 |
 | [specs/mcp/spec.md](specs/mcp/spec.md) | 目标 | 做本机 MCP | stdio 只读搜索、分页与参数校验 |
 | [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 完整分类/合集/成员/软删除往返与时间归一化 |
-| [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 显式 mock 支付与真实权益隔离 |
+| [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 独立持久化模拟订单/权益、测试码与真实权益隔离 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
 | [reference/test-gates.md](reference/test-gates.md) | 现行 | 加测试或 CI | 分阶段门禁 |
 | [reference/openapi/square.yaml](reference/openapi/square.yaml) | 现行 | 改广场 API 时 | M5 广场 / 登录 / 发布合同 |
@@ -88,6 +114,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/oauth-clients/proposal.md](changes/oauth-clients/proposal.md) | 现行 | 查客户端 OAuth 是否已接受 | 已接受；登录弹窗接 Google / GitHub |
 | [changes/full-product/proposal.md](changes/full-product/proposal.md) | 现行 | 查完整产品队列是否已接受 | 已接受；ADR 0014 |
 | [changes/full-product/design.md](changes/full-product/design.md) | 目标 | 看同步 / 更新 / 账单怎么落地 | 账号库推拉；updater；预发兑换 |
+| [changes/admin-complete/proposal.md](changes/admin-complete/proposal.md) | 目标 | 确认完整管理台范围 | A01–A19；补齐原型 12 页、AI 审核与风控 |
+| [plans/2026-09-07-admin-catalog.md](plans/2026-09-07-admin-catalog.md) | 现行 | 复验远端分类与模型管理 | 两级字典、版本审计、引用保护和公共消费端；引用迁移未实现 |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
@@ -102,6 +130,12 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-09-07-category-actions.md](plans/2026-09-07-category-actions.md) | 现行 | 修复分类新建和删除 | 明确入口、重复校验、内容保留与删除同步 |
 | [plans/2026-09-07-custom-root-categories.md](plans/2026-09-07-custom-root-categories.md) | 现行 | 新增本地大分类 | 可选父级、两级关系往返与广场隔离 |
 | [plans/2026-09-07-admin-oauth-settings.md](plans/2026-09-07-admin-oauth-settings.md) | 现行 | 管理端配置第三方登录 | Google/GitHub 热配置、密钥保护与管理台视觉整理 |
+| [plans/2026-09-07-admin-complete.md](plans/2026-09-07-admin-complete.md) | 目标 | 开始完整管理端开发 | 九阶段依赖与退出标准；覆盖原型及新增运营需求 |
+| [plans/2026-09-07-admin-security.md](plans/2026-09-07-admin-security.md) | 现行 | 复验管理安全首个子切片 | 初始化不覆盖、本人改密、全会话撤销与事务审计；不等于安全阶段全部完成 |
+| [plans/2026-09-07-admin-users.md](plans/2026-09-07-admin-users.md) | 现行 | 复验角色权限和用户管理 | 显式 owner 迁移、分页检索、详情、停用与撤权；不等于完整身份模块 |
+| [plans/2026-09-07-admin-navigation-throttle.md](plans/2026-09-07-admin-navigation-throttle.md) | 现行 | 复验管理基础 1c | 认证节流、地址导航、会话过期与草稿保护 |
+| [plans/2026-09-07-admin-reviews.md](plans/2026-09-07-admin-reviews.md) | 现行 | 复验审核运营 3a | 分页检索、驳回理由、事务历史与逐项批量结果 |
+| [plans/2026-09-07-admin-content.md](plans/2026-09-07-admin-content.md) | 现行 | 复验广场内容管理 3b | 版本化展示编辑、上下架、回收站和公开访问边界 |
 | [plans/2026-08-22-m1-desktop-skeleton.md](plans/2026-08-22-m1-desktop-skeleton.md) | 归档 | 查 M1 怎么做的 | M1 逐步实现计划 |
 | [plans/2026-08-22-m2-local-workbench.md](plans/2026-08-22-m2-local-workbench.md) | 归档 | 查 M2 怎么做的 | M2 逐步实现计划 |
 | [plans/2026-08-23-m3-launcher.md](plans/2026-08-23-m3-launcher.md) | 归档 | 查 M3 怎么做的 | M3 逐步实现计划 |
@@ -163,7 +197,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/modules/settings.md](plans/modules/settings.md) | 现行 | 做设置 | 设置模块完成态（M2 子集 + M8 十类） |
 | [plans/modules/launcher.md](plans/modules/launcher.md) | 现行 | 做启动器 | 启动器模块完成态 |
 | [plans/modules/square.md](plans/modules/square.md) | 现行 | M5 广场 | 广场模块完成态 |
-| [plans/modules/admin.md](plans/modules/admin.md) | 现行 | M6 管理台 | 管理台模块完成态 |
+| [plans/modules/admin.md](plans/modules/admin.md) | 现行 | 查看管理台范围与计划入口 | 区分旧 M6 基线与完整后台待实现目标 |
 | [plans/modules/web.md](plans/modules/web.md) | 现行 | 做浏览器工作台 | Web 模块完成态 |
 | [plans/modules/mcp.md](plans/modules/mcp.md) | 现行 | 做本机 MCP | MCP 模块完成态 |
 | [plans/done/README.md](plans/done/README.md) | 现行 | 里程碑做完后 | 完成记录怎么写 |

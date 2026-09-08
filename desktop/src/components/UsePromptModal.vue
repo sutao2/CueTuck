@@ -1,13 +1,11 @@
 <template>
-  <div class="modal-layer" data-testid="use-modal">
-    <div class="modal-backdrop" @click="$emit('cancel')"></div>
-    <section v-dialog-focus="() => $emit('cancel')" class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="use-title">
+    <section v-page-focus="() => !busy && $emit('cancel')" class="workspace-page" data-testid="use-modal" role="region" aria-labelledby="use-title">
       <header class="modal-header">
         <div>
           <p class="modal-kicker">{{ prompt.title }}</p>
           <h2 id="use-title">{{ heading }}</h2>
         </div>
-        <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
+        <button type="button" class="page-back" aria-label="返回" :disabled="busy" @click="$emit('cancel')">← 返回</button>
       </header>
       <div class="create-body">
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
@@ -31,6 +29,12 @@
           <p class="use-hint">确认后复制到剪贴板，并记一次使用。</p>
           <pre class="preview-box" data-testid="use-preview">{{ preview }}</pre>
         </template>
+        <details v-if="prompt.asset_count" class="use-assets" @toggle="loadAssets">
+          <summary>参考资料 · {{ prompt.asset_count }} 个附件 <span>复制仅包含正文</span></summary>
+          <p v-if="assetError" role="alert">{{ assetError }} <button type="button" @click="loadAssets">重试</button></p>
+          <p v-if="assetLoading" role="status">正在读取附件…</p>
+          <AttachmentPanel v-else :model-value="assets" :prompt-id="prompt.id" :saved-ids="assets.map(a => a.id)" readonly />
+        </details>
       </div>
       <footer class="modal-footer">
         <span class="create-location">{{ stepLabel }}</span>
@@ -44,14 +48,25 @@
         </div>
       </footer>
     </section>
-  </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from "vue";
-import { vDialogFocus } from "../lib/dialogFocus.js";
+import { vPageFocus } from "../lib/pageFocus.js";
 import { extractVariables, renderPrompt } from "../lib/renderPrompt.js";
 import { hintForVariable } from "../platform/variableHints.js";
+import AttachmentPanel from './AttachmentPanel.vue';
+import { listPromptAssets } from '../platform/assets.js';
+
+const assets = ref([]), assetLoading = ref(false), assetError = ref('');
+let assetsLoaded = false;
+async function loadAssets(event) {
+  if (assetsLoaded || assetLoading.value || (event?.target?.tagName === 'DETAILS' && !event.target.open)) return;
+  assetLoading.value = true; assetError.value = '';
+  try { assets.value = await listPromptAssets(props.prompt.id); assetsLoaded = true; }
+  catch (err) { assetError.value = `附件读取失败：${err.message || err}`; }
+  finally { assetLoading.value = false; }
+}
 
 const props = defineProps({
   prompt: { type: Object, required: true },

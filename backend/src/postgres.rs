@@ -1,9 +1,10 @@
-use crate::password::{hash_password, verify_password};
+#[cfg(test)]
+use crate::password::hash_password;
+use crate::password::verify_password;
 use crate::{AdminUser, Publication, SquareItem};
 use axum::http::StatusCode;
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct Pg {
@@ -24,24 +25,49 @@ impl Pg {
         Ok(Self { pool, schema })
     }
 
-    fn t(&self, table: &str) -> String {
+    pub(crate) fn t(&self, table: &str) -> String {
         format!("\"{}\".\"{}\"", self.schema, table)
     }
 
     pub async fn apply_schema(&self, reset: bool) -> Result<(), sqlx::Error> {
-        sqlx::query(&format!(
-            "CREATE SCHEMA IF NOT EXISTS \"{}\"",
-            self.schema
-        ))
-        .execute(&self.pool)
-        .await?;
+        sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS \"{}\"", self.schema))
+            .execute(&self.pool)
+            .await?;
         if reset {
             for table in [
+                "reports",
+                "report_events",
+                "safety_rules",
+                "moderation_policy",
+                "ai_configuration",
+                "ai_tests",
+                "mail_configuration",
+                "mail_outbox",
+                "mail_attempts",
+                "identity_policy",
+                "site_configuration",
+                "mock_entitlements",
+                "mock_orders",
+                "mock_code_batches",
+                "mock_codes",
+                "mock_code_uses",
+                "operations_metadata",
+                "request_failures",
+                "identity_challenges",
+                "catalog",
+                "catalog_redirects",
+                "oauth_verifications",
+                "notification_configuration",
+                "notification_deliveries",
+                "notification_attempts",
+                "auth_limits",
+                "security_audit",
                 "favorites",
                 "media_objects",
                 "oauth_accounts",
                 "access_tokens",
                 "refresh_tokens",
+                "review_events",
                 "publications",
                 "square_items",
                 "settings",
@@ -55,6 +81,10 @@ impl Pg {
             }
         }
         let statements = [
+            format!("CREATE TABLE IF NOT EXISTS {} (bucket_key TEXT PRIMARY KEY, attempts INT NOT NULL, expires_at TIMESTAMPTZ NOT NULL)", self.t("auth_limits")),
+            format!("CREATE TABLE IF NOT EXISTS {} (id TEXT PRIMARY KEY, actor_email TEXT NOT NULL, action TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())", self.t("security_audit")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS target_email TEXT", self.t("security_audit")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS details JSONB NOT NULL DEFAULT '{{}}'", self.t("security_audit")),
             format!(
                 "CREATE TABLE IF NOT EXISTS {} (
                   email TEXT PRIMARY KEY,
@@ -66,6 +96,7 @@ impl Pg {
                 )",
                 self.t("accounts")
             ),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS disabled BOOLEAN NOT NULL DEFAULT FALSE", self.t("accounts")),
             format!(
                 "CREATE TABLE IF NOT EXISTS {} (
                   provider TEXT NOT NULL,
@@ -120,11 +151,21 @@ impl Pg {
                 self.t("publications")
             ),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS category_id TEXT", self.t("square_items")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS reference JSONB", self.t("square_items")),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS category_id TEXT", self.t("publications")),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS model TEXT", self.t("publications")),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'prompt'", self.t("publications")),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS members JSONB NOT NULL DEFAULT '[]'", self.t("publications")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ", self.t("publications")),
+            format!("ALTER TABLE {} ALTER COLUMN created_at SET DEFAULT now()", self.t("publications")),
+            format!("CREATE TABLE IF NOT EXISTS {} (id BIGSERIAL PRIMARY KEY, publication_id TEXT NOT NULL REFERENCES {}(id), actor_email TEXT NOT NULL, status TEXT NOT NULL, reason TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now())", self.t("review_events"), self.t("publications")),
+            format!("CREATE INDEX IF NOT EXISTS review_events_publication ON {} (publication_id, id)", self.t("review_events")),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS members JSONB NOT NULL DEFAULT '[]'", self.t("square_items")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'online'", self.t("square_items")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS revision BIGINT NOT NULL DEFAULT 0", self.t("square_items")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS recommended BOOLEAN NOT NULL DEFAULT false", self.t("square_items")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS listed_at TIMESTAMPTZ", self.t("square_items")),
+            format!("ALTER TABLE {} ALTER COLUMN listed_at SET DEFAULT now()", self.t("square_items")),
             format!(
                 "CREATE TABLE IF NOT EXISTS {} (
                   email TEXT NOT NULL REFERENCES {}(email) ON DELETE CASCADE,
@@ -208,9 +249,22 @@ impl Pg {
         ))
         .execute(&self.pool)
         .await?;
+        self.seed_catalog().await?;
+        self.init_risk().await?;
+        self.init_moderation().await?;
+        self.init_ai().await?;
+        self.init_mail().await?;
+        self.init_identity().await?;
+        self.init_site().await?;
+        self.init_mock_billing().await?;
+        self.init_operations().await?;
+        self.init_catalog_redirects().await?;
+        self.init_oauth_verification().await?;
+        self.init_notifications().await?;
         Ok(())
     }
 
+    #[cfg(test)]
     pub async fn upsert_account(
         &self,
         email: &str,
@@ -236,10 +290,17 @@ impl Pg {
     }
 
     pub async fn oauth_config(&self, provider: &str) -> Result<Option<String>, StatusCode> {
-        sqlx::query_scalar(&format!("SELECT value FROM {} WHERE key=$1", self.t("settings")))
-            .bind(format!("oauth_provider_{provider}")).fetch_optional(&self.pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        sqlx::query_scalar(&format!(
+            "SELECT value FROM {} WHERE key=$1",
+            self.t("settings")
+        ))
+        .bind(format!("oauth_provider_{provider}"))
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
     }
 
+    #[cfg(test)]
     pub async fn set_oauth_config(&self, provider: &str, value: &str) -> Result<(), StatusCode> {
         sqlx::query(&format!("INSERT INTO {} (key,value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", self.t("settings")))
             .bind(format!("oauth_provider_{provider}")).bind(value).execute(&self.pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -291,7 +352,9 @@ impl Pg {
         self.get_profile(email).await
     }
 
-    fn library_change_from_row(row: &sqlx::postgres::PgRow) -> Result<crate::library::LibraryChange, StatusCode> {
+    fn library_change_from_row(
+        row: &sqlx::postgres::PgRow,
+    ) -> Result<crate::library::LibraryChange, StatusCode> {
         let payload: String = row.get("payload");
         Ok(crate::library::LibraryChange {
             id: row.get("id"),
@@ -317,9 +380,14 @@ impl Pg {
         .fetch_all(&self.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let mut items = rows.iter().map(Self::library_change_from_row).collect::<Result<Vec<_>, _>>()?;
+        let mut items = rows
+            .iter()
+            .map(Self::library_change_from_row)
+            .collect::<Result<Vec<_>, _>>()?;
         if !since.is_empty() {
-            items.retain(|row| crate::library::timestamp_ms(&row.updated_at) > crate::library::timestamp_ms(since));
+            items.retain(|row| {
+                crate::library::timestamp_ms(&row.updated_at) > crate::library::timestamp_ms(since)
+            });
         }
         Ok(items)
     }
@@ -330,7 +398,11 @@ impl Pg {
         items: &[crate::library::LibraryChange],
     ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
         crate::library::validate_changes(items)?;
-        let mut transaction = self.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let mut transaction = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         for item in items {
             let payload = serde_json::to_string(&item.payload).unwrap_or_else(|_| "{}".into());
             sqlx::query(&format!(
@@ -357,7 +429,10 @@ impl Pg {
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         }
-        transaction.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        transaction
+            .commit()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         self.list_library_changes(email, "").await
     }
 
@@ -384,51 +459,6 @@ impl Pg {
         }
     }
 
-    pub async fn issue_session(&self, email: &str) -> Result<(String, String), StatusCode> {
-        let access = format!("acc.{}", Uuid::new_v4());
-        let refresh = format!("ref.{}", Uuid::new_v4());
-        sqlx::query(&format!(
-            "INSERT INTO {} (token, email) VALUES ($1, $2)",
-            self.t("access_tokens")
-        ))
-        .bind(&access)
-        .bind(email)
-        .execute(&self.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        sqlx::query(&format!(
-            "INSERT INTO {} (token, email) VALUES ($1, $2)",
-            self.t("refresh_tokens")
-        ))
-        .bind(&refresh)
-        .bind(email)
-        .execute(&self.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        Ok((access, refresh))
-    }
-
-    pub async fn rotate_refresh(&self, token: &str) -> Result<String, StatusCode> {
-        let row = sqlx::query(&format!(
-            "DELETE FROM {} WHERE token = $1 RETURNING email",
-            self.t("refresh_tokens")
-        ))
-        .bind(token)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let email: String = row.ok_or(StatusCode::UNAUTHORIZED)?.get("email");
-        sqlx::query(&format!(
-            "DELETE FROM {} WHERE email = $1",
-            self.t("access_tokens")
-        ))
-        .bind(&email)
-        .execute(&self.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        Ok(email)
-    }
-
     pub async fn revoke_access(&self, token: &str) -> Result<bool, StatusCode> {
         let result = sqlx::query(&format!(
             "DELETE FROM {} WHERE token = $1",
@@ -443,8 +473,8 @@ impl Pg {
 
     pub async fn email_for_access(&self, token: &str) -> Result<Option<String>, StatusCode> {
         let row = sqlx::query(&format!(
-            "SELECT email FROM {} WHERE token = $1",
-            self.t("access_tokens")
+            "SELECT a.email FROM {} t JOIN {} a ON a.email=t.email WHERE t.token=$1 AND NOT a.disabled",
+            self.t("access_tokens"), self.t("accounts")
         ))
         .bind(token)
         .fetch_optional(&self.pool)
@@ -486,6 +516,7 @@ impl Pg {
 
     fn item_from_row(row: &sqlx::postgres::PgRow) -> SquareItem {
         SquareItem {
+            reference: row.get("reference"),
             id: row.get("id"),
             title: row.get("title"),
             kind: row.get("kind"),
@@ -494,14 +525,25 @@ impl Pg {
             category_id: row.get("category_id"),
             member_count: row.get("member_count"),
             content: row.get("content"),
-            members: row.get::<sqlx::types::Json<Vec<crate::PublishedPrompt>>, _>("members").0,
+            members: row
+                .get::<sqlx::types::Json<Vec<crate::PublishedPrompt>>, _>("members")
+                .0,
         }
     }
 
     pub async fn list_items(&self) -> Result<Vec<SquareItem>, StatusCode> {
+        self.list_visible_items(false).await
+    }
+
+    pub async fn list_visible_items(&self, latest: bool) -> Result<Vec<SquareItem>, StatusCode> {
+        let order = if latest {
+            "listed_at DESC NULLS LAST, id"
+        } else {
+            "recommended DESC, sort_index, id"
+        };
         let rows = sqlx::query(&format!(
-            "SELECT id, title, kind, excerpt, model, member_count, content, category_id, members
-             FROM {} ORDER BY sort_index, id",
+            "SELECT id, title, kind, excerpt, model, member_count, content, category_id, members, reference
+             FROM {} WHERE visibility='online' ORDER BY {order}",
             self.t("square_items")
         ))
         .fetch_all(&self.pool)
@@ -512,8 +554,8 @@ impl Pg {
 
     pub async fn get_item(&self, id: &str) -> Result<Option<SquareItem>, StatusCode> {
         let row = sqlx::query(&format!(
-            "SELECT id, title, kind, excerpt, model, member_count, content, category_id, members
-             FROM {} WHERE id = $1",
+            "SELECT id, title, kind, excerpt, model, member_count, content, category_id, members, reference
+             FROM {} WHERE id = $1 AND visibility='online'",
             self.t("square_items")
         ))
         .bind(id)
@@ -525,7 +567,7 @@ impl Pg {
 
     pub async fn increment_download_count(&self, id: &str) -> Result<(), StatusCode> {
         let result = sqlx::query(&format!(
-            "UPDATE {} SET download_count = download_count + 1 WHERE id = $1",
+            "UPDATE {} SET download_count = download_count + 1 WHERE id = $1 AND visibility='online'",
             self.t("square_items")
         ))
         .bind(id)
@@ -560,8 +602,8 @@ impl Pg {
     #[cfg(test)]
     pub async fn insert_item(&self, item: &SquareItem) -> Result<(), StatusCode> {
         sqlx::query(&format!(
-            "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, category_id, members, sort_index)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, COALESCE((SELECT MAX(sort_index)+1 FROM {0}), 0))",
+            "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, category_id, members, reference, sort_index)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, COALESCE((SELECT MAX(sort_index)+1 FROM {0}), 0))",
             self.t("square_items")
         ))
         .bind(&item.id)
@@ -573,6 +615,7 @@ impl Pg {
         .bind(&item.content)
         .bind(&item.category_id)
         .bind(sqlx::types::Json(&item.members))
+        .bind(&item.reference)
         .execute(&self.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -586,8 +629,8 @@ impl Pg {
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         for (index, item) in items.iter().enumerate() {
             sqlx::query(&format!(
-                "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, sort_index, category_id, members)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+                "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, sort_index, category_id, members, reference)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
                 self.t("square_items")
             ))
             .bind(&item.id)
@@ -600,6 +643,7 @@ impl Pg {
             .bind(index as i32)
             .bind(&item.category_id)
             .bind(sqlx::types::Json(&item.members))
+            .bind(&item.reference)
             .execute(&self.pool)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -608,6 +652,34 @@ impl Pg {
     }
 
     pub async fn insert_publication(&self, publication: &Publication) -> Result<(), StatusCode> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        self.insert_publication_in(&mut tx, publication).await?;
+        tx.commit()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(())
+    }
+
+    pub(crate) async fn insert_publication_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        publication: &Publication,
+    ) -> Result<(), StatusCode> {
+        self.catalog_lock(tx).await?;
+        self.validate_catalog_refs(
+            tx,
+            publication.category_id.as_deref(),
+            publication.model.as_deref(),
+        )
+        .await?;
+        for member in &publication.members {
+            self.validate_catalog_refs(tx, member.category_id.as_deref(), member.model.as_deref())
+                .await?;
+        }
         sqlx::query(&format!(
             "INSERT INTO {} (id, source_id, status, title, content, author_email, category_id, model, kind, members) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
             self.t("publications")
@@ -622,7 +694,7 @@ impl Pg {
         .bind(&publication.model)
         .bind(&publication.kind)
         .bind(sqlx::types::Json(&publication.members))
-        .execute(&self.pool)
+        .execute(&mut **tx)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         Ok(())
@@ -639,7 +711,9 @@ impl Pg {
             category_id: row.get("category_id"),
             model: row.get("model"),
             kind: row.get("kind"),
-            members: row.get::<sqlx::types::Json<Vec<crate::PublishedPrompt>>, _>("members").0,
+            members: row
+                .get::<sqlx::types::Json<Vec<crate::PublishedPrompt>>, _>("members")
+                .0,
         }
     }
 
@@ -671,12 +745,43 @@ impl Pg {
         id: &str,
         status: &str,
     ) -> Result<Publication, StatusCode> {
-        let mut transaction = self.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let existing = sqlx::query(&format!("SELECT status FROM {} WHERE id = $1 FOR UPDATE", self.t("publications")))
-            .bind(id).fetch_optional(&mut *transaction).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-            .ok_or(StatusCode::NOT_FOUND)?;
+        self.review_publication(id, status, None, None).await
+    }
+
+    pub async fn review_publication(
+        &self,
+        id: &str,
+        status: &str,
+        reason: Option<&str>,
+        actor: Option<(&str, &str)>,
+    ) -> Result<Publication, StatusCode> {
+        let mut transaction = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if let Some((email, token)) = actor {
+            let role: Option<String> = sqlx::query_scalar(&format!("SELECT role FROM {} a WHERE email=$1 AND NOT disabled AND EXISTS(SELECT 1 FROM {} WHERE email=a.email AND token=$2) FOR SHARE", self.t("accounts"), self.t("access_tokens")))
+                .bind(email).bind(token).fetch_optional(&mut *transaction).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let role = role.ok_or(StatusCode::UNAUTHORIZED)?;
+            if !crate::admin_users::staff(&role) {
+                return Err(StatusCode::FORBIDDEN);
+            }
+        }
+        self.catalog_lock(&mut transaction).await?;
+        let existing = sqlx::query(&format!(
+            "SELECT status FROM {} WHERE id = $1 FOR UPDATE",
+            self.t("publications")
+        ))
+        .bind(id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
         let previous: String = existing.get("status");
-        if previous != "pending" && previous != status { return Err(StatusCode::CONFLICT); }
+        if previous != "pending" && previous != status {
+            return Err(StatusCode::CONFLICT);
+        }
         let row = sqlx::query(&format!(
             "UPDATE {} SET status = $2 WHERE id = $1
              RETURNING id, source_id, status, title, content, author_email, category_id, model, kind, members",
@@ -690,7 +795,8 @@ impl Pg {
         .ok_or(StatusCode::NOT_FOUND)?;
         let publication = Self::publication_from_row(&row);
         if status == "approved" {
-            if let Some(item) = publication.square_item() {
+            if let Some(mut item) = publication.square_item() {
+                self.resolve_catalog_item(&mut transaction, &mut item).await?;
                 sqlx::query(&format!(
                     "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, category_id, members, sort_index)
                      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, COALESCE((SELECT MAX(sort_index)+1 FROM {0}), 0)) ON CONFLICT(id) DO NOTHING",
@@ -700,7 +806,19 @@ impl Pg {
                     .execute(&mut *transaction).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             }
         }
-        transaction.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if previous == "pending" {
+            if let Some((email, _)) = actor {
+                sqlx::query(&format!("INSERT INTO {} (publication_id,actor_email,status,reason) VALUES ($1,$2,$3,$4)", self.t("review_events")))
+                    .bind(id).bind(email).bind(status).bind(reason).execute(&mut *transaction).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                sqlx::query(&format!("INSERT INTO {} (id,actor_email,action,details) VALUES ($1,$2,'publication_reviewed',$3)", self.t("security_audit")))
+                    .bind(uuid::Uuid::new_v4().to_string()).bind(email).bind(serde_json::json!({"publication_id":id,"status":status,"reason":reason}))
+                    .execute(&mut *transaction).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            }
+        }
+        transaction
+            .commit()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         Ok(publication)
     }
 
@@ -790,14 +908,82 @@ impl Pg {
         provider: &str,
         provider_uid: &str,
         email: &str,
-    ) -> Result<(), StatusCode> {
+    ) -> Result<String, StatusCode> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        self.identity_lock(&mut tx).await?;
+        if let Some(existing) = sqlx::query_scalar::<_, String>(&format!(
+            "SELECT email FROM {} WHERE provider=$1 AND provider_uid=$2",
+            self.t("oauth_accounts")
+        ))
+        .bind(provider)
+        .bind(provider_uid)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        {
+            return Ok(existing);
+        }
+        let accounts: Vec<String> = sqlx::query_scalar(&format!(
+            "SELECT email FROM {} WHERE lower(email)=lower($1)",
+            self.t("accounts")
+        ))
+        .bind(email)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if accounts.len() > 1 {
+            return Err(StatusCode::CONFLICT);
+        }
+        let email = if let Some(existing) = accounts.first() {
+            existing.to_owned()
+        } else {
+            let open: bool = sqlx::query_scalar(&format!(
+                "SELECT (data->>'registration_open')::boolean FROM {} WHERE id=1 FOR SHARE",
+                self.t("identity_policy")
+            ))
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            if !open {
+                return Err(StatusCode::FORBIDDEN);
+            }
+            email.trim().to_lowercase()
+        };
+        let conflict: bool = sqlx::query_scalar(&format!(
+            "SELECT EXISTS(SELECT 1 FROM {} WHERE provider=$1 AND email=$2 AND provider_uid<>$3)",
+            self.t("oauth_accounts")
+        ))
+        .bind(provider)
+        .bind(&email)
+        .bind(provider_uid)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if conflict {
+            return Err(StatusCode::CONFLICT);
+        }
+        let disabled: Option<bool> = sqlx::query_scalar(&format!(
+            "SELECT disabled FROM {} WHERE email=$1 FOR UPDATE",
+            self.t("accounts")
+        ))
+        .bind(&email)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if disabled == Some(true) {
+            return Err(StatusCode::FORBIDDEN);
+        }
         sqlx::query(&format!(
             "INSERT INTO {} (email, password_hash, role) VALUES ($1, NULL, 'user')
              ON CONFLICT (email) DO NOTHING",
             self.t("accounts")
         ))
-        .bind(email)
-        .execute(&self.pool)
+        .bind(&email)
+        .execute(&mut *tx)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         sqlx::query(&format!(
@@ -807,11 +993,14 @@ impl Pg {
         ))
         .bind(provider)
         .bind(provider_uid)
-        .bind(email)
-        .execute(&self.pool)
+        .bind(&email)
+        .execute(&mut *tx)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        Ok(())
+        tx.commit()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(email)
     }
 
     pub async fn insert_media(

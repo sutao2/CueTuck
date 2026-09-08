@@ -1,6 +1,7 @@
 # 16. 以 Codex 风格方向重排工作台与设置
 
-- Status: accepted
+- Status: superseded
+- Superseded by: 主工作台见 [ADR 0017](0017-screenshot-workbench-frame.md)，设置见 [ADR 0019](0019-settings-page.md)
 - Date: 2026-09-06
 - Supersedes: [ADR 0015](0015-workbench-visual-system.md)
 

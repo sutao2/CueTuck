@@ -59,7 +59,11 @@ pub fn preview_import_json_in_dir(dir: &Path, json: &str) -> Result<ImportPrevie
 }
 
 pub fn export_library_json_in_dir(dir: &Path) -> Result<String, String> {
-    let snapshot = super::export_sync_changes(dir)?;
+    let mut snapshot = super::export_sync_changes(dir)?;
+    let connection = open_db(dir)?;
+    for row in snapshot.iter_mut().filter(|row| row.kind == "prompt" && row.deleted_at.is_none()) {
+        row.payload["assets"] = serde_json::to_value(super::assets::read(&connection, &row.id)?).map_err(|e| e.to_string())?;
+    }
     let rows = |kind| snapshot.iter().filter(|row| row.kind == kind && row.deleted_at.is_none()).map(|row| row.payload.clone()).collect::<Vec<_>>();
     serde_json::to_string_pretty(&json!({ "version": 2,
         "prompts": rows("prompt"), "collections": rows("collection"), "categories": rows("category"),
@@ -69,7 +73,7 @@ pub fn export_library_json_in_dir(dir: &Path) -> Result<String, String> {
 
 pub fn apply_import_json_in_dir(dir: &Path, json: &str) -> Result<ImportPreview, String> {
     let (preview, changes) = prepare_import(json, &super::now_millis())?;
-    super::apply_sync_changes(dir, &changes, false)?;
+    super::sync::apply_changes(dir, &changes, false, true)?;
     Ok(preview)
 }
 
@@ -86,6 +90,10 @@ fn prepare_import(raw: &str, timestamp: &str) -> Result<(ImportPreview, Vec<supe
             let field = if *kind == "category" { "name" } else { "title" };
             if row[field].as_str().unwrap_or("").trim().is_empty() { return Err("导入记录缺少名称".into()); }
             super::sync::validate_payload(kind, row)?;
+            if *kind == "prompt" {
+                let assets = serde_json::from_value::<Vec<super::assets::Asset>>(row.get("assets").cloned().unwrap_or_else(|| json!([]))).map_err(|_| "附件格式错误")?;
+                super::assets::validate(&assets)?;
+            }
             let original = row["id"].as_str().filter(|id| !id.is_empty());
             if *kind == "category" && original.is_none() { return Err("分类缺少 id".into()); }
             if let Some(original) = original.filter(|id| !id.is_empty()) {

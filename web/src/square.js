@@ -5,11 +5,13 @@ const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
 let testList = null;
 let testContent = null;
 let testFavorite = null;
+let testCatalog = null;
 
 export function resetSquare() {
   testList = null;
   testContent = null;
   testFavorite = null;
+  testCatalog = null;
 }
 
 export function setSquareTransport(transport) {
@@ -24,9 +26,18 @@ export function setFavoriteTransport(transport) {
   testFavorite = transport;
 }
 
-export async function listSquareItems() {
-  if (testList) return testList();
-  const response = await fetch(`${API_BASE}/v1/square/items`);
+export function setCatalogTransport(transport) { testCatalog = transport; }
+export async function fetchSquareCatalog() {
+  if (testCatalog) return testCatalog();
+  const response = await fetch(`${API_BASE}/v1/square/catalog`);
+  if (!response.ok) throw new Error('广场分类配置暂时不可用');
+  const payload = await response.json();
+  if (!Array.isArray(payload.categories) || !Array.isArray(payload.models)) throw new Error('广场字典响应无效');
+  return payload;
+}
+export async function listSquareItems({ categoryId = '', model = '' } = {}) {
+  if (testList) return testList({ categoryId, model });
+  const response = await fetch(`${API_BASE}/v1/square/items?${new URLSearchParams({category_id:categoryId,model})}`);
   if (!response.ok) throw new Error("广场暂时不可用");
   const payload = await response.json();
   return payload.items ?? [];

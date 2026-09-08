@@ -250,6 +250,9 @@ pub async fn callback(
     State(state): State<AppState>,
     Query(query): Query<OAuthCallbackQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
+    if query.state.as_deref().is_some_and(|s|s.starts_with("admin-test.")) {
+        return crate::oauth_verification::callback(&state,&query).await;
+    }
     if query.error.as_deref().is_some_and(|value| !value.is_empty()) {
         return Err(StatusCode::UNAUTHORIZED);
     }
@@ -298,9 +301,19 @@ async fn fetch_user(
     if let Some(user) = state.oauth.mock_users.get(code).cloned() {
         return Ok(user);
     }
+    fetch_verified_user(&config,provider,code).await
+}
+
+async fn provider_json(response:reqwest::Response)->Result<Value,StatusCode>{
+    if !response.status().is_success()||response.content_length().is_some_and(|n|n>262144){return Err(StatusCode::UNAUTHORIZED)}
+    let mut response=response;let mut bytes=Vec::new();
+    while let Some(chunk)=response.chunk().await.map_err(|_|StatusCode::UNAUTHORIZED)?{if bytes.len()+chunk.len()>262144{return Err(StatusCode::UNAUTHORIZED)}bytes.extend_from_slice(&chunk)}
+    serde_json::from_slice(&bytes).map_err(|_|StatusCode::UNAUTHORIZED)
+}
+pub(crate) async fn fetch_verified_user(config:&ProviderConfig,provider:&str,code:&str)->Result<OAuthUser,StatusCode>{
     let client = reqwest::Client::builder().user_agent("PromptArk/0.1")
-        .timeout(std::time::Duration::from_secs(20)).build().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let token_response: Value = client
+        .redirect(reqwest::redirect::Policy::none()).timeout(std::time::Duration::from_secs(20)).build().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let token_response: Value = provider_json(client
         .post(&config.token_uri)
         .header(reqwest::header::ACCEPT, "application/json")
         .form(&[
@@ -312,24 +325,18 @@ async fn fetch_user(
         ])
         .send()
         .await
-        .map_err(|_| StatusCode::UNAUTHORIZED)?
-        .json()
-        .await
-        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+        .map_err(|_| StatusCode::UNAUTHORIZED)?).await?;
     let access = token_response
         .get("access_token")
         .and_then(Value::as_str)
         .ok_or(StatusCode::UNAUTHORIZED)?;
-    let profile: Value = client
+    let profile: Value = provider_json(client
         .get(&config.user_info_uri)
         .bearer_auth(access)
         .header(reqwest::header::ACCEPT, "application/json")
         .send()
         .await
-        .map_err(|_| StatusCode::UNAUTHORIZED)?
-        .json()
-        .await
-        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+        .map_err(|_| StatusCode::UNAUTHORIZED)?).await?;
     let uid = if provider == "github" {
         profile
             .get("id")
@@ -352,16 +359,13 @@ async fn fetch_user(
     if provider == "github" {
         email.clear();
         if let Some(uri) = &config.emails_uri {
-            let emails: Value = client
+            let emails: Value = provider_json(client
                 .get(uri)
                 .bearer_auth(access)
                 .header(reqwest::header::ACCEPT, "application/json")
                 .send()
                 .await
-                .map_err(|_| StatusCode::UNAUTHORIZED)?
-                .json()
-                .await
-                .map_err(|_| StatusCode::UNAUTHORIZED)?;
+                .map_err(|_| StatusCode::UNAUTHORIZED)?).await?;
             if let Some(items) = emails.as_array() {
                 email = items
                     .iter()
@@ -373,7 +377,7 @@ async fn fetch_user(
             }
         }
     }
-    if email.is_empty() {
+    if email.is_empty() || uid.trim().is_empty() || email.len()>254 || !email.contains('@') {
         return Err(StatusCode::UNAUTHORIZED);
     }
     Ok(OAuthUser {

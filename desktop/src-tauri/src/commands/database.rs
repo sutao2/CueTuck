@@ -20,6 +20,24 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
+pub fn save_local_prompt_with_assets(app: AppHandle, id: Option<String>, title: String, content: String, category_id: Option<String>, model: Option<String>, assets: Vec<crate::local_database::assets::Asset>) -> Result<PromptRecord, String> {
+    crate::local_database::assets::save_prompt(&data_dir(&app)?, id.as_deref(), &title, &content, category_id.as_deref(), model.as_deref(), &assets)
+}
+
+#[tauri::command]
+pub fn list_local_prompt_assets(app: AppHandle, prompt_id: String) -> Result<Vec<crate::local_database::assets::Asset>, String> {
+    crate::local_database::assets::list(&data_dir(&app)?, &prompt_id)
+}
+
+#[tauri::command]
+pub fn export_local_prompt_asset(app: AppHandle, prompt_id: String, asset_id: String) -> Result<String, String> {
+    let path = crate::local_database::assets::export_file(&data_dir(&app)?, &prompt_id, &asset_id)?;
+    // Reveal the containing directory, never execute the attachment.
+    open::that(std::path::Path::new(&path).parent().ok_or("导出路径无效")?).map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
+#[tauri::command]
 pub fn export_local_sync_changes(app: AppHandle) -> Result<Vec<crate::local_database::SyncChange>, String> {
     crate::local_database::export_sync_changes(&data_dir(&app)?)
 }

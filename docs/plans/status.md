@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行（活文档，只写今天为真的事） |
-| 更新日期 | 2026-09-05（功能复审发现分类与跨端缺口，重新进入修复验收） |
+| 更新日期 | 2026-09-08（管理端范围代码与本地全端验收完成，外部验收和提交门禁未完成） |
 
 禁止在本文件预写「已完成」。完成时改勾选并链到 `done/` 记录。
 
@@ -17,12 +17,14 @@
 | M3 启动器对齐 | 完成 | [done/2026-08-23-m3-launcher.md](done/2026-08-23-m3-launcher.md) |
 | M4 桌面可分发 | 完成 | [done/2026-08-23-m4-desktop-distributable.md](done/2026-08-23-m4-desktop-distributable.md) |
 | M5 在线广场 | 完成 | [done/2026-08-23-m5-online-square.md](done/2026-08-23-m5-online-square.md) |
-| M6 运营后台 | 完成 | [done/2026-08-23-m6-admin-console.md](done/2026-08-23-m6-admin-console.md) |
+| M6 管理台基础范围 | 旧范围完成；完整后台本地已验、外部及提交未完成 | [旧 M6 证据](done/2026-08-23-m6-admin-console.md)；[最终联调记录](2026-09-08-admin-acceptance.md) |
 | M7 合同补齐 | 完成 | [done/2026-08-23-m7-contract-gaps.md](done/2026-08-23-m7-contract-gaps.md) |
 | M8 设置对齐 | 完成 | [done/2026-08-23-m8-settings-ia.md](done/2026-08-23-m8-settings-ia.md) |
 | M9 浏览器工作台与 MCP | 完成 | [done/2026-08-24-m9-web-and-mcp.md](done/2026-08-24-m9-web-and-mcp.md) |
 
 ## 当前可执行的下一步
+
+当前用户指定任务为[完整管理端](2026-09-07-admin-complete.md)，原型 12 页和新增范围的实现、本地验收及剩余外部条件见[最终联调记录](2026-09-08-admin-acceptance.md)。不再把已完成代码的邀请、注册邮件、引用迁移、文本 AI 与通知列为待开发；真实凭据验收与 WorkLog 提交门禁仍未完成。以下旧队列记录仅表示各自切片，不得据此宣布生产或全部外部验收通过。
 
 1. 历史实现计划已关闭，但实际功能验收未完成。当前队首：[功能复审与修复](2026-09-05-functional-repair.md)。外部依赖见 [deferred.md](deferred.md)。
 2. 工作台壳层接线已关闭。证据：[done/2026-08-29-workbench-shell-wiring.md](done/2026-08-29-workbench-shell-wiring.md)。

@@ -1,15 +1,13 @@
 <template>
-  <div class="modal-layer" data-testid="collection-detail">
-    <div class="modal-backdrop" @click="$emit('cancel')"></div>
-    <section v-dialog-focus="() => $emit('cancel')" class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="collection-title">
+    <section v-page-focus="() => !busy && $emit('cancel')" class="workspace-page" data-testid="collection-detail" role="region" aria-labelledby="collection-title" :aria-busy="busy">
       <header class="modal-header">
         <div>
           <p class="modal-kicker">提示词合集</p>
           <h2 id="collection-title">{{ collection.title }}</h2>
         </div>
-        <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
+        <button type="button" class="page-back" aria-label="返回" :disabled="busy" @click="$emit('cancel')">← 返回</button>
       </header>
-      <div class="create-body">
+      <div class="create-body" :inert="busy ? '' : undefined">
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <div v-if="collection.cover_type === 'single' && singleCover" class="cover-single">
           <img :src="singleCover" alt="">
@@ -41,21 +39,20 @@
         </label>
       </div>
       <footer class="modal-footer">
-        <button type="button" class="button ghost-button" data-testid="edit-collection" @click="$emit('edit')">编辑合集</button>
+        <button type="button" class="button ghost-button" data-testid="edit-collection" :disabled="busy" @click="$emit('edit')">编辑合集</button>
         <div class="modal-actions">
-          <button type="button" class="button ghost-button" @click="$emit('cancel')">关闭</button>
-          <button type="button" class="button primary-button" :disabled="!selectedPromptId" @click="add">
+          <button type="button" class="button ghost-button" :disabled="busy" @click="$emit('cancel')">返回</button>
+          <button type="button" class="button primary-button" :disabled="busy || !selectedPromptId" @click="add">
             加入合集
           </button>
         </div>
       </footer>
     </section>
-  </div>
 </template>
 
 <script setup>
 import { computed, ref } from "vue";
-import { vDialogFocus } from "../lib/dialogFocus.js";
+import { vPageFocus } from "../lib/pageFocus.js";
 import { coverSlots, parseCoverUrls } from "../lib/cover.js";
 
 const props = defineProps({
@@ -63,6 +60,7 @@ const props = defineProps({
   members: { type: Array, default: () => [] },
   prompts: { type: Array, default: () => [] },
   error: { type: String, default: "" },
+  busy: { type: Boolean, default: false },
 });
 const emit = defineEmits(["cancel", "add", "open", "use", "remove-member", "edit"]);
 const selectedPromptId = ref("");
@@ -73,7 +71,7 @@ const coverCells = computed(() => coverSlots(props.collection.cover_json, 9));
 const singleCover = computed(() => parseCoverUrls(props.collection.cover_json)[0] || "");
 
 function add() {
-  if (!selectedPromptId.value) return;
+  if (props.busy || !selectedPromptId.value) return;
   emit("add", selectedPromptId.value);
   selectedPromptId.value = "";
 }

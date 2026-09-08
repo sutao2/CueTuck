@@ -118,7 +118,7 @@ it("rolls back an immediate switch when persistence fails", async () => {
 it("keeps model drafts when cancelling exit and closes after a successful save", async () => {
   await settings("models");
   await w.get('[data-testid="custom-models"]').setValue("Local model");
-  await w.get('[aria-label="关闭"]').trigger("click");
+  await w.get('[aria-label="返回应用"]').trigger("click");
   expect(w.get('[role="alertdialog"]').text()).toContain("未保存");
   await w.get('[data-testid="cancel-settings-action"]').trigger("click");
   expect(w.emitted("cancel")).toBeUndefined();
@@ -126,7 +126,7 @@ it("keeps model drafts when cancelling exit and closes after a successful save",
   await w.get('[data-testid="save-models"]').trigger("click");
   await flushPromises();
   expect(w.get('[data-testid="settings-feedback"]').text()).toContain("模型偏好已保存");
-  await w.get('[aria-label="关闭"]').trigger("click");
+  await w.get('[aria-label="返回应用"]').trigger("click");
   expect(w.emitted("cancel")).toHaveLength(1);
 });
 
@@ -137,9 +137,9 @@ it("restores failed appearance choices without applying them", async () => {
   await flushPromises();
   expect(w.get('[data-testid="density"]').element.value).toBe("comfortable");
   expect(document.body.dataset.density).not.toBe("compact");
-  await w.get('[data-testid="theme-select"]').setValue("dark");
+  await w.get('[data-theme-choice="dark"]').trigger('click');
   await flushPromises();
-  expect(w.get('[data-testid="theme-select"]').element.value).toBe("light");
+  expect(w.get('[data-theme-choice="light"]').attributes('aria-pressed')).toBe('true');
   expect(w.emitted("theme")).toBeUndefined();
 });
 
@@ -149,7 +149,7 @@ it("blocks repeat saves and close while persistence is pending", async () => {
   const pending = new Promise(done => { resolve = done; });
   const save = vi.spyOn(library, "setLocalSetting").mockImplementationOnce(() => pending);
   await w.get('[data-testid="save-models"]').trigger("click");
-  await w.get('[aria-label="关闭"]').trigger("click");
+  await w.get('[aria-label="返回应用"]').trigger("click");
   expect(w.emitted("cancel")).toBeUndefined();
   expect(w.get("fieldset").element.disabled).toBe(true);
   expect(save).toHaveBeenCalledTimes(1);
@@ -211,5 +211,5 @@ it("loads persisted density and supports sidebar and settings shortcuts", async 
   expect(w.get('.app-shell').classes()).not.toContain('sidebar-collapsed');
   window.dispatchEvent(new KeyboardEvent('keydown', { key: ',', metaKey: true }));
   await flushPromises();
-  expect(w.get('[data-testid="settings-modal"]').exists()).toBe(true);
+  expect(w.get('[data-testid="settings-page"]').exists()).toBe(true);
 });

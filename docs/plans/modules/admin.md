@@ -4,9 +4,12 @@
 |---|---|
 | 里程碑 | M6 |
 | 规格 | [admin](../../specs/admin/spec.md) |
-| 分步计划 | [2026-08-23-m6-admin-console.md](../2026-08-23-m6-admin-console.md) |
+| M6 分步计划 | [2026-08-23-m6-admin-console.md](../2026-08-23-m6-admin-console.md) |
+| 完整后台目标 | [功能范围提案](../../changes/admin-complete/proposal.md) |
+| 后续实施入口 | [完整管理端计划](../2026-09-07-admin-complete.md) |
+| 最新验收 | [A01–A19 本地全端记录](../2026-09-08-admin-acceptance.md)；外部凭据与 Git 门禁仍未完成 |
 
-## 完成时必须为真
+## 旧 M6 基线（不代表完整后台完成）
 
 - 独立浏览器管理端能审核、只读看用户、改一项运行时开关
 - 桌面安装包不含管理源码

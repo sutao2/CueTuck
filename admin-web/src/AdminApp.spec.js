@@ -31,11 +31,11 @@ describe("AdminApp", () => {
           ],
         };
       }
-      if (request.kind === "getSettings") {
-        return { square_public: true };
+      if (request.kind === "siteConfig") {
+        return { revision:0, name:'提示方舟', square_public: true };
       }
-      if (request.kind === "putSettings") {
-        return { square_public: request.square_public };
+      if (request.kind === "siteSave") {
+        return { ...request.config, revision:request.config.revision+1 };
       }
       throw new Error(`unexpected ${request.kind}`);
     });
@@ -124,11 +124,11 @@ describe("AdminApp", () => {
       if (request.kind === "list") {
         return { items: [] };
       }
-      if (request.kind === "getSettings") {
-        return { square_public: true };
+      if (request.kind === "siteConfig") {
+        return { revision:0, name:'提示方舟', square_public: true };
       }
-      if (request.kind === "putSettings") {
-        return { square_public: request.square_public };
+      if (request.kind === "siteSave") {
+        return { ...request.config, revision:request.config.revision+1 };
       }
       throw new Error(`unexpected ${request.kind}`);
     });
@@ -142,9 +142,9 @@ describe("AdminApp", () => {
     const box = w.get('[data-testid="setting-square-public"]');
     expect(box.element.checked).toBe(true);
     await box.setValue(false);
-    await w.get('[data-testid="settings-save"]').trigger("click");
+    await w.get('[data-testid="settings-panel"]').trigger("submit");
     await flushPromises();
-    expect(calls.some((call) => call.kind === "putSettings" && call.square_public === false)).toBe(
+    expect(calls.some((call) => call.kind === "siteSave" && call.config.square_public === false)).toBe(
       true,
     );
   });

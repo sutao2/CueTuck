@@ -1,25 +1,28 @@
 :root {
   color-scheme: light;
-  --bg: #f7f6f2;
+  --bg: #fafafa;
   --surface: #ffffff;
-  --sidebar: #f2f1ed;
-  --toolbar: #fafaf8;
-  --text: #1d2528;
-  --muted: #667075;
-  --faint: #9aa2a5;
-  --line: #e1e2de;
-  --line-strong: #c9cbc7;
+  --sidebar: #f5f5f5;
+  --toolbar: #fafafa;
+  --text: #242424;
+  --muted: #6b6b6b;
+  --faint: #767676;
+  --line: #e9e9e9;
+  --line-strong: #d7d7d7;
+  --focus: #3478f6;
+  --hover: rgba(0, 0, 0, .035);
   --scrollbar-thumb: rgba(100, 108, 112, .36);
   --scrollbar-thumb-hover: rgba(100, 108, 112, .58);
-  --accent: #176b62;
-  --accent-strong: #0e554e;
-  --accent-soft: #e3f0ed;
+  --accent: #303030;
+  --accent-strong: #171717;
+  --accent-soft: #eaeaea;
   --blue: #0067c0;
   --danger: #c33d34;
   --shadow-menu: 0 4px 16px rgba(25, 31, 32, 0.17);
-  --font-ui: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-code: ui-monospace, "SFMono-Regular", Consolas, monospace;
   --traffic-light-inset: 0px;
-  --font-display: Georgia, "Noto Serif SC", "Songti SC", serif;
+  --font-display: var(--font-ui);
   --titlebar-height: 32px;
   --statusbar-height: 22px;
   --sidebar-width: 248px;
@@ -27,20 +30,22 @@
 
 body.theme-dark {
   color-scheme: dark;
-  --bg: #111315;
-  --surface: #1b1e20;
-  --sidebar: #17191b;
-  --toolbar: #202326;
-  --text: #eef1f1;
-  --muted: #aeb6b7;
-  --faint: #747d80;
-  --line: #303437;
-  --line-strong: #454b4e;
+  --bg: #181818;
+  --surface: #202020;
+  --sidebar: #222222;
+  --toolbar: #202020;
+  --text: #ededed;
+  --muted: #aaa;
+  --faint: #949494;
+  --line: #333;
+  --line-strong: #484848;
+  --focus: #82adff;
+  --hover: rgba(255, 255, 255, .055);
   --scrollbar-thumb: rgba(181, 188, 192, .34);
   --scrollbar-thumb-hover: rgba(181, 188, 192, .56);
-  --accent: #63b8aa;
-  --accent-strong: #8bd0c4;
-  --accent-soft: #1d3935;
+  --accent: #e6e6e6;
+  --accent-strong: #fff;
+  --accent-soft: #303030;
   --danger: #ee756c;
 }
 
@@ -78,22 +83,21 @@ body {
 button, input, textarea, select { font: inherit; color: inherit; }
 button { color: inherit; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
-  outline-offset: 1px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 kbd {
   font: 10px/1 var(--font-ui);
   color: var(--faint);
   border: 1px solid var(--line);
-  border-bottom-color: var(--line-strong);
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.8);
+  border-radius: 4px;
+  background: var(--surface);
   padding: 3px 5px;
   white-space: nowrap;
 }
 
-body.theme-dark kbd { background: #23272a; }
+body.theme-dark kbd { background: var(--surface); }
 
 body.host-mac {
   --font-ui: "SF Pro Text", "PingFang SC", -apple-system, system-ui, sans-serif;

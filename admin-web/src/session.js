@@ -1,5 +1,7 @@
 let accessToken = null;
 let accountEmail = null;
+let accountRole = null;
+let permissions = {};
 let testTransport = null;
 let oauthProviderList = [];
 let oauthProviderOverride = false;
@@ -18,12 +20,24 @@ function stripRefreshFromWebStorage() {
 }
 
 export function resetAdminSession() {
-  accessToken = null;
-  accountEmail = null;
+  clearAdminSession();
   testTransport = null;
   oauthProviderList = [];
   oauthProviderOverride = false;
   if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
+}
+
+export function clearAdminSession() {
+  accessToken = null;
+  accountEmail = null;
+  accountRole = null;
+  permissions = {};
+}
+
+export function expireAdminSession(expectedToken) {
+  if (!expectedToken || expectedToken !== accessToken) return;
+  clearAdminSession();
+  window.dispatchEvent(new Event('promptark:session-expired'));
 }
 
 export function setOAuthProviderList(items) {
@@ -40,34 +54,40 @@ export function getAdminSession() {
     email: accountEmail,
     accessToken,
     loggedIn: Boolean(accessToken),
+    role: accountRole,
+    permissions: { ...permissions },
   };
 }
 
 async function applySession(result, fallbackEmail, signal) {
   if (signal?.aborted) throw new Error('已取消');
   if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
-  accessToken = null;
-  accountEmail = null;
+  clearAdminSession();
   const candidate = result.access_token ?? result.accessToken;
   if (!candidate) throw new Error('登录响应无效');
   let email = result.email ?? fallbackEmail;
+  let role = result.role ?? 'admin';
+  let allowed = result.permissions ?? { users: role !== 'reviewer', configuration: role !== 'reviewer', roles: role === 'owner' };
   if (!testTransport) {
     const response = await fetch(`${API_BASE}/v1/admin/me`, { headers: { authorization: `Bearer ${candidate}` }, signal });
     if (!response.ok) throw new Error(response.status === 403 ? '该账号不是管理员' : '无法验证管理员身份，请重新登录');
     const account = await response.json();
-    if (account.role !== 'admin') throw new Error('该账号不是管理员');
+    if (!['owner', 'admin', 'reviewer'].includes(account.role)) throw new Error('该账号不是管理员');
     email = account.email;
+    role = account.role;
+    allowed = account.permissions ?? {};
   }
   if (signal?.aborted) throw new Error('已取消');
   accessToken = candidate;
   accountEmail = email;
-  return { email: accountEmail, accessToken };
+  accountRole = role;
+  permissions = allowed;
+  return getAdminSession();
 }
 
 export async function logoutAdmin() {
   const token = accessToken;
-  accessToken = null;
-  accountEmail = null;
+  clearAdminSession();
   if (!token || testTransport) return true;
   try { return (await fetch(`${API_BASE}/v1/session`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } })).ok; }
   catch { return false; }
@@ -99,7 +119,7 @@ export async function loginAdmin({ email, password } = {}) {
       body: JSON.stringify({ email: title, password }),
     });
     if (!response.ok) {
-      throw new Error(response.status === 401 ? "邮箱或密码不对" : "登录失败");
+      throw new Error(response.status === 429 ? '登录尝试过于频繁，请一分钟后重试' : response.status === 401 ? "邮箱或密码不对" : "登录失败，请稍后重试");
     }
     result = await response.json();
   }
