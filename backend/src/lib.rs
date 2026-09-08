@@ -9,6 +9,7 @@ mod oauth_verification_tests;
 #[cfg(test)]
 mod admin_operations_tests;
 mod media;
+mod media_reclaim;
 mod square_search;
 #[cfg(test)]
 mod media_tests;
@@ -471,6 +472,8 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/admin/audit", get(admin_operations::audit_list))
         .route("/v1/admin/audit/export", get(admin_operations::audit_export))
         .route("/v1/admin/system", get(admin_operations::system))
+        .route("/v1/admin/media/orphans", get(media_reclaim::list))
+        .route("/v1/admin/media/orphans/:id/purge", post(media_reclaim::purge))
         .route("/v1/admin/notifications/config", get(admin_notifications::get_config).put(admin_notifications::save_config))
         .route("/v1/admin/notifications/test", post(admin_notifications::test))
         .route("/v1/admin/notifications/deliveries", get(admin_notifications::list))
@@ -707,12 +710,7 @@ async fn create_publication(
         }
         if assigned != expected { return Err(StatusCode::BAD_REQUEST); }
     }
-    if !publication.asset_refs.is_empty() {
-        let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
-        library::validate_asset_refs(pg, publication.author_email.as_deref().unwrap(), &[library::LibraryChange {
-            id: publication.id.clone(), kind: "prompt".into(), payload: serde_json::json!({"asset_refs":publication.asset_refs}), updated_at:"0".into(), deleted_at:None,
-        }]).await?;
-    }
+    if !publication.asset_refs.is_empty() && state.db.is_none() { return Err(StatusCode::SERVICE_UNAVAILABLE); }
     if let Some(pg)=&state.db {
         let publication=pg.moderate_publication(&publication,&bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?).await?;
         // The snapshot is already durable. A failed external check must not turn a successful submission into a retry/duplicate.

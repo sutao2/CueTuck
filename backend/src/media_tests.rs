@@ -18,6 +18,7 @@ use tower::ServiceExt;
 struct Store {
     objects: Arc<Mutex<HashMap<String, Vec<u8>>>>,
     gets: Arc<AtomicUsize>,
+    deletes: Arc<AtomicUsize>,
     mode: Arc<AtomicUsize>,
 }
 struct Server(tokio::task::JoinHandle<()>);
@@ -156,8 +157,9 @@ async fn fixture() -> (AppState, String, String, String, Store, Server) {
             )
             .delete(
                 |State(s): State<Store>, Path(key): Path<String>| async move {
-                    s.objects.lock().unwrap().remove(&key);
-                    StatusCode::NO_CONTENT
+                    s.deletes.fetch_add(1,Ordering::SeqCst);
+                    if s.mode.load(Ordering::SeqCst) == 5 { return StatusCode::BAD_GATEWAY; }
+                    if s.objects.lock().unwrap().remove(&key).is_some() { StatusCode::NO_CONTENT } else { StatusCode::NOT_FOUND }
                 },
             ),
         )
@@ -199,6 +201,115 @@ async fn fixture() -> (AppState, String, String, String, Store, Server) {
         .unwrap()
         .access_token;
     (state, a, b, admin, store, server)
+}
+async fn age_media(state: &AppState, id: &str) {
+    let pg=state.db.as_ref().unwrap();
+    sqlx::query(&format!("UPDATE {} SET last_used_at=now()-interval '8 days' WHERE id=$1",pg.t("media_objects"))).bind(id).execute(&pg.pool).await.unwrap();
+}
+fn media_ref(media: &Value) -> Value { json!({"id":Uuid::new_v4().to_string(),"media_id":media["id"],"name":media["name"],"mime":media["mime"],"size":media["size"],"sha256":media["sha256"]}) }
+async fn reclaim(state: &AppState, admin: &str, id: &str) -> (StatusCode,Value) {
+    crate::admin_security_tests::request(state,"POST",&format!("/v1/admin/media/orphans/{id}/purge"),admin,json!({"confirm":true})).await
+}
+
+#[tokio::test]
+async fn reclaim_excludes_recent_incomplete_legacy_and_all_historical_references() {
+    let (state,a,b,admin,store,_server)=fixture().await;
+    let pg=state.db.as_ref().unwrap();
+    let mut ids=vec![];
+    for name in ["recent.txt","incomplete.txt","legacy.txt","deleted.txt","rejected.txt","orphan.txt"] {
+        let (_,media)=upload(&state,&a,name,"text/plain",name.as_bytes(),false).await;
+        let id=media["id"].as_str().unwrap().to_owned();
+        if name!="recent.txt" { age_media(&state,&id).await; }
+        if name=="incomplete.txt" {sqlx::query(&format!("UPDATE {} SET ready=FALSE WHERE id=$1",pg.t("media_objects"))).bind(&id).execute(&pg.pool).await.unwrap();}
+        if name=="legacy.txt" {sqlx::query(&format!("UPDATE {} SET object_key='legacy/path' WHERE id=$1",pg.t("media_objects"))).bind(&id).execute(&pg.pool).await.unwrap();}
+        if name=="deleted.txt" {pg.put_library_changes("a@example.com",&[library::LibraryChange{id:"deleted".into(),kind:"prompt".into(),payload:json!({"title":"deleted","content":"body","asset_refs":[media_ref(&media)]}),updated_at:"1".into(),deleted_at:Some("1".into())}]).await.unwrap();}
+        if name=="rejected.txt" {
+            let (_,p)=crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,json!({"source_id":"rejected","title":"rejected","content":"body","asset_refs":[media_ref(&media)]})).await;
+            sqlx::query(&format!("UPDATE {} SET status='rejected' WHERE id=$1",pg.t("publications"))).bind(p["id"].as_str().unwrap()).execute(&pg.pool).await.unwrap();
+        }
+        ids.push(id);
+    }
+    for token in [&a,&b,""] {assert!(crate::admin_security_tests::request(&state,"GET","/v1/admin/media/orphans",token,json!(null)).await.0.is_client_error());assert!(reclaim(&state,token,&ids[5]).await.0.is_client_error());}
+    let (_,list)=crate::admin_security_tests::request(&state,"GET","/v1/admin/media/orphans",&admin,json!(null)).await;
+    assert_eq!(list["items"].as_array().unwrap().len(),1);assert_eq!(list["items"][0]["id"],ids[5]);
+    assert!(!list.to_string().contains("object_key"));assert!(!list.to_string().contains("owner_email"));
+    for id in &ids[..5] {assert_eq!(reclaim(&state,&admin,id).await.0,StatusCode::CONFLICT);}
+    age_media(&state,&ids[0]).await;
+    sqlx::query(&format!("UPDATE {} SET file_name=NULL WHERE id=$1",pg.t("media_objects"))).bind(&ids[0]).execute(&pg.pool).await.unwrap();
+    assert_eq!(reclaim(&state,&admin,&ids[0]).await.0,StatusCode::CONFLICT);
+    assert_eq!(store.deletes.load(Ordering::SeqCst),0);
+    assert_eq!(reclaim(&state,&admin,&ids[5]).await.0,StatusCode::OK);
+    assert_eq!(store.deletes.load(Ordering::SeqCst),1);
+    assert_eq!(store.objects.lock().unwrap().len(),5);
+    let count:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {} WHERE action IN ('media_reclaim_started','media_reclaim_completed')",pg.t("security_audit"))).fetch_one(&pg.pool).await.unwrap();assert_eq!(count,2);
+}
+
+#[tokio::test]
+async fn reclaim_preserves_retry_state_after_storage_and_database_failure() {
+    let (state,a,_b,admin,store,_server)=fixture().await;let pg=state.db.as_ref().unwrap();
+    let (_,media)=upload(&state,&a,"retry.txt","text/plain",b"retry",false).await;let id=media["id"].as_str().unwrap();age_media(&state,id).await;
+    store.mode.store(5,Ordering::SeqCst);
+    assert_eq!(reclaim(&state,&admin,id).await.0,StatusCode::BAD_GATEWAY);
+    assert_eq!(get(&state,&a,&format!("/v1/media/{id}/content")).await.status(),StatusCode::NOT_FOUND);
+    let (_,list)=crate::admin_security_tests::request(&state,"GET","/v1/admin/media/orphans",&admin,json!(null)).await;assert_eq!(list["items"][0]["deleting"],true);
+    store.mode.store(0,Ordering::SeqCst);
+    sqlx::query(&format!("ALTER TABLE {} ADD CONSTRAINT block_reclaim_audit CHECK (action <> 'media_reclaim_completed') NOT VALID",pg.t("security_audit"))).execute(&pg.pool).await.unwrap();
+    assert!(reclaim(&state,&admin,id).await.0.is_server_error());assert_eq!(store.objects.lock().unwrap().len(),0);
+    let count:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {} WHERE id=$1 AND deleting",pg.t("media_objects"))).bind(id).fetch_one(&pg.pool).await.unwrap();assert_eq!(count,1);
+    sqlx::query(&format!("ALTER TABLE {} DROP CONSTRAINT block_reclaim_audit",pg.t("security_audit"))).execute(&pg.pool).await.unwrap();
+    assert_eq!(reclaim(&state,&admin,id).await.0,StatusCode::OK);
+    let (_,list)=crate::admin_security_tests::request(&state,"GET","/v1/admin/media/orphans",&admin,json!(null)).await;assert_eq!(list["items"],json!([]));
+}
+
+#[tokio::test]
+async fn reclaim_lease_and_reference_lock_prevent_dangling_snapshots() {
+    let (state,a,_b,admin,store,_server)=fixture().await;let pg=state.db.as_ref().unwrap();
+    let (_,media)=upload(&state,&a,"race.txt","text/plain",b"race",false).await;let id=media["id"].as_str().unwrap();age_media(&state,id).await;
+    let (_,reused)=upload(&state,&a,"race.txt","text/plain",b"race",false).await;assert_eq!(media["id"],reused["id"]);
+    assert_eq!(reclaim(&state,&admin,id).await.0,StatusCode::CONFLICT);age_media(&state,id).await;
+    let change=library::LibraryChange{id:"race".into(),kind:"prompt".into(),payload:json!({"title":"race","content":"body","asset_refs":[media_ref(&media)]}),updated_at:"1".into(),deleted_at:None};
+    let mut tx=pg.pool.begin().await.unwrap();media_reclaim::reference_lock(pg,&mut tx).await.unwrap();
+    let pending=pg.put_library_changes("a@example.com",std::slice::from_ref(&change));tokio::pin!(pending);
+    assert!(tokio::time::timeout(std::time::Duration::from_millis(100),&mut pending).await.is_err());
+    sqlx::query(&format!("UPDATE {} SET deleting=TRUE WHERE id=$1",pg.t("media_objects"))).bind(id).execute(&mut *tx).await.unwrap();tx.commit().await.unwrap();
+    assert!(matches!(pending.await,Err(StatusCode::NOT_FOUND)));
+    assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,json!({"source_id":"race","title":"race","content":"body","asset_refs":[media_ref(&media)]})).await.0,StatusCode::NOT_FOUND);
+    assert_eq!(reclaim(&state,&admin,id).await.0,StatusCode::OK);assert_eq!(store.deletes.load(Ordering::SeqCst),1);
+}
+
+#[tokio::test]
+async fn reclaim_rechecks_references_after_waiting_for_writer_commit() {
+    let (state,a,_b,admin,store,_server)=fixture().await;let pg=state.db.as_ref().unwrap();
+    let (_,media)=upload(&state,&a,"referenced.txt","text/plain",b"referenced",false).await;let id=media["id"].as_str().unwrap();age_media(&state,id).await;
+    let (_,list)=crate::admin_security_tests::request(&state,"GET","/v1/admin/media/orphans",&admin,json!(null)).await;assert_eq!(list["items"][0]["id"],id);
+    let mut tx=pg.pool.begin().await.unwrap();media_reclaim::reference_lock(pg,&mut tx).await.unwrap();
+    let pending=reclaim(&state,&admin,id);tokio::pin!(pending);
+    assert!(tokio::time::timeout(std::time::Duration::from_millis(100),&mut pending).await.is_err());
+    sqlx::query(&format!("INSERT INTO {} (owner_email,id,kind,payload,updated_at) VALUES ('a@example.com','concurrent','prompt',$1,'1')",pg.t("library_changes")))
+        .bind(json!({"title":"concurrent","content":"body","asset_refs":[media_ref(&media)]}).to_string()).execute(&mut *tx).await.unwrap();tx.commit().await.unwrap();
+    assert_eq!(pending.await.0,StatusCode::CONFLICT);assert_eq!(store.deletes.load(Ordering::SeqCst),0);
+    assert_eq!(get(&state,&a,&format!("/v1/media/{id}/content")).await.status(),StatusCode::OK);
+}
+
+#[tokio::test]
+async fn reclaim_requires_confirmation_current_owner_and_durable_claim_audit() {
+    let (state,a,b,admin,store,_server)=fixture().await;let pg=state.db.as_ref().unwrap();
+    let (_,media)=upload(&state,&a,"permissions.txt","text/plain",b"permissions",false).await;let id=media["id"].as_str().unwrap();age_media(&state,id).await;
+    for role in ["reviewer","admin"] {
+        sqlx::query(&format!("UPDATE {} SET role=$1 WHERE email='b@example.com'",pg.t("accounts"))).bind(role).execute(&pg.pool).await.unwrap();
+        assert_eq!(crate::admin_security_tests::request(&state,"GET","/v1/admin/media/orphans",&b,json!(null)).await.0,StatusCode::FORBIDDEN);
+        assert_eq!(reclaim(&state,&b,id).await.0,StatusCode::FORBIDDEN);
+    }
+    assert_eq!(crate::admin_security_tests::request(&state,"POST",&format!("/v1/admin/media/orphans/{id}/purge"),&admin,json!({"confirm":false})).await.0,StatusCode::BAD_REQUEST);
+    sqlx::query(&format!("ALTER TABLE {} ADD CONSTRAINT block_reclaim_claim CHECK (action <> 'media_reclaim_started') NOT VALID",pg.t("security_audit"))).execute(&pg.pool).await.unwrap();
+    assert!(reclaim(&state,&admin,id).await.0.is_server_error());
+    let deleting:bool=sqlx::query_scalar(&format!("SELECT deleting FROM {} WHERE id=$1",pg.t("media_objects"))).bind(id).fetch_one(&pg.pool).await.unwrap();assert!(!deleting);
+    sqlx::query(&format!("ALTER TABLE {} DROP CONSTRAINT block_reclaim_claim",pg.t("security_audit"))).execute(&pg.pool).await.unwrap();
+    let mut tx=pg.pool.begin().await.unwrap();sqlx::query(&format!("SELECT email FROM {} WHERE email='owner@example.com' FOR UPDATE",pg.t("accounts"))).execute(&mut *tx).await.unwrap();
+    let pending=reclaim(&state,&admin,id);tokio::pin!(pending);
+    assert!(tokio::time::timeout(std::time::Duration::from_millis(100),&mut pending).await.is_err());
+    sqlx::query(&format!("UPDATE {} SET role='user' WHERE email='owner@example.com'",pg.t("accounts"))).execute(&mut *tx).await.unwrap();tx.commit().await.unwrap();
+    assert_eq!(pending.await.0,StatusCode::FORBIDDEN);assert_eq!(store.deletes.load(Ordering::SeqCst),0);
 }
 
 async fn upload(

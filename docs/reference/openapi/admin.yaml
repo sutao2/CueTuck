@@ -34,6 +34,16 @@ paths:
       operationId: getAdminSystem
       summary: owner 查看实际依赖状态与恢复提示
       description: 返回 version/checked_at/postgres/redis/media/mail_queue/notification_queue/encryption_key_loaded/mock_billing/recovery。依赖状态 healthy/unavailable/not_configured，可含 latency_ms，每项最多 3 秒并行探测；HTTP 非 2xx 或重定向不视为健康。队列计数读取失败为 null 而非零；邮件通知关联实际邮件状态。没有凭据、服务器路径、URL 或命令执行入口。
+  /v1/admin/media/orphans:
+    get:
+      operationId: listOrphanMedia
+      summary: 配置管理员显式检查可回收的云端附件
+      description: 返回 items（id/name/size/deleting/last_used_at）和 more，最多 25 项。仅完整 ready 标准对象、超过 7 天未复用且未被任何同步/投稿快照引用；包括软删除和驳回记录的引用仍保护。deleting 为可重试清理状态。无对象键、所有者邮箱、URL 或秘密。不自动清理或扫描存储桶，503 查询失败。
+  /v1/admin/media/orphans/{id}/purge:
+    post:
+      operationId: purgeOrphanMedia
+      summary: 配置管理员明确确认后永久清理一份候选云端附件
+      description: JSON confirm=true（不接受其他字段）；返回 removed=true。执行时事务内复核当前权限、保护期和全部引用，与新引用写入互斥。先持久化清理声明及审计，再限时删除该对象；存储成功或 404 后移除记录并审计。409 候选变化/不符合条件/并发清理，502 存储失败，503 数据库或配置不可用。失败可能已经删除存储对象，保留 deleting 待显式重试，不得恢复为可引用。配置权限沿用 owner 初始化前的 legacy admin 兼容。不可撤销，不删本地副本；服务器无法识别未同步的离线草稿，清理前须确认备份。
   /v1/admin/me:
     get:
       operationId: getAdminMe

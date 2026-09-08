@@ -1,6 +1,6 @@
 <template>
   <section class="panel operations">
-    <div class="panel-heading"><h2>{{ headings[mode] }}</h2><button :disabled="busy" @click="load">刷新</button></div>
+    <div class="panel-heading"><h2>{{ headings[mode] }}</h2><button :disabled="busy || mediaBusy" @click="load">刷新</button></div>
     <form v-if="mode==='audit'" class="operations-filters" @submit.prevent="offset=0;load()">
       <label>操作者<input v-model="filters.actor" placeholder="邮箱" maxlength="254"></label>
       <label>操作<input v-model="filters.action" placeholder="操作标识 / request_failed" maxlength="100"></label>
@@ -31,14 +31,17 @@
       <h3>邮件队列</h3><p v-if="data.mail_queue===null" role="alert">队列读取失败，请刷新重试。</p><p v-else-if="!Object.keys(data.mail_queue).length" class="muted">暂无投递记录。</p><ul v-else><li v-for="(count,key) in data.mail_queue" :key="key">{{ mailStatus[key] || key }}：{{ count }}</li></ul>
       <h3>风险通知队列</h3><p v-if="data.notification_queue==null" role="alert">队列读取失败，请刷新重试。</p><p v-else-if="!Object.keys(data.notification_queue).length" class="muted">暂无风险通知。</p><ul v-else><li v-for="(count,key) in data.notification_queue" :key="key">{{ mailStatus[key] || key }}：{{ count }}</li></ul>
       <h3>备份与恢复</h3><p>{{ data.recovery }}</p><p class="muted">配套保存数据库备份、加密密钥与对象存储。先在隔离环境恢复并验证，再授权正式切换。操作手册：docs/how-to/backend-recovery.md。</p>
+      <MediaReclaim @busy-change="mediaBusy=$event;emit('busy-change',$event)" />
     </template>
   </section>
 </template>
 <script setup>
 import {onMounted,ref} from 'vue';
 import {getOperations} from './adminApi.js';
+import MediaReclaim from './MediaReclaim.vue';
 const props=defineProps({mode:{type:String,required:true}});
 const emit=defineEmits(['busy-change']);
+const mediaBusy=ref(false);
 const headings={overview:'运行概况',audit:'操作记录',system:'服务健康'};
 const metrics=[['accounts','全部账号'],['active_accounts','启用账号'],['online_content','在线内容'],['pending','待审投稿'],['recorded_downloads','累计记录下载'],['favorites','当前收藏'],['mock_orders','Mock 历史订单'],['mock_success','Mock 成功开通订单']];
 const additions=[['new_accounts','新增账号'],['new_publications','新增投稿'],['new_mock_orders','新增 Mock 订单']];
@@ -49,7 +52,7 @@ const data=ref(null),busy=ref(false),error=ref(''),notice=ref(''),days=ref(7),of
 const number=value=>Number(value??0).toLocaleString();
 const date=value=>value?new Date(value).toLocaleString():'未记录';
 function query(){return props.mode==='overview'?{days:days.value}:props.mode==='audit'?{...filters.value,offset:offset.value}:{}}
-async function load(){if(busy.value)return;busy.value=true;error.value='';notice.value='';data.value=null;try{data.value=await getOperations(props.mode,query())}catch(e){error.value=e.message}finally{busy.value=false}}
+async function load(){if(busy.value||mediaBusy.value)return;busy.value=true;error.value='';notice.value='';data.value=null;try{data.value=await getOperations(props.mode,query())}catch(e){error.value=e.message}finally{busy.value=false}}
 async function exportLog(){if(busy.value||!window.confirm('导出当前筛选条件下最新的最多 500 条脱敏记录？文件包含操作账号，请妥善保管。'))return;busy.value=true;emit('busy-change',true);error.value='';notice.value='';try{const result=await getOperations('audit/export',{...filters.value});const blob=new Blob([JSON.stringify(result,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`promptark-audit-${new Date().toISOString().slice(0,10)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice.value=`已导出 ${result.items.length} 条记录（匹配 ${result.total} 条，上限 500 条）。`}catch(e){error.value=e.message}finally{busy.value=false;emit('busy-change',false)}}
 onMounted(load);
 </script>

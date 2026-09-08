@@ -196,6 +196,7 @@ impl Pg {
                 self.t("accounts")
             ),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS file_name TEXT, ADD COLUMN IF NOT EXISTS size BIGINT, ADD COLUMN IF NOT EXISTS sha256 TEXT, ADD COLUMN IF NOT EXISTS ready BOOLEAN NOT NULL DEFAULT FALSE", self.t("media_objects")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS deleting BOOLEAN NOT NULL DEFAULT FALSE, ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ NOT NULL DEFAULT now()", self.t("media_objects")),
             format!(
                 "CREATE TABLE IF NOT EXISTS {} (
                   owner_email TEXT NOT NULL REFERENCES {}(email) ON DELETE CASCADE,
@@ -400,12 +401,13 @@ impl Pg {
         items: &[crate::library::LibraryChange],
     ) -> Result<Vec<crate::library::LibraryChange>, StatusCode> {
         crate::library::validate_changes(items)?;
-        crate::library::validate_asset_refs(self, email, items).await?;
         let mut transaction = self
             .pool
             .begin()
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        crate::media_reclaim::reference_lock(self, &mut transaction).await?;
+        crate::library::validate_asset_refs(self, &mut transaction, email, items).await?;
         for item in items {
             let payload = serde_json::to_string(&item.payload).unwrap_or_else(|_| "{}".into());
             sqlx::query(&format!(
@@ -675,6 +677,12 @@ impl Pg {
         publication: &Publication,
     ) -> Result<(), StatusCode> {
         self.catalog_lock(tx).await?;
+        crate::media_reclaim::reference_lock(self, tx).await?;
+        if !publication.asset_refs.is_empty() {
+            crate::library::validate_asset_refs(self, tx, publication.author_email.as_deref().ok_or(StatusCode::UNAUTHORIZED)?, &[crate::library::LibraryChange {
+                id: publication.id.clone(), kind: "prompt".into(), payload: serde_json::json!({"asset_refs":publication.asset_refs}), updated_at:"0".into(), deleted_at:None,
+            }]).await?;
+        }
         self.validate_catalog_refs(
             tx,
             publication.category_id.as_deref(),

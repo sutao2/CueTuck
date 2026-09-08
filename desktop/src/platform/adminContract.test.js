@@ -16,6 +16,8 @@ const REQUIRED = [
   { method: "GET", path: "/v1/admin/audit", auth: "admin" },
   { method: "GET", path: "/v1/admin/audit/export", auth: "admin" },
   { method: "GET", path: "/v1/admin/system", auth: "admin" },
+  { method: "GET", path: "/v1/admin/media/orphans", auth: "admin" },
+  { method: "POST", path: "/v1/admin/media/orphans/{id}/purge", auth: "admin" },
   { method: "GET", path: "/v1/admin/me", auth: "admin" },
   { method: "GET", path: "/v1/admin/publications", auth: "admin" },
   { method: "POST", path: "/v1/admin/publications/{id}/approve", auth: "admin" },
