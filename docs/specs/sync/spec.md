@@ -17,6 +17,8 @@
 
 已登录时「立即同步」MUST 向预发 API 推拉变更。MUST NOT 在未登录时调用同步接口。MUST NOT 把 Refresh 写入 Web Storage。
 
+个人库同步和队列送达 MUST 分阶段反馈：仍有当前账号的任务时不得宣称全部完成，提供仅队列重试。同步中不得关闭设置或重复提交；账号变化后不得显示上一账号的成功。具体场景见 [P3c 计划](../../plans/2026-09-08-publish-sync-feedback.md)。
+
 #### Scenario: 登录后立即同步
 
 - GIVEN 用户已登录且本机有一条「本地仍在」

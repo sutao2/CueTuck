@@ -90,8 +90,12 @@ export async function publishWithQueue(payload) {
       }, email);
       return { queued: true };
     }
-    await removeSuperseded({ kind: "publish", sourceId: payload.sourceId }, email);
-    await flushQueueFor(email);
+    try {
+      await removeSuperseded({ kind: "publish", sourceId: payload.sourceId }, email);
+      await flushQueueFor(email);
+    } catch (error) {
+      return { queued: false, result, queueWarning: error.message || String(error) };
+    }
     return { queued: false, result };
   });
 }

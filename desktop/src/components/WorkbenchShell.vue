@@ -434,9 +434,12 @@
           <button type="button" class="page-back" aria-label="返回" :disabled="publishBusy" @click="publishResume = false">← 返回</button>
         </header>
         <div class="create-body">
+          <p v-if="publishSourcesLoading" role="status">正在读取本地内容…</p>
+          <p v-else-if="publishSourcesError" role="alert">{{ publishSourcesError }} <button type="button" data-testid="retry-publish-sources" @click="openPublish">重新读取</button></p>
+          <p v-else-if="!publishSources.length" role="status">本地库还没有内容，请返回本地提示词新建后再发布。</p>
           <label class="field">
             <span>本地内容</span>
-            <select v-model="publishSourceId" data-testid="publish-source" :disabled="publishBusy">
+            <select v-model="publishSourceId" data-testid="publish-source" :disabled="publishBusy || publishSourcesLoading || Boolean(publishSourcesError)">
               <option value="">选择要发布的本地提示词或合集</option>
               <option v-for="item in publishSources" :key="item.id" :value="item.id">
                 {{ item.title }}
@@ -464,7 +467,7 @@
             type="button"
             class="button primary-button"
             data-testid="publish-submit"
-            :disabled="!publishSourceId || publishBusy || publishAssetsLoading || Boolean(publishAssetsError)"
+            :disabled="!publishSourceId || publishBusy || publishSourcesLoading || Boolean(publishSourcesError) || publishAssetsLoading || Boolean(publishAssetsError)"
             @click="submitPublish"
           >
             {{ publishBusy ? '正在提交…' : '提交审核' }}
@@ -749,6 +752,10 @@ const loginReason = ref("");
 const publishResume = ref(false);
 const pendingPublish = ref(false);
 const publishSources = ref([]);
+const publishSourcesLoading = ref(false), publishSourcesError = ref('');
+let publishSourcesRequest = 0;
+watch(publishResume, value => { if (!value) ++publishSourcesRequest; }, { flush: 'sync' });
+onUnmounted(() => { ++publishSourcesRequest; });
 const publishSourceId = ref("");
 const publishCategoryId = ref(null), publishModel = ref(null);
 const publishAssets = ref([]), publishAssetIds = ref([]), publishAssetsLoading = ref(false), publishAssetsError = ref('');
@@ -1186,18 +1193,29 @@ async function loadPublishSources() {
     listLocalPrompts({ query: "", categoryId: null }),
     listLocalCollections({ query: "", categoryId: null }),
   ]);
-  publishSources.value = [
+  return [
     ...localPrompts.map((item) => ({ ...item, kind: "prompt" })),
     ...localCollections.map((item) => ({ ...item, kind: "collection" })),
   ];
-  publishSourceId.value = "";
 }
 
 async function openPublish() {
+  if (publishResume.value && publishSourcesLoading.value) return;
+  const request = ++publishSourcesRequest;
+  const token = getSession().accessToken;
+  const current = () => request === publishSourcesRequest && publishResume.value && getSession().accessToken === token;
   operationNote.value = "";
-  await loadRemoteCatalog();
-  await loadPublishSources();
   publishResume.value = true;
+  publishSourcesLoading.value = true;
+  publishSourcesError.value = '';
+  publishSources.value = [];
+  publishSourceId.value = '';
+  try {
+    const [sources] = await Promise.all([loadPublishSources(), loadRemoteCatalog()]);
+    if (current()) publishSources.value = sources;
+  } catch (error) {
+    if (current()) publishSourcesError.value = `本地内容读取失败：${error.message || error}`;
+  } finally { if (current()) publishSourcesLoading.value = false; }
 }
 
 async function startPublish() {
@@ -1220,7 +1238,7 @@ async function finishLogin() {
 }
 
 async function submitPublish() {
-  if (!publishSourceId.value || publishBusy.value || publishAssetsLoading.value || publishAssetsError.value) return;
+  if (!publishSourceId.value || publishBusy.value || publishSourcesLoading.value || publishSourcesError.value || publishAssetsLoading.value || publishAssetsError.value) return;
   publishBusy.value = true;
   const source = publishSources.value.find((item) => item.id === publishSourceId.value);
   const account = getSession();
@@ -1248,7 +1266,6 @@ async function submitPublish() {
       assetRefs.push(await uploadPrivateAsset(asset, account.accessToken));
     }
     assertAccount();
-    assertAccount();
     const result = await publishWithQueue({
       sourceId: publishSourceId.value,
       title: source?.title,
@@ -1260,6 +1277,8 @@ async function submitPublish() {
     });
     publishResume.value = false;
     operationNote.value = result.queued ? "草稿已保存在本机队列，尚未提交审核。" : "已提交审核，本地内容仍可编辑。";
+    if (result.queueWarning) operationNote.value += ` 队列整理失败：${result.queueWarning}。请勿重复提交此稿。`;
+    notifyOperation(operationNote.value, !result.queueWarning, 'publish');
   } catch (error) {
     operationNote.value = `发布失败：${error.message || error}`;
   } finally { publishBusy.value = false; }
