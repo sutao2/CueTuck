@@ -1,0 +1,42 @@
+{
+  "checked_at": "2026-09-08",
+  "purpose": "local-development-preview",
+  "archive": "corpus.jsonl.gz",
+  "uncompressed_sha256": "5ff85b363d5c784384e81b0e2708c60840c1afd17ee1ccda4c3a6ce95e11de0c",
+  "sources": [
+    {
+      "repository": "poloclub/diffusiondb",
+      "url": "https://huggingface.co/datasets/poloclub/diffusiondb",
+      "download": "https://huggingface.co/datasets/poloclub/diffusiondb/resolve/main/metadata.parquet",
+      "sha256": "eecd341187bc91c07f5994ad0660d40228ea025616fd57a509bef8323677c68f",
+      "license": "CC0 1.0",
+      "license_file": "cc0.txt",
+      "selected": 20000,
+      "note": "2022 Stable Diffusion dataset. Metadata only; images are not downloaded or attached. Automatic screening does not guarantee safety or image quality."
+    },
+    {
+      "repository": "f/prompts.chat",
+      "url": "https://github.com/f/prompts.chat",
+      "observed_commit": "eaab6b14a085f3b9e4461be90367fcd9a16d3204",
+      "snapshot_sha256": "c506bbf29106058a021e5cf85271bb97c9856c2b7fcc9f337421cdc8b00964c6",
+      "stars": 169665,
+      "license": "CC0 1.0",
+      "license_url": "https://github.com/f/prompts.chat/blob/main/LICENSE",
+      "license_file": "cc0.txt",
+      "selected": 1653,
+      "note": "Prompt data is CC0, not the site's MIT software license. Unknown image models remain unspecified."
+    },
+    {
+      "repository": "YouMind-OpenLab/awesome-nano-banana-pro-prompts",
+      "url": "https://github.com/YouMind-OpenLab/awesome-nano-banana-pro-prompts",
+      "commit": "3ccf3756ec221f2d07b272a10ad5d8a6058692da",
+      "file": "README_zh.md",
+      "snapshot_sha256": "7afa5329f52592037c8e578c935bf8945db447725fb7718c7b227ce953046249",
+      "stars": 13383,
+      "license": "CC BY 4.0",
+      "license_file": "youmind-license.txt",
+      "selected": 122,
+      "note": "Original prompt bodies retained; added display categories and separate attribution metadata. URLs point to source-matched reference images. No endorsement or warranty of third-party image/publicity rights. Public README subset only, not the private CMS."
+    }
+  ]
+}

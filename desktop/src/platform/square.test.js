@@ -30,6 +30,18 @@ describe("square client", () => {
     expect(rows[0].title).toBe("自然光群像");
   });
 
+  it('does not append corpus attribution metadata to downloaded prompt text', async () => {
+    const content = 'A mountain valley in golden-hour light, watercolor illustration.';
+    setSquareContentTransport(async () => ({ id: 'corpus-clean', title: 'Valley', content, reference: {
+      repository: 'poloclub/diffusiondb', author: 'Contributors', license: 'CC0 1.0',
+      url: 'https://huggingface.co/datasets/poloclub/diffusiondb', images: [],
+    } }));
+    await downloadSquareItem('corpus-clean');
+    const [row] = await listLocalPrompts();
+    expect(row.content).toBe(content);
+    expect(row.remote_id).toBe('corpus-clean');
+  });
+
   it("deduplicates concurrent downloads and permits another after deletion", async () => {
     let reads = 0, stats = 0;
     setSquareContentTransport(async id => { reads++; return {id,title:'同一条',content:'正文'}; });
