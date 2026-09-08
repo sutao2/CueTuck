@@ -66,7 +66,11 @@ it('returns from member editing to its collection and refreshes the edited membe
   expect(w.get('.member-title').text()).toBe('Updated member');
   await w.get('[data-testid="edit-collection"]').trigger('click');
   await editor().get('.danger-button').trigger('click'); await flushPromises();
+  expect(w.get('[data-testid="delete-confirmation"]').text()).toContain('合集内的提示词会保留');
+  await w.get('[data-testid="confirm-delete"]').trigger('click'); await flushPromises();
   expect(w.find('[data-testid="collection-detail"]').exists()).toBe(false);
+  expect(await library.listLocalPrompts()).toHaveLength(1);
+  expect(w.get('[data-testid="delete-notice"]').text()).toContain('合集内的提示词已保留');
 });
 
 it('preserves settings drafts across login and guards a sidebar destination before leaving settings', async () => {

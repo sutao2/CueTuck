@@ -482,10 +482,15 @@
       </section>
     </div>
 
-    <div v-if="downloadNotice" class="download-notice" data-testid="download-notice" role="status" aria-live="polite">
-      <span>{{ downloadNotice.text }}</span>
-      <button v-if="downloadNotice.success" type="button" @click="closeSquareDetail(); openLocal(); downloadNotice = null">前往本地</button>
-      <button type="button" aria-label="关闭下载提示" @click="downloadNotice = null">×</button>
+    <div v-if="pendingDelete" class="download-notice" data-testid="delete-confirmation" role="group" aria-label="确认删除">
+      <span>删除「{{ pendingDelete.title }}」？{{ pendingDelete.kind === 'collection' ? '合集内的提示词会保留。' : '将从本地列表移除。' }}</span>
+      <button ref="cancelDeleteButton" type="button" :disabled="editorBusy" @click="pendingDelete = null">取消</button>
+      <button type="button" :disabled="editorBusy" data-testid="confirm-delete" @click="confirmRemovePrompt">{{ editorBusy ? '正在删除…' : '确认删除' }}</button>
+    </div>
+    <div v-if="operationNotice" class="download-notice" :class="{ 'notice-above-confirmation': pendingDelete }" :data-testid="operationNotice.kind + '-notice'" role="status" aria-live="polite">
+      <span>{{ operationNotice.text }}</span>
+      <button v-if="operationNotice.success && operationNotice.kind === 'download'" type="button" @click="closeSquareDetail(); openLocal(); operationNotice = null">前往本地</button>
+      <button type="button" aria-label="关闭提示" @click="operationNotice = null">×</button>
     </div>
 
     <SettingsModal
@@ -880,6 +885,7 @@ function finishNavigation() {
     return;
   }
   pendingNavigation.value = null;
+  pendingDelete.value = null;
   creating.value = false; editing.value = null; using.value = null;
   openedCollection.value = null; closeSquareDetail();
   loginReason.value = ''; publishResume.value = false; pendingPublish.value = false;
@@ -977,14 +983,22 @@ async function confirmDeleteCategory() {
   if (categoryBusy.value || !deletingCategory.value) return;
   categoryBusy.value = true;
   categoryError.value = '';
+  let deleted = false;
+  const title = deletingCategory.value.name;
   try {
     const id = deletingCategory.value.id;
     await deleteLocalCategory(id);
+    deleted = true;
+    deletingCategory.value = null;
+    notifyOperation(`已删除分类「${title}」，内容已保留。`, true, 'delete');
     await refreshCategoryTree();
     if (selectedId.value === id) selectedId.value = '__uncategorized__';
     await reloadPrompts();
     deletingCategory.value = null;
-  } catch (error) { categoryError.value = error instanceof Error ? error.message : String(error); }
+  } catch (error) {
+    categoryError.value = `${deleted ? '分类已删除，但刷新失败' : '删除失败'}：${error.message || error}`;
+    notifyOperation(categoryError.value, false, 'delete');
+  }
   finally { categoryBusy.value = false; }
 }
 
@@ -1017,14 +1031,16 @@ const squareDetailLoading = ref(false);
 const squareDetailError = ref("");
 const downloadBusy = ref([]);
 const downloadedIds = ref([]);
-const downloadNotice = ref(null);
-let downloadNoticeTimer;
-onUnmounted(() => clearTimeout(downloadNoticeTimer));
+const operationNotice = ref(null);
+const pendingDelete = ref(null);
+const cancelDeleteButton = ref(null);
+let operationNoticeTimer;
+onUnmounted(() => clearTimeout(operationNoticeTimer));
 
-function notifyDownload(text, success) {
-  clearTimeout(downloadNoticeTimer);
-  downloadNotice.value = { text, success };
-  downloadNoticeTimer = setTimeout(() => { downloadNotice.value = null; }, success ? 6000 : 12000);
+function notifyOperation(text, success, kind = 'download') {
+  clearTimeout(operationNoticeTimer);
+  operationNotice.value = { text, success, kind };
+  operationNoticeTimer = setTimeout(() => { operationNotice.value = null; }, success ? 6000 : 12000);
 }
 
 async function refreshDownloaded() {
@@ -1058,7 +1074,7 @@ async function openSquareDetail(item) {
 async function downloadSquare(item) {
   if (downloadBusy.value.includes(item.id)) return;
   if (downloadedIds.value.includes(item.id)) {
-    notifyDownload(`「${item.title}」已在本地，无需重复下载。`, true);
+    notifyOperation(`「${item.title}」已在本地，无需重复下载。`, true);
     return;
   }
   downloadBusy.value = [...downloadBusy.value, item.id];
@@ -1066,10 +1082,10 @@ async function downloadSquare(item) {
     await downloadSquareItem(item.id);
     downloadedIds.value = [...new Set([...downloadedIds.value, item.id])];
     operationNote.value = `「${item.title}」已下载到本地。`;
-    notifyDownload(operationNote.value, true);
+    notifyOperation(operationNote.value, true);
   } catch (error) {
     operationNote.value = `下载失败：${error.message || error}`;
-    notifyDownload(operationNote.value, false);
+    notifyOperation(operationNote.value, false);
   } finally { downloadBusy.value = downloadBusy.value.filter((id) => id !== item.id); }
   // Saving succeeded independently of refreshing the visible local list.
   try { await refreshDownloaded(); await reloadPrompts(); } catch { /* Retain confirmed download state. */ }
@@ -1360,7 +1376,7 @@ async function runContextAction(action) {
     return;
   }
   if (action === "delete") {
-    await removePrompt(item.id);
+    removePrompt(item.id);
     return;
   }
   if (action === "download") {
@@ -1463,6 +1479,7 @@ async function reloadPrompts() {
 let localRequest = 0;
 
 function closeEditor() {
+  pendingDelete.value = null;
   creating.value = false;
   editing.value = null;
   editorError.value = "";
@@ -1503,17 +1520,34 @@ async function savePrompt({ id, kind, title, content, categoryId, model, coverTy
   } finally { editorBusy.value = false; }
 }
 
-async function removePrompt(id) {
+function removePrompt(id) {
   if (editorBusy.value) return;
+  const item = editing.value?.id === id ? editing.value : prompts.value.find(row => row.id === id);
+  if (!item) return;
+  operationNotice.value = null;
+  pendingDelete.value = { id, title: item.title, kind: item.kind };
+  nextTick(() => cancelDeleteButton.value?.focus());
+}
+
+async function confirmRemovePrompt() {
+  if (!pendingDelete.value || editorBusy.value) return;
+  const { id, title, kind } = pendingDelete.value;
   editorBusy.value = true;
+  let deleted = false;
   try {
-    if (editing.value?.kind === "collection") await deleteLocalCollection(id);
+    if (kind === "collection") await deleteLocalCollection(id);
     else await deleteLocalPrompt(id);
+    deleted = true;
+    pendingDelete.value = null;
+    notifyOperation(`已删除「${title}」。${kind === 'collection' ? '合集内的提示词已保留。' : ''}`, true, 'delete');
+    if (editing.value?.id === id) closeEditor();
     if (openedCollection.value?.id === id) openedCollection.value = null;
     else if (openedCollection.value) await openCollection(openedCollection.value);
-    closeEditor();
     await reloadPrompts();
-  } catch (error) { editorError.value = `删除失败：${error.message || error}`; }
+  } catch (error) {
+    editorError.value = `${deleted ? '已删除，但刷新失败' : '删除失败'}：${error.message || error}`;
+    notifyOperation(editorError.value, false, 'delete');
+  }
   finally { editorBusy.value = false; }
 }
 
