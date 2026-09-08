@@ -6,11 +6,13 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-08-mcp-square.md](plans/2026-09-08-mcp-square.md) | 现行 | P2 MCP 广场与接入 | 已验收：默认本地、显式联网工具、分页与原生配置生成 |
+| [architecture/decisions/0021-mcp-square-opt-in.md](architecture/decisions/0021-mcp-square-opt-in.md) | 现行 | 调整 MCP 网络边界 | 独立工具只读匿名广场，不借用桌面会话 |
 | [plans/2026-09-08-publication-assets.md](plans/2026-09-08-publication-assets.md) | 现行 | P1c 单条投稿附件 | 显式选择、强制人工审核、按可见性代理与原子下载已验 |
 | [plans/2026-09-08-private-media.md](plans/2026-09-08-private-media.md) | 现行 | P1 附件传输基础 | 私有上传、鉴权下载和真实 MinIO 往返已验 |
 | [plans/2026-09-08-private-asset-sync.md](plans/2026-09-08-private-asset-sync.md) | 现行 | P1b 私有附件手动同步 | 已验显式选择、私有引用、重试复用与本地补齐 |
 | [specs/media/spec.md](specs/media/spec.md) | 现行 | 附件传输权限合同 | 私有所有者鉴权；投稿审核及公开可见性代理 |
-| [plans/2026-09-08-local-completion.md](plans/2026-09-08-local-completion.md) | 目标 | 不依赖外部凭据的后续完善 | P0、P1a/b/c 已验；合集附件、回收、MCP、可靠性及发行准备待做 |
+| [plans/2026-09-08-local-completion.md](plans/2026-09-08-local-completion.md) | 目标 | 不依赖外部凭据的后续完善 | P0、P1a/b/c、P2 已验；合集附件、回收、可靠性及发行准备待做 |
 | [plans/2026-09-08-download-feedback.md](plans/2026-09-08-download-feedback.md) | 现行 | 下载反馈与重复下载 | 来源 ID 持久状态、入口防重复与固定轻提示 |
 | [plans/2026-09-08-disable-worklog-gate.md](plans/2026-09-08-disable-worklog-gate.md) | 现行 | 关闭 WorkLog 提交拦截 | 用户明确停用本仓库 IDE 评审钩子，保留测试与 CI |
 | [plans/2026-09-08-community-import.md](plans/2026-09-08-community-import.md) | 现行 | 导入公开提示词样本 | 有来源许可的本机追加导入与参考图 |
@@ -66,7 +68,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0008-m5-backend-contract.md](architecture/decisions/0008-m5-backend-contract.md) | 现行 | 接广场或后端前 | 改写 API；邮箱密码；覆盖率 |
 | [architecture/decisions/0009-m6-admin-console.md](architecture/decisions/0009-m6-admin-console.md) | 现行 | 做管理台或审核 API 前 | 独立 admin.yaml；admin-web 不进桌面 |
 | [architecture/decisions/0010-m7-contract-gaps.md](architecture/decisions/0010-m7-contract-gaps.md) | 现行 | 做已登录收藏、轮换或 admin me 前 | 收藏是账号关系；Refresh 轮换；GET /v1/admin/me |
-| [architecture/decisions/0011-web-and-mcp.md](architecture/decisions/0011-web-and-mcp.md) | 现行 | 做浏览器工作台或 MCP 前 | Web 独立 SPA；Agent 入口是 MCP stdio |
+| [architecture/decisions/0011-web-and-mcp.md](architecture/decisions/0011-web-and-mcp.md) | 归档 | 追溯 Web 与 MCP 初始范围 | Web 独立 SPA 保持；MCP 网络边界由 0021 取代 |
 | [architecture/decisions/0012-postgres-backend.md](architecture/decisions/0012-postgres-backend.md) | 现行 | 接 Postgres、Redis、MinIO 或改口令存储时 | 预发存本机 `promptark` 库；Argon2id |
 | [architecture/decisions/0013-oauth-google-github.md](architecture/decisions/0013-oauth-google-github.md) | 现行 | 接 Google / GitHub 登录前 | 选定 Google 与 GitHub；仍不接 QQ/LinuxDo |
 | [architecture/decisions/0014-full-product.md](architecture/decisions/0014-full-product.md) | 现行 | 问是否还按第一期冻结 | 剩余工作按完整产品排队 |
@@ -83,7 +85,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 身份/内容/审核/站点运营、权限与真实消费者 |
 | [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 账号隔离、保存重试与复制失败反馈；不进桌面包 |
-| [specs/mcp/spec.md](specs/mcp/spec.md) | 目标 | 做本机 MCP | stdio 只读搜索、分页与参数校验 |
+| [specs/mcp/spec.md](specs/mcp/spec.md) | 现行 | 做 MCP | 默认本地只读；显式启用独立广场工具及有界请求 |
 | [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 完整分类/合集/成员/软删除往返与时间归一化 |
 | [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 独立持久化模拟订单/权益、测试码与真实权益隔离 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
@@ -92,7 +94,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [reference/openapi/admin.yaml](reference/openapi/admin.yaml) | 现行 | 改管理 API 时 | M6 管理合同；/v1/admin |
 | [reference/quality.md](reference/quality.md) | 现行 | 评审标准含糊时 | 质量约定 |
 | [how-to/local-dev.md](how-to/local-dev.md) | 现行 | 想在本机验证 | npm test / npm run dev / tauri dev / 备份恢复 |
-| [how-to/mcp-clients.md](how-to/mcp-clients.md) | 现行 | 让其他智能体搜索提示词 | 独立 stdio 产物、绝对路径配置、三工具与隐私边界 |
+| [how-to/mcp-clients.md](how-to/mcp-clients.md) | 现行 | 让其他智能体搜索提示词 | 独立 stdio、原生配置生成、本地三工具与可选广场三工具 |
 | [how-to/release-qa.md](how-to/release-qa.md) | 现行 | 发行前手工 smoke | M4 QA 表；未验证平台不得勾选 |
 | [how-to/read-docs.md](how-to/read-docs.md) | 现行 | Agent 或人要省 token | 按问题打开哪份 |
 | [how-to/update-docs.md](how-to/update-docs.md) | 现行 | 要改规格或 ADR | 文档更新步骤 |
@@ -205,7 +207,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/modules/square.md](plans/modules/square.md) | 现行 | M5 广场 | 广场模块完成态 |
 | [plans/modules/admin.md](plans/modules/admin.md) | 现行 | 查看管理台范围与计划入口 | 区分旧 M6 基线与完整后台待实现目标 |
 | [plans/modules/web.md](plans/modules/web.md) | 现行 | 做浏览器工作台 | Web 模块完成态 |
-| [plans/modules/mcp.md](plans/modules/mcp.md) | 现行 | 做本机 MCP | MCP 模块完成态 |
+| [plans/modules/mcp.md](plans/modules/mcp.md) | 现行 | 做本机 MCP | MCP 模块完成态，联网边界见 P2 计划 |
 | [plans/done/README.md](plans/done/README.md) | 现行 | 里程碑做完后 | 完成记录怎么写 |
 | [plans/done/_template.md](plans/done/_template.md) | 模板 | 写完成记录 | 完成记录模板 |
 | [plans/done/2026-08-22-m0-documentation.md](plans/done/2026-08-22-m0-documentation.md) | 归档 | 查 M0 是否关闭 | M0 完成证据 |

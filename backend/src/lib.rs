@@ -9,6 +9,7 @@ mod oauth_verification_tests;
 #[cfg(test)]
 mod admin_operations_tests;
 mod media;
+mod square_search;
 #[cfg(test)]
 mod media_tests;
 mod me;
@@ -402,6 +403,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/media/:id/url", get(media::private_url))
         .route("/v1/media/:id/content", get(media::download))
         .route("/v1/square/items", get(list_square_items))
+        .route("/v1/square/search", get(square_search::search))
         .route("/v1/square/items/:id/downloads", post(square_downloads::record))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/square/items/:id", get(get_square_item))

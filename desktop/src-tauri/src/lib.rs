@@ -33,6 +33,7 @@ pub fn run() {
             commands::media::download_private_asset,
             commands::media::download_published_asset,
             commands::media::hash_private_asset,
+            commands::mcp::mcp_connection_info,
             commands::database::import_downloaded_prompt,
             commands::database::upsert_synced_local_prompt,
             commands::database::list_local_prompts,

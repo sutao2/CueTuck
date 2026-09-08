@@ -2,6 +2,7 @@ pub mod database;
 pub mod desktop;
 pub mod launcher;
 pub mod media;
+pub mod mcp;
 pub mod paste;
 pub mod session;
 pub mod square;

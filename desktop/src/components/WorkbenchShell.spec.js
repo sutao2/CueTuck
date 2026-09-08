@@ -920,7 +920,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="open-settings"]').trigger("click");
     expect(w.get('[data-testid="settings-page"]').exists()).toBe(true);
     await w.get('[data-settings-page="sync"]').trigger("click");
-    expect(w.get('[data-testid="settings-unavailable"]').text()).toContain("启动器与 MCP 仍只读本机 SQLite");
+    expect(w.get('[data-testid="settings-unavailable"]').text()).toContain("MCP 广场工具需在接入配置中另行启用");
     expect(w.get('[data-testid="auto-sync-queue-row"]').text()).not.toContain("尚未提供");
   });
 

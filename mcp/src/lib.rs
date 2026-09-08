@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 const TOOLS: &[&str] = &["search_prompts", "get_prompt", "render_prompt"];
+pub mod square;
 
 pub fn library_path(dir: &Path) -> PathBuf {
     dir.join("promptark.sqlite")
@@ -84,6 +85,10 @@ pub fn render_prompt_text(content: &str, values: &HashMap<String, String>) -> St
 }
 
 pub fn handle_rpc(dir: &Path, request: &Value) -> Option<Value> {
+    handle_rpc_with_square(dir, request, None)
+}
+
+pub fn handle_rpc_with_square(dir: &Path, request: &Value, square: Option<&square::Square>) -> Option<Value> {
     if request.get("jsonrpc").and_then(Value::as_str) != Some("2.0") || !request.get("method").is_some_and(Value::is_string) {
         return Some(json!({"jsonrpc": "2.0", "id": null, "error": {"code": -32600, "message": "无效请求"}}));
     }
@@ -102,8 +107,8 @@ pub fn handle_rpc(dir: &Path, request: &Value) -> Option<Value> {
             "serverInfo": { "name": "promptark-mcp", "version": "0.1.0" }
         }),
         "ping" => json!({}),
-        "tools/list" => json!({ "tools": tool_defs() }),
-        "tools/call" => match call_tool(dir, request.get("params").unwrap_or(&Value::Null)) {
+        "tools/list" => { let mut tools = tool_defs(); if square.is_some() { tools.extend(square::tool_defs()); } json!({"tools":tools}) },
+        "tools/call" => match dispatch(dir, request.get("params").unwrap_or(&Value::Null), square) {
             Ok(value) => value,
             Err(message) => json!({
                 "content": [{ "type": "text", "text": message }],
@@ -161,6 +166,16 @@ fn tool_defs() -> Vec<Value> {
             }
         }),
     ]
+}
+
+fn dispatch(dir: &Path, params: &Value, square: Option<&square::Square>) -> Result<Value,String> {
+    let name = params["name"].as_str().unwrap_or("");
+    if matches!(name,"search_square_prompts"|"get_square_prompt"|"list_square_catalog") {
+        let square = square.ok_or("广场工具未启用；需由宿主配置 PROMPTARK_MCP_SQUARE=1 后重启")?;
+        let value = square.call(name, params.get("arguments").unwrap_or(&json!({})))?;
+        return Ok(json!({"content":[{"type":"text","text":value.to_string()}]}));
+    }
+    call_tool(dir,params)
 }
 
 fn call_tool(dir: &Path, params: &Value) -> Result<Value, String> {
@@ -323,9 +338,8 @@ mod tests {
     }
 
     #[test]
-    fn search_has_no_http_client() {
-        let manifest = include_str!("../Cargo.toml");
-        assert!(!manifest.contains("reqwest"));
-        assert!(!manifest.contains("ureq"));
+    fn local_default_rejects_remote_calls() {
+        let response = handle_rpc(Path::new("."), &json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_square_prompts"}})).unwrap();
+        assert_eq!(response["result"]["isError"],true);
     }
 }
