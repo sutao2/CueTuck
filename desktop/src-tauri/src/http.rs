@@ -53,7 +53,9 @@ pub fn apply_runtime_proxy(builder: ClientBuilder) -> Result<ClientBuilder, Stri
 }
 
 pub fn client_builder() -> Result<ClientBuilder, String> {
-    apply_runtime_proxy(Client::builder())
+    apply_runtime_proxy(Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30)))
 }
 
 pub fn client() -> Result<Client, String> {
