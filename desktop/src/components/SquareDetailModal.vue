@@ -43,10 +43,11 @@
               <h3>{{ member.title }}</h3>
               <p v-if="member.model">{{ member.model }}</p>
               <pre class="square-body">{{ member.content }}</pre>
+              <PublishedAttachments :item-id="item.id" :references="(item.asset_refs || []).filter(file => member.asset_ids?.includes(file.id))" />
             </article>
           </template>
           <pre v-else class="square-body" data-testid="square-detail-content">{{ item.content || '还没有正文' }}</pre>
-          <PublishedAttachments :item-id="item.id" :references="item.asset_refs || []" />
+          <PublishedAttachments v-if="item.kind !== 'collection'" :item-id="item.id" :references="item.asset_refs || []" />
         </template>
         <p v-if="note" role="status">{{ note }}</p>
         <ReportPanel v-if="!loading && !error" :key="item.id" :target-id="item.id" />

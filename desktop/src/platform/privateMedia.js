@@ -26,6 +26,21 @@ export async function verifyAsset(asset, ref) {
   if (asset.id !== ref.id || asset.name !== ref.name || asset.mime !== ref.mime || assetSize(asset) !== ref.size || await assetHash(asset) !== ref.sha256) throw new Error('附件内容校验失败');
   return asset;
 }
+export function validateCollectionAssets(members, refs) {
+  validateReferences(refs);
+  if (!Array.isArray(members) || !members.length) throw new Error('该合集缺少成员快照，暂时无法下载');
+  const expected = new Set(refs.map(file => file.id)), assigned = new Set();
+  for (const member of members) {
+    if (!member?.title?.trim() || !member?.content?.trim()) throw new Error('合集成员快照不完整');
+    const ids = member.asset_ids ?? [];
+    if (!Array.isArray(ids)) throw new Error('合集附件关联无效');
+    for (const id of ids) {
+      if (!expected.has(id) || assigned.has(id)) throw new Error('合集附件关联无效');
+      assigned.add(id);
+    }
+  }
+  if (assigned.size !== expected.size) throw new Error('合集附件未关联到成员');
+}
 function check(response) {
   if (response.ok) return;
   if (response.status === 401) throw new Error('登录已失效，请重新登录');

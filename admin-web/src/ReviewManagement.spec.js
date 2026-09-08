@@ -16,6 +16,15 @@ it('shows selected files and requires confirmation before approving a file publi
   expect(w.find('[data-testid=review-approve]').exists()).toBe(false);
 });
 beforeEach(() => resetAdminApi());
+it('groups collection attachments under their member and still requires file approval confirmation', async () => {
+  const transport = vi.fn(() => ({ items:[{ ...item(),kind:'collection',asset_refs:[{id:'file',name:'member.txt',mime:'text/plain',size:12}],members:[
+    {title:'成员一',content:'正文一',asset_ids:['file']},{title:'成员二',content:'正文二'},
+  ] }] }));
+  const w = await open(transport); const members = w.findAll('[data-testid=review-content] article');
+  expect(members[0].text()).toContain('member.txt'); expect(members[1].text()).not.toContain('member.txt');
+  await w.get('[data-testid=review-approve]').trigger('click'); await flushPromises();
+  expect(w.find('[data-testid=review-confirm]').exists()).toBe(true); expect(transport).toHaveBeenCalledTimes(1);
+});
 afterEach(() => { wrapper?.unmount(); vi.restoreAllMocks(); });
 async function open(transport) { setAdminApiTransport(transport); wrapper = mount(ReviewManagement); await flushPromises(); return wrapper; }
 it('requires a reason, retains it on failure, and sends trimmed reason on retry', async () => {

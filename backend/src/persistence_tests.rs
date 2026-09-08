@@ -39,7 +39,7 @@ async fn collection_members_survive_publication_review_and_restart() {
     let publication = Publication { asset_refs: vec![], id: "collection-test".into(), source_id: "local".into(), status: "pending".into(),
         title: Some("合集".into()), content: None, author_email: Some("dev@promptark.local".into()),
         category_id: Some("cat-image".into()), model: None, kind: "collection".into(),
-        members: vec![PublishedPrompt { title: "成员".into(), content: "原始正文".into(), category_id: Some("cat-image-0".into()), model: Some("Flux".into()) }] };
+        members: vec![PublishedPrompt { asset_ids: vec![], title: "成员".into(), content: "原始正文".into(), category_id: Some("cat-image-0".into()), model: Some("Flux".into()) }] };
     state.insert_publication(&publication).await.unwrap();
     let restarted = AppState { db: state.db.clone(), ..AppState::default() };
     let pending = restarted.pending_publications().await.unwrap();

@@ -450,8 +450,8 @@
             <p class="use-hint">默认不公开任何附件。勾选的文件会上传并交由人工审核，通过后所有可访问广场的人都能下载；已下载副本无法撤回。</p>
             <p v-if="publishAssetsLoading" role="status">正在读取附件…</p>
             <p v-else-if="publishAssetsError" role="alert">{{ publishAssetsError }} <button type="button" @click="loadPublishAssets">重试</button></p>
-            <p v-else-if="!publishAssets.length" class="use-hint">{{ publishSources.find(item => item.id === publishSourceId)?.kind === 'collection' ? '合集本次仅发布正文，不包含成员附件。' : '所选提示词没有附件。' }}</p>
-            <label v-for="asset in publishAssets" :key="asset.id" class="publication-file"><input v-model="publishAssetIds" type="checkbox" :value="asset.id" data-testid="publish-asset"><span>{{ asset.name }}<small>{{ formatBytes(assetSize(asset)) }} · {{ asset.mime }}</small></span></label>
+            <p v-else-if="!publishAssets.length" class="use-hint">所选内容没有附件。</p>
+            <label v-for="asset in publishAssets" :key="asset.id" class="publication-file"><input v-model="publishAssetIds" type="checkbox" :value="asset.id" data-testid="publish-asset"><span>{{ asset.name }}<small v-if="asset.memberTitle">所属提示词：{{ asset.memberTitle }}</small><small>{{ formatBytes(assetSize(asset)) }} · {{ asset.mime }}</small></span></label>
           </fieldset>
         </div>
         <footer class="modal-footer">
@@ -748,9 +748,19 @@ async function loadPublishAssets() {
   const version = ++publishAssetsVersion;
   publishAssets.value = []; publishAssetIds.value = []; publishAssetsError.value = '';
   const source = publishSources.value.find(item => item.id === publishSourceId.value);
-  publishAssetsLoading.value = source?.kind === 'prompt';
+  publishAssetsLoading.value = Boolean(source);
   if (!publishAssetsLoading.value) return;
-  try { const assets = await listPromptAssets(source.id); if (version === publishAssetsVersion) publishAssets.value = assets; }
+  try {
+    const assets = [];
+    if (source.kind === 'collection') {
+      for (const member of await listCollectionMembers(source.id)) {
+        const files = await listPromptAssets(member.id);
+        // Imported copies can share local asset IDs; each publication occurrence needs its own ID.
+        assets.push(...files.map(file => ({ ...file, id: crypto.randomUUID(), memberId: member.id, memberTitle: member.title })));
+      }
+    } else assets.push(...await listPromptAssets(source.id));
+    if (version === publishAssetsVersion) publishAssets.value = assets;
+  }
   catch (error) { if (version === publishAssetsVersion) publishAssetsError.value = `附件读取失败：${error.message || error}`; }
   finally { if (version === publishAssetsVersion) publishAssetsLoading.value = false; }
 }
@@ -1185,6 +1195,18 @@ async function submitPublish() {
   try {
     if (!source) throw new Error("未选择本地内容");
     assertAccount();
+    let members;
+    if (source.kind === 'collection') {
+      const currentMembers = await listCollectionMembers(source.id);
+      if (selectedAssets.some(asset => !currentMembers.some(member => member.id === asset.memberId))) throw new Error('所选附件的成员已移出合集，请重新选择本地内容');
+      members = currentMembers.map(member => ({
+        title: member.title, content: member.content, category_id: publicationCategory(member.category_id), model: member.model,
+        ...(selectedAssets.some(asset => asset.memberId === member.id) ? { asset_ids: selectedAssets.filter(asset => asset.memberId === member.id).map(asset => asset.id) } : {}),
+      }));
+      if (!members.length) throw new Error('合集至少需要一条提示词才能发布');
+      if (members.some(member => !member.title?.trim() || !member.content?.trim())) throw new Error('合集成员标题和正文不能为空');
+    }
+    if (selectedAssets.length > 12 || selectedAssets.reduce((total, asset) => total + assetSize(asset), 0) > 20 * 1024 * 1024) throw new Error('一份稿件最多选择 12 个附件、合计 20 MiB');
     const assetRefs = [];
     for (const asset of selectedAssets) {
       assertAccount();
@@ -1192,14 +1214,6 @@ async function submitPublish() {
       assetRefs.push(await uploadPrivateAsset(asset, account.accessToken));
     }
     assertAccount();
-    let members;
-    if (source.kind === "collection") {
-      members = (await listCollectionMembers(source.id)).map((member) => ({
-        title: member.title, content: member.content, category_id: publicationCategory(member.category_id), model: member.model,
-      }));
-      if (!members.length) throw new Error("合集至少需要一条提示词才能发布");
-      if (members.some((member) => !member.title?.trim() || !member.content?.trim())) throw new Error("合集成员标题和正文不能为空");
-    }
     assertAccount();
     const result = await publishWithQueue({
       sourceId: publishSourceId.value,
