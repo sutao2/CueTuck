@@ -1,6 +1,6 @@
 # 不依赖外部凭据的完善计划
 
-状态：P0 已验收；P1a [私有传输基础](2026-09-08-private-media.md)、P1b [客户端私有附件手动同步](2026-09-08-private-asset-sync.md)及 P1c [单条投稿公开附件](2026-09-08-publication-assets.md)已完成。合集成员附件及云端删除回收仍待后续切片；P2–P6 未实施。
+状态：P0 已验收；P1a [私有传输基础](2026-09-08-private-media.md)、P1b [客户端私有附件手动同步](2026-09-08-private-asset-sync.md)及 P1c [单条投稿公开附件](2026-09-08-publication-assets.md)已完成；P2 [MCP 广场与接入](2026-09-08-mcp-square.md)已验收。合集成员附件及云端删除回收仍待后续切片；P3–P6 未实施。
 
 ## 边界与顺序
 

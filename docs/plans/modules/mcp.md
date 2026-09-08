@@ -10,4 +10,4 @@
 - stdio MCP 可列出 `search_prompts`、`get_prompt`、`render_prompt`
 - 查询本机 `promptark.sqlite`，缺文件时报错
 - 未填变量保留 `{{名称}}`
-- 不请求广场或管理接口
+- 本地工具不请求广场或管理接口；可选联网边界及验收见 [P2 计划](../2026-09-08-mcp-square.md)

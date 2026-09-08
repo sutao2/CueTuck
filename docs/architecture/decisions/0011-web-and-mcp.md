@@ -1,6 +1,6 @@
 # 11. 浏览器工作台与本机 MCP
 
-- Status: accepted
+- Status: superseded（MCP 联网边界由 [ADR 0021](0021-mcp-square-opt-in.md) 取代；Web 部分保持）
 - Date: 2026-08-24
 - 关联：[提案](../../changes/m9-web-and-mcp/proposal.md) · [web](../../specs/web/spec.md) · [mcp](../../specs/mcp/spec.md)
 

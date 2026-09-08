@@ -4,6 +4,12 @@ info:
   version: 0.1.0
   description: M5 广场合同。旧 Spring 路径不是本合同。条目列表、详情和正文可含 reference（可空对象），字段 repository、url、author、license、license_url、images（HTTPS URL 数组）；历史记录为空，普通投稿不可自行写入此导入来源字段。
 paths:
+  /v1/square/search:
+    get:
+      operationId: searchPublicSquare
+      security: []
+      summary: 智能体及只读消费者的有界广场检索
+      description: q 为标题/摘要字面关键词，最多 1200 字节，百分号及下划线非通配；category_id 含一级子分类，model 精确匹配，各最多 200 字节。limit 默认 20、1–100，offset 默认 0、0–100000；非法参数 400。按 title/id 稳定排序且只含 online，响应 items（id/title/kind/excerpt/category_id/model）、limit、offset、next_offset（末页 null）。数据库限量读取，不返回全部正文/成员。站点禁止匿名时无有效 Access 为 401，依赖故障或查询超时 503；不记统计、不改既有 items 接口。
   /v1/square/items/{id}/assets/{asset_id}:
     get:
       operationId: getPublicPublicationAsset

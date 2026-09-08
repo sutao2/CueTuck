@@ -187,7 +187,7 @@
           </section>
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
             <h3>同步</h3>
-            <p>已登录可立即同步个人库。启动器与 MCP 仍只读本机 SQLite。</p>
+            <p>已登录可立即同步个人库。启动器始终只读本机；MCP 广场工具需在接入配置中另行启用。</p>
             <div class="settings-group">
             <label class="setting-row" data-testid="auto-sync-queue-row">
               <span class="setting-copy"><strong>自动同步收藏与发布草稿</strong><small>打开后，收藏或发布在断网时写入本机队列，联网后随立即同步送出。不会假装已经到达服务器。</small></span>
@@ -325,6 +325,7 @@
               <span class="setting-control">手动立即同步</span>
             </div>
             </div>
+            <McpSettings />
           </section>
           <section v-else-if="current === 'appearance'">
             <h3>外观</h3>
@@ -439,6 +440,7 @@
 </template>
 
 <script setup>
+import McpSettings from './McpSettings.vue';
 import AppIcon from "./AppIcon.vue";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { uiText } from "../platform/uiStrings.js";
@@ -507,7 +509,7 @@ const searchKeywords = {
   general: '启动 托盘 窗口 startup tray', account: '登录 邮箱 资料 订阅 账单 兑换 作者 login profile billing',
   shortcuts: '快捷键 按键 启动器 录入 keyboard launcher', sync: '同步 冲突 wifi 云 sync',
   models: '模型 默认 标签 变量 建议 model ai', data: '数据 备份 恢复 导入 导出 backup restore import export',
-  network: '代理 广场 网络 proxy network', appearance: '外观 主题 深色 浅色 语言 密度 theme language',
+  network: '代理 广场 网络 智能体 MCP 接入 proxy network', appearance: '外观 主题 深色 浅色 语言 密度 theme language',
   privacy: '隐私 统计 历史 安全 钥匙串 privacy history', updates: '更新 版本 下载 通道 update version',
 };
 const filteredPages = computed(() => {

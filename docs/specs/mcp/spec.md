@@ -3,11 +3,11 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 已指定，M9 实现 |
-| 关联 | [本地提示词](../library/spec.md) · [变量](../variables/spec.md) · [ADR 0011](../../architecture/decisions/0011-web-and-mcp.md) |
+| 关联 | [本地提示词](../library/spec.md) · [变量](../variables/spec.md) · [ADR 0021](../../architecture/decisions/0021-mcp-square-opt-in.md) |
 
 ## Purpose
 
-让 Codex、Claude、Cursor 等 MCP 宿主查询本机提示词库。只走本机 SQLite，不搜广场。
+让支持 stdio 的 MCP 宿主查询本机提示词库；按 [ADR 0021](../../architecture/decisions/0021-mcp-square-opt-in.md) 显式启用独立广场工具。
 
 ## Requirements
 
@@ -23,7 +23,7 @@
 
 ### Requirement: 只读本机库
 
-查询 MUST 针对 `PROMPTARK_LIBRARY_DIR` 下的 `promptark.sqlite`。MUST 忽略已软删条目。库文件不存在时 MUST 返回明确错误，MUST NOT 编造提示词。MUST NOT 请求广场或管理 HTTP。
+本地工具 MUST 针对 `PROMPTARK_LIBRARY_DIR` 下的 `promptark.sqlite`。MUST 忽略已软删条目。库文件不存在时 MUST 返回明确错误，MUST NOT 编造提示词。本地工具 MUST NOT 请求广场或管理 HTTP。
 
 连接 MUST 使用 SQLite 只读打开模式；未配置目录时进程 MUST 在 stderr 给出配置提示并退出，不猜测当前工作目录。搜索默认最多 50 条，允许 `limit`（1–100）和非负整数 `offset` 分页，按标题/id 稳定排序；`%`、`_` 作为普通查询字符。参数类型错误必须报错，不得降级为全库搜索。
 
@@ -62,9 +62,9 @@
 - WHEN 调用 `render_prompt` 且不提供受众
 - THEN 结果仍包含 `{{受众}}`
 
-### Requirement: 不请求广场
+### Requirement: 本地工具不请求广场
 
-MCP 进程在搜索与读取时 MUST NOT 发起广场或管理接口请求。
+本地工具搜索与读取 MUST NOT 发起广场或管理接口请求。广场工具、启动授权、限制与配置生成 MUST 满足 [P2 计划](../../plans/2026-09-08-mcp-square.md) 的场景；默认不列出广场工具，不能由工具参数开启网络。
 
 #### Scenario: 搜索不联网
 
@@ -82,4 +82,4 @@ MCP 进程在搜索与读取时 MUST NOT 发起广场或管理接口请求。
 | 按标题命中 | `mcp` `search_hits_title` |
 | 缺库文件 | `mcp` `search_missing_library_errors` |
 | 未填保留占位 | `mcp` `render_keeps_unfilled_placeholder` |
-| 搜索不联网 | `mcp` `search_has_no_http_client` |
+| 搜索不联网 | `mcp` `local_default_rejects_remote_calls`；`mcp/tests/square.rs` 默认与启用后本地工具均无 HTTP |

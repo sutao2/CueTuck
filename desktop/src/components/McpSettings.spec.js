@@ -1,0 +1,20 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
+import McpSettings from './McpSettings.vue';
+import { prepareMcpConfig } from '../platform/mcp.js';
+import { copyLauncherText } from '../platform/paste.js';
+vi.mock('../platform/mcp.js', () => ({prepareMcpConfig:vi.fn()}));
+vi.mock('../platform/paste.js', () => ({copyLauncherText:vi.fn()}));
+let wrapper;
+afterEach(()=>{wrapper?.unmount();vi.resetAllMocks();});
+it('requires a program, retains input on validation errors and removes stale config when options change',async()=>{
+  prepareMcpConfig.mockRejectedValueOnce(new Error('文件不存在')).mockResolvedValueOnce('{"mcpServers":{}}');
+  wrapper=mount(McpSettings);expect(wrapper.get('[data-testid=mcp-generate]').element.disabled).toBe(true);
+  expect(wrapper.get('[data-testid=mcp-square]').element.checked).toBe(false);
+  await wrapper.get('input').setValue('/test/mcp');await wrapper.get('[data-testid=mcp-generate]').trigger('click');await flushPromises();
+  expect(wrapper.text()).toContain('文件不存在');expect(wrapper.get('input').element.value).toBe('/test/mcp');
+  await wrapper.get('[data-testid=mcp-generate]').trigger('click');await flushPromises();expect(wrapper.get('pre[data-testid=mcp-config]').text()).toContain('mcpServers');
+  copyLauncherText.mockRejectedValueOnce(new Error('clipboard denied'));
+  await wrapper.findAll('button').find(b=>b.text()==='复制配置').trigger('click');await flushPromises();expect(wrapper.text()).toContain('复制失败');expect(wrapper.find('[data-testid=mcp-config]').exists()).toBe(true);
+  await wrapper.get('[data-testid=mcp-square]').setValue(true);expect(wrapper.find('[data-testid=mcp-config]').exists()).toBe(false);expect(wrapper.find('[data-testid=mcp-base]').exists()).toBe(true);
+});
