@@ -438,6 +438,7 @@ owner MUST 使用当前密码及 revision 配置通知渠道、阈值、每日�
 | 场景 | 测试 |
 |---|---|
 | 管理合同 | `adminContract.test.js` lists `/v1/admin` paths with admin auth |
+| AI 任务迁移与开发重置 | `ai_jobs_tests::schema_migration_preserves_jobs_and_explicit_reset_rebuilds_foreign_key`；普通迁移保留任务，显式开发重置清除旧任务并重建稿件外键 |
 | 桌面包不含管理 | `desktop` `packageIsolation.test.js` does not depend on or bundle admin-web |
 | 启动器不请求管理 | `LauncherApp.spec.js` does not request admin APIs while searching locally |
 | 普通令牌不能审核 | `backend` `regular_token_cannot_review_publication` |

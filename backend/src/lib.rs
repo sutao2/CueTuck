@@ -13,6 +13,8 @@ mod media_reclaim;
 mod square_search;
 #[cfg(test)]
 mod media_tests;
+#[cfg(test)]
+mod business_browser_tests;
 mod me;
 mod library;
 mod billing;

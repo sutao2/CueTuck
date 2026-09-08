@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-08-business-acceptance.md](plans/2026-09-08-business-acceptance.md) | 验收 | 完整业务链路与远程 CI | 隔离真实后端/存储业务链路通过，修复开发重置遗漏；远程 CI 待验 |
 | [plans/2026-09-08-admin-hardening.md](plans/2026-09-08-admin-hardening.md) | 验收 | 管理端五项补齐 | 列表状态、持久化 AI/视觉审核、存储对账和隔离 E2E 已本机验收 |
 | [../deploy/README.md](../deploy/README.md) | 现行 | 集中验收、部署和发行配置 | 一键回归、独立开发服务及调试/正式构建边界 |
 | [plans/2026-09-08-local-release-readiness.md](plans/2026-09-08-local-release-readiness.md) | 验收 | P4–P6 本地收尾 | 本机回归/恢复/打包已验；远程 CI、生产签名与跨平台待验 |

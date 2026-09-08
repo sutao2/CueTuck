@@ -3,6 +3,20 @@ use axum::http::StatusCode;
 use serde_json::{json,Value};
 
 #[tokio::test]
+async fn schema_migration_preserves_jobs_and_explicit_reset_rebuilds_foreign_key(){
+    let state=state().await;let pg=state.db.as_ref().unwrap();
+    pg.upsert_account("reset@test.local",None,"user").await.unwrap();
+    let token=state.issue_session("reset@test.local".into()).await.unwrap().access_token;
+    sqlx::query(&format!("UPDATE {} SET data=$1 WHERE id=1",pg.t("moderation_policy"))).bind(json!({"enabled":true,"require_ai":true})).execute(&pg.pool).await.unwrap();
+    assert_eq!(request(&state,"POST","/v1/publications",&token,json!({"source_id":"reset","title":"Reset test","content":"Safe"})).await.0,StatusCode::OK);
+    pg.apply_schema(false).await.unwrap();
+    let count:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {}",pg.t("ai_jobs"))).fetch_one(&pg.pool).await.unwrap();assert_eq!(count,1);
+    pg.apply_schema(true).await.unwrap();
+    let count:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {}",pg.t("ai_jobs"))).fetch_one(&pg.pool).await.unwrap();assert_eq!(count,0);
+    assert!(sqlx::query(&format!("INSERT INTO {} (publication_id) VALUES ('missing')",pg.t("ai_jobs"))).execute(&pg.pool).await.is_err());
+}
+
+#[tokio::test]
 async fn durable_ai_jobs_lease_recovery_retry_limit_and_human_priority(){
     let state=state().await;let pg=state.db.as_ref().unwrap();
     pg.upsert_account("worker@test.local",None,"owner").await.unwrap();

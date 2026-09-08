@@ -68,6 +68,7 @@ impl Pg {
                 "access_tokens",
                 "refresh_tokens",
                 "review_events",
+                "ai_jobs",
                 "publications",
                 "square_items",
                 "settings",
