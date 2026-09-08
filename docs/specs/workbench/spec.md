@@ -12,16 +12,35 @@
 
 ## Requirements
 
-### Requirement: 全桌面弹窗一致性
+### Requirement: 内容优先的列表
 
-工作台弹窗 MUST 使用一致的标题、关闭按钮、字段、反馈与底部操作层级；正文在小视口内部滚动，标题与主要操作保留。登录使用紧凑单列表单，编辑器的模型和分类可并排，窄视口改为单列。设置仍遵循固定尺寸合同。
+浏览页 MUST 显示可移除的活动筛选条件；清除仅影响查询、分类和模型，不改变排序与存储数据。本地排序标签计数遵守模型筛选，合集提供明确打开入口。具体场景见[浏览精修计划](../../plans/2026-09-08-browse-refinement.md)。
 
-#### Scenario: 键盘进入与退出弹窗
+列表 MUST 以标题、摘要和次要元数据组成紧凑行，不再为「本地」标签单独保留宽列。网格保持统一信息顺序；分类、模型和附件计数可见，长内容截断，操作不能被长标题挤出。
 
-- GIVEN 用户从工作台打开登录、编辑、使用、合集、广场详情、发布或设置
-- WHEN 用键盘操作弹窗
-- THEN 焦点进入弹窗，Tab/Shift+Tab 不进入背后的页面，Escape 走该弹窗原有的关闭或未保存确认逻辑
-- AND 关闭后恢复到仍存在的入口；输入法组字的 Escape 不关闭弹窗
+#### Scenario: 文件与长内容展示
+
+- GIVEN 带图片/文件的提示词、合集和超长标题
+- WHEN 在窄窗口切换列表/网格及浅深色
+- THEN 文件计数无需加载二进制内容，标题/摘要和使用入口保持可读且无横向溢出
+
+### Requirement: 连续操作页面化
+
+工作台连续操作 MUST 使用右侧页面而非模态，包括新建/编辑、使用、合集和广场详情、发布、登录及新建分类，见 [ADR 0020](../../architecture/decisions/0020-workspace-pages.md)。使用一致的返回入口、标题、字段、反馈与操作层级；正文内部滚动。登录使用紧凑单列表单，编辑器元数据窄屏改为单列。设置为应用内完整页面，遵循 ADR 0019；仅必要确认保留对话框。
+
+#### Scenario: 键盘进入与返回页面
+
+- GIVEN 用户从工作台打开登录、编辑、使用、合集、广场详情或发布
+- WHEN 用键盘操作页面
+- THEN 焦点进入页面，Tab 不强制循环；Escape 走返回或未保存确认逻辑
+- AND 返回后恢复到仍存在的入口；输入法组字的 Escape 不离开页面，必要确认仍管理模态焦点
+
+#### Scenario: 导航与父级上下文
+
+- GIVEN 列表带筛选或用户已进入合集/广场详情
+- WHEN 编辑、使用、登录后返回，或侧栏切换空间
+- THEN 返回保留查询与滚动，成员操作返回原合集；切换侧栏先处理未保存内容和忙碌状态
+- AND 只显示一个活动内容页，不让隐藏页面接受键盘焦点
 
 #### Scenario: 所有内容面适配
 
@@ -39,6 +58,13 @@
 
 ### Requirement: 专业桌面视觉
 
+#### Scenario: 全客户端细节一致
+
+- GIVEN 主窗口、设置或独立启动器处于浅色/深色
+- WHEN 浏览列表、卡片、表单与反馈
+- THEN 使用一致的中性表面和字体层级，主要正文与辅助说明可辨识；输入、选择及按钮的边框与焦点提示统一
+- AND 卡片与按钮悬停不改变几何布局，遵循减少动态效果偏好；启动器的原生尺寸、位置和复制粘贴行为不因换肤改变
+
 #### Scenario: 桌面滚动区域与组合控件
 
 - GIVEN 主窗口或独立启动器含超出可视区域的内容
@@ -55,7 +81,7 @@
 - WHEN 查看桌面应用图标或启动器搜索栏
 - THEN 使用同一方舟标记，图标透明角保留；启动器品牌占位尺寸和原键盘行为不变
 
-主窗口视觉规则见 [ADR 0017](../../architecture/decisions/0017-screenshot-workbench-frame.md)，设置规则仍见 [ADR 0016](../../architecture/decisions/0016-workbench-frame-and-settings.md)。主窗口使用系统无衬线字体、统一线性图标和中性色表面。空间使用纵向导航，账号与偏好位于侧栏底部；内容工作面与侧栏有明确分区。标题、正文、辅助信息有清晰字号层级；筛选栏和卡片随可用宽度排列，状态栏不抢占内容注意力。
+主窗口视觉规则见 [ADR 0017](../../architecture/decisions/0017-screenshot-workbench-frame.md)，设置规则见 [ADR 0019](../../architecture/decisions/0019-settings-page.md)。主窗口使用系统无衬线字体、统一线性图标和中性色表面。空间使用纵向导航，账号与偏好位于侧栏底部；内容工作面与侧栏有明确分区。标题、正文、辅助信息有清晰字号层级；筛选栏和卡片随可用宽度排列，状态栏不抢占内容注意力。
 
 #### Scenario: 截图参考的分栏框架
 
@@ -85,9 +111,32 @@
 - GIVEN 工作台有提示词和合集
 - WHEN 切换浅色/深色、网格/列表，或缩窄至 960 像素
 - THEN 主操作、导航、内容与反馈保持可辨识，没有页面级横向溢出
-- AND 设置弹窗尺寸保持固定，长内容内部滚动；编辑、下载、使用等原动作仍可操作
+- AND 设置占据主窗口，长内容内部滚动，返回时保留工作台；编辑、下载、使用等原动作仍可操作
 
 ### Requirement: 壳层结构
+
+#### Scenario: 重启恢复布局与系统主题变化
+
+- GIVEN 用户已调整侧栏宽度、折叠状态或网格/列表视图
+- WHEN 工作台重新加载
+- THEN 从本地设置恢复有效值，异常值回退默认；首次读取不被默认写入覆盖，拖拽结束再保存宽度
+- AND 跟随系统主题实时响应系统变化，手动主题不改变；卸载清理监听
+
+#### Scenario: 连续搜索与分类展开
+
+- GIVEN 用户搜索广场或浏览分类
+- WHEN 连续输入或中文组字
+- THEN 广场等待 250ms 稳定输入再查询，清空立即查询，组字结束前不查询；本地非组字输入仍即时搜索
+- AND 进入广场及显式刷新更新分类/模型字典，连续搜索不重复加载字典，旧结果不能覆盖新查询
+- AND 大分类箭头只展开/收起，分类名称只筛选，均可键盘操作
+
+#### Scenario: 拖动侧栏分隔线调宽
+
+- GIVEN 主窗口侧栏展开，默认宽度遵循 ADR 0017
+- WHEN 拖动侧栏右边缘，或聚焦分隔条后按左右方向键
+- THEN 侧栏与顶栏左区同步调宽，范围为 200–400 CSS 像素，并尽量为内容保留 560 像素；调宽不触发原生窗口拖动
+- AND 收起再展开保留当前窗口内的用户宽度，窗口缩窄时限制显示宽度、放大后恢复偏好宽度
+- AND 松开、取消、失焦或卸载结束拖动，分隔条提供可读名称和当前宽度
 
 主窗口 MUST 提供侧栏折叠按钮与 `Cmd+B`（macOS）/`Ctrl+B`（其他系统），设置入口另支持 `Cmd+,`/`Ctrl+,`。编辑控件内不拦截侧栏快捷键，弹窗打开时不切换侧栏。
 
@@ -205,10 +254,14 @@
 
 | 场景 | 测试 |
 |---|---|
-| 键盘进入与退出弹窗 | `LoginModal.spec.js` 焦点循环/归还；`SettingsInteraction.spec.js` 嵌套确认；`UsePromptModal.spec.js` 切步焦点；`CollectionDetailModal.spec.js` 按钮禁用后焦点保留 |
+| 全客户端细节一致 | [客户端细化验收](../../plans/2026-09-08-desktop-refinement.md)：浅深色与窗口矩阵、长文本及原生主窗口检查 |
+| 重启恢复布局与系统主题变化、连续搜索与分类展开 | `ClientPolish.spec.js` 持久化/无效值、媒体监听、组字/防抖/旧响应、分类独立操作 |
+| 键盘进入与返回页面 | `LoginModal.spec.js` 非模态 Tab/归还；`SettingsInteraction.spec.js` 嵌套确认；`UsePromptModal.spec.js` 切步焦点；`CollectionDetailModal.spec.js` 按钮禁用后焦点保留 |
+| 页面导航与父级上下文 | `WorkspacePages.spec.js` 查询/滚动保留、侧栏未保存保护、合集成员返回、设置登录草稿保留、保存失败 |
 | 所有内容面适配 | Playwright 十页设置 40 组、网格/列表 8 组和编辑器/登录/发布视口测量 |
 | 清楚区分筛选无结果 | `WorkbenchShell.spec.js` distinguishes a filtered empty result and exposes a keyboard-operable card title |
 | 打开应用 | `desktop/src/components/WorkbenchShell.spec.js` renders four chrome regions；renders prototype sidebar chrome |
+| 拖动侧栏分隔线调宽 | `WorkbenchShell.spec.js` pointer capture/bounds/collapse、keyboard/viewport、cancel/blur/unmount；原生桌面 260→340px 后折叠保留 |
 | 广场不可用时回到本地 | `desktop/src/components/WorkbenchShell.spec.js` 广场离线与重试场景 |
 | SQLite 就绪 | `desktop/src-tauri` `status_is_ready_after_initialize` |
 | 展开大分类 | `desktop/src/components/WorkbenchShell.spec.js` loads preset categories into the tree；`lists_children_under_software` |

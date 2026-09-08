@@ -7,6 +7,8 @@ struct SquareListResponse {
 
 #[derive(Deserialize, serde::Serialize)]
 pub struct SquareContentResponse {
+    #[serde(default)]
+    reference: Option<serde_json::Value>,
     id: String,
     title: String,
     content: String,
@@ -24,6 +26,22 @@ fn prompt_kind() -> String { "prompt".into() }
 
 fn api_base() -> String {
     std::env::var("PROMPTARK_API_BASE").unwrap_or_else(|_| "http://127.0.0.1:8787".into())
+}
+
+#[tauri::command]
+pub async fn square_reports(access_token:String,config:Option<serde_json::Value>,offset:Option<u32>)->Result<serde_json::Value,String> {
+    let client=crate::http::client()?;
+    let request=if let Some(config)=config {client.post(format!("{}/v1/reports",api_base())).json(&config)} else {client.get(format!("{}/v1/reports",api_base())).query(&[("offset",offset.unwrap_or(0))])};
+    let response=request.bearer_auth(access_token).send().await.map_err(|_|"举报服务连接失败".to_string())?;
+    if !response.status().is_success(){return Err(match response.status().as_u16(){401=>"登录已失效，请重新登录",404=>"该内容已不可举报",429=>"每天最多提交 20 件举报，请稍后重试",_=>"举报请求失败，请重试"}.into());}
+    response.json().await.map_err(|_|"举报响应无效".into())
+}
+
+#[tauri::command]
+pub async fn get_square_catalog() -> Result<serde_json::Value, String> {
+    let response = crate::http::client()?.get(format!("{}/v1/square/catalog",api_base())).send().await.map_err(|error|error.to_string())?;
+    if !response.status().is_success() { return Err("广场字典暂时不可用".into()); }
+    response.json().await.map_err(|error|error.to_string())
 }
 
 #[tauri::command]

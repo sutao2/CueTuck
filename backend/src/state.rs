@@ -2,16 +2,15 @@ use crate::media;
 use crate::oauth::{OAuthSettings, OAuthUser};
 use crate::password::verify_password;
 use crate::postgres::Pg;
-use crate::{SessionResponse, SquareItem, AppState};
+use crate::{AppState, SessionResponse, SquareItem};
 use axum::http::StatusCode;
 use std::collections::HashMap;
 use uuid::Uuid;
 
 impl AppState {
     pub async fn from_runtime() -> Result<Self, String> {
-        let url = std::env::var("PROMPTARK_DATABASE_URL").unwrap_or_else(|_| {
-            "postgres://pl:pl@127.0.0.1:5432/promptark?sslmode=disable".into()
-        });
+        let url = std::env::var("PROMPTARK_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://pl:pl@127.0.0.1:5432/promptark?sslmode=disable".into());
         let pool = sqlx::PgPool::connect(&url)
             .await
             .map_err(|err| format!("postgres: {err}"))?;
@@ -29,14 +28,38 @@ impl AppState {
                 Err(_) => None,
             }
         };
-        let existing_oauth = pg.oauth_config("google").await.map_err(|_| "read OAuth configuration")?.is_some()
-            || pg.oauth_config("github").await.map_err(|_| "read OAuth configuration")?.is_some();
-        let key_file = std::env::var("PROMPTARK_OAUTH_KEY_FILE").unwrap_or_else(|_| ".promptark/oauth.key".into());
+        let existing_oauth = pg
+            .oauth_config("google")
+            .await
+            .map_err(|_| "read OAuth configuration")?
+            .is_some()
+            || pg
+                .oauth_config("github")
+                .await
+                .map_err(|_| "read OAuth configuration")?
+                .is_some()
+            || pg
+                .has_ai_secrets()
+                .await
+                .map_err(|_| "read encrypted AI configuration")?
+            || pg
+                .has_mail_secrets()
+                .await
+                .map_err(|_| "read encrypted mail configuration")?
+            || pg.has_notification_secrets().await.map_err(|_|"read encrypted notification configuration")?;
+        let key_file = std::env::var("PROMPTARK_OAUTH_KEY_FILE")
+            .unwrap_or_else(|_| ".promptark/oauth.key".into());
         let key = crate::oauth_admin::load_key(std::path::Path::new(&key_file), existing_oauth)?;
         let mut oauth = OAuthSettings::default();
-        if std::env::var("PROMPTARK_OAUTH_STATE_SECRET").or_else(|_| std::env::var("PL_OAUTH_STATE_SECRET")).is_err() {
+        if std::env::var("PROMPTARK_OAUTH_STATE_SECRET")
+            .or_else(|_| std::env::var("PL_OAUTH_STATE_SECRET"))
+            .is_err()
+        {
             use sha2::Digest;
-            oauth.state_secret = format!("{:x}", sha2::Sha256::digest([b"oauth-state:".as_slice(), &key].concat()));
+            oauth.state_secret = format!(
+                "{:x}",
+                sha2::Sha256::digest([b"oauth-state:".as_slice(), &key].concat())
+            );
         }
         let state = Self {
             db: Some(pg),
@@ -49,20 +72,29 @@ impl AppState {
         };
         let email =
             std::env::var("PROMPTARK_DEV_EMAIL").unwrap_or_else(|_| "dev@promptark.local".into());
-        let password =
-            std::env::var("PROMPTARK_DEV_PASSWORD").unwrap_or_else(|_| "devpass".into());
-        let admin_email =
-            std::env::var("PROMPTARK_ADMIN_EMAIL").unwrap_or_else(|_| "admin@promptark.local".into());
-        let admin_password =
-            std::env::var("PROMPTARK_ADMIN_PASSWORD").unwrap_or_else(|_| "adminpass".into());
+        let password = std::env::var("PROMPTARK_DEV_PASSWORD").unwrap_or_else(|_| "devpass".into());
+        let development = std::env::var("PROMPTARK_ALLOW_DEV_USER").ok().as_deref() == Some("1");
+        let admin_email = std::env::var("PROMPTARK_ADMIN_EMAIL").ok();
+        let admin_password = std::env::var("PROMPTARK_ADMIN_PASSWORD").ok();
         if let Some(pg) = &state.db {
-            pg.upsert_account(&email, Some(&password), "user")
+            pg.initialize_admin(
+                admin_email.as_deref(),
+                admin_password.as_deref(),
+                development,
+            )
+            .await?;
+            pg.migrate_owner(std::env::var("PROMPTARK_OWNER_EMAIL").ok().as_deref())
+                .await?;
+            if development {
+                pg.insert_development_user(&email, &password)
+                    .await
+                    .map_err(|_| "seed user".to_string())?;
+            }
+            if !pg
+                .has_square_records()
                 .await
-                .map_err(|_| "seed user".to_string())?;
-            pg.upsert_account(&admin_email, Some(&admin_password), "admin")
-                .await
-                .map_err(|_| "seed admin".to_string())?;
-            if pg.list_items().await.unwrap_or_default().is_empty() {
+                .map_err(|_| "检查广场数据失败，不执行种子写入".to_string())?
+            {
                 state.seed_square_demo();
                 let items = state.items.lock().expect("items").clone();
                 pg.replace_items(&items)
@@ -154,9 +186,9 @@ impl AppState {
         }
     }
 
-    pub(crate) async fn rotate_refresh(&self, token: &str) -> Result<String, StatusCode> {
+    pub(crate) async fn renew_session(&self, token: &str) -> Result<SessionResponse, StatusCode> {
         if let Some(pg) = &self.db {
-            return pg.rotate_refresh(token).await;
+            return pg.refresh_session(token).await;
         }
         let email = self
             .refresh
@@ -168,7 +200,7 @@ impl AppState {
             .lock()
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
             .retain(|_, holder| holder != &email);
-        Ok(email)
+        self.issue_session(email).await
     }
 
     pub(crate) async fn revoke_access(&self, token: &str) -> Result<bool, StatusCode> {
@@ -187,7 +219,11 @@ impl AppState {
         if let Some(pg) = &self.db {
             return pg.email_for_access(token).await;
         }
-        Ok(self.access.lock().ok().and_then(|map| map.get(token).cloned()))
+        Ok(self
+            .access
+            .lock()
+            .ok()
+            .and_then(|map| map.get(token).cloned()))
     }
 
     pub(crate) async fn role_of(&self, email: &str) -> Result<String, StatusCode> {
@@ -272,8 +308,7 @@ impl AppState {
                 existing
             } else {
                 pg.link_oauth(&user.provider, &user.provider_uid, &user.email)
-                    .await?;
-                user.email.clone()
+                    .await?
             }
         } else {
             let mut users = self
@@ -339,9 +374,7 @@ impl AppState {
         Ok(())
     }
 
-    pub(crate) async fn pending_publications(
-        &self,
-    ) -> Result<Vec<crate::Publication>, StatusCode> {
+    pub(crate) async fn pending_publications(&self) -> Result<Vec<crate::Publication>, StatusCode> {
         if let Some(pg) = &self.db {
             return pg.pending_publications().await;
         }
@@ -372,7 +405,10 @@ impl AppState {
             .collect())
     }
 
-    pub(crate) async fn get_profile(&self, email: &str) -> Result<crate::me::MeProfile, StatusCode> {
+    pub(crate) async fn get_profile(
+        &self,
+        email: &str,
+    ) -> Result<crate::me::MeProfile, StatusCode> {
         if let Some(pg) = &self.db {
             return pg.get_profile(email).await;
         }
@@ -435,7 +471,9 @@ impl AppState {
             .map(|rows| rows.values().cloned().collect::<Vec<_>>())
             .unwrap_or_default();
         if !since.is_empty() {
-            items.retain(|row| crate::library::timestamp_ms(&row.updated_at) > crate::library::timestamp_ms(since));
+            items.retain(|row| {
+                crate::library::timestamp_ms(&row.updated_at) > crate::library::timestamp_ms(since)
+            });
         }
         items.sort_by(|left, right| left.id.cmp(&right.id));
         Ok(items)
@@ -457,9 +495,10 @@ impl AppState {
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let account = map.entry(email.to_string()).or_default();
             for item in items {
-                let keep_existing = account
-                    .get(&item.id)
-                    .is_some_and(|existing| crate::library::timestamp_ms(&existing.updated_at) >= crate::library::timestamp_ms(&item.updated_at));
+                let keep_existing = account.get(&item.id).is_some_and(|existing| {
+                    crate::library::timestamp_ms(&existing.updated_at)
+                        >= crate::library::timestamp_ms(&item.updated_at)
+                });
                 if keep_existing {
                     continue;
                 }
@@ -526,13 +565,26 @@ impl AppState {
         if let Some(pg) = &self.db {
             return pg.set_publication_status(id, status).await;
         }
-        let mut rows = self.publications.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let publication = rows.iter_mut().find(|row| row.id == id).ok_or(StatusCode::NOT_FOUND)?;
-        if publication.status != "pending" && publication.status != status { return Err(StatusCode::CONFLICT); }
+        let mut rows = self
+            .publications
+            .lock()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let publication = rows
+            .iter_mut()
+            .find(|row| row.id == id)
+            .ok_or(StatusCode::NOT_FOUND)?;
+        if publication.status != "pending" && publication.status != status {
+            return Err(StatusCode::CONFLICT);
+        }
         if status == "approved" {
             if let Some(item) = publication.square_item() {
-                let mut items = self.items.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-                if !items.iter().any(|row| row.id == id) { items.push(item); }
+                let mut items = self
+                    .items
+                    .lock()
+                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                if !items.iter().any(|row| row.id == id) {
+                    items.push(item);
+                }
             }
         }
         publication.status = status.into();
@@ -565,7 +617,11 @@ impl AppState {
         Ok(())
     }
 
-    pub(crate) async fn delete_favorite(&self, email: &str, item_id: &str) -> Result<(), StatusCode> {
+    pub(crate) async fn delete_favorite(
+        &self,
+        email: &str,
+        item_id: &str,
+    ) -> Result<(), StatusCode> {
         if let Some(pg) = &self.db {
             return pg.delete_favorite(email, item_id).await;
         }

@@ -1,7 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createLocalPrompt, listLocalPrompts, resetMemoryLibrary } from "./memoryLibrary.js";
-import { resetSquare, setSquareContentTransport, setSquareTransport, setFavoriteTransport } from "./square.js";
+import { resetSquare, setSquareContentTransport, setSquareTransport, setFavoriteTransport, setCatalogTransport } from "./square.js";
 import {
   loginOAuthSession,
   getSession,
@@ -15,6 +15,17 @@ import { resetBilling, setBillingTransport } from "./billing.js";
 import WebApp from "./WebApp.vue";
 
 describe("WebApp", () => {
+  it('consumes community branding and announcements without changing local space',async()=>{
+    setCatalogTransport(async()=>({categories:[],models:[],site:{name:'测试社区',announcement:'维护公告',publishing_open:false}}));setSquareTransport(async()=>[]);const w=mount(WebApp);await w.get('[data-space="square"]').trigger('click');await flushPromises();expect(w.get('.site-notice').text()).toContain('维护公告');expect(w.get('.site-notice').text()).toContain('关闭新投稿');await w.get('[data-space="local"]').trigger('click');await flushPromises();expect(w.find('.site-notice').exists()).toBe(false);w.unmount();
+  });
+  it('uses the remote catalog for square filters',async()=>{
+    setCatalogTransport(async()=>({categories:[{id:'remote',name:'新增分类',parent_id:null}],models:[{id:'model',name:'新增模型'}]}));
+    const list=vi.fn(async()=>[]);setSquareTransport(list);
+    const w=mount(WebApp);await w.get('[data-space="square"]').trigger('click');await flushPromises();
+    await w.get('[aria-label="广场分类"]').setValue('remote');await flushPromises();
+    await w.get('[aria-label="模型"]').setValue('model');await flushPromises();
+    expect(list.mock.lastCall[0]).toEqual({categoryId:'remote',model:'model'});w.unmount();
+  });
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -32,6 +43,7 @@ describe("WebApp", () => {
       }),
     });
     resetSquare();
+    setCatalogTransport(async()=>null);
     setOAuthProviderList([]);
   });
 
@@ -352,6 +364,8 @@ describe("WebApp", () => {
     await w.get('[data-testid="billing-mock-success"]').trigger("click"); await flushPromises();
     expect(w.get('[data-testid="billing-note"]').text()).toContain("offline");
     expect(w.get('[data-testid="billing-mock-success"]').attributes("disabled")).toBeUndefined();
+    const redeem=vi.fn(async()=>({pro:false,mock:true,mock_pro:true,note:'Mock 测试码兑换'}));
+    setBillingTransport({redeem});await w.get('[data-testid="billing-redeem-code"]').setValue('TEST-'+'A'.repeat(32));await w.get('[data-testid="billing-redeem"]').trigger('click');await flushPromises();expect(redeem).toHaveBeenCalledOnce();expect(w.get('[data-testid="billing-mock"]').text()).toContain('模拟 Pro');expect(w.get('[data-testid="billing-pro"]').text()).toBe('未订阅');
     expect(opened).not.toHaveBeenCalled();
     w.unmount();
   });

@@ -37,6 +37,7 @@ import {
   setDownloadStatsTransport,
   setSquareContentTransport,
   setSquareTransport,
+  setCatalogTransport,
 } from "../platform/square.js";
 import { listSyncQueue } from "../platform/syncQueue.js";
 
@@ -48,6 +49,39 @@ const tauriVersion = JSON.parse(
 ).version;
 
 describe("WorkbenchShell", () => {
+  it('shows site policy only in the community and keeps local tools available',async()=>{
+    await createLocalPrompt({title:'离线可用',content:'本地正文'});
+    setCatalogTransport(async()=>({categories:[],models:[],site:{name:'测试社区',description:'站点说明',publishing_open:false,announcement:'社区公告'}}));setSquareTransport(async()=>[]);
+    const w=mount(WorkbenchShell);await flushPromises();await w.get('[data-space="square"]').trigger('click');await flushPromises();expect(w.get('.site-notice').text()).toContain('社区公告');expect(w.get('[data-testid="publish-prompt"]').attributes('disabled')).toBeDefined();await w.get('[data-space="local"]').trigger('click');await flushPromises();expect(w.find('.site-notice').exists()).toBe(false);expect(w.get('[data-testid="library-view"]').exists()).toBe(true);w.unmount();
+  });
+  it('uses remote square categories and models without changing the local category tree', async () => {
+    await createLocalPrompt({title:'保留本地内容',content:'正文'});
+    setCatalogTransport(async()=>({categories:[{id:'remote-root',name:'新广场分类',parent_id:null,color:'#228877',icon:'folder'},{id:'remote-child',name:'新广场小类',parent_id:'remote-root'}],models:[{id:'new-model',name:'新模型'}]}));
+    const list=vi.fn(async()=>[{id:'remote',title:'远端内容',kind:'prompt',category_id:'remote-child',model:'new-model'}]);
+    setSquareTransport(list);
+    const w=mount(WorkbenchShell); await flushPromises();
+    await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+    expect(w.find('.category-tree').text()).toContain('新广场分类');
+    await w.findAll('.tree-parent').find(item=>item.text().includes('新广场分类')).trigger('click');await flushPromises();
+    expect(list.mock.lastCall[0].categoryId).toBe('remote-root');expect(w.text()).toContain('远端内容');
+    await w.get('[data-space="local"]').trigger('click');await flushPromises();
+    expect(w.find('.category-tree').text()).not.toContain('新广场分类');expect(w.find('.category-tree').text()).toContain('软件开发');
+    expect(w.get('[data-testid="library-view"]').text()).toContain('保留本地内容');
+    w.unmount();
+  });
+  it('publishes with an explicitly selected remote category and model without modifying local metadata', async () => {
+    const created=await createLocalPrompt({title:'发布字典测试',content:'本地正文',categoryId:'cat-image-0',model:'Flux'});
+    setSessionTransport(async()=>({access_token:'acc.remote',email:'dev@promptark.local'}));
+    await loginSession({email:'dev@promptark.local',password:'devpass'});
+    setCatalogTransport(async()=>({categories:[{id:'remote-root',name:'远端分类',parent_id:null}],models:[{id:'remote-model',name:'远端模型'}]}));
+    const publish=vi.fn(async()=>({id:'publication',status:'pending'}));setPublishTransport(publish);
+    const w=mount(WorkbenchShell);await flushPromises();await w.get('[data-space="square"]').trigger('click');await flushPromises();
+    await w.get('[data-testid="publish-prompt"]').trigger('click');await flushPromises();await w.get('[data-testid="publish-source"]').setValue(created.id);
+    await w.get('[data-testid="publish-category"]').setValue('remote-root');await w.get('[data-testid="publish-model"]').setValue('remote-model');
+    await w.get('[data-testid="publish-submit"]').trigger('click');await flushPromises();
+    expect(publish.mock.calls[0][0]).toMatchObject({categoryId:'remote-root',model:'remote-model'});
+    expect((await listLocalPrompts())[0]).toMatchObject({content:'本地正文',category_id:'cat-image-0',model:'Flux'});w.unmount();
+  });
   it('distinguishes a filtered empty result and exposes a keyboard-operable card title', async () => {
     await createLocalPrompt({ title: 'Keep this', content: 'body' });
     const w = mount(WorkbenchShell);
@@ -69,6 +103,7 @@ describe("WorkbenchShell", () => {
     resetUpdates();
     resetBilling();
     resetSquare();
+    setCatalogTransport(async () => { throw new Error('字典离线'); });
     setSquareTransport(async () => {
       throw new Error("广场暂时不可用");
     });
@@ -113,7 +148,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-space="square"]').trigger("click");
     await flushPromises();
     await w.get(".prompt-card").trigger("click");
-    await w.get('[data-testid="square-detail"] .modal-close').trigger("click");
+    await w.get('[data-testid="square-detail"] .page-back').trigger("click");
     resolveContent({ content: "迟到响应" });
     await flushPromises();
     expect(w.find('[data-testid="square-detail"]').exists()).toBe(false);
@@ -255,7 +290,7 @@ describe("WorkbenchShell", () => {
       return [
         { id: "pic", title: "分类人像", kind: "prompt", category_id: "cat-image-0" },
         { id: "code", title: "分类代码", kind: "prompt", category_id: "cat-software-0" },
-      ];
+      ].filter(item=>!request.categoryId || item.category_id.startsWith(request.categoryId));
     });
     const w = mount(WorkbenchShell);
     await flushPromises();
@@ -367,6 +402,78 @@ describe("WorkbenchShell", () => {
     expect(toggle.attributes('aria-expanded')).toBe('true');
     expect(w.emitted('open-launcher')).toBeUndefined();
     w.unmount();
+  });
+
+  it('resizes the sidebar with pointer capture, bounds and collapse retention', async () => {
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    const handle = w.get('[role="separator"]');
+    handle.element.setPointerCapture = vi.fn();
+    handle.element.hasPointerCapture = vi.fn(() => true);
+    handle.element.releasePointerCapture = vi.fn();
+    expect(handle.attributes('aria-valuenow')).toBe('260');
+    expect(handle.element.closest('[data-tauri-drag-region]')).toBeNull();
+    await handle.trigger('pointerdown', { button: 2, pointerId: 1, clientX: 260 });
+    expect(handle.element.setPointerCapture).not.toHaveBeenCalled();
+    await handle.trigger('pointerdown', { button: 0, pointerId: 1, clientX: 260 });
+    await handle.trigger('pointermove', { pointerId: 2, clientX: 330 });
+    expect(handle.attributes('aria-valuenow')).toBe('260');
+    await handle.trigger('pointermove', { pointerId: 1, clientX: 330 });
+    expect(w.attributes('style')).toContain('--sidebar-width: 330px');
+    await handle.trigger('pointermove', { pointerId: 1, clientX: 900 });
+    expect(handle.attributes('aria-valuenow')).toBe(handle.attributes('aria-valuemax'));
+    await handle.trigger('pointermove', { pointerId: 1, clientX: -100 });
+    expect(handle.attributes('aria-valuenow')).toBe('200');
+    await handle.trigger('pointermove', { pointerId: 1, clientX: 310 });
+    await handle.trigger('pointerup', { pointerId: 1 });
+    expect(handle.element.releasePointerCapture).toHaveBeenCalledWith(1);
+    await handle.trigger('pointermove', { pointerId: 1, clientX: 360 });
+    expect(handle.attributes('aria-valuenow')).toBe('310');
+    await w.get('[data-testid="toggle-sidebar"]').trigger('click');
+    expect(handle.isVisible()).toBe(false);
+    await w.get('[data-testid="toggle-sidebar"]').trigger('click');
+    expect(handle.attributes('aria-valuenow')).toBe('310');
+    w.unmount();
+  });
+
+  it('supports keyboard resizing and restores preferred width after a narrow viewport', async () => {
+    const originalWidth = window.innerWidth;
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    const handle = w.get('[role="separator"]');
+    await handle.trigger('keydown', { key: 'ArrowRight' });
+    expect(handle.attributes('aria-valuenow')).toBe('270');
+    await handle.trigger('keydown', { key: 'ArrowLeft' });
+    expect(handle.attributes('aria-valuenow')).toBe('260');
+    window.innerWidth = 760;
+    window.dispatchEvent(new Event('resize'));
+    await flushPromises();
+    expect(handle.attributes('aria-valuenow')).toBe('200');
+    window.innerWidth = originalWidth;
+    window.dispatchEvent(new Event('resize'));
+    await flushPromises();
+    expect(handle.attributes('aria-valuenow')).toBe('260');
+    w.unmount();
+  });
+
+  it.each(['pointercancel', 'lostpointercapture', 'blur', 'unmount'])('ends sidebar dragging on %s', async (ending) => {
+    const w = mount(WorkbenchShell);
+    await flushPromises();
+    const handle = w.get('[role="separator"]');
+    handle.element.setPointerCapture = vi.fn();
+    handle.element.hasPointerCapture = vi.fn(() => true);
+    handle.element.releasePointerCapture = vi.fn();
+    await handle.trigger('pointerdown', { button: 0, pointerId: 1, clientX: 260 });
+    if (ending === 'unmount') w.unmount();
+    else if (ending === 'blur') window.dispatchEvent(new Event('blur'));
+    else await handle.trigger(ending, { pointerId: 1 });
+    expect(handle.element.releasePointerCapture).toHaveBeenCalledWith(1);
+    if (ending !== 'unmount') {
+      await handle.trigger('pointermove', { pointerId: 1, clientX: 330 });
+      expect(handle.attributes('aria-valuenow')).toBe('260');
+      expect(w.classes()).not.toContain('sidebar-resizing');
+      w.unmount();
+    }
   });
 
   it("separates in-app search from the launcher in both spaces and sidebar states", async () => {
@@ -566,7 +673,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="keep-author-on-download"]').setValue(true);
     await flushPromises();
     expect(await getLocalSetting("keep_author_on_download")).toBe("1");
-    await w.get(".modal-close").trigger("click");
+    await w.get(".settings-return").trigger("click");
 
     await w.get('[data-space="square"]').trigger("click");
     await flushPromises();
@@ -585,7 +692,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="keep-author-on-download"]').setValue(false);
     await flushPromises();
     expect(await getLocalSetting("keep_author_on_download")).toBe("0");
-    await w.get(".modal-close").trigger("click");
+    await w.get(".settings-return").trigger("click");
 
     setSquareTransport(async () => [
       { id: "sq-plain", title: "夜景街拍", kind: "prompt", author: "林晚" },
@@ -811,7 +918,7 @@ describe("WorkbenchShell", () => {
   it("opens settings from the sidebar", async () => {
     const w = mount(WorkbenchShell);
     await w.get('[data-testid="open-settings"]').trigger("click");
-    expect(w.get('[data-testid="settings-modal"]').exists()).toBe(true);
+    expect(w.get('[data-testid="settings-page"]').exists()).toBe(true);
     await w.get('[data-settings-page="sync"]').trigger("click");
     expect(w.get('[data-testid="settings-unavailable"]').text()).toContain("启动器与 MCP 仍只读本机 SQLite");
     expect(w.get('[data-testid="auto-sync-queue-row"]').text()).not.toContain("尚未提供");
@@ -1222,7 +1329,7 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell);
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="appearance"]').trigger("click");
-    const select = w.get('[data-testid="theme-select"]');
+    const select = w.get('.theme-choices');
     expect(select.text()).toContain("浅色");
     expect(select.text()).toContain("深色");
     expect(select.text()).toContain("跟随系统");
@@ -1279,6 +1386,8 @@ describe("WorkbenchShell", () => {
     await loginSession({ email: "dev@promptark.local", password: "devpass" });
     setMineTransport(async () => [
       { id: "pub-1", source_id: "mem-1", status: "pending", title: "新稿" },
+      { id: "pub-2", source_id: "mem-2", status: "rejected", title: "待完善", history: [{ id: 1, status: 'rejected', reason: '请补充使用说明', created_at: '2026-09-07T12:00:00Z' }] },
+      { id: "pub-3", source_id: "mem-3", status: "approved", title: "已通过但已下架", visibility: 'offline' },
     ]);
     const w = mount(WorkbenchShell);
     await w.get('[data-testid="open-settings"]').trigger("click");
@@ -1288,6 +1397,8 @@ describe("WorkbenchShell", () => {
     const mine = w.get('[data-testid="my-publications"]');
     expect(mine.text()).toContain("新稿");
     expect(mine.text()).toContain("pending");
+    expect(mine.text()).toContain("驳回原因：请补充使用说明");
+    expect(mine.text()).toContain("广场：已下架");
     expect(w.text()).not.toMatch(/QQ|LinuxDo|Google/);
   });
 
@@ -1370,7 +1481,7 @@ describe("WorkbenchShell", () => {
     expect(rows[0].content).toBe("中文 English");
     expect(rows[0].use_count).toBe(0);
     expect(rows[0].last_used_at).toBeFalsy();
-    await w.get(".modal-close").trigger("click");
+    await w.get(".settings-return").trigger("click");
     await flushPromises();
     expect(w.find('[data-testid="library-view"]').exists()).toBe(false);
     expect(w.text()).toContain("还没有最近使用");
@@ -1439,6 +1550,8 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="billing-mock-success"]').trigger("click"); await flushPromises();
     expect(w.get('[data-testid="billing-note"]').text()).toContain("offline");
     expect(w.get('[data-testid="billing-mock-success"]').attributes("disabled")).toBeUndefined();
+    const redeem=vi.fn(async()=>({pro:false,mock:true,mock_pro:true,note:'Mock 测试码兑换'}));
+    setBillingTransport({redeem});await w.get('[data-testid="billing-redeem-code"]').setValue('TEST-'+'A'.repeat(32));await w.get('[data-testid="billing-redeem"]').trigger('click');await flushPromises();expect(redeem).toHaveBeenCalledOnce();expect(w.get('[data-testid="billing-mock"]').text()).toContain('模拟 Pro');expect(w.get('[data-testid="billing-pro"]').text()).toBe('未订阅');
     expect(opened).not.toHaveBeenCalled();
     w.unmount();
   });
@@ -1472,7 +1585,7 @@ describe("WorkbenchShell", () => {
     await flushPromises();
     expect(w.get('[data-testid="billing-note"]').text()).toContain("支付未开通");
     expect(opened).toEqual([]);
-    expect(w.get('[data-testid="settings-modal"]').text()).not.toMatch(/已从商店|已经上架/);
+    expect(w.get('[data-testid="settings-page"]').text()).not.toMatch(/已从商店|已经上架/);
     vi.unstubAllGlobals();
   });
 
@@ -1503,7 +1616,7 @@ describe("WorkbenchShell", () => {
     await flushPromises();
     expect(opened).toEqual(["https://checkout.stripe.com/c/pay/cs_test_preview"]);
     expect(w.get('[data-testid="billing-pro"]').text()).toContain("未订阅");
-    expect(w.get('[data-testid="settings-modal"]').text()).not.toMatch(/已从商店|已经上架/);
+    expect(w.get('[data-testid="settings-page"]').text()).not.toMatch(/已从商店|已经上架/);
     vi.unstubAllGlobals();
   });
 
@@ -1559,7 +1672,7 @@ describe("WorkbenchShell", () => {
     expect(await getLocalSetting("ui_language")).toBe("en");
     await w.get('[data-testid="open-settings"]').trigger("click");
     expect(w.findAll("[data-settings-page]").map((button) => button.text())[0]).toBe("General");
-    await w.get(".modal-close").trigger("click");
+    await w.get(".settings-return").trigger("click");
     await w.get(".language-toggle").trigger("click");
     await flushPromises();
     expect(w.get('[data-space="square"]').text()).toContain("广场");

@@ -2,12 +2,37 @@ openapi: 3.0.3
 info:
   title: PromptArk Admin
   version: 0.1.0
-  description: M6 管理合同。不把本路径写进 square.yaml。本仓库 backend 是预发，不声称生产。
+  description: 管理合同。不把本路径写进 square.yaml。本仓库 backend 是预发，不声称生产。密码重新认证受 60 秒窗口限制（全实例 300、连接 IP 60、操作者 10 次），超限返回 429 和 Retry-After=60；限流存储故障返回 503。管理客户端 401 清空当前会话，403 保留登录并提示权限不足。
 paths:
+  /v1/admin/overview:
+    get:
+      operationId: getAdminOverview
+      summary: owner/admin 的真实运行统计
+      description: days 仅 7/30/90，默认 7；返回当前账号/启用数、在线内容、待审数、已记录下载累计、当前收藏、全期 Mock 订单与成功开通订单，及窗口内新增账号/投稿/Mock 订单。未知历史日期单独计数，不伪造增长；无收入指标。400 参数错误，403 权限不足，503 查询超时或数据库不可用。
+  /v1/admin/catalog/{kind}/{id}/migrate:
+    post:
+      operationId: migrateAdminCatalog
+      summary: owner/admin 迁移公开引用并移除分类或模型
+      description: kind 为 categories/models；请求含 target、revision、target_revision、reason（非空最多 1000 字）。目标必须同类启用且非源；大分类只能迁到大分类，子分类重新挂接并递增版本。迁移公开条目/成员的元数据与版本，投稿快照不变，历史引用使用永久压平重定向；审核上架持字典锁，AI 期间相关迁移转人工。响应 migrated=true/content/children/target；Skill 引用或同名子分类冲突为 migrated=false/blocked/message，不写入任何更改。400 无效目标/参数，401/403 身份或权限无效，404 字典项不存在，409 源/目标版本变化；审计失败回滚。
+  /v1/admin/audit:
+    get:
+      operationId: listAdminAudit
+      summary: owner 查询成功操作与失败请求的脱敏审计
+      description: actor/action 字面子串、from/to UTC 日期（含首尾日）、offset 0–100000；固定每页 25，返回 items/total/offset/limit。记录含 id/actor_email/action/target_email/created_at/result/details（白名单摘要）。不含请求正文、密钥和路径实参；失败请求提供模板路由、方法、HTTP 状态及请求 ID。400 无效筛选，403 权限不足。
+  /v1/admin/audit/export:
+    get:
+      operationId: exportAdminAudit
+      summary: owner 导出最多 500 条最新脱敏记录
+      description: 使用审计筛选，忽略 offset；返回同分页 JSON，limit=500，total 为全部匹配量。复核 owner 与会话并审计成功导出，受操作者限流保护。前端须确认并提醒文件包含操作账号。无删除日志接口。
+  /v1/admin/system:
+    get:
+      operationId: getAdminSystem
+      summary: owner 查看实际依赖状态与恢复提示
+      description: 返回 version/checked_at/postgres/redis/media/mail_queue/notification_queue/encryption_key_loaded/mock_billing/recovery。依赖状态 healthy/unavailable/not_configured，可含 latency_ms，每项最多 3 秒并行探测；HTTP 非 2xx 或重定向不视为健康。队列计数读取失败为 null 而非零；邮件通知关联实际邮件状态。没有凭据、服务器路径、URL 或命令执行入口。
   /v1/admin/me:
     get:
       operationId: getAdminMe
-      summary: 当前管理员身份与角色
+      summary: 当前管理身份、固定角色及 permissions（users、configuration、roles）
   /v1/admin/publications:
     get:
       operationId: listAdminPublications
@@ -27,17 +52,117 @@ paths:
     post:
       operationId: rejectPublication
       summary: 驳回审核
-      description: 重复驳回成功；已通过返回 409，不允许覆盖相反审核结果
+      description: 重复驳回成功但不覆盖首次原因或重复写历史；已通过返回 409。无请求体旧客户端兼容记录「旧客户端未提供原因」。审核员/admin/owner 可操作；状态、上架、历史与审计同事务。
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
+  /v1/admin/reviews:
+    get:
+      operationId: listReviewHistory
+      summary: 审核员/admin/owner 的分页投稿与审核历史
+      description: q 标题/来源字面子串（最多 300 字节），author 邮箱子串（最多 254 字节），status 默认 pending，可为 approved/rejected/空（全部）；from/to 为 UTC 日期 YYYY-MM-DD（含首尾日），offset 非负，limit 1–100 默认 25。返回 items、total、offset、limit；条目含提交快照、created_at 和 history（id、status、reason、actor_email、created_at）。旧投稿时间为 null，不伪造历史。非法参数 400，非管理人员 403，缺数据库 503。
+  /v1/admin/reviews/batch:
+    post:
+      operationId: batchReviewPublications
+      summary: 逐项独立事务的批量审核
+      description: 审核员/admin/owner 可用，最多 50 个不同 ID。200 返回 results，每项 id、ok、status；失败项另含 message（404 不存在、409 相反结果、401 会话失效、403 权限被撤销、500 事务失败）。部分成功不回滚其他项。400 表示批量参数无效且尚未写入；每项事务内复核身份。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ids, status]
+              properties:
+                ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  uniqueItems: true
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 200
+                status:
+                  type: string
+                  enum: [approved, rejected]
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                  description: rejected 必填且不全空白，approved 不允许提供
+  /v1/admin/content:
+    get:
+      operationId: listAdminContent
+      summary: owner/admin 检索广场条目（含下架和回收站）
+      description: q 标题/ID 子串最多 300 字节；visibility 为 online/offline/trashed/空（全部）；offset 非负，limit 1–100 默认 25。返回 items（展示信息、可见状态、revision、recommended、sort_index、download_count、listed_at）、total、offset、limit、categories（系统分类 id/name）。不等于可编辑远端字典。
+  /v1/admin/content/{id}:
+    get:
+      operationId: getAdminContent
+      summary: owner/admin 读取广场快照、运营字段和审计历史
+    put:
+      operationId: updateAdminContent
+      summary: 版本化更新展示信息和可见状态
+      description: 仅 owner/admin，事务内复核当前身份。200 返回 updated=true、revision；409 版本冲突；400 非法字段值/状态变更缺少原因/回收站直接上架；422 未知字段（不能传标题/正文/成员）；503 无数据库。移入回收站不删除记录，恢复仅到 offline，再明确上架。排序权重越小越靠前，推荐优先；不影响首次上架时间的最新排序。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [revision, excerpt, recommended, sort_index, visibility]
+              properties:
+                revision:
+                  type: integer
+                  minimum: 0
+                excerpt:
+                  type: string
+                  maxLength: 2000
+                category_id:
+                  type: string
+                  nullable: true
+                  description: 现有系统分类 ID，null 清空
+                model:
+                  type: string
+                  nullable: true
+                  maxLength: 100
+                recommended:
+                  type: boolean
+                sort_index:
+                  type: integer
+                  minimum: -1000000
+                  maximum: 1000000
+                visibility:
+                  type: string
+                  enum: [online, offline, trashed]
+                reason:
+                  type: string
+                  nullable: true
+                  maxLength: 1000
+                  description: 状态变化时必填非空原因
   /v1/admin/users:
     get:
       operationId: listAdminUsers
-      summary: 用户只读列表
+      summary: 用户检索和分页（owner/admin）
+      description: q 按邮箱/显示名查字面子串；role 为 owner/admin/reviewer/user；status 为 active/disabled；offset 非负，limit 为 1–100（默认 25）。返回 items、total、offset、limit。不返回密码或令牌。
   /v1/admin/settings:
     get:
       operationId: getAdminSettings
@@ -48,7 +173,7 @@ paths:
   /v1/admin/oauth:
     get:
       operationId: listAdminOAuthProviders
-      summary: 读取 Google 与 GitHub 的脱敏配置（仅管理员）
+      summary: owner 读取 Google 与 GitHub 的脱敏版本化配置与验证状态
       responses:
         '200':
           description: 不返回 Client Secret 或密文
@@ -68,6 +193,7 @@ paths:
   /v1/admin/oauth/{provider}:
     put:
       operationId: updateAdminOAuthProvider
+      description: PostgreSQL 写入仅 owner，须 current_password 和 revision；旧版本 409，错误密码/角色 403。保存递增版本并使所有旧验证失效，业务与审计同事务；空 Secret 保留。配置和秘密不进入浏览器持久存储。
       summary: 保存提供商配置并立即生效
       parameters:
         - name: provider
@@ -83,8 +209,10 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [enabled, client_id, redirect_uri]
+              required: [enabled, client_id, redirect_uri, revision, current_password]
               properties:
+                revision: { type: integer, minimum: 0 }
+                current_password: { type: string, maxLength: 512, writeOnly: true }
                 enabled:
                   type: boolean
                 client_id:
@@ -114,12 +242,388 @@ paths:
           description: 非管理员
         '500':
           description: 配置持久化或密钥解密失败，不返回敏感内容
+  /v1/admin/oauth/{provider}/verify:
+    post:
+      operationId: verifyAdminOAuthProvider
+      summary: owner 显式发起独立真实授权验证
+      description: 提供商须已保存启用或来自环境配置；JSON 空对象，返回 authorization_url/expires_in=600。仅存随机 state 摘要，10 分钟一次性，新的验证取消旧待处理验证；回调复核指纹和有效 owner，不创建/绑定账号或签发会话。真实 token/profile 请求有界且只认已验证邮箱；内存模拟身份不得成为验证证据。未启用 409、无权限 403、数据库缺失 503、限流 429。
+  /v1/admin/security:
+    get:
+      operationId: getAdminSecurity
+      summary: 本人账号安全信息（仅管理员）
+      responses:
+        '200':
+          description: 只返回是否设置密码及有效访问令牌数量，不返回令牌
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [has_password, active_access_count]
+                properties:
+                  has_password:
+                    type: boolean
+                  active_access_count:
+                    type: integer
+                    minimum: 0
+        '401':
+          description: 未登录
+        '403':
+          description: 非管理员
+        '503':
+          description: 无持久化数据库
+  /v1/admin/security/password:
+    put:
+      operationId: changeAdminPassword
+      summary: 验证当前密码并修改本人密码，撤销本人全部会话
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [current_password, new_password]
+              properties:
+                current_password:
+                  type: string
+                  writeOnly: true
+                  description: 最多 512 UTF-8 字节；不 trim
+                new_password:
+                  type: string
+                  minLength: 12
+                  maxLength: 128
+                  writeOnly: true
+                  description: 最多 512 UTF-8 字节，与当前密码不同；不 trim
+      responses:
+        '200':
+          description: 密码变更、全会话撤销与成功审计原子提交；返回 signed_out=true
+        '400':
+          description: 新密码不满足要求
+        '401':
+          description: 未登录或等待锁期间会话已撤销
+        '403':
+          description: 非管理员
+        '422':
+          description: 当前密码错误、无本地密码或 JSON 不满足结构
+        '500':
+          description: 事务失败且回滚，不返回秘密
+        '503':
+          description: 无持久化数据库
+  /v1/admin/security/sessions:
+    delete:
+      operationId: revokeAdminSessions
+      summary: 撤销本人的全部 Access 和 Refresh，会话退出与成功审计原子提交
+      responses:
+        '200':
+          description: 返回 signed_out=true；当前管理台也须重新登录
+        '401':
+          description: 未登录或等待锁期间会话已撤销
+        '403':
+          description: 非管理员
+        '500':
+          description: 事务失败且回滚
+        '503':
+          description: 无持久化数据库
+  /v1/admin/users/{email}:
+    get:
+      operationId: getAdminUser
+      summary: 读取用户公开资料、登录来源、投稿计数与真实/模拟权益（owner/admin）
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: email、display_name、bio、role、disabled、pro、mock_pro、has_password、providers、publication_count、active_access_count；不含私人库正文
+        '403':
+          description: 当前角色没有用户管理权限
+        '404':
+          description: 用户不存在
+  /v1/admin/users/{email}/actions:
+    post:
+      operationId: manageAdminUser
+      summary: 重新认证后停用、启用、撤销会话或调整角色
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [action, current_password]
+              properties:
+                action:
+                  type: string
+                  enum: [disable, enable, revoke_sessions, role]
+                current_password:
+                  type: string
+                  writeOnly: true
+                  description: 操作者当前密码，最多 512 字节
+                role:
+                  type: string
+                  enum: [owner, admin, reviewer, user]
+                  description: 仅 action=role 时必填，其余操作禁止传入
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                  description: disable/enable 必填，不可全空白；与账号动作同事务记录安全审计
+      responses:
+        '200':
+          description: updated=true；用户状态、会话撤销与审计同事务提交。启用不恢复旧会话。
+        '400':
+          description: 参数无效
+        '401':
+          description: 未登录、已撤权或停用
+        '403':
+          description: admin 只能管理普通用户，角色变更仅 owner；reviewer/user 禁止
+        '409':
+          description: 禁止操作本人或移除最后有效 owner
+        '422':
+          description: 当前密码错误、无本地密码或 JSON 无效
+        '500':
+          description: 事务回滚，操作未完成
+        '503':
+          description: 无数据库连接
+  /v1/admin/catalog/{kind}:
+    get:
+      operationId: listAdminCatalog
+      summary: owner/admin 获取分类或模型字典及引用数
+      description: kind 为 categories 或 models。items 包含 id/name/parent_id/icon/color/vendor/group/enabled/sort_index/revision/references；引用数为广场和投稿记录数（含合集成员匹配），不是公开条目数。
+    post:
+      operationId: createAdminCatalogEntry
+      summary: owner/admin 新建分类或模型字典项
+      description: JSON 字段与 CatalogEntry 一致，id/name 必填，其他字段使用默认值。不接受 references。返回保存后条目。400 为字段/层级错误，409 为同级重名或 ID 已存在，403 为越权；写入与审计原子提交。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogEntry'
+  /v1/admin/catalog/{kind}/{id}:
+    put:
+      operationId: updateAdminCatalogEntry
+      summary: 版本化编辑分类或模型
+      description: id/模型值不可修改。旧版本返回 409；分类不超过两级。启停不下架既有内容，不影响本地分类。返回新 revision 的条目。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogEntry'
+    delete:
+      operationId: deleteAdminCatalogEntry
+      summary: 无子分类且无引用时安全删除
+      description: JSON 为 revision 整数；存在广场、投稿或成员引用/子分类时返回 409，不迁移引用。保存墓碑避免种子复活，成功返回 deleted=true 和 id。
+  /v1/admin/reports:
+    get:
+      operationId: listAdminReports
+      summary: owner/admin 分页检索举报
+      description: q 为内容 ID/原因/举报者字面子串（最多 200 字节），status 为 pending/processing/dismissed/closed 或空，category 为 privacy/medical/financial/copyright/danger/spam/other 或空，priority 为 normal/high 或空，assignee 为邮箱或空，offset 0–100000。返回 items,total,offset,limit=25,assignees（有效 owner/admin）。
+  /v1/admin/reports/export:
+    get:
+      operationId: exportAdminReports
+      summary: 同样筛选条件导出前 500 件必要元数据并记录审计
+      description: owner/admin，JSON items 不含 reason/resolution/reporter 或内容正文；含 total/limit，结果可能截断。事务内复核会话，审计失败不返回成功。
+  /v1/admin/reports/{id}:
+    get:
+      operationId: getAdminReport
+      summary: 举报详情、公开目标快照、内部处置历史及当前规则复核
+    put:
+      operationId: updateAdminReport
+      summary: owner/admin 版本化处置举报
+      description: JSON revision、action（start/assign/dismiss/offline）、reason（非空最多 1000 字）、priority（normal/high）、assignee（assign 时必填有效 owner/admin）。旧版本/已结案 409，字段无效 400，权限不足 403，无数据库 503。返回更新后的案件；下架、案件、事件和审计同事务。下架操作不将回收站内容恢复为 offline。驳回/下架的结案原因向举报者展示。
+  /v1/admin/safety-rules:
+    get:
+      operationId: getSafetyRules
+      summary: owner/admin 读取持久化规则集
+    put:
+      operationId: saveSafetyRules
+      summary: 带 revision 保存规则集，与前后版本审计同事务
+      description: JSON revision 与 rules；最多 100 条，每条 id（唯一最多 80 字节）、name（非空最多 80 字）、category（同举报类型）、words（1–100 个非空字面词，每词最多 80 字）、score（0–100）、enabled（布尔）。返回新版本规则集；旧版本 409；非法字段 400/422。不支持正则，未设置默认空规则，不表示所有内容通过。
+  /v1/admin/safety-rules/test:
+    post:
+      operationId: testSafetyRules
+      summary: 测试已保存启用规则，不调用外部模型或保存测试正文
+      description: JSON text（最多 200000 UTF-8 字节）、category（可选风险分类）。返回 source=local_rules、revision、score（最高命中分数）、hits（规则 id/name/category/score/words）及无命中不代表安全的说明。
+  /v1/admin/moderation:
+    get:
+      operationId: getModerationPolicy
+      summary: owner 读取自动初筛策略
+    put:
+      operationId: saveModerationPolicy
+      summary: owner 版本化保存初筛、投稿限额及自动上架策略
+      description: JSON revision、enabled、daily_limit（1–1000）、auto_approve、approve_below（1–99）、manual_at（大于 approve_below，不超过 100）、check_duplicates、check_structure、check_sensitive、check_images、require_ai。默认关闭自动初筛/通过，其余检查默认开启。版本冲突 409，非法字段 400/422，非 owner 403，无数据库 503。保存与前后版本审计同事务；只对后续投稿生效，不重审历史。要求 AI/图片检查而依赖不可用时转人工。
+  /v1/admin/ai/config:
+    get:
+      operationId: getAiConfiguration
+      summary: owner 读取当前审核模型、Skills 与最近测试状态，不返回凭据或密文
+    put:
+      operationId: saveAiConfiguration
+      summary: owner 验证当前密码后追加配置版本
+      description: JSON revision、current_password、models、skills、secrets（模型 ID 到新密钥，留空保留）。models 最多 20 条，id/name/endpoint/model/enabled/json_mode/redact/timeout_seconds（1–15）；endpoint 为完整公网 HTTPS Chat Completions 地址。skills 最多 30 条，id/name/instruction/enabled/kinds（prompt/collection）/categories（空为全部，精确分类）/route（fallback/consensus/majority）/models（有序最多 3 ID）。密钥加密并绑定 ID；修改生成新版本，旧测试不沿用；旧 revision 409，非法输入 400/422，错误密码或非 owner 403，频率限制 429。历史快照不覆盖，审计不含凭据。
+  /v1/admin/ai/history:
+    get:
+      operationId: getAiConfigurationHistory
+      summary: owner 读取最近 50 个不可变配置版本，凭据仅返回是否已配置
+  /v1/admin/ai/test:
+    post:
+      operationId: testAiConfiguration
+      summary: owner 明确发送样本测试已保存版本，不保存样本正文
+      description: JSON revision、skill_id、model_id（可选，单模型测试）、text（非空最多 8000 字节）。返回 revision/skill_id/verdict/models/error；连接、目标、响应结构或路由失败为 verdict=null，不假报通过。每模型限时，整链路最多 25 秒；禁止代理和重定向，拒绝非公网目标，响应最多 256 KiB。记录版本、执行人、测试范围和成功/失败，不记录 API Key 或提供商错误正文。
+  /v1/admin/mail/config:
+    get:
+      operationId: getMailConfiguration
+      summary: owner 读取脱敏 SMTP 配置和最近测试状态
+    put:
+      operationId: saveMailConfiguration
+      summary: owner 当前密码验证后保存新版本，不发送邮件
+      description: JSON revision、current_password、host（公网主机）、port（465/587）、tls（implicit/starttls）、from、username、password（留空保留）、enabled。密钥加密保存，不返回密码或密文。旧版本 409，非法字段 400/422，错误密码/角色 403，限流 429。旧版本测试不代表新配置可用。
+  /v1/admin/mail/test:
+    post:
+      operationId: testMailConfiguration
+      summary: owner 明确发起固定模板测试邮件
+      description: JSON revision、to（单个收件邮箱）。有密钥的已保存配置可测试，即使业务 enabled=false。返回 202 与 id/status=queued，不能解释成送达。无凭据 503，旧版本 409，单账号限流。只发送固定测试说明，无任意正文群发入口。
+  /v1/admin/mail/deliveries:
+    get:
+      operationId: listMailDeliveries
+      summary: owner 分页查看投递元数据，不返回正文/密文/验证凭据
+      description: 查询 status、q（收件邮箱或记录 ID，字面匹配）、offset；每页 25，返回 items/total/offset/limit。状态 queued/sending/accepted/failed/expired/config_changed；accepted 只代表 SMTP 接受。最多 3 次尝试，超时结果可能未知。
+  /v1/admin/mail/deliveries/{id}:
+    get:
+      operationId: getMailDelivery
+      summary: owner 读取指定投递的脱敏元数据及每次尝试记录
+  /v1/admin/mail/deliveries/{id}/retry:
+    post:
+      operationId: retryMailDelivery
+      summary: owner 版本化提前重试失败邮件，不改变收件人或载荷
+      description: JSON revision；只有未过期、失败且累计尝试少于 3 次的记录可回到 queued。版本/状态不符合 409，限流 429。与审计原子写入，不能重复重试已接受的邮件。
+  /v1/admin/identity/policy:
+    get:
+      operationId: getIdentityPolicy
+      summary: owner 读取注册策略及 revision
+    put:
+      operationId: saveIdentityPolicy
+      summary: owner 版本化保存 registration_open
+      description: JSON revision、registration_open；对邮箱注册和首次 OAuth 创建同时生效，已有账号不受影响；旧版本 409，保存和审计原子一致。
+  /v1/admin/identity/invitations:
+    get:
+      operationId: listAdminInvitations
+      summary: owner 分页读取邀请状态，不返回验证码或摘要
+      description: offset 0–100000，每页 25；返回 items/total/offset/limit，状态 pending/used/revoked/expired 不代表邮件投递状态。
+    post:
+      operationId: inviteAdministrator
+      summary: owner 重新认证后邀请新邮箱，不立即创建账号
+      description: JSON email、role（admin/reviewer）、current_password。202 id/status=pending；已有邮箱 409，非 owner/错误密码 403，邮件未启用 503，频控或每日邮件额度 429。邀请、邮件与审计同事务，不允许邀请 owner 或覆盖原账号。
+  /v1/admin/identity/invitations/{id}/revoke:
+    post:
+      operationId: revokeAdminInvitation
+      summary: owner 撤销当前版本待接受邀请
+      description: JSON revision；冲突 409；凭据永久失效并使未完成邮件过期，不撤销已接受的账号，后者必须走用户管理。
+  /v1/admin/users/{email}/password-reset:
+    post:
+      operationId: requestUserPasswordReset
+      summary: 重新认证后向目标邮箱发起密码重置
+      description: JSON current_password。admin 仅普通用户，owner 可操作管理账号；停用目标拒绝。返回 202 message，仅表示请求被接受，不返回验证码或更改密码；无邮件能力 503，非授权/错误密码 403，未找到 404。
+  /v1/admin/site:
+    get:
+      operationId: getSiteConfiguration
+      summary: owner 读取站点全部配置和 revision
+    put:
+      operationId: saveSiteConfiguration
+      summary: owner 版本化保存站点配置、匿名浏览与事务审计
+      description: JSON revision、name（1–60 字）、description（最多 300 字）、logo_url（可空 HTTPS 最多 2048 字节）、support_email（可空）、square_public、publishing_open、announcement（纯文本最多 2000 字）、announcement_start/end（可空 RFC3339，起早于止）。冲突 409，非法输入 400/422；旧 PUT settings 只修改匿名浏览并递增站点 revision。注册策略由 identity/policy 唯一保存。
+  /v1/admin/mock-billing/{kind}:
+    get:
+      operationId: listMockBilling
+      summary: owner/admin 分页读取账号权益或模拟订单
+      description: kind=entitlements/orders；q 为邮箱/ID/结果，最多 254 字节；offset 0–100000，固定每页 25。返回 items/total/offset/limit/mock=true/enabled；真实权益只读单列，订单无收费金额；mock 关闭时仍允许读取历史。
+  /v1/admin/mock-billing/actions:
+    post:
+      operationId: changeMockEntitlement
+      summary: owner/admin 在 mock 开启时带原因执行模拟操作
+      description: JSON email、outcome（success/failure/cancel/reset）、reason（非空最多 500 字）、request_id（UUID）。返回 mock=true/order；同操作者同 ID 同参数幂等，不同参数 409；停用目标拒绝；不改变真实 Pro，权益/订单/审计同事务。
+  /v1/admin/mock-billing/batches:
+    get:
+      operationId: listMockCodeBatches
+      summary: owner/admin 分页读取测试码批次及使用量
+      description: q 名称/ID，offset 每页 25；返回 enabled/revision/expires_at/code_count/uses_per_code/used_count，不返回明码或摘要。
+    post:
+      operationId: createMockCodeBatch
+      summary: 生成一次性展示的 TEST 前缀测试码
+      description: JSON name（1–80 字）、count（1–100）、uses_per_code（1–1000）、expires_at（未来最多 365 天 RFC3339）、request_id（UUID）。返回 mock/id/codes；同 request_id 重试 409，不重新生成或回显明码。数据库仅存摘要，审计无明码，关闭模拟拒绝。
+  /v1/admin/mock-billing/batches/{id}:
+    get:
+      operationId: getMockCodeBatch
+      summary: 查看测试码提示和使用额度，最近 100 条使用记录
+      description: 返回 batch/codes（id/hint/uses）/recent_uses/uses_limit；不返回完整码或摘要。
+    put:
+      operationId: updateMockCodeBatch
+      summary: owner/admin 版本化启用或停用测试批次
+      description: JSON revision、enabled；过期批次不能重新启用，冲突/未开启 mock 为 409。不删除历史记录或改真实权益。
+  /v1/admin/notifications/config:
+    get:
+      operationId: getNotificationConfiguration
+      summary: owner 查询通知和日志保留策略
+      description: 返回 revision、email_enabled、recipient、webhook_enabled、endpoint_configured、webhook_host、secret_configured、threshold、daily_limit、active_since、retention_enabled、retention_days；默认渠道和清理均关闭。Endpoint 路径和签名密钥加密且不返回。
+    put:
+      operationId: saveNotificationConfiguration
+      summary: owner 当前密码确认并按版本保存
+      description: 请求包含 revision/current_password、开关及配置字段；endpoint/secret 空白保留，签名密钥至少 16 字节；HTTPS 地址仅公网，禁凭据/查询/片段/私网，发送时固定 DNS 且禁重定向。阈值 1–100、每日额度 1–1000、保留天数 7–3650。启用邮件需已启用 SMTP。修改使旧未完成任务失效并审计，保存不发送测试。400 参数错误，403 权限/密码错误，409 版本冲突，503 SMTP 不可用。清理仅过期终态运行日志，安全审计不删，UI 必须告知备份与不可撤销。
+  /v1/admin/notifications/test:
+    post:
+      operationId: testNotificationChannel
+      summary: owner 显式测试已保存渠道
+      description: 请求 revision/channel（email 或 webhook）。202 返回 id/status；queued/mail_queued 是入队，不等于接收；quota_limited/unavailable 是跳过。固定测试元数据不含正文或邮箱，按 UTC 日计入额度。409 渠道未启用或版本变化，429 频率受限。测试需用户确认目标。
+  /v1/admin/notifications/deliveries:
+    get:
+      operationId: listNotificationDeliveries
+      summary: owner 分页读取通知实际状态
+      description: status 筛选最多 40 字节，offset 0–100000；固定 25，返回 items/total/offset/limit。条目含 id/channel/metadata/status/attempts/revision/expires_at/created_at/error，无目标秘密或邮件载荷。状态 queued/mail_queued/sending/accepted/failed/expired/config_changed/quota_limited/unavailable；accepted 只代表对端接收。
+  /v1/admin/notifications/deliveries/{id}:
+    get:
+      operationId: getNotificationDelivery
+      summary: owner 查询固定事件元数据与尝试历史
+      description: 返回 delivery/history；邮件关联 SMTP 实际尝试记录；Webhook 失败无提供商正文。404 不存在。
+  /v1/admin/notifications/deliveries/{id}/retry:
+    post:
+      operationId: retryNotificationDelivery
+      summary: owner 按记录版本显式重试
+      description: 请求 revision；仅当前配置启用、未过期且 attempts 小于 3 的失败记录可重试。事务复核权限/版本并审计，409 状态或配置变化。Webhook 使用稳定投递 ID 和 HMAC-SHA256 签名，至少一次语义；超时可能已投递，接收端须按 ID 去重。
 components:
   schemas:
+    CatalogEntry:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 100 }
+        name: { type: string, minLength: 1, maxLength: 80 }
+        parent_id: { type: string, nullable: true }
+        icon: { type: string, maxLength: 40, default: folder }
+        color: { type: string, pattern: '^#[0-9a-fA-F]{6}$', default: '#728080' }
+        vendor: { type: string, maxLength: 100 }
+        region: { type: string, enum: ['', 国内, 国外], default: '' }
+        group: { type: string, enum: [language, image, video], default: language }
+        enabled: { type: boolean, default: true }
+        sort_index: { type: integer, minimum: -1000000, maximum: 1000000, default: 0 }
+        revision: { type: integer, minimum: 0, default: 0 }
     OAuthProviderView:
       type: object
-      required: [provider, enabled, client_id, redirect_uri, secret_configured, source]
+      required: [provider, enabled, client_id, redirect_uri, secret_configured, source, revision, verification]
       properties:
+        revision: { type: integer, minimum: 0 }
+        verification:
+          type: object
+          description: status 为 unverified/pending/verifying/succeeded/failed/expired/cancelled/configuration_changed，可含固定 message、created_at、finished_at；不含指纹、state、提供商响应或测试账号邮箱。状态只对应已保存配置，变更后旧成功失效。
         provider:
           type: string
           enum: [google, github]

@@ -32,7 +32,11 @@ fn http_client(follow_redirects: bool) -> Result<reqwest::Client, String> {
 }
 
 fn persist_pair(pair: TokenPair) -> Result<SessionView, String> {
-    persist_session_tokens(&KeyringRefreshStore, &pair.access_token, &pair.refresh_token)?;
+    persist_session_tokens(
+        &KeyringRefreshStore,
+        &pair.access_token,
+        &pair.refresh_token,
+    )?;
     Ok(SessionView {
         email: pair.email,
         access_token: pair.access_token,
@@ -65,6 +69,34 @@ pub async fn login_local_session(email: String, password: String) -> Result<Sess
     }
     let pair: TokenPair = response.json().await.map_err(|error| error.to_string())?;
     persist_pair(pair)
+}
+
+#[tauri::command]
+pub async fn identity_request(action: String, config: Value) -> Result<Value, String> {
+    if !["options", "request", "confirm"].contains(&action.as_str()) {
+        return Err("不支持的验证动作".into());
+    }
+    let url = format!("{}/v1/session/identity/{action}", api_base());
+    let client = http_client(false)?;
+    let response = if action == "options" {
+        client.get(url)
+    } else {
+        client.post(url).json(&config)
+    }
+    .send()
+    .await
+    .map_err(|_| "邮箱验证服务连接失败".to_owned())?;
+    if !response.status().is_success() {
+        return Err(match response.status().as_u16() {
+            429 => "操作频繁，请一分钟后重试",
+            503 => "站点邮件服务暂不可用",
+            403 => "站点暂未开放新账号注册",
+            400 => "验证码无效或已过期，或密码不符合 12–128 字符要求",
+            _ => "邮箱验证失败，请稍后重试",
+        }
+        .into());
+    }
+    response.json().await.map_err(|_| "邮箱验证响应无效".into())
 }
 
 fn cancelled_flows() -> &'static Mutex<HashSet<String>> {
@@ -110,10 +142,7 @@ async fn load_ready_pair(flow_id: &str) -> Result<Option<TokenPair>, String> {
         return Err("登录未完成".to_string());
     }
     let poll = match http_client(true)?
-        .get(format!(
-            "{}/v1/session/oauth/session/{flow_id}",
-            api_base()
-        ))
+        .get(format!("{}/v1/session/oauth/session/{flow_id}", api_base()))
         .send()
         .await
     {
@@ -234,10 +263,7 @@ pub async fn put_me(
 }
 
 #[tauri::command]
-pub async fn put_library_changes(
-    access_token: String,
-    items: Vec<Value>,
-) -> Result<Value, String> {
+pub async fn put_library_changes(access_token: String, items: Vec<Value>) -> Result<Value, String> {
     let response = http_client(true)?
         .put(format!("{}/v1/library/changes", api_base()))
         .bearer_auth(&access_token)
@@ -284,11 +310,15 @@ pub async fn get_billing_status(access_token: String) -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub async fn start_billing_checkout(access_token: String, mock_outcome: Option<String>) -> Result<Value, String> {
+pub async fn start_billing_checkout(
+    access_token: String,
+    mock_outcome: Option<String>,
+    request_id: Option<String>,
+) -> Result<Value, String> {
     let response = http_client(true)?
         .post(format!("{}/v1/billing/checkout", api_base()))
         .bearer_auth(&access_token)
-        .json(&serde_json::json!({ "mock_outcome": mock_outcome }))
+        .json(&serde_json::json!({ "mock_outcome": mock_outcome, "request_id": request_id }))
         .send()
         .await
         .map_err(|error| error.to_string())?;
@@ -296,19 +326,36 @@ pub async fn start_billing_checkout(access_token: String, mock_outcome: Option<S
         return Err("账单需要登录".to_string());
     }
     let status = response.status();
-    let payload: Value = response.json().await.map_err(|_| "支付请求失败，请重试".to_string())?;
-    if !status.is_success() && !([403, 409].contains(&status.as_u16()) && payload["note"].is_string()) {
+    let payload: Value = response
+        .json()
+        .await
+        .map_err(|_| "支付请求失败，请重试".to_string())?;
+    if !status.is_success()
+        && !([403, 409].contains(&status.as_u16()) && payload["note"].is_string())
+    {
         return Err("支付请求失败，请重试".into());
     }
     Ok(payload)
 }
 
 #[tauri::command]
-pub async fn redeem_billing_code(access_token: String, code: String) -> Result<Value, String> {
+pub async fn redeem_billing_code(
+    access_token: String,
+    code: String,
+    mock_mode: Option<bool>,
+    request_id: Option<String>,
+) -> Result<Value, String> {
+    let mock_mode = mock_mode.unwrap_or(false);
+    let path = if mock_mode { "mock/redeem" } else { "redeem" };
+    let body = if mock_mode {
+        serde_json::json!({"code":code,"request_id":request_id})
+    } else {
+        serde_json::json!({"code":code})
+    };
     let response = http_client(true)?
-        .post(format!("{}/v1/billing/redeem", api_base()))
+        .post(format!("{}/v1/billing/{path}", api_base()))
         .bearer_auth(&access_token)
-        .json(&serde_json::json!({ "code": code }))
+        .json(&body)
         .send()
         .await
         .map_err(|error| error.to_string())?;

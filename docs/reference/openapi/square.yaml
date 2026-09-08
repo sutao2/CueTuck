@@ -2,13 +2,36 @@ openapi: 3.0.3
 info:
   title: PromptArk Square
   version: 0.1.0
-  description: M5 广场合同。旧 Spring 路径不是本合同。
+  description: M5 广场合同。旧 Spring 路径不是本合同。条目列表、详情和正文可含 reference（可空对象），字段 repository、url、author、license、license_url、images（HTTPS URL 数组）；历史记录为空，普通投稿不可自行写入此导入来源字段。
 paths:
+  /v1/site:
+    get:
+      operationId: getPublicSiteConfiguration
+      security: []
+      summary: 公开社区名称、说明、HTTPS 标识、支持邮箱、投稿开关和当前有效公告
+      description: 返回公开站点字段与 revision，不含 SMTP/OAuth/账号信息；公告未开始或已到期返回空正文。广场 catalog.site 返回相同字段。关闭投稿时直接 POST publications 也返回 403，不影响本地库与已有投稿审核。
+  /v1/reports:
+    get:
+      operationId: listMyReports
+      summary: 登录用户读取本人举报进度
+      description: offset 0–100000，每页 25。返回 items,total,offset,limit；每项 id,target_id,category,reason,status,resolution,created_at,updated_at。不含管理员邮箱、内部历史或其他举报者。
+    post:
+      operationId: reportSquareContent
+      summary: 举报在线广场提示词或合集
+      description: JSON target_id（最多 200 字节）、category（privacy/medical/financial/copyright/danger/spam/other）、reason（非空最多 1000 字）。须有效用户 Access。同人同目标未结案去重返回相同 id/status；每 24 小时最多 20 个新案件，超限 429。目标不存在或不可见 404；账号禁用/令牌撤销不能提交。举报不自动下架，不读取本地内容。
+  /v1/square/catalog:
+    get:
+      operationId: getSquareCatalog
+      security: []
+      summary: 广场分类和模型公共字典
+      x-category-parents: category_parents 为所有未删除分类的 ID 到父 ID（根为 null）映射，包含停用项，仅用于既有内容和收藏的父级筛选，不作为新投稿选项。
+      description: 返回 categories/models 数组，每项含 id、name、排序等公开元数据；不包含引用计数或秘密。只返回启用且未删除的项，停用父级不返回其子级。分类用于广场筛选和投稿，模型 id 对应提示词 model 值。字典公开不等于允许匿名访问正文。
   /v1/square/items:
     get:
       operationId: listSquareItems
       security: []
       summary: 浏览广场（匿名）
+      description: 仅返回 online 内容；关闭匿名浏览后访客列表为空，已登录仍可读。recommended 推荐优先再按权重/id；latest 按首次上架时间倒序，旧条目无时间置后；hot 仍按匿名下载计数。数据库错误不当作成功空列表。
       parameters:
         - name: category_id
           in: query
@@ -20,6 +43,7 @@ paths:
       operationId: getSquareItem
       security: []
       summary: 广场条目详情（匿名）
+      description: 下架/回收站与不存在均 404；关闭匿名浏览时须有效 Access，否则 401。
       parameters:
         - name: id
           in: path
@@ -31,7 +55,7 @@ paths:
       operationId: getSquareItemContent
       security: []
       summary: 下载正文（匿名）
-      description: 返回 id、title、kind、content、category_id、model、members；members 为合集成员快照数组（title、content、category_id、model），普通提示词为空数组；历史条目分类与模型可为 null
+      description: 返回 id、title、kind、content、category_id、model、members；members 为合集成员快照数组（title、content、category_id、model），普通提示词为空数组；历史条目分类与模型可为 null。下架/回收站 404；关闭匿名浏览时须有效 Access，否则 401。
       parameters:
         - name: id
           in: path
@@ -43,6 +67,7 @@ paths:
       operationId: recordSquareDownload
       security: []
       summary: 匿名下载计数（不要求登录；不记录账号）
+      description: 仅在线条目可增加计数；下架/回收站与不存在均 404。
       parameters:
         - name: id
           in: path
@@ -54,6 +79,7 @@ paths:
       operationId: createSession
       security: []
       summary: 邮箱密码登录
+      description: 60 秒内全实例 300 次、同连接 IP 60 次、同邮箱 10 次尝试；超额返回 429 和 Retry-After=60，不区分邮箱是否存在；限流存储不可用返回 503。
     delete:
       operationId: deleteSession
       summary: 退出
@@ -62,6 +88,24 @@ paths:
       operationId: refreshSession
       security: []
       summary: 用 Refresh 轮换 Access 与 Refresh；旧对失效
+  /v1/session/identity/options:
+    get:
+      operationId: getIdentityOptions
+      security: []
+      summary: 公开注册策略和邮件是否可用，不返回凭据
+      description: 返回 registration_open、email_enabled；没有 SMTP 时邮箱注册/重置不可用，但已有账号仍可登录。
+  /v1/session/identity/request:
+    post:
+      operationId: requestIdentityVerification
+      security: []
+      summary: 请求注册或密码重置验证邮件
+      description: JSON kind（registration/reset）、email。符合条件时入队加密邮件；不符合账号条件仍统一 202 message，不返回验证码、账号是否存在或投递 ID。无 SMTP 统一 503；注册关闭 403；格式错误 400/422；认证频控 429，每邮箱每天最多 5 封挑战邮件。重发使同目的旧码失效。
+  /v1/session/identity/confirm:
+    post:
+      operationId: confirmIdentityVerification
+      security: []
+      summary: 消耗一次性验证凭据并设置密码，不自动登录
+      description: JSON kind（registration/reset/invitation）、email、token（64 位十六进制）、new_password（12–128 字符）。凭据 30 分钟有效；无效/已用/过期/撤销统一 400；成功返回 status=verified 和 message，不发令牌。只有邮箱验证完成后创建账号；重置则撤销全部旧会话。账号、凭据消费与审计同事务。
   /v1/me:
     get:
       operationId: getMe
@@ -81,6 +125,12 @@ paths:
     post:
       operationId: startBillingCheckout
       summary: 仅在 Stripe 测试密钥下给出 Checkout；无密钥说明支付未开通
+      description: 显式 mock 模式不调用 Stripe；JSON mock_outcome（success/failure/cancel/reset）、request_id（可选 UUID，新客户端重试必须复用）。Postgres 中独立保存模拟权益和订单，真实 pro 不变；同账号同 ID 同参数幂等，不同参数冲突；返回 mock/mock_pro/pro/note/checkout_url=null。
+  /v1/billing/mock/redeem:
+    post:
+      operationId: redeemMockCode
+      summary: 登录用户兑换 TEST 前缀测试码，仅模拟权益
+      description: JSON code（TEST- 加 32 位十六进制）、request_id（可选 UUID，新客户端必须发送并在重试时复用）。须后端启用 mock，独立于真实兑换表；同人同码最多一次，过期/停用/额度用尽拒绝，事务内配额检查、订单/模拟权益与审计原子一致。成功返回标准 BillingStatus，pro 仍是真实值，只有 mock_pro 可改变。
   /v1/billing/webhook:
     post:
       operationId: receiveBillingWebhook
@@ -127,6 +177,7 @@ paths:
     get:
       operationId: listMyPublications
       summary: 当前账号投稿与审核状态
+      description: 返回 items，仅含当前账号投稿；Postgres 模式包含 created_at（旧投稿可能 null）、visibility（online/offline/trashed/null 未上架）和 history（id、publication_id、status、reason、created_at），不含审核人邮箱。作者可读取驳回理由和当前广场状态，内容仍是提交快照，不修改本地库。
   /v1/health:
     get:
       operationId: health
@@ -142,6 +193,7 @@ paths:
       operationId: oauthCallback
       security: []
       summary: OAuth 授权码回调
+      description: 普通登录沿用会话流程；admin-test. 前缀 state 单独执行管理员发起的配置验证，随机一次性索引、10 分钟期限、配置/权限复核。验证返回固定 HTML，no-store/no-referrer，不返回令牌、不创建账号或会话；无效/重放 400，被新验证或配置替代 409。普通客户端无需发送或解析验证 state。
   /v1/session/oauth/session/{flowId}:
     get:
       operationId: oauthBrowserSession

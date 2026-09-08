@@ -1,21 +1,27 @@
 <template>
-  <div class="modal-layer" data-testid="prompt-editor">
-    <div class="modal-backdrop" @click="$emit('cancel')"></div>
-    <section v-dialog-focus="() => $emit('cancel')" class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="editor-title">
+    <section v-page-focus="requestClose" class="workspace-page editor-page" data-testid="prompt-editor" role="region" aria-labelledby="editor-title" :aria-busy="busy || assetBusy" @paste="assetPanel?.paste($event)" @dragover="assetPanel?.dragover($event)" @drop="assetPanel?.drop($event)">
       <header class="modal-header">
         <div>
           <h2 id="editor-title">{{ heading }}</h2>
         </div>
-        <button type="button" class="modal-close" aria-label="关闭" @click="$emit('cancel')">×</button>
+        <button type="button" class="page-back" aria-label="返回" :disabled="busy || assetBusy" @click="requestClose">← 返回</button>
       </header>
-      <div class="create-body">
+      <div v-if="confirmDiscard" class="create-body" data-testid="discard-editor">
+        <h3>放弃未保存的修改？</h3>
+        <p>关闭后本次修改不会保存。</p>
+        <div class="modal-actions">
+          <button ref="keepEditingButton" type="button" class="button primary-button" @click="keepEditing">继续编辑</button>
+          <button type="button" class="button danger-button" @click="$emit('cancel')">放弃修改</button>
+        </div>
+      </div>
+      <div v-else class="create-body" :inert="busy ? '' : undefined">
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <div v-if="!prompt" class="create-type-grid">
-          <button type="button" class="create-type" :class="{ active: kind === 'prompt' }" :aria-pressed="kind === 'prompt'" @click="kind = 'prompt'">
+          <button type="button" class="create-type" :disabled="assetBusy || assetLoading" :class="{ active: kind === 'prompt' }" :aria-pressed="kind === 'prompt'" @click="kind = 'prompt'">
             <strong>单个提示词</strong>
             <small>一条可直接使用的提示词。</small>
           </button>
-          <button type="button" class="create-type" :class="{ active: kind === 'collection' }" :aria-pressed="kind === 'collection'" @click="kind = 'collection'">
+          <button type="button" class="create-type" :disabled="assetBusy || assetLoading" :class="{ active: kind === 'collection' }" :aria-pressed="kind === 'collection'" @click="kind = 'collection'">
             <strong>提示词合集</strong>
             <small>同一主题下的一组提示词。</small>
           </button>
@@ -67,26 +73,32 @@
             @change="onCoverFiles"
           >
         </label>
+        <template v-if="kind === 'prompt'">
+          <p v-if="assetLoading" role="status">正在读取附件…</p>
+          <p v-else-if="assetError" role="alert">{{ assetError }} <button type="button" class="button" @click="loadAssets">重试</button></p>
+          <AttachmentPanel v-else ref="assetPanel" v-model="assets" :prompt-id="prompt?.id" :saved-ids="savedAssetIds" :disabled="busy" @busy="assetBusy = $event" />
+        </template>
       </div>
-      <footer class="modal-footer">
-        <button v-if="prompt" type="button" class="button danger-button" @click="$emit('remove', prompt.id)">
+      <footer v-if="!confirmDiscard" class="modal-footer">
+        <button v-if="prompt" type="button" class="button danger-button" :disabled="busy || assetBusy" @click="$emit('remove', prompt.id)">
           删除
         </button>
         <span v-else class="create-location">将创建在本地库</span>
         <div class="modal-actions">
-          <button type="button" class="button ghost-button" @click="$emit('cancel')">取消</button>
-          <button type="button" class="button primary-button" :disabled="busy || !title.trim()" @click="submit">
+          <button type="button" class="button ghost-button" :disabled="busy || assetBusy" @click="requestClose">取消</button>
+          <button type="button" class="button primary-button" :disabled="busy || assetBusy || assetLoading || Boolean(assetError) || !title.trim()" @click="submit">
             {{ busy ? '正在保存…' : kind === "collection" && !prompt ? "创建合集" : "保存" }}
           </button>
         </div>
       </footer>
     </section>
-  </div>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { vDialogFocus } from "../lib/dialogFocus.js";
+import { computed, nextTick, onMounted, ref } from "vue";
+import AttachmentPanel from './AttachmentPanel.vue';
+import { listPromptAssets } from '../platform/assets.js';
+import { vPageFocus } from "../lib/pageFocus.js";
 import { parseCoverUrls } from "../lib/cover.js";
 
 const props = defineProps({
@@ -99,7 +111,7 @@ const props = defineProps({
   busy: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["cancel", "save", "remove"]);
+const emit = defineEmits(["cancel", "save", "remove", "stay"]);
 const kind = ref(props.prompt?.kind ?? "prompt");
 const title = ref(props.prompt?.title ?? "");
 const content = ref(props.prompt?.content ?? "");
@@ -107,6 +119,37 @@ const categoryId = ref(props.prompt ? (props.prompt.category_id ?? "") : props.d
 const model = ref(props.prompt ? (props.prompt.model ?? "") : (props.defaultModel ?? ""));
 const coverType = ref(props.prompt?.cover_type ?? "none");
 const coverUrls = ref(parseCoverUrls(props.prompt?.cover_json));
+const assets = ref([]), savedAssetIds = ref([]), assetPanel = ref(null), assetBusy = ref(false), assetError = ref('');
+const assetLoading = ref(Boolean(props.prompt?.asset_count));
+let initialAssets = '[]';
+async function loadAssets() {
+  assetLoading.value = true; assetError.value = '';
+  try {
+    assets.value = await listPromptAssets(props.prompt.id);
+    savedAssetIds.value = assets.value.map(a => a.id);
+    initialAssets = JSON.stringify(assets.value);
+  } catch (err) { assetError.value = `读取附件失败，暂不能保存：${err.message || err}`; }
+  finally { assetLoading.value = false; }
+}
+onMounted(() => { if (props.prompt?.asset_count) loadAssets(); });
+const confirmDiscard = ref(false), keepEditingButton = ref(null);
+const snapshot = () => JSON.stringify([kind.value, title.value, content.value, categoryId.value, model.value, coverType.value, coverUrls.value]);
+const initialSnapshot = snapshot();
+async function requestClose() {
+  if (props.busy || assetBusy.value) return;
+  if (confirmDiscard.value) { keepEditing(); return; }
+  if (snapshot() === initialSnapshot && JSON.stringify(assets.value) === initialAssets) { emit('cancel'); return; }
+  confirmDiscard.value = true;
+  await nextTick();
+  keepEditingButton.value?.focus();
+}
+async function keepEditing() {
+  confirmDiscard.value = false;
+  emit('stay');
+  await nextTick();
+  document.querySelector('[data-testid="prompt-editor"] [data-dialog-autofocus]')?.focus();
+}
+defineExpose({ requestClose });
 const heading = computed(() => {
   if (props.prompt) return kind.value === "collection" ? "编辑合集" : "编辑提示词";
   return kind.value === "collection" ? "新建合集" : "新建提示词";
@@ -128,12 +171,13 @@ async function onCoverFiles(event) {
 }
 
 function submit() {
-  if (props.busy || !title.value.trim()) return;
+  if (props.busy || assetBusy.value || assetLoading.value || assetError.value || !title.value.trim()) return;
   emit("save", {
     id: props.prompt?.id,
     kind: kind.value,
     title: title.value.trim(),
     content: content.value,
+    assets: assets.value,
     categoryId: categoryId.value || null,
     model: kind.value === "prompt" ? model.value || null : null,
     coverType: coverType.value,

@@ -1,0 +1,23 @@
+<template>
+  <section class="panel"><div class="panel-heading"><h2>敏感词与风险规则</h2><button :disabled="!loaded || busy" @click="add" data-testid="rule-add">新增规则</button></div><p class="muted">仅对主动发布的公开内容做字面匹配；不读取本地库，不代表 AI 审核。修改后保存才会生效。</p>
+    <p v-if="error" class="error-banner" role="alert">{{ error }}</p><p v-if="message" class="success-message" role="status">{{ message }}</p>
+    <p v-if="loading" role="status">正在加载规则…</p><button v-else-if="!loaded" @click="load">重新加载</button>
+    <form v-else @submit.prevent="save"><fieldset :disabled="busy"><article v-for="(rule,index) in draft.rules" :key="rule.id" class="risk-rule"><div class="risk-filters"><label>名称<input v-model="rule.name" maxlength="80" required aria-label="规则名称"></label><label>类型<select v-model="rule.category"><option v-for="(label,key) in riskCategories" :key="key" :value="key">{{ label }}</option></select></label><label>分数<input v-model.number="rule.score" type="number" min="0" max="100" required></label><label class="risk-check"><input v-model="rule.enabled" type="checkbox">启用</label><button type="button" @click="remove(index)">移除</button></div><label>关键词（每行一个，忽略大小写）<textarea :value="rule.words.join('\n')" @input="rule.words=$event.target.value.split('\n')" aria-label="关键词" required></textarea></label></article><p v-if="!draft.rules.length" class="empty-state">尚未配置规则，不会假设任何内容已通过安全检查。</p><footer class="provider-footer"><span class="muted">版本 {{ draft.revision }} · 最多 100 条规则</span><div class="risk-actions"><button type="button" :disabled="busy" @click="reload">重新加载</button><button class="primary" :disabled="!hasUnsavedChanges" data-testid="rules-save">{{ busy?'保存中…':'保存规则' }}</button></div></footer></fieldset></form>
+  </section>
+  <section class="panel risk-detail"><h2>测试已保存的规则</h2><p class="muted">输入测试内容，不保存正文、不发送到外部服务。{{ hasUnsavedChanges ? '当前草稿未保存，测试仍使用上次保存版本。' : '' }}</p><form @submit.prevent="test"><label>测试文本<textarea v-model="testText" maxlength="100000" required data-testid="rules-text"></textarea></label><button :disabled="!loaded || busy || !testText.trim()">运行规则测试</button></form><div v-if="result" role="status" class="risk-rule-result"><strong>风险分数 {{ result.score }} · 规则版本 {{ result.revision }}</strong><p>{{ result.notice }}</p><p v-for="hit in result.hits" :key="hit.id">{{ hit.name }}（{{ hit.score }}）：{{ hit.words.join('、') }}</p></div></section>
+</template>
+<script setup>
+import { computed, onMounted, ref } from 'vue';
+import { getSafetyRules, saveSafetyRules, testSafetyRules } from './adminApi.js';
+import { riskCategories } from './riskLabels.js';
+const emit=defineEmits(['busy-change']);const draft=ref({revision:0,rules:[]}),saved=ref(''),loaded=ref(false),loading=ref(false),busy=ref(false),error=ref(''),message=ref(''),testText=ref(''),result=ref(null);
+const hasUnsavedChanges=computed(()=>loaded.value && JSON.stringify(draft.value)!==saved.value);defineExpose({hasUnsavedChanges,isBusy:busy});
+function accept(data){if(!Array.isArray(data.rules)||!Number.isInteger(data.revision))throw Error('规则响应无效');draft.value=structuredClone(data);saved.value=JSON.stringify(data);loaded.value=true;}
+async function load(){loading.value=true;error.value='';try{accept(await getSafetyRules());}catch(e){error.value=e.message;}finally{loading.value=false;}}
+function reload(){if(!hasUnsavedChanges.value||window.confirm('放弃规则草稿并重新加载？'))load();}
+function add(){if(draft.value.rules.length>=100){error.value='最多 100 条规则';return;}draft.value.rules.push({id:crypto.randomUUID(),name:'',category:'other',score:50,enabled:true,words:['']});}
+function remove(index){if(window.confirm('从草稿移除此规则？保存后生效。'))draft.value.rules.splice(index,1);}
+async function save(){if(busy.value||!loaded.value)return;busy.value=true;emit('busy-change',true);error.value='';message.value='';try{const config=JSON.parse(JSON.stringify(draft.value));config.rules.forEach(rule=>rule.words=[...new Set(rule.words.map(w=>w.trim()).filter(Boolean))]);const data=await saveSafetyRules(config);if(data.revision!==draft.value.revision+1)throw Error('服务端未确认规则保存');accept(data);result.value=null;message.value='规则已保存';}catch(e){error.value=e.message;}finally{busy.value=false;emit('busy-change',false);}}
+async function test(){if(busy.value||!testText.value.trim())return;busy.value=true;emit('busy-change',true);error.value='';result.value=null;try{const data=await testSafetyRules({text:testText.value,category:null});if(data.source!=='local_rules'||!Array.isArray(data.hits))throw Error('测试响应无效');result.value=data;}catch(e){error.value=e.message;}finally{busy.value=false;emit('busy-change',false);}}
+onMounted(load);
+</script>

@@ -154,6 +154,10 @@ pub fn apply_sync_changes(
     items: &[SyncChange],
     keep_local: bool,
 ) -> Result<(), String> {
+    apply_changes(dir, items, keep_local, false)
+}
+
+pub(crate) fn apply_changes(dir: &Path, items: &[SyncChange], keep_local: bool, local_import: bool) -> Result<(), String> {
     if items.iter().any(|item| {
         schema(&item.kind).is_none()
             || item.updated_at.parse::<u64>().is_err()
@@ -304,6 +308,10 @@ pub fn apply_sync_changes(
                 .join(",");
             let placeholders = vec!["?"; fields.len()].join(",");
             transaction.execute(&format!("INSERT INTO {table} ({}) VALUES ({placeholders}) ON CONFLICT({key}) DO UPDATE SET {updates}", fields.join(",")), params_from_iter(values)).map_err(|e| e.to_string())?;
+            if local_import && kind == "prompt" {
+                let assets = serde_json::from_value::<Vec<super::assets::Asset>>(item.payload.get("assets").cloned().unwrap_or_else(|| json!([]))).map_err(|_| "附件格式错误")?;
+                super::assets::replace(&transaction, id, &assets)?;
+            }
         }
     }
     let invalid_tree: bool = transaction.query_row(

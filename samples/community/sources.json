@@ -1,0 +1,9 @@
+{
+  "checked_at": "2026-09-08",
+  "scope": "local-development-preview",
+  "sources": [
+    {"repository":"YouMind-OpenLab/awesome-nano-banana-pro-prompts","stars":13383,"count":12,"license":"CC BY 4.0","url":"https://github.com/YouMind-OpenLab/awesome-nano-banana-pro-prompts","note":"官方同步 YouMind 图库；仓库另注明社区内容仅供教育用途。保留原作者与来源，不作为商业再分发授权证明。"},
+    {"repository":"PlexPt/awesome-chatgpt-prompts-zh","stars":62121,"count":24,"license":"MIT","url":"https://github.com/PlexPt/awesome-chatgpt-prompts-zh"},
+    {"repository":"f/prompts.chat","stars":169615,"count":12,"license":"CC0 1.0","url":"https://github.com/f/prompts.chat"}
+  ]
+}

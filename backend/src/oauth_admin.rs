@@ -1,5 +1,5 @@
 use crate::oauth::ProviderConfig;
-use crate::{require_admin, AppState};
+use crate::{require_configuration_admin, AppState};
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
@@ -26,6 +26,8 @@ fn internal(_: impl std::fmt::Debug) -> StatusCode {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct StoredProvider {
+    #[serde(default)]
+    revision:i64,
     enabled: bool,
     client_id: String,
     redirect_uri: String,
@@ -113,7 +115,7 @@ pub fn load_key(path: &FilePath, existing_config: bool) -> Result<[u8; 32], Stri
         .map_err(|_| "OAuth 密钥文件必须为 32 字节".into())
 }
 
-fn seal(key: &[u8; 32], provider: &str, secret: &str) -> Result<String, StatusCode> {
+pub(crate) fn seal(key: &[u8; 32], provider: &str, secret: &str) -> Result<String, StatusCode> {
     if secret.is_empty() {
         return Ok(String::new());
     }
@@ -130,7 +132,7 @@ fn seal(key: &[u8; 32], provider: &str, secret: &str) -> Result<String, StatusCo
     .map_err(internal)?;
     Ok(URL_SAFE_NO_PAD.encode([nonce.to_vec(), bytes].concat()))
 }
-fn unseal(key: &[u8; 32], provider: &str, encrypted: &str) -> Result<String, StatusCode> {
+pub(crate) fn unseal(key: &[u8; 32], provider: &str, encrypted: &str) -> Result<String, StatusCode> {
     if encrypted.is_empty() {
         return Ok(String::new());
     }
@@ -152,6 +154,7 @@ fn unseal(key: &[u8; 32], provider: &str, encrypted: &str) -> Result<String, Sta
 }
 
 impl AppState {
+    pub(crate) async fn oauth_revision(&self,name:&str)->Result<i64,StatusCode>{Ok(self.stored_provider(name).await?.map_or(0,|c|c.revision))}
     async fn stored_provider(&self, name: &str) -> Result<Option<StoredProvider>, StatusCode> {
         if let Some(pg) = &self.db {
             return pg
@@ -205,6 +208,10 @@ impl AppState {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateProvider {
+    #[serde(default)]
+    revision:Option<i64>,
+    #[serde(default)]
+    current_password:String,
     enabled: bool,
     client_id: String,
     redirect_uri: String,
@@ -251,10 +258,13 @@ pub async fn list(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, StatusCode> {
-    require_admin(&state, &headers).await?;
+    require_configuration_admin(&state, &headers).await?;
     let mut items = Vec::new();
     for name in PROVIDERS {
-        items.push(state.provider_view(name).await?);
+        let mut view=state.provider_view(name).await?;
+        view["revision"]=json!(state.oauth_revision(name).await?);
+        view["verification"]=state.oauth_verification_view(name).await?;
+        items.push(view);
     }
     Ok(Json(json!({ "items": items })))
 }
@@ -266,15 +276,26 @@ pub async fn update(
     Json(mut input): Json<UpdateProvider>,
 ) -> Result<Json<Value>, ApiError> {
     let map_error = |status| (status, Json(json!({ "message": "无权限或配置服务不可用" })));
-    require_admin(&state, &headers).await.map_err(map_error)?;
+    let actor=require_configuration_admin(&state, &headers).await.map_err(map_error)?;
     if !PROVIDERS.contains(&name.as_str()) {
         return Err(invalid("不支持的登录提供商"));
     }
     let _guard = state.oauth_config.writes.lock().await;
+    if input.current_password.len()>512{return Err(invalid("当前密码过长"))}
+    let mut transaction=if let Some(pg)=&state.db {
+        state.limit_account_auth(&actor).await.map_err(map_error)?;
+        let mut tx=pg.pool.begin().await.map_err(|_|map_error(StatusCode::INTERNAL_SERVER_ERROR))?;
+        crate::oauth_verification::owner_lock(pg,&mut tx,&actor,&crate::bearer_token(&headers).ok_or_else(||map_error(StatusCode::UNAUTHORIZED))?).await.map_err(map_error)?;
+        pg.verify_login(&actor,&input.current_password).await.map_err(|_|(StatusCode::FORBIDDEN,Json(json!({"message":"当前密码不正确，请重新验证本人身份"}))))?;
+        crate::oauth_verification::config_lock(pg,&mut tx).await.map_err(map_error)?;
+        Some(tx)
+    }else{None};
     input.client_id = input.client_id.trim().into();
     input.redirect_uri = input.redirect_uri.trim().into();
     input.client_secret = input.client_secret.trim().into();
     let current = state.stored_provider(&name).await.map_err(map_error)?;
+    let revision=current.as_ref().map_or(0,|c|c.revision);
+    if (state.db.is_some() && input.revision.is_none()) || input.revision.is_some_and(|r|r!=revision){return Err((StatusCode::CONFLICT,Json(json!({"message":"配置版本已变化，请刷新后核对；草稿已保留"}))))}
     let secret = if !input.client_secret.is_empty() {
         input.client_secret.clone()
     } else if let Some(stored) = &current {
@@ -289,19 +310,16 @@ pub async fn update(
     };
     validate(&input, !secret.is_empty())?;
     let stored = StoredProvider {
+        revision:revision+1,
         enabled: input.enabled,
         client_id: input.client_id,
         redirect_uri: input.redirect_uri,
         encrypted_secret: seal(&state.oauth_config.key, &name, &secret).map_err(map_error)?,
     };
-    if let Some(pg) = &state.db {
-        pg.set_oauth_config(
-            &name,
-            &serde_json::to_string(&stored)
-                .map_err(|_| map_error(StatusCode::INTERNAL_SERVER_ERROR))?,
-        )
-        .await
-        .map_err(map_error)?;
+    if let (Some(pg),Some(tx))=(&state.db,transaction.as_mut()) {
+        sqlx::query(&format!("INSERT INTO {} (key,value) VALUES ($1,$2) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value",pg.t("settings"))).bind(format!("oauth_provider_{name}")).bind(serde_json::to_string(&stored).map_err(|_|map_error(StatusCode::INTERNAL_SERVER_ERROR))?).execute(&mut **tx).await.map_err(|_|map_error(StatusCode::INTERNAL_SERVER_ERROR))?;
+        sqlx::query(&format!("UPDATE {} SET status='configuration_changed',message='配置已变化，请重新验证',finished_at=now() WHERE provider=$1",pg.t("oauth_verifications"))).bind(&name).execute(&mut **tx).await.map_err(|_|map_error(StatusCode::INTERNAL_SERVER_ERROR))?;
+        crate::admin_risk::audit(pg,tx,&actor,"oauth_configuration_saved",json!({"provider":name,"revision":stored.revision,"enabled":stored.enabled})).await.map_err(map_error)?;
     } else {
         state
             .oauth_config
@@ -310,7 +328,11 @@ pub async fn update(
             .map_err(|_| map_error(StatusCode::INTERNAL_SERVER_ERROR))?
             .insert(name.clone(), stored);
     }
-    Ok(Json(state.provider_view(&name).await.map_err(map_error)?))
+    if let Some(tx)=transaction{tx.commit().await.map_err(|_|map_error(StatusCode::INTERNAL_SERVER_ERROR))?;}
+    let mut view=state.provider_view(&name).await.map_err(map_error)?;
+    view["revision"]=json!(state.oauth_revision(&name).await.map_err(map_error)?);
+    view["verification"]=state.oauth_verification_view(&name).await.map_err(map_error)?;
+    Ok(Json(view))
 }
 
 #[cfg(test)]

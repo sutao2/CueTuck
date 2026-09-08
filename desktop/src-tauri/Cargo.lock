@@ -2755,6 +2755,7 @@ dependencies = [
 name = "promptark"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "enigo",
  "keyring",
  "objc2-app-kit",

@@ -12,8 +12,8 @@ describe("CollectionDetailModal", () => {
     add.element.focus();
     await add.trigger('click');
     await flushPromises();
-    expect(document.activeElement).toBe(w.get('[role="dialog"]').element);
-    await w.get('[role="dialog"]').trigger('keydown', { key: 'Escape' });
+    expect(document.activeElement).toBe(w.get('[role="region"]').element);
+    await w.get('[role="region"]').trigger('keydown', { key: 'Escape' });
     expect(w.emitted('cancel')).toHaveLength(1);
     w.unmount();
   });

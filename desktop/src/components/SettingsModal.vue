@@ -1,13 +1,13 @@
 <template>
-  <div class="modal-layer" data-testid="settings-modal" @keydown.esc="onEscape">
-    <div class="modal-backdrop" @click="requestClose"></div>
-    <section v-dialog-focus="requestClose" class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <button type="button" class="modal-close settings-close" aria-label="关闭" @click="requestClose">×</button>
-      <div class="settings-body">
+  <section class="settings-page" data-testid="settings-page" aria-label="设置" @keydown.esc="onEscape">
+      <div class="settings-window-drag" data-tauri-drag-region aria-hidden="true"></div>
+      <div class="settings-body" :inert="pendingAction ? '' : undefined">
         <nav class="settings-nav" aria-labelledby="settings-title">
+          <button ref="returnButton" type="button" class="settings-return" aria-label="返回应用" :disabled="saving || loading || dataBusy || importBusy || billingBusy || logoutBusy" @click="requestClose"><span aria-hidden="true">←</span> 返回应用</button>
+          <label class="settings-search"><AppIcon name="search" /><input v-model="settingsQuery" type="search" aria-label="搜索设置" placeholder="搜索设置…" @keydown.esc.stop="clearSearchOrReturn" /></label>
           <h2 id="settings-title">{{ uiText(uiLanguage, "settings") }}</h2>
           <button
-            v-for="page in pages"
+            v-for="page in filteredPages"
             :key="page.id"
             type="button"
             :class="{ active: current === page.id }"
@@ -17,12 +17,14 @@
           >
             <AppIcon :name="page.icon" /><span>{{ page.label }}</span>
           </button>
+          <p v-if="!filteredPages.length" class="settings-no-results" role="status">没有匹配的设置</p>
         </nav>
-        <div :key="current" class="settings-content">
+        <main :key="current" class="settings-content" :aria-label="pages.find(page => page.id === current)?.label">
           <fieldset class="settings-fields" :disabled="saving || loading">
           <section v-if="current === 'general'">
             <h3>常规</h3>
             <p>管理应用启动、托盘和快捷窗口的使用偏好。</p>
+            <div class="settings-group">
             <p v-if="prefError" data-testid="pref-error">{{ prefError }}</p>
             <label class="setting-row">
               <span class="setting-copy"><strong>开机启动</strong><small>登录系统后自动打开提示方舟。</small></span>
@@ -51,16 +53,19 @@
                 @change="togglePref(DESKTOP_PREF_KEYS.closeLauncherAfterUse, $event)"
               >
             </label>
+            </div>
           </section>
           <section v-else-if="current === 'account'">
             <h3>账号与广场</h3>
+            <p v-if="logoutError" role="alert">{{ logoutError }}</p>
             <p>管理登录账号、公开资料与订阅。</p>
+            <div class="settings-group">
             <div class="setting-row">
               <span class="setting-copy"><strong>当前账号</strong><small>登录后可发布、收藏和同步提示词。</small></span>
               <span class="setting-control account-session">
                 <span data-testid="current-account">{{ session.loggedIn ? session.email : "未登录" }}</span>
                 <button v-if="!session.loggedIn" type="button" class="button primary-button" data-testid="settings-login" @click="$emit('login')">登录</button>
-                <button v-else type="button" class="button ghost-button" data-testid="settings-logout" @click="$emit('logout')">退出</button>
+                <button v-else type="button" class="button ghost-button" data-testid="settings-logout" :disabled="logoutBusy" @click="$emit('logout')">{{ logoutBusy ? '正在退出…' : '退出登录' }}</button>
               </span>
             </div>
             <div class="setting-row setting-block">
@@ -102,6 +107,8 @@
                 <ul v-else class="mine-list">
                   <li v-for="row in myPublications" :key="row.id">
                     {{ row.title || row.source_id }} · {{ row.status }}
+                    <small v-if="row.visibility">广场：{{ { online: '已上架', offline: '已下架', trashed: '已移入回收站' }[row.visibility] || row.visibility }}</small>
+                    <small v-for="event in row.history || []" :key="event.id">{{ event.status === 'rejected' ? '驳回原因：' : '审核通过' }}{{ event.reason || '' }}<template v-if="event.created_at"> · {{ new Date(event.created_at).toLocaleString() }}</template></small>
                   </li>
                 </ul>
               </span>
@@ -115,10 +122,10 @@
             <span v-if="session.loggedIn && billingMock">
               <button v-for="(label, outcome) in { success: '模拟成功', failure: '模拟失败', cancel: '模拟取消', reset: '重置模拟' }" :key="outcome" type="button" :data-testid="`billing-mock-${outcome}`" :disabled="billingBusy" @click="runCheckout(outcome)">{{ label }}</button>
             </span>
-                <label class="profile-field"><span>兑换码</span>
+                <label class="profile-field"><span>{{ billingMock ? 'Mock 测试码（仅模拟权益）' : '兑换码' }}</span>
                 <input
                   data-testid="billing-redeem-code"
-                  :disabled="!session.loggedIn || billingMock || billingBusy"
+                  :disabled="!session.loggedIn || billingBusy"
                   v-model="redeemCode"
                   placeholder="兑换码"
                 >
@@ -127,10 +134,10 @@
                   type="button"
                   class="button ghost-button"
                   data-testid="billing-redeem"
-                  :disabled="!session.loggedIn || billingMock || billingBusy"
+                  :disabled="!session.loggedIn || billingBusy || (billingMock && !/^TEST-[A-F0-9]{32}$/i.test(redeemCode.trim()))"
                   @click="runRedeem"
                 >
-                  兑换
+                  {{ billingMock ? '兑换测试码' : '兑换' }}
                 </button>
                 <button
                   type="button"
@@ -153,10 +160,12 @@
                 @change="toggleKeepAuthorOnDownload"
               >
             </label>
+            </div>
           </section>
           <section v-else-if="current === 'shortcuts'">
             <h3>快捷键</h3>
             <p>登记全局组合以唤起独立启动器。与系统冲突时会提示，不会静默失效。</p>
+            <div class="settings-group">
             <p class="save-mode-hint">点击后按组合键，完成后保存。支持 Ctrl / Alt / Command 组合或 F1–F24；Tab 切换，Esc 取消。系统保留组合可能被拦截。</p>
             <label class="field">
               <span>唤起启动器</span>
@@ -174,10 +183,12 @@
               <button type="button" class="button primary-button" @click="saveShortcut">保存快捷键</button>
             </div>
             <p v-if="shortcutError" data-testid="shortcut-error">{{ shortcutError }}</p>
+            </div>
           </section>
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
             <h3>同步</h3>
             <p>已登录可立即同步个人库。启动器与 MCP 仍只读本机 SQLite。</p>
+            <div class="settings-group">
             <label class="setting-row" data-testid="auto-sync-queue-row">
               <span class="setting-copy"><strong>自动同步收藏与发布草稿</strong><small>打开后，收藏或发布在断网时写入本机队列，联网后随立即同步送出。不会假装已经到达服务器。</small></span>
               <input
@@ -208,10 +219,12 @@
               <button type="button" class="button ghost-button" data-testid="sync-now" @click="runSyncNow">立即同步</button>
             </div>
             <p v-if="syncNote" data-testid="sync-note">{{ syncNote }}</p>
+            </div>
           </section>
           <section v-else-if="current === 'models'">
             <h3>AI 与模型</h3>
             <p>这些是本机目录、标签与建议，不会把提示词正文发到模型供应商。</p>
+            <div class="settings-group">
             <p class="save-mode-hint">本页修改后请点击「保存本机模型偏好」。</p>
             <label class="field">
               <span>默认目标模型</span>
@@ -236,10 +249,12 @@
             <div class="modal-actions">
               <button type="button" class="button primary-button" data-testid="save-models" @click="saveModels">保存本机模型偏好</button>
             </div>
+            </div>
           </section>
           <section v-else-if="current === 'data'">
             <h3>数据与备份</h3>
             <p>管理本机资料、导入导出与数据恢复。</p>
+            <div class="settings-group">
             <div class="setting-row">
               <span class="setting-copy"><strong>SQLite 数据库</strong><small>打开库文件所在目录。</small></span>
               <button type="button" class="button ghost-button" data-testid="open-library-dir" @click="openDir">打开目录</button>
@@ -281,10 +296,12 @@
             </div>
             <p v-if="backupPath" data-testid="backup-path">已备份到 {{ backupPath }}</p>
             <p v-if="dataError" data-testid="backup-error">{{ dataError }}</p>
+            </div>
           </section>
           <section v-else-if="current === 'network'">
             <h3>网络与代理</h3>
             <p>控制联网范围，以及桌面端使用的代理。</p>
+            <div class="settings-group">
             <label class="setting-row">
               <span class="setting-copy"><strong>允许访问提示词广场</strong><small>关闭后工作台不请求广场；启动器仍只搜本地。</small></span>
               <input type="checkbox" data-testid="square-access" :checked="squareAccess" @change="toggleSquareAccess">
@@ -303,18 +320,18 @@
               <span class="setting-copy"><strong>同步状态</strong><small>个人库可立即同步。没有后台自动同步，不会显示假进度。</small></span>
               <span class="setting-control">手动立即同步</span>
             </div>
+            </div>
           </section>
           <section v-else-if="current === 'appearance'">
             <h3>外观</h3>
             <p>选择适合你的主题、语言与内容密度。</p>
-            <label class="field">
-              <span>主题</span>
-              <select data-testid="theme-select" :value="themeChoice" @change="saveTheme($event)">
-                <option value="light">浅色</option>
-                <option value="dark">深色</option>
-                <option value="system">跟随系统</option>
-              </select>
-            </label>
+            <div class="theme-choices" role="group" aria-label="主题">
+              <button v-for="option in [{id:'system',label:'跟随系统'},{id:'light',label:'浅色'},{id:'dark',label:'深色'}]" :key="option.id" type="button" class="theme-choice" :data-theme-choice="option.id" :aria-pressed="themeChoice === option.id" @click="chooseTheme(option.id)">
+                <span class="theme-preview" :class="`preview-${option.id}`" aria-hidden="true"><span class="preview-sidebar"></span><span class="preview-paper"><i></i><i></i><i></i></span></span>
+                <span>{{ option.label }}</span>
+              </button>
+            </div>
+            <div class="settings-group">
             <label class="field">
               <span>界面语言</span>
               <select data-testid="ui-language" :value="uiLanguage" @change="saveUiLanguage($event.target.value, $event)">
@@ -333,10 +350,12 @@
                 <option value="compact">紧凑</option>
               </select>
             </label>
+            </div>
           </section>
           <section v-else-if="current === 'privacy'">
             <h3>隐私与安全</h3>
             <p>了解数据的保存方式，管理统计与使用记录。</p>
+            <div class="settings-group">
             <div class="setting-row">
               <span class="setting-copy"><strong>本地提示词默认不上传</strong><small>未点发布不得把本地正文送出。</small></span>
               <span class="setting-control">始终生效</span>
@@ -362,10 +381,12 @@
               </span>
               <span class="setting-control">{{ usesSystemKeychain() ? "本机钥匙串" : "浏览器内存" }}</span>
             </div>
+            </div>
           </section>
           <section v-else-if="current === 'updates'" data-testid="settings-updates">
             <h3>更新</h3>
             <p>管理版本、更新通道与发行说明。</p>
+            <div class="settings-group">
             <div class="setting-row">
               <span class="setting-copy"><strong>当前版本</strong><small>桌面包 {{ appVersion }}，与本机构建一致。</small></span>
               <button type="button" class="button ghost-button" data-testid="check-updates" @click="runCheckUpdates">检查更新</button>
@@ -392,9 +413,10 @@
             </div>
             <p v-if="releaseNotes" data-testid="release-notes">{{ releaseNotes }}</p>
             <p v-if="updateNote" data-testid="update-note">{{ updateNote }}</p>
+            </div>
           </section>
           </fieldset>
-        </div>
+        </main>
       </div>
       <footer class="settings-feedback" :class="{ error: feedbackError }" role="status" aria-live="polite" data-testid="settings-feedback">
         {{ loading ? '正在读取设置…' : saving ? '正在保存…' : feedback || '开关与选择项即时保存；有保存按钮的表单需手动保存。' }}
@@ -404,19 +426,17 @@
           <h3 id="settings-confirm-title">{{ pendingAction === 'discard' ? '放弃未保存的修改？' : pendingAction === 'restore' ? '恢复数据库？' : '清除使用历史？' }}</h3>
           <p id="settings-confirm-copy">{{ pendingAction === 'discard' ? '尚未保存的表单和导入文本将被丢弃，已经保存的设置不受影响。' : pendingAction === 'restore' ? `将使用 ${restorePath} 替换当前库。请先备份当前数据，此操作不是合并导入。` : '将清除最近使用记录与使用次数，不删除提示词正文。' }}</p>
           <div class="modal-actions">
-            <button ref="confirmCancel" type="button" class="button" data-testid="cancel-settings-action" @click="pendingAction = null">{{ pendingAction === 'discard' ? '继续编辑' : '取消' }}</button>
+            <button ref="confirmCancel" type="button" class="button" data-testid="cancel-settings-action" @click="pendingAction = null; emit('stay')">{{ pendingAction === 'discard' ? '继续编辑' : '取消' }}</button>
             <button type="button" class="button danger-button" data-testid="confirm-settings-action" @click="confirmAction">{{ pendingAction === 'discard' ? '放弃修改' : '确认执行' }}</button>
           </div>
         </section>
       </div>
-    </section>
-  </div>
+  </section>
 </template>
 
 <script setup>
 import AppIcon from "./AppIcon.vue";
-import { vDialogFocus } from "../lib/dialogFocus.js";
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { uiText } from "../platform/uiStrings.js";
 import {
   applyLocalImport,
@@ -452,8 +472,11 @@ const props = defineProps({
   host: { type: String, default: "macos" },
   session: { type: Object, default: () => ({ loggedIn: false, email: "" }) },
   language: { type: String, default: "zh" },
+  initialPage: { type: String, default: 'general' },
+  logoutBusy: { type: Boolean, default: false },
+  logoutError: { type: String, default: '' },
 });
-const emit = defineEmits(["cancel", "theme", "imported", "login", "logout", "history-cleared", "language", "launcher-shortcut-saved"]);
+const emit = defineEmits(["cancel", "stay", "theme", "imported", "login", "logout", "history-cleared", "language", "launcher-shortcut-saved"]);
 
 function usesSystemKeychain() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -474,7 +497,22 @@ const pages = computed(() => [
   { id: "privacy", icon: "shield", label: uiText(uiLanguage.value, "settingsPrivacy") },
   { id: "updates", icon: "download", label: uiText(uiLanguage.value, "settingsUpdates") },
 ]);
-const current = ref("general");
+const current = ref(pages.value.some(page => page.id === props.initialPage) ? props.initialPage : 'general');
+const settingsQuery = ref(''), returnButton = ref(null);
+const searchKeywords = {
+  general: '启动 托盘 窗口 startup tray', account: '登录 邮箱 资料 订阅 账单 兑换 作者 login profile billing',
+  shortcuts: '快捷键 按键 启动器 录入 keyboard launcher', sync: '同步 冲突 wifi 云 sync',
+  models: '模型 默认 标签 变量 建议 model ai', data: '数据 备份 恢复 导入 导出 backup restore import export',
+  network: '代理 广场 网络 proxy network', appearance: '外观 主题 深色 浅色 语言 密度 theme language',
+  privacy: '隐私 统计 历史 安全 钥匙串 privacy history', updates: '更新 版本 下载 通道 update version',
+};
+const filteredPages = computed(() => {
+  const terms = settingsQuery.value.trim().toLowerCase().split(/\s+/);
+  return pages.value.filter(page => terms.every(term => `${page.label} ${searchKeywords[page.id]}`.toLowerCase().includes(term)));
+});
+let previousFocus;
+onMounted(() => { previousFocus = document.activeElement; returnButton.value?.focus(); });
+onUnmounted(() => nextTick(() => { if (previousFocus?.isConnected) previousFocus.focus(); }));
 const exportText = ref("");
 const importText = ref("");
 const preview = ref(null);
@@ -545,10 +583,15 @@ const hasUnsaved = computed(() => !loading.value && (
 
 function showFeedback(message, error = false) { feedback.value = message; feedbackError.value = error; }
 function onEscape(event) {
-  if (event.isComposing) return;
+  if (event.isComposing || document.querySelector('[data-testid="login-modal"]')) return;
   event.preventDefault();
   event.stopPropagation();
-  if (pendingAction.value) pendingAction.value = null;
+  if (pendingAction.value) { pendingAction.value = null; emit('stay'); }
+  else requestClose();
+}
+function clearSearchOrReturn(event) {
+  if (event.isComposing) return;
+  if (settingsQuery.value) settingsQuery.value = '';
   else requestClose();
 }
 function requestClose() {
@@ -556,6 +599,7 @@ function requestClose() {
   if (hasUnsaved.value) pendingAction.value = 'discard';
   else emit('cancel');
 }
+defineExpose({ requestClose });
 watch(pendingAction, async (action) => {
   if (action) {
     confirmationReturnFocus = document.activeElement;
@@ -596,7 +640,7 @@ async function savePreference(key, state, value, event, apply) {
   } finally { saving.value = false; }
 }
 
-onMounted(loadSettings);
+onMounted(async () => { await loadSettings(); await nextTick(); returnButton.value?.focus(); });
 
 async function loadSettings() {
   loading.value = true;
@@ -960,21 +1004,22 @@ async function runCheckout(mockOutcome) {
 }
 
 async function runRedeem() {
-  if (billingBusy.value || billingMock.value) return;
+  if (billingBusy.value) return;
   if (!props.session.loggedIn) {
     emit("login");
     return;
   }
+  billingBusy.value=true;
   try {
-    const payload = await redeemBillingCode(redeemCode.value);
+    const payload = await redeemBillingCode(redeemCode.value,{mock:billingMock.value});
     applyBilling(payload);
   } catch (error) {
     billingNote.value = error instanceof Error ? error.message : String(error);
-  }
+  } finally { billingBusy.value=false; }
 }
 
-async function saveTheme(event) {
-  await savePreference('theme', themeChoice, event.target.value, event, () => emit('theme', themeChoice.value));
+async function chooseTheme(value) {
+  await savePreference('theme', themeChoice, value, null, () => emit('theme', themeChoice.value));
 }
 
 async function saveUiLanguage(value, event) {

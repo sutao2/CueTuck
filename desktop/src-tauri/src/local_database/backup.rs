@@ -94,6 +94,14 @@ fn validate_references(path: &Path) -> Result<(), String> {
         let invalid: i64 = connection.query_row(query, [], |row| row.get(0)).map_err(|error| error.to_string())?;
         if invalid != 0 { return Err("备份包含无效记录或成员引用".into()); }
     }
+    let mut statement = connection.prepare("SELECT DISTINCT prompt_id FROM prompt_assets").map_err(|e| e.to_string())?;
+    let owners = statement.query_map([], |row| row.get::<_, String>(0)).map_err(|e| e.to_string())?;
+    for owner in owners {
+        let owner = owner.map_err(|e| e.to_string())?;
+        let exists: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM prompts WHERE id=?1)", [&owner], |row| row.get(0)).map_err(|e| e.to_string())?;
+        if !exists { return Err("附件归属无效".into()); }
+        super::assets::validate(&super::assets::read(&connection, &owner)?)?;
+    }
     Ok(())
 }
 

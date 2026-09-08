@@ -62,6 +62,9 @@ body { font: 14px/1.45 "IBM Plex Sans", "Noto Sans SC", sans-serif; color: var(-
 }
 .space-tab.active { background: rgba(28, 109, 102, 0.12); color: var(--accent); }
 .content { flex: 1; padding: 28px 32px; min-width: 0; }
+.square-filters { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 18px; }
+.square-filters label { display: grid; gap: 6px; min-width: 150px; }
+.square-filters select { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 9px 12px; max-width: 100%; }
 .library-note {
   margin: 0 0 16px;
   color: var(--muted);

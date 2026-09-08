@@ -15,7 +15,7 @@ async function open(reason = '登录') {
   return wrapper;
 }
 
-it('uses one heading, focuses email, traps tab, and returns focus on close', async () => {
+it('uses a page, focuses email without trapping Tab, and returns focus on leaving', async () => {
   const trigger = document.createElement('button');
   document.body.append(trigger); trigger.focus();
   const w = await open();
@@ -23,13 +23,14 @@ it('uses one heading, focuses email, traps tab, and returns focus on close', asy
   expect(w.get('[data-testid="login-reason"]').text()).not.toBe('登录');
   expect(document.activeElement).toBe(w.get('[type="email"]').element);
   w.get('.login-later').element.focus();
-  await w.get('.login-later').trigger('keydown', { key: 'Tab' });
-  expect(document.activeElement).toBe(w.get('[aria-label="关闭"]').element);
-  await w.get('[aria-label="关闭"]').trigger('keydown', { key: 'Tab', shiftKey: true });
-  expect(document.activeElement).toBe(w.get('.login-later').element);
-  await w.get('[role="dialog"]').trigger('keydown', { key: 'Escape', isComposing: true });
+  const tab = new KeyboardEvent('keydown', {key:'Tab',bubbles:true,cancelable:true});
+  w.get('.login-later').element.dispatchEvent(tab);
+  expect(tab.defaultPrevented).toBe(false);
+  expect(w.find('[aria-modal]').exists()).toBe(false);
+  expect(w.find('.modal-backdrop').exists()).toBe(false);
+  await w.get('[role="region"]').trigger('keydown', { key: 'Escape', isComposing: true });
   expect(w.emitted('cancel')).toBeUndefined();
-  await w.get('[role="dialog"]').trigger('keydown', { key: 'Escape' });
+  await w.get('[role="region"]').trigger('keydown', { key: 'Escape' });
   expect(w.emitted('cancel')).toHaveLength(1);
   w.unmount(); wrapper = null;
   await flushPromises();
@@ -48,7 +49,7 @@ it('blocks duplicate email submits and closing while pending, then preserves inp
   expect(loginSession).toHaveBeenCalledTimes(1);
   expect(w.get('[data-testid="login-submit"]').text()).toBe('正在登录…');
   expect(w.find('[data-testid="oauth-wait"]').exists()).toBe(false);
-  await w.get('[role="dialog"]').trigger('keydown', { key: 'Escape' });
+  await w.get('[role="region"]').trigger('keydown', { key: 'Escape' });
   expect(w.emitted('cancel')).toBeUndefined();
   reject(new Error('邮箱或密码不正确'));
   await flushPromises();
@@ -67,7 +68,7 @@ it('shows configured OAuth providers and aborts authorization on cancel', async 
   expect(w.findAll('.oauth-row button')).toHaveLength(2);
   await w.get('[data-testid="oauth-google"]').trigger('click');
   expect(w.get('[data-testid="oauth-wait"]').text()).toContain('浏览器授权');
-  await w.get('[aria-label="关闭"]').trigger('click');
+  await w.get('[aria-label="返回"]').trigger('click');
   expect(loginOAuthSession.mock.calls[0][1].signal.aborted).toBe(true);
   expect(w.emitted('cancel')).toHaveLength(1);
 });

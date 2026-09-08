@@ -6,6 +6,7 @@ use tower::ServiceExt;
 fn demo_sort_items() -> Vec<SquareItem> {
     vec![
         SquareItem {
+            reference: None,
             id: "sq-b".into(),
             title: "Beta".into(),
             kind: "prompt".into(),
@@ -17,6 +18,7 @@ fn demo_sort_items() -> Vec<SquareItem> {
             members: vec![],
         },
         SquareItem {
+            reference: None,
             id: "sq-a".into(),
             title: "Alpha".into(),
             kind: "prompt".into(),
@@ -28,6 +30,7 @@ fn demo_sort_items() -> Vec<SquareItem> {
             members: vec![],
         },
         SquareItem {
+            reference: None,
             id: "sq-g".into(),
             title: "Gamma".into(),
             kind: "prompt".into(),

@@ -99,7 +99,7 @@ it('prevents double submission and closing while creating', async () => {
   await name.setValue('Busy');
   await name.trigger('keydown', { key: 'Enter' });
   await name.trigger('keydown', { key: 'Enter' });
-  await wrapper.get('.category-modal').trigger('keydown', { key: 'Escape' });
+  await wrapper.get('.category-page').trigger('keydown', { key: 'Escape' });
   expect(spy).toHaveBeenCalledTimes(1);
   expect(wrapper.get('[data-testid="confirm-category"]').element.disabled).toBe(true);
   finish();

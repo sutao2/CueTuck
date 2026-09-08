@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 export default defineConfig({
   plugins: [vue()],
+  resolve: { dedupe: ['vue'] },
   server: {
     port: 1420,
     strictPort: true,

@@ -47,9 +47,10 @@ describe("square client", () => {
       expect(members.find((row) => row.title === "人像")).toMatchObject({ content: "光影", model: "Flux", category_id: "cat-image-0", source: "downloaded", remote_id: "remote" });
     }
     payload.members[1].category_id = "missing";
-    await expect(downloadSquareItem("remote")).rejects.toThrow();
-    expect(await listLocalCollections()).toHaveLength(2);
-    expect(await listLocalPrompts()).toHaveLength(4);
+    await downloadSquareItem("remote");
+    expect(await listLocalCollections()).toHaveLength(3);
+    expect(await listLocalPrompts()).toHaveLength(6);
+    expect((await listLocalPrompts()).filter(item=>item.category_id===null)).toHaveLength(1);
     payload.members = [];
     await expect(downloadSquareItem("remote")).rejects.toThrow("缺少成员快照");
   });

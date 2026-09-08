@@ -17,12 +17,26 @@ mod mock_tests {
     #[tokio::test]
     async fn mock_accounts_and_real_entitlements_are_separate() {
         let state = AppState::default().with_billing_mock();
-        state.mock_pro_accounts.lock().unwrap().insert("a@example.test".into());
+        state
+            .mock_pro_accounts
+            .lock()
+            .unwrap()
+            .insert("a@example.test".into());
         assert!(status_for(&state, "a@example.test").await.unwrap().mock_pro);
         assert!(!status_for(&state, "a@example.test").await.unwrap().pro);
         assert!(!status_for(&state, "b@example.test").await.unwrap().mock_pro);
-        assert!(!status_for(&AppState::default().with_billing_mock(), "a@example.test").await.unwrap().mock_pro);
-        assert_eq!(webhook(State(state), HeaderMap::new(), Bytes::new()).await.unwrap_err(), StatusCode::CONFLICT);
+        assert!(
+            !status_for(&AppState::default().with_billing_mock(), "a@example.test")
+                .await
+                .unwrap()
+                .mock_pro
+        );
+        assert_eq!(
+            webhook(State(state), HeaderMap::new(), Bytes::new())
+                .await
+                .unwrap_err(),
+            StatusCode::CONFLICT
+        );
     }
 }
 
@@ -45,6 +59,7 @@ pub struct CheckoutResponse {
 #[derive(Deserialize)]
 pub struct CheckoutRequest {
     pub mock_outcome: Option<String>,
+    pub request_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -79,14 +94,36 @@ fn payment_note(payment_enabled: bool) -> String {
     }
 }
 
-async fn status_for(state: &AppState, email: &str) -> Result<BillingStatus, StatusCode> {
-    let payment_enabled = !state.billing_mock && configured_secret(state).is_some_and(|key| key.starts_with("sk_test_"));
+pub(crate) async fn status_for(state: &AppState, email: &str) -> Result<BillingStatus, StatusCode> {
+    let payment_enabled = !state.billing_mock
+        && configured_secret(state).is_some_and(|key| key.starts_with("sk_test_"));
+    let mock_pro = if state.billing_mock {
+        if let Some(pg) = &state.db {
+            pg.mock_pro(email).await?
+        } else {
+            state
+                .mock_pro_accounts
+                .lock()
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+                .contains(email)
+        }
+    } else {
+        false
+    };
     Ok(BillingStatus {
         mock: state.billing_mock,
-        mock_pro: state.billing_mock && state.mock_pro_accounts.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.contains(email),
+        mock_pro,
         pro: state.account_is_pro(email).await?,
         payment_enabled,
-        note: if state.billing_mock { "Mock 支付：仅模拟，不扣款；重启服务清空模拟状态".into() } else { payment_note(payment_enabled) },
+        note: if state.billing_mock {
+            if state.db.is_some() {
+                "Mock 支付：仅模拟，不扣款；模拟记录独立保存，真实权益不变".into()
+            } else {
+                "Mock 支付：仅模拟，不扣款；内存测试状态重启清空".into()
+            }
+        } else {
+            payment_note(payment_enabled)
+        },
     })
 }
 
@@ -104,7 +141,9 @@ pub async fn redeem(
     Json(body): Json<RedeemRequest>,
 ) -> Result<Json<BillingStatus>, StatusCode> {
     let email = require_user(&state, &headers).await?;
-    if state.billing_mock { return Err(StatusCode::CONFLICT); }
+    if state.billing_mock {
+        return Err(StatusCode::CONFLICT);
+    }
     state.redeem_code(&email, &body.code).await?;
     Ok(Json(status_for(&state, &email).await?))
 }
@@ -117,22 +156,74 @@ pub async fn checkout(
     let email = require_user(&state, &headers).await?;
     let outcome = body.as_ref().and_then(|body| body.mock_outcome.as_deref());
     if state.billing_mock {
+        if let Some(pg) = &state.db {
+            if let Some(outcome) = outcome {
+                state.limit_account_auth(&email).await?;
+                let id = body
+                    .as_ref()
+                    .and_then(|b| b.request_id.clone())
+                    .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                pg.change_mock(
+                    &email,
+                    &crate::bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?,
+                    &email,
+                    outcome,
+                    "用户模拟支付",
+                    &id,
+                    false,
+                )
+                .await?;
+            }
+            let mut status = status_for(&state, &email).await?;
+            status.note = match outcome {
+                Some("success") => "Mock：模拟成功，未扣款",
+                Some("failure") => "Mock：模拟失败，未扣款",
+                Some("cancel") => "Mock：已取消，未扣款",
+                Some("reset") => "Mock：已重置，真实权益不变",
+                _ => "Mock：请选择模拟结果，未扣款",
+            }
+            .into();
+            return Ok((
+                StatusCode::OK,
+                Json(CheckoutResponse {
+                    status,
+                    checkout_url: None,
+                }),
+            ));
+        }
         let note = {
-            let mut accounts = state.mock_pro_accounts.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let mut accounts = state
+                .mock_pro_accounts
+                .lock()
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             match outcome {
-                Some("success") => { accounts.insert(email.clone()); "Mock：模拟支付成功，未扣款" },
+                Some("success") => {
+                    accounts.insert(email.clone());
+                    "Mock：模拟支付成功，未扣款"
+                }
                 Some("failure") => "Mock：模拟支付失败，可重试；未扣款",
                 Some("cancel") => "Mock：已取消模拟支付，未扣款",
-                Some("reset") => { accounts.remove(&email); "Mock：模拟状态已重置，真实权益不变" },
+                Some("reset") => {
+                    accounts.remove(&email);
+                    "Mock：模拟状态已重置，真实权益不变"
+                }
                 None => "Mock：请选择模拟成功、失败或取消；未扣款",
                 _ => return Err(StatusCode::BAD_REQUEST),
             }
         };
         let mut status = status_for(&state, &email).await?;
         status.note = note.into();
-        return Ok((StatusCode::OK, Json(CheckoutResponse { status, checkout_url: None })));
+        return Ok((
+            StatusCode::OK,
+            Json(CheckoutResponse {
+                status,
+                checkout_url: None,
+            }),
+        ));
     }
-    if outcome.is_some() { return Err(StatusCode::CONFLICT); }
+    if outcome.is_some() {
+        return Err(StatusCode::CONFLICT);
+    }
     let mut status = status_for(&state, &email).await?;
     let Some(secret) = configured_secret(&state) else {
         return Ok((
@@ -194,10 +285,7 @@ async fn create_stripe_session(secret: &str, email: &str) -> Result<String, Stat
     if !response.status().is_success() {
         return Err(StatusCode::BAD_GATEWAY);
     }
-    let payload: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let payload: serde_json::Value = response.json().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
     payload["url"]
         .as_str()
         .filter(|url| url.starts_with("https://"))
@@ -274,7 +362,9 @@ pub async fn webhook(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<StatusCode, StatusCode> {
-    if state.billing_mock { return Err(StatusCode::CONFLICT); }
+    if state.billing_mock {
+        return Err(StatusCode::CONFLICT);
+    }
     let Some(secret) = webhook_secret(&state) else {
         return Err(StatusCode::CONFLICT);
     };

@@ -39,12 +39,16 @@
         <button v-if="session.loggedIn" type="button" data-testid="reload-account" :disabled="syncBusy" @click="readAccount">重新读取账号库</button>
         <button v-if="session.loggedIn && prompts.some((row) => row.sync_pending)" type="button" data-testid="retry-save" :disabled="syncBusy" @click="retrySaves">重试保存到账号库</button>
         <section v-if="loginOpen" data-testid="login-modal" class="editor">
+          <template v-if="!identityMode">
           <label><span>邮箱</span><input v-model="loginEmail" type="email" data-testid="login-email" autocomplete="username"></label>
           <label><span>密码</span><input v-model="loginPassword" type="password" data-testid="login-password" autocomplete="current-password"></label>
           <p v-if="loginError" data-testid="login-error">{{ loginError }}</p>
           <button type="button" class="primary-button" data-testid="login-submit" :disabled="loginBusy" @click="submitLogin">登录</button>
           <button v-for="name in oauthProviders" :key="name" type="button" :data-testid="`oauth-${name}`" :disabled="loginBusy" @click="submitOAuth(name)">{{ name === 'google' ? 'Google 登录' : 'GitHub 登录' }}</button>
+          <button v-for="(label,mode) in {registration:'创建账号',reset:'忘记密码',invitation:'接受邀请'}" :key="mode" type="button" :disabled="loginBusy" :data-testid="`identity-${mode}`" @click="identityMode=mode;loginPassword=''">{{ label }}</button>
           <button type="button" @click="cancelLogin">取消</button>
+          </template>
+          <IdentityForm v-else :key="identityMode" :mode="identityMode" :request="identityRequest" :initial-email="loginEmail" @back="identityMode=''" @done="identityDone" @busy-change="identityBusy=$event" />
         </section>
         <section v-if="space === 'local'" class="billing" data-testid="billing">
           <p class="billing-head">
@@ -60,18 +64,18 @@
           <div class="billing-actions">
             <input
                   data-testid="billing-redeem-code"
-                  :disabled="!session.loggedIn || billingMock || billingBusy"
+                  :disabled="!session.loggedIn || billingBusy"
               v-model="redeemCode"
-              placeholder="兑换码"
+              :placeholder="billingMock ? 'Mock 测试码 TEST-…' : '兑换码'"
             >
             <button
               type="button"
               class="primary-button"
                   data-testid="billing-redeem"
-                  :disabled="!session.loggedIn || billingMock || billingBusy"
+                  :disabled="!session.loggedIn || billingBusy || (billingMock && !/^TEST-[A-F0-9]{32}$/i.test(redeemCode.trim()))"
               @click="runRedeem"
             >
-              兑换
+              {{ billingMock ? '兑换测试码' : '兑换' }}
             </button>
             <button
               type="button"
@@ -97,6 +101,7 @@
             新建
           </button>
         </section>
+        <SiteNotice v-if="space === 'square'" :site="squareCatalog?.site" />
         <form v-if="space === 'local' && editing" class="editor" @submit.prevent="savePrompt">
           <input
             v-model="draftTitle"
@@ -152,6 +157,9 @@
         </section>
         <p v-if="space === 'local' && !prompts.length" class="empty">浏览器内存库是空的。点「新建」只会写在这个标签页里。</p>
         <div v-else-if="space === 'square'" class="square-pane">
+          <button v-if="session.loggedIn" @click="reportTarget=''; reportOpen=true">我的举报</button>
+          <ReportPanel v-if="reportOpen && session.loggedIn" :key="reportTarget" :target-id="reportTarget" @close="reportOpen=false" />
+          <div v-if="squareCatalog" class="square-filters"><label>广场分类<select v-model="squareCategory" aria-label="广场分类" @change="openSquare"><option value="">全部分类</option><option v-for="category in squareCatalog.categories" :key="category.id" :value="category.id">{{ category.parent_id ? `${squareCatalog.categories.find(item => item.id === category.parent_id)?.name} / ` : '' }}{{ category.name }}</option></select></label><label>模型<select v-model="squareModel" aria-label="模型" @change="openSquare"><option value="">全部模型</option><option v-for="model in squareCatalog.models" :key="model.id" :value="model.id">{{ model.name }}</option></select></label></div>
           <p v-if="squareOffline" data-testid="square-offline" class="empty">
             当前离线。预发广场暂时不可用，本地内存库仍可使用。
           </p>
@@ -162,6 +170,7 @@
               <span>{{ item.title }}</span>
               <button type="button" data-testid="square-download" :disabled="downloadBusy.includes(item.id)" @click="downloadItem(item.id)">下载</button>
               <button type="button" data-testid="square-favorite" @click="favoriteItem(item.id)">收藏</button>
+              <button type="button" @click="session.loggedIn ? (reportTarget=item.id,reportOpen=true) : openLogin()">举报</button>
             </li>
           </ul>
           <p v-else-if="!squareOffline" class="empty">广场仍走本仓库预发 API。未开后端时列表为空。</p>
@@ -175,7 +184,11 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { activateMemoryLibrary, markPromptSynced, createLocalPrompt, getLocalPrompt, listLocalCollections, listLocalPrompts, updateLocalPrompt } from "./memoryLibrary.js";
 import { extractVariables, renderPrompt } from "./renderPrompt.js";
-import { downloadSquareItem, listSquareItems, putFavorite } from "./square.js";
+import { downloadSquareItem, fetchSquareCatalog, listSquareItems, putFavorite } from "./square.js";
+import ReportPanel from './ReportPanel.vue';
+import IdentityForm from '../../shared/IdentityForm.vue';
+import SiteNotice from '../../shared/SiteNotice.vue';
+import {identityRequest} from './identity.js';
 import { loadAccountLibrary, pushAccountPrompt } from "./accountLibrary.js";
 import {
   getBillingStatus,
@@ -211,9 +224,14 @@ const wizardValues = ref({});
 const wizardStep = ref("fill");
 const draftVar = ref("");
 const squareItems = ref([]);
+const reportOpen=ref(false),reportTarget=ref('');
 const squareOffline = ref(false);
+const squareCatalog = ref(null), squareCategory = ref(''), squareModel = ref('');
+let squareVersion = 0;
 const favoriteNote = ref("");
 const loginOpen = ref(false);
+const identityMode=ref(''),identityBusy=ref(false);
+function identityDone(email){loginEmail.value=email;loginPassword.value='';identityMode.value='';loginError.value='邮箱验证完成，请使用新密码登录。';}
 const loginEmail = ref("");
 const loginPassword = ref("");
 const loginError = ref("");
@@ -354,6 +372,8 @@ async function openLogin() {
 }
 
 function cancelLogin() {
+  if(identityBusy.value)return;
+  identityMode.value='';
   loginAbort.abort();
   loginOpen.value = false;
   loginBusy.value = false;
@@ -384,13 +404,24 @@ function openLocal() {
 }
 
 async function openSquare() {
+  const version = ++squareVersion;
   space.value = "square";
   favoriteNote.value = "";
   cancelLogin();
   squareOffline.value = false;
   try {
-    squareItems.value = await listSquareItems();
+    const catalog = await fetchSquareCatalog().catch(() => null);
+    if (version !== squareVersion || space.value !== 'square') return;
+    if (catalog) {
+      squareCatalog.value = catalog;
+      if (!catalog.categories.some(item=>item.id===squareCategory.value)) squareCategory.value='';
+      if (!catalog.models.some(item=>item.id===squareModel.value)) squareModel.value='';
+    }
+    const items = await listSquareItems({categoryId:squareCategory.value,model:squareModel.value});
+    if (version !== squareVersion || space.value !== 'square') return;
+    squareItems.value = items;
   } catch {
+    if (version !== squareVersion || space.value !== 'square') return;
     squareOffline.value = true;
     squareItems.value = [];
   }
@@ -535,12 +566,13 @@ async function runCheckout(mockOutcome) {
 }
 
 async function runRedeem() {
-  if (billingBusy.value || billingMock.value) return;
+  if (billingBusy.value) return;
   if (!getSession().loggedIn) return;
+  billingBusy.value=true;
   try {
-    applyBilling(await redeemBillingCode(redeemCode.value));
+    applyBilling(await redeemBillingCode(redeemCode.value,{mock:billingMock.value}));
   } catch (error) {
     billingNote.value = error instanceof Error ? error.message : String(error);
-  }
+  } finally { billingBusy.value=false; }
 }
 </script>

@@ -13,7 +13,18 @@
 
 ### Requirement: 显式 mock 支付
 
-仅后端启动时设置 `PROMPTARK_BILLING_MOCK=1` 才启用 mock。状态返回 `mock` 和 `mock_pro`，`pro` 始终是真实权益。模拟结果仅按账号存进程内存，重启清空，MUST NOT 调用 Stripe 或写真实 Pro。mock 时兑换入口禁用且服务端拒绝兑换/webhook，避免测试误改真实权益。
+仅后端启动时设置 `PROMPTARK_BILLING_MOCK=1` 才启用 mock。状态返回 `mock` 和 `mock_pro`，`pro` 始终是真实权益。Postgres 运行态模拟结果和订单按账号保存到独立 mock 表，重启保留；无数据库的内存测试态重启清空。MUST NOT 调用 Stripe 或写真实 Pro。mock 时原真实兑换/webhook 拒绝；测试码使用独立 `/v1/billing/mock/redeem` 路径，不访问真实兑换表。
+
+### Requirement: 模拟运营隔离
+
+owner/admin MUST 能查看模拟订单和权益、带原因调整、生成和启停测试码批次、查看使用记录；所有列表显著标记 Mock，无收费金额或真实付款凭证。幂等请求与订单/权益/成功审计同事务；测试码明码只在生成成功时一次展示，列表/审计不能恢复明码。
+
+#### Scenario: 模拟重试与测试码额度
+
+- GIVEN 重复请求或测试码仅剩一次额度
+- WHEN 重试订单或多个账号并发兑换
+- THEN 幂等请求不重复记账，同码最多额度内成功、同账号不能重复使用；过期/停用拒绝
+- AND 不改变真实 accounts.pro，模拟关闭后不能通过直接 API 调整或兑换，历史仍可只读查看
 
 #### Scenario: 模拟支付与重置
 

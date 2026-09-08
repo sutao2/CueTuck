@@ -16,12 +16,12 @@ async fn postgres_state() -> Option<AppState> {
 #[tokio::test]
 async fn admin_oauth_configuration_is_encrypted_and_survives_new_process_state() {
     let state = postgres_state().await.expect("local Postgres required");
-    state.db.as_ref().unwrap().upsert_account("oauth-admin@example.com", Some("test-password"), "admin").await.unwrap();
+    state.db.as_ref().unwrap().upsert_account("oauth-admin@example.com", Some("test-password"), "owner").await.unwrap();
     let session = state.issue_session("oauth-admin@example.com".into()).await.unwrap();
     let router = app(state.clone());
     let response = router.oneshot(Request::builder().method("PUT").uri("/v1/admin/oauth/google")
         .header(header::AUTHORIZATION, format!("Bearer {}", session.access_token)).header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(serde_json::json!({ "enabled": true, "client_id": "persisted-client", "client_secret": "persisted-secret", "redirect_uri": "http://localhost:8787/v1/session/oauth/callback" }).to_string())).unwrap()).await.unwrap();
+        .body(Body::from(serde_json::json!({ "revision":0,"current_password":"test-password", "enabled": true, "client_id": "persisted-client", "client_secret": "persisted-secret", "redirect_uri": "http://localhost:8787/v1/session/oauth/callback" }).to_string())).unwrap()).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
     let stored = state.db.as_ref().unwrap().oauth_config("google").await.unwrap().unwrap();
     assert!(!stored.contains("persisted-secret"));
@@ -145,6 +145,7 @@ async fn publication_favorite_and_settings_survive_postgres() {
         .await
         .unwrap();
     pg.replace_items(&[SquareItem {
+        reference: Some(serde_json::json!({"author":"source author","license":"CC0 1.0","images":[]})),
         id: "sq-1".into(),
         title: "自然光群像".into(),
         kind: "prompt".into(),
@@ -158,6 +159,13 @@ async fn publication_favorite_and_settings_survive_postgres() {
     .await
     .unwrap();
     let router = app(state.clone());
+    for uri in ["/v1/square/items/sq-1", "/v1/square/items/sq-1/content"] {
+        let response = router.clone().oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(payload["reference"]["author"], "source author");
+    }
     let user = login_json(&router, "dev@promptark.local", "devpass").await;
     let admin = login_json(&router, "admin@promptark.local", "adminpass").await;
     let published = router
@@ -427,6 +435,7 @@ async fn anonymous_download_count_survives_new_appstate_on_postgres() {
     };
     let pg = state.db.as_ref().unwrap();
     pg.insert_item(&SquareItem {
+        reference: None,
         id: "sq-hot".into(),
         title: "Zed".into(),
         kind: "prompt".into(),
@@ -440,6 +449,7 @@ async fn anonymous_download_count_survives_new_appstate_on_postgres() {
     .await
     .unwrap();
     pg.insert_item(&SquareItem {
+        reference: None,
         id: "sq-cold".into(),
         title: "Alpha".into(),
         kind: "prompt".into(),

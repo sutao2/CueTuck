@@ -57,7 +57,19 @@ impl MediaConfig {
         };
         let action = bucket.head_bucket(Some(&creds));
         let url = action.sign(Duration::from_secs(60));
-        reqwest::Client::new().head(url).send().await.is_ok()
+        let Ok(client) = reqwest::Client::builder()
+            .no_proxy()
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(Duration::from_secs(3))
+            .build()
+        else {
+            return false;
+        };
+        client
+            .head(url)
+            .send()
+            .await
+            .is_ok_and(|response| response.status().is_success())
     }
 }
 
@@ -78,7 +90,10 @@ pub async fn upload(
     mut multipart: Multipart,
 ) -> Result<Json<MediaUpload>, StatusCode> {
     let email = crate::require_user(&state, &headers).await?;
-    let media = state.media.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let media = state
+        .media
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let mut bytes = None;
     let mut content_type = None;
     while let Some(field) = multipart
@@ -128,7 +143,10 @@ pub async fn signed_url(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<MediaUrl>, StatusCode> {
-    let media = state.media.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let media = state
+        .media
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let key = if let Some(pg) = &state.db {
         pg.media_key(&id).await?.ok_or(StatusCode::NOT_FOUND)?
     } else {

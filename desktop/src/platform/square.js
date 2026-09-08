@@ -1,4 +1,4 @@
-import { applyLocalImport, importDownloadedPrompt, getLocalSetting } from "./library.js";
+import { applyLocalImport, importDownloadedPrompt, getLocalSetting, listLocalCategories } from "./library.js";
 import { getSession } from "./session.js";
 
 let testTransport = null;
@@ -7,6 +7,7 @@ let testPublishTransport = null;
 let testFavoriteTransport = null;
 let testMineTransport = null;
 let testStatsTransport = null;
+let testCatalogTransport = null;
 
 function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -25,10 +26,24 @@ export function resetSquare() {
   testFavoriteTransport = null;
   testMineTransport = null;
   testStatsTransport = null;
+  testCatalogTransport = null;
 }
 
 export function setSquareTransport(transport) {
   testTransport = transport;
+}
+export function setCatalogTransport(transport) { testCatalogTransport = transport; }
+export async function fetchSquareCatalog() {
+  let payload;
+  if (testCatalogTransport) payload = await testCatalogTransport();
+  else if (isTauri()) payload = await tauriInvoke('get_square_catalog');
+  else {
+    const response = await fetch(`${apiBase()}/v1/square/catalog`);
+    if (!response.ok) throw new Error('广场分类与模型配置暂时不可用');
+    payload = await response.json();
+  }
+  if (!Array.isArray(payload?.categories) || !Array.isArray(payload?.models)) throw new Error('广场字典响应无效');
+  return payload;
 }
 
 export function setSquareContentTransport(transport) {
@@ -85,6 +100,8 @@ export async function fetchSquareContent(id) {
 
 export async function downloadSquareItem(id) {
   const payload = await fetchSquareContent(id);
+  const localCategoryIds = new Set((await listLocalCategories()).map(category => category.id));
+  const localCategory = id => localCategoryIds.has(id) ? id : null;
   let row;
   if (payload.kind === "collection") {
     if (!Array.isArray(payload.members) || !payload.members.length) throw new Error("该合集缺少成员快照，暂时无法下载");
@@ -92,9 +109,9 @@ export async function downloadSquareItem(id) {
     const keepAuthor = (await getLocalSetting("keep_author_on_download")) === "1";
     row = await applyLocalImport(JSON.stringify({
       version: 2,
-      collections: [{ id: "download", title: payload.title, category_id: payload.category_id }],
+      collections: [{ id: "download", title: payload.title, category_id: localCategory(payload.category_id) }],
       prompts: payload.members.map((member) => ({
-        title: member.title, content: member.content, category_id: member.category_id, model: member.model,
+        title: member.title, content: member.content, category_id: localCategory(member.category_id), model: member.model,
         collection_id: "download", source: "downloaded", remote_id: payload.id ?? id,
         author: keepAuthor ? payload.author : null,
       })),
@@ -105,7 +122,7 @@ export async function downloadSquareItem(id) {
       content: payload.content ?? "",
       remoteId: payload.id ?? id,
       author: payload.author,
-      categoryId: payload.category_id,
+      categoryId: localCategory(payload.category_id),
       model: payload.model,
     });
   }

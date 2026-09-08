@@ -1,6 +1,7 @@
 <template>
-  <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+  <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed, 'sidebar-resizing': sidebarDrag !== null }" :style="{ '--sidebar-width': `${sidebarWidth}px` }">
     <header
+      v-show="!settingsOpen || Boolean(loginReason)"
       data-region="titlebar"
       class="titlebar"
       :class="{ 'host-mac': host === 'macos' }"
@@ -11,17 +12,17 @@
         <button type="button" class="sidebar-toggle" data-testid="toggle-sidebar" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!sidebarCollapsed" aria-controls="workbench-sidebar" @click="sidebarCollapsed = !sidebarCollapsed"><AppIcon name="sidebar" /></button>
       </div>
       <div class="titlebar-center" data-tauri-drag-region>
-        <AppIcon :name="space === 'local' ? 'folder' : 'square'" /><span data-tauri-drag-region>{{ locationLabel }}</span>
+        <AppIcon :name="space === 'local' ? 'folder' : 'square'" /><span data-tauri-drag-region>{{ taskTitle || locationLabel }}</span>
       </div>
       <div class="titlebar-right">
-        <button type="button" class="title-tool" data-testid="titlebar-search" :title="`${t('search')} ${searchShortcutLabel}`" @click="focusSearch">
+        <button type="button" class="title-tool" data-testid="titlebar-search" :title="`${t('search')} ${searchShortcutLabel}`" @click="navigateTo(focusSearch)">
           <AppIcon name="search" /><span>{{ t("search") }}</span><kbd>{{ searchShortcutLabel }}</kbd>
         </button>
       </div>
     </header>
 
-    <div class="workspace">
-      <aside v-show="!sidebarCollapsed" id="workbench-sidebar" data-region="sidebar" class="sidebar">
+    <div v-show="!settingsOpen || Boolean(loginReason)" class="workspace">
+      <aside v-show="!sidebarCollapsed" id="workbench-sidebar" data-region="sidebar" class="sidebar" @click.capture="guardSidebarNavigation">
         <div class="sidebar-brand-row">
           <span class="brand-name">{{ t("brand") }}</span>
           <button type="button" class="frame-icon-button" data-testid="sidebar-search" :aria-label="t('search')" :title="`${t('search')} ${searchShortcutLabel}`" @click="focusSearch"><AppIcon name="search" /></button>
@@ -81,9 +82,9 @@
           </button>
           <div v-for="group in visibleCategoryGroups" :key="group.id" class="tree-group" :class="{ open: group.open }">
             <div class="tree-child-row">
-            <button type="button" class="tree-row tree-parent" :class="{ active: selectedId === group.id }" @click="toggleGroup(group)">
-              <span class="chevron">›</span>
-              <span class="tree-icon" :class="group.tone"><AppIcon :name="group.tone" /></span>
+            <button type="button" class="tree-expand" :aria-label="`${group.open ? '收起' : '展开'} ${group.name}`" :aria-expanded="group.open" @click="toggleGroup(group)"><span class="chevron">›</span></button>
+            <button type="button" class="tree-row tree-parent" :class="{ active: selectedId === group.id }" @click="selectCategory(group.id)">
+              <span class="tree-icon" :class="group.tone" :style="space === 'square' && group.color ? { color:group.color } : undefined"><AppIcon :name="space === 'square' && group.icon ? group.icon : group.tone" /></span>
               <span>{{ group.name }}</span>
               <span v-if="space === 'local'" class="tree-count">{{ categoryCount(group.id) }}</span>
             </button>
@@ -114,9 +115,9 @@
           </button>
           <div class="sidebar-account">
             <button type="button" class="account-button" data-testid="open-login"
-              :title="session.loggedIn ? session.email : t('login')" @click="openLogin(t('login'))">
+              :title="session.loggedIn ? session.email : t('login')" @click="openAccount">
               <span class="avatar">{{ session.loggedIn ? (session.email?.[0] || "已") : "游" }}</span>
-              <span>{{ session.loggedIn ? t("loggedIn") : t("login") }}</span>
+              <span>{{ session.loggedIn ? session.email || t("loggedIn") : t("login") }}</span>
             </button>
             <button type="button" class="preference-toggle" :title="dark ? t('switchLight') : t('switchDark')" @click="toggleTheme">
               <AppIcon :name="dark ? 'sun' : 'moon'" />
@@ -128,9 +129,18 @@
         </div>
       </aside>
 
-      <main data-region="content" class="content-area">
+      <div v-show="!sidebarCollapsed" class="sidebar-resizer" role="separator" tabindex="0"
+        aria-label="调整侧栏宽度" aria-orientation="vertical" aria-controls="workbench-sidebar"
+        :aria-valuenow="sidebarWidth" :aria-valuemin="200" :aria-valuemax="sidebarMaxWidth"
+        @pointerdown="startSidebarResize" @pointermove="moveSidebarResize"
+        @pointerup="endSidebarResize" @pointercancel="endSidebarResize"
+        @lostpointercapture="endSidebarResize" @keydown="resizeSidebarByKey" />
+
+      <main v-show="!hasTaskPage" data-region="content" class="content-area">
         <section class="content-header">
           <div class="content-heading">
+            <SiteNotice v-if="space === 'square' && remoteCatalog?.site" :site="remoteCatalog.site" heading />
+            <template v-else>
             <h1>{{ space === "square" ? "发现好用的提示词" : "我的提示词" }}</h1>
             <p>
               {{
@@ -139,14 +149,16 @@
                   : "所有内容保存在本机，即使断网也可以继续编辑、整理与使用。"
               }}
             </p>
+            </template>
           </div>
           <div class="content-actions">
-            <button v-if="space === 'square'" type="button" class="button ghost-button" @click="loadSquare"><AppIcon name="refresh" />{{ t("refresh") }}</button>
+            <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="loadSquare(true)"><AppIcon name="refresh" />{{ t("refresh") }}</button>
             <button
               v-if="space === 'square'"
               type="button"
               class="button primary-button"
               data-testid="publish-prompt"
+              :disabled="remoteCatalog?.site?.publishing_open === false"
               @click="startPublish"
             >
               <AppIcon name="plus" /><span>{{ t("publish") }}</span>
@@ -171,7 +183,7 @@
               type="search"
               :aria-label="space === 'square' ? '搜索标题、标签或作者' : '搜索标题或正文'"
               :placeholder="space === 'square' ? '搜索标题、标签或作者' : '搜索标题或正文'"
-              @input="space === 'square' ? loadSquare() : reloadPrompts()"
+              @input="scheduleSearch" @compositionstart="beginSearchComposition" @compositionend="finishSearchComposition"
             >
             <kbd>{{ searchShortcutLabel }}</kbd>
           </label>
@@ -186,20 +198,22 @@
               :class="{ active: sortTab === tab.id }"
               @click="setSort(tab.id)"
             >
-              {{ tab.label }} <small>{{ tabCount(tab.id) }}</small>
+              {{ tab.label }} <small v-if="space === 'local'">{{ tabCount(tab.id) }}</small>
             </button>
           </div>
           <div class="filter-spacer"></div>
+          <div class="filter-controls">
           <label class="compact-select">
             <span>{{ t("model") }}</span>
             <select data-testid="model-filter" v-model="modelFilter" @change="onModelFilter">
               <option value="">{{ t("allModels") }}</option>
-              <option v-for="name in modelOptions" :key="name" :value="name">{{ name }}</option>
+              <option v-for="name in modelOptions" :key="name" :value="name">{{ space === 'square' ? remoteCatalog?.models.find(item => item.id === name)?.name || name : name }}</option>
             </select>
           </label>
           <div class="view-switch" aria-label="视图切换">
             <button type="button" :class="{ active: view === 'grid' }" :aria-pressed="view === 'grid'" title="网格视图" @click="view = 'grid'"><AppIcon name="grid" /></button>
             <button type="button" :class="{ active: view === 'list' }" :aria-pressed="view === 'list'" title="列表视图" @click="view = 'list'"><AppIcon name="list" /></button>
+          </div>
           </div>
         </section>
 
@@ -210,9 +224,10 @@
         >
           <span>◌</span>
           <div>
-            <strong>当前离线</strong>
-            <small>广场列表暂时不可用，本地库仍可使用。</small>
+            <strong>暂时无法连接广场</strong>
+            <small>广场列表暂时不可用，本地库仍可离线使用。</small>
           </div>
+          <button type="button" data-testid="retry-square" @click="loadSquare(true)">重试</button>
           <button type="button" data-testid="go-local" @click="openLocal">前往本地</button>
         </div>
         <div
@@ -229,15 +244,26 @@
         </div>
 
         <p v-if="operationNote" role="status" data-testid="operation-note" class="use-hint">{{ operationNote }}</p>
-        <section class="prompt-section">
+        <p v-if="space === 'square' && catalogError && !squareOffline" role="status" class="use-hint">{{ catalogError }}；当前保留上次可用分类，点击刷新重试。</p>
+        <section class="prompt-section" :aria-busy="space === 'square' && squareLoading">
+          <div v-if="hasContentFilter" class="active-filters" aria-label="当前筛选">
+            <button v-if="query.trim()" type="button" :title="query" @click="clearFilters('query')">搜索：{{ query }} <span aria-hidden="true">×</span></button>
+            <button v-if="selectedId" type="button" @click="clearFilters('category')">{{ selectedLabel }} <span aria-hidden="true">×</span></button>
+            <button v-if="modelFilter" type="button" @click="clearFilters('model')">{{ activeModelLabel }} <span aria-hidden="true">×</span></button>
+            <button type="button" class="clear-filters" data-testid="clear-filters" @click="clearFilters()">清除筛选</button>
+          </div>
+          <template v-if="!(space === 'square' && (squareOffline || squareBlocked))">
           <div class="section-heading-row">
             <div>
-              <h2>{{ space === "square" ? "正在流行" : selectedLabel }}</h2>
+              <h2>{{ resultsHeading }}</h2>
             </div>
-            <span class="result-count">共 {{ displayedItems.length }} 个结果</span>
+            <span class="result-count">{{ space === 'square' && squareLoading ? '正在加载…' : `共 ${displayedItems.length} 个结果` }}</span>
+          </div>
+          <div v-if="space === 'square' && squareLoading" class="browse-loading" role="status" data-testid="browse-loading">
+            <span>正在加载提示词…</span><div v-for="n in 3" :key="n" class="loading-row" aria-hidden="true"><i></i><i></i><i></i></div>
           </div>
           <div
-            v-if="displayedItems.length"
+            v-else-if="displayedItems.length"
             class="prompt-grid"
             :class="{ 'list-view': view === 'list' }"
             data-testid="library-view"
@@ -251,6 +277,7 @@
               @click="openItem(item)"
               @contextmenu.prevent="openContextMenu($event, item)"
             >
+              <img v-if="space === 'square' && referenceImages(item).length && !failedReferenceImages[item.id]" class="square-reference-cover" :src="referenceImages(item)[0]" :alt="item.title" loading="lazy" referrerpolicy="no-referrer" @error="failedReferenceImages[item.id] = true">
               <div
                 v-if="item.kind === 'collection' && coverPreview(item).length"
                 class="collection-card-preview"
@@ -259,7 +286,8 @@
                 <img v-for="(src, index) in coverPreview(item)" :key="index" :src="src" alt="">
               </div>
               <div class="card-top">
-                <span class="type-badge">{{ item.kind === "collection" ? "合集" : space === "square" ? "广场" : "本地" }}</span>
+                <span class="type-badge"><AppIcon :name="item.kind === 'collection' ? 'folder' : 'file'" />{{ item.kind === "collection" ? "合集" : space === "square" ? "广场" : item.source === 'downloaded' ? '已下载' : '提示词' }}</span>
+                <span v-if="cardCategory(item)" class="card-category" :title="cardCategory(item)">{{ cardCategory(item) }}</span>
                 <span v-if="showModelTags && item.model" class="model-tag" data-testid="model-tag">{{ item.model }}</span>
               </div>
               <h3><button type="button" class="prompt-title" @click.stop="openItem(item)">{{ item.title }}</button></h3>
@@ -271,7 +299,11 @@
                     : item.content || item.excerpt || "还没有正文"
                 }}
               </p>
-              <div v-if="item.kind === 'prompt' || space === 'square'" class="card-footer">
+              <div v-if="item.asset_count" class="card-assets" data-testid="card-assets">
+                <span v-if="item.image_count"><AppIcon name="image" />{{ item.image_count }} 张图片</span>
+                <span v-if="item.asset_count > (item.image_count || 0)"><AppIcon name="file" />{{ item.asset_count - (item.image_count || 0) }} 个文件</span>
+              </div>
+              <div class="card-footer">
                 <template v-if="space === 'square'">
                   <button
                     type="button"
@@ -280,7 +312,7 @@
                     :disabled="downloadBusy.includes(item.id)"
                     @click.stop="downloadSquare(item)"
                   >
-                    下载
+                    {{ downloadBusy.includes(item.id) ? '下载中…' : '下载' }}
                   </button>
                   <button
                     type="button"
@@ -292,7 +324,8 @@
                     {{ favoriteIds.includes(item.id) ? "已收藏" : "收藏" }}
                   </button>
                 </template>
-                <button v-else type="button" class="card-action" @click.stop="startUse(item)">使用</button>
+                <button v-else-if="item.kind === 'prompt'" type="button" class="card-action" @click.stop="startUse(item)">使用</button>
+                <button v-else type="button" class="card-action" @click.stop="openItem(item)">打开合集</button>
               </div>
             </article>
           </div>
@@ -300,21 +333,16 @@
             <span class="empty-glyph"><AppIcon :name="space === 'square' ? 'square' : 'library'" /></span>
             <h3>{{ emptyHeading }}</h3>
             <p>{{ emptyCopy }}</p>
+            <button v-if="hasContentFilter" type="button" class="button" @click="clearFilters()">清除筛选</button>
+            <button v-else-if="space === 'local' && sortTab === '全部'" type="button" class="button" @click="creating = true">新建提示词</button>
           </div>
+          </template>
         </section>
       </main>
-    </div>
-
-    <div v-if="addingCategory || deletingCategory" class="modal-layer">
-      <div class="modal-backdrop" @click="closeCategoryDialog"></div>
-      <section v-dialog-focus="closeCategoryDialog" class="modal category-modal" :role="deletingCategory ? 'alertdialog' : 'dialog'" aria-modal="true" aria-labelledby="category-dialog-title" :aria-busy="categoryBusy">
-        <header class="modal-header">
-          <h2 id="category-dialog-title">{{ deletingCategory ? '删除分类' : '新建分类' }}</h2>
-          <button type="button" class="modal-close" aria-label="关闭分类窗口" :disabled="categoryBusy" @click="closeCategoryDialog">×</button>
-        </header>
-        <div class="create-body">
-          <p v-if="deletingCategory">删除「{{ deletingCategory.name }}」？该分类中的提示词和合集会移到“未分类”，不会删除正文或合集成员。</p>
-          <template v-else>
+      <div v-show="hasTaskPage" class="task-host" data-testid="task-host">
+    <section v-if="addingCategory" v-page-focus="closeCategoryDialog" class="workspace-page category-page" role="region" aria-labelledby="category-page-title">
+      <header class="modal-header"><h2 id="category-page-title">新建分类</h2><button type="button" class="page-back" aria-label="返回" :disabled="categoryBusy" @click="closeCategoryDialog">← 返回</button></header>
+      <div class="create-body">
             <label class="field"><span>所属分类</span>
               <select v-model="addingCategoryId" data-testid="category-parent" :disabled="categoryBusy">
                 <option value="">无（新建大分类）</option>
@@ -325,19 +353,15 @@
               <input v-model="newCategoryName" data-testid="new-category-name" :placeholder="addingCategoryId ? '小分类名称' : '大分类名称'" :disabled="categoryBusy"
                 @keydown.enter.prevent="!$event.isComposing && !$event.repeat && confirmAddCategory()">
             </label>
-          </template>
-          <p v-if="categoryError" role="alert" data-testid="category-error">{{ categoryError }}</p>
-        </div>
-        <footer class="modal-footer">
-          <button type="button" class="button ghost-button" :data-dialog-autofocus="deletingCategory ? '' : undefined" :disabled="categoryBusy" @click="closeCategoryDialog">取消</button>
-          <button v-if="deletingCategory" type="button" class="button danger-button" data-testid="confirm-delete-category" :disabled="categoryBusy" @click="confirmDeleteCategory">{{ categoryBusy ? '正在删除…' : '删除分类' }}</button>
-          <button v-else type="button" class="button primary-button" data-testid="confirm-category" :disabled="categoryBusy || !newCategoryName.trim()" @click="confirmAddCategory">{{ categoryBusy ? '正在创建…' : '创建分类' }}</button>
-        </footer>
-      </section>
-    </div>
 
+        <p v-if="categoryError" role="alert" data-testid="category-error">{{ categoryError }}</p>
+      </div>
+      <footer class="modal-footer"><button type="button" class="button ghost-button" :disabled="categoryBusy" @click="closeCategoryDialog">取消</button><button type="button" class="button primary-button" data-testid="confirm-category" :disabled="categoryBusy || !newCategoryName.trim()" @click="confirmAddCategory">{{ categoryBusy ? '正在创建…' : '创建分类' }}</button></footer>
+    </section>
     <CreatePromptModal
       v-if="creating || editing"
+      ref="editorPage"
+      v-show="!loginReason"
       :prompt="editing"
       :groups="categoryGroups"
       :model-options="modelOptions"
@@ -346,11 +370,13 @@
       :error="editorError"
       :busy="editorBusy"
       @cancel="closeEditor"
+      @stay="pendingNavigation = null"
       @save="savePrompt"
       @remove="removePrompt"
     />
     <UsePromptModal
       v-if="using"
+      v-show="!loginReason"
       :prompt="using"
       :hints-enabled="variableHints"
       :error="useError"
@@ -360,10 +386,12 @@
     />
     <CollectionDetailModal
       v-if="openedCollection"
+      v-show="!editing && !creating && !using && !loginReason"
       :collection="openedCollection"
       :members="collectionMembers"
       :prompts="collectionCandidates"
       :error="collectionError"
+      :busy="collectionBusy"
       @cancel="openedCollection = null"
       @add="addToOpenedCollection"
       @remove-member="removeFromOpenedCollection"
@@ -371,23 +399,9 @@
       @use="useCollectionMember"
       @edit="editOpenedCollection"
     />
-    <SettingsModal
-      v-if="settingsOpen"
-      :theme="theme"
-      :host="host"
-      :session="session"
-      :language="uiLanguage"
-      @cancel="closeSettings"
-      @language="applyUiLanguage"
-      @theme="applyTheme($event, false)"
-      @imported="refreshLocalSettings"
-      @history-cleared="reloadPrompts"
-      @launcher-shortcut-saved="launcherShortcut = $event"
-      @login="openLogin('登录账号')"
-      @logout="logoutFromSettings"
-    />
     <SquareDetailModal
       v-if="squareDetail"
+      v-show="!loginReason"
       :item="squareDetail"
       :loading="squareDetailLoading"
       :error="squareDetailError"
@@ -402,18 +416,17 @@
     />
     <LoginModal
       v-if="loginReason"
+      ref="loginPage"
       :reason="loginReason"
-      @cancel="loginReason = ''"
+      @cancel="closeLoginPage"
       @success="finishLogin"
     />
-    <div v-if="publishResume" class="modal-layer" data-testid="publish-resume">
-      <div class="modal-backdrop" @click="publishResume = false"></div>
-      <section v-dialog-focus="() => publishResume = false" class="modal create-modal" role="dialog" aria-modal="true" aria-labelledby="publish-title">
+    <section v-if="publishResume" v-show="!loginReason" v-page-focus="() => !publishBusy && (publishResume = false)" class="workspace-page" data-testid="publish-resume" role="region" aria-labelledby="publish-title">
         <header class="modal-header">
           <div>
             <h2 id="publish-title">发布到广场</h2>
           </div>
-          <button type="button" class="modal-close" aria-label="关闭" @click="publishResume = false">×</button>
+          <button type="button" class="page-back" aria-label="返回" :disabled="publishBusy" @click="publishResume = false">← 返回</button>
         </header>
         <div class="create-body">
           <label class="field">
@@ -426,11 +439,15 @@
             </select>
           </label>
           <div class="publish-explainer"><AppIcon name="globe" /><div><strong>分享前确认内容可以公开</strong><p>请移除密钥、个人信息和其他不适合公开的内容。</p></div></div>
+          <label v-if="remoteCatalog" class="field"><span>广场分类</span><select v-model="publishCategoryId" data-testid="publish-category" :disabled="publishBusy"><option :value="null">未分类</option><option v-for="category in remoteCatalog.categories" :key="category.id" :value="category.id">{{ remoteCategoryLabel(category) }}</option></select></label>
+          <label v-if="remoteCatalog" class="field"><span>适用模型</span><select v-model="publishModel" data-testid="publish-model" :disabled="publishBusy"><option :value="null">通用模型</option><option v-if="publishModel && !remoteCatalog.models.some(item => item.id === publishModel)" :value="publishModel">{{ publishModel }}（原有自定义模型）</option><option v-for="model in remoteCatalog.models" :key="model.id" :value="model.id">{{ model.name }}</option></select></label>
+          <p v-if="catalogError" class="use-hint" role="status">{{ catalogError }}；恢复连接后请重新进入发布页更新分类。</p>
           <p v-if="operationNote" role="status" class="use-hint">{{ operationNote }}</p>
           <p>提交后本地正文仍可编辑，审核状态不会覆盖本机内容。</p>
+          <p class="use-hint">图片和文件附件仅保存在本机，本次发布不包含这些附件。</p>
         </div>
         <footer class="modal-footer">
-          <button type="button" class="button ghost-button" @click="publishResume = false">关闭</button>
+          <button type="button" class="button ghost-button" :disabled="publishBusy" @click="publishResume = false">返回</button>
           <button
             type="button"
             class="button primary-button"
@@ -442,7 +459,49 @@
           </button>
         </footer>
       </section>
+
+      </div>
     </div>
+
+    <div v-if="deletingCategory" class="modal-layer">
+      <div class="modal-backdrop" @click="closeCategoryDialog"></div>
+      <section v-dialog-focus="closeCategoryDialog" class="modal category-modal" :role="deletingCategory ? 'alertdialog' : 'dialog'" aria-modal="true" aria-labelledby="category-dialog-title" :aria-busy="categoryBusy">
+        <header class="modal-header">
+          <h2 id="category-dialog-title">{{ deletingCategory ? '删除分类' : '新建分类' }}</h2>
+          <button type="button" class="modal-close" aria-label="关闭分类窗口" :disabled="categoryBusy" @click="closeCategoryDialog">×</button>
+        </header>
+        <div class="create-body">
+          <p v-if="deletingCategory">删除「{{ deletingCategory.name }}」？该分类中的提示词和合集会移到“未分类”，不会删除正文或合集成员。</p>
+          <p v-if="categoryError" role="alert" data-testid="category-error">{{ categoryError }}</p>
+        </div>
+        <footer class="modal-footer">
+          <button type="button" class="button ghost-button" :data-dialog-autofocus="deletingCategory ? '' : undefined" :disabled="categoryBusy" @click="closeCategoryDialog">取消</button>
+          <button v-if="deletingCategory" type="button" class="button danger-button" data-testid="confirm-delete-category" :disabled="categoryBusy" @click="confirmDeleteCategory">{{ categoryBusy ? '正在删除…' : '删除分类' }}</button>
+        </footer>
+      </section>
+    </div>
+
+    <SettingsModal
+      ref="settingsView"
+      v-if="settingsOpen"
+      v-show="!loginReason"
+      :theme="theme"
+      :host="host"
+      :session="session"
+      :initial-page="settingsPage"
+      :logout-busy="logoutBusy"
+      :logout-error="logoutError"
+      :language="uiLanguage"
+      @cancel="closeSettings"
+      @stay="pendingNavigation = null"
+      @language="applyUiLanguage"
+      @theme="applyTheme($event, false)"
+      @imported="refreshLocalSettings"
+      @history-cleared="reloadPrompts"
+      @launcher-shortcut-saved="launcherShortcut = $event"
+      @login="openLogin('登录账号')"
+      @logout="logoutFromSettings"
+    />
 
     <div
       v-if="contextMenu"
@@ -468,7 +527,7 @@
         </button>
       </div>
     </div>
-    <footer data-region="statusbar" class="statusbar">
+    <footer v-show="!settingsOpen || Boolean(loginReason)" data-region="statusbar" class="statusbar">
       <span class="status-item">
         <span class="connection-dot" :class="databaseStatus === 'ready' ? 'online' : 'offline'"></span>
         <span>{{ t("localFirst") }}</span>
@@ -489,7 +548,8 @@
 <script setup>
 import AppIcon from "./AppIcon.vue";
 import { vDialogFocus } from "../lib/dialogFocus.js";
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { vPageFocus } from "../lib/pageFocus.js";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
@@ -500,9 +560,12 @@ import { getSession, logoutSession } from "../platform/session.js";
 import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
 import { parseModelNames } from "../platform/modelCatalog.js";
 import { uiText } from "../platform/uiStrings.js";
-import { downloadSquareItem, fetchSquareContent, listFavorites, listSquareItems } from "../platform/square.js";
+import { downloadSquareItem, fetchSquareContent, fetchSquareCatalog, listFavorites, listSquareItems } from "../platform/square.js";
+import SiteNotice from '../../../shared/SiteNotice.vue';
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
 import { parseCoverUrls } from "../lib/cover.js";
+import { referenceImages } from "../lib/squareReference.js";
+const failedReferenceImages = ref({});
 import { DEFAULT_LAUNCHER_SHORTCUT } from "../platform/shortcut.js";
 import { applyHostChrome, detectHost, formatShortcutLabel, trafficLightInsetPx } from "../platform/windowChrome.js";
 import {
@@ -551,6 +614,51 @@ const emit = defineEmits(["open-launcher", "library-changed"]);
 
 const space = ref("local");
 const sidebarCollapsed = ref(false);
+const viewportWidth = ref(window.innerWidth);
+const preferredSidebarWidth = ref(null);
+const sidebarMaxWidth = computed(() => Math.max(200, Math.min(400, viewportWidth.value - 560)));
+const sidebarWidth = computed(() => Math.max(200, Math.min(sidebarMaxWidth.value,
+  preferredSidebarWidth.value ?? (viewportWidth.value <= 760 ? 200 : 260))));
+const sidebarDrag = ref(null);
+
+function startSidebarResize(event) {
+  if (event.button !== 0 || sidebarDrag.value) return;
+  event.preventDefault();
+  event.currentTarget.setPointerCapture(event.pointerId);
+  sidebarDrag.value = { id: event.pointerId, x: event.clientX, width: sidebarWidth.value, target: event.currentTarget };
+}
+function moveSidebarResize(event) {
+  const drag = sidebarDrag.value;
+  if (!drag || event.pointerId !== drag.id) return;
+  preferredSidebarWidth.value = Math.max(200, Math.min(sidebarMaxWidth.value, drag.width + event.clientX - drag.x));
+}
+function endSidebarResize(event) {
+  const drag = sidebarDrag.value;
+  if (!drag || (event?.pointerId !== undefined && event.pointerId !== drag.id)) return;
+  sidebarDrag.value = null;
+  if (drag.target.hasPointerCapture(drag.id)) drag.target.releasePointerCapture(drag.id);
+  saveLayout();
+}
+function resizeSidebarByKey(event) {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+  event.preventDefault();
+  preferredSidebarWidth.value = Math.max(200, Math.min(sidebarMaxWidth.value, sidebarWidth.value + (event.key === 'ArrowRight' ? 10 : -10)));
+  saveLayout();
+}
+function updateSidebarViewport() {
+  endSidebarResize();
+  viewportWidth.value = window.innerWidth;
+}
+watch(sidebarCollapsed, () => endSidebarResize());
+onMounted(() => {
+  window.addEventListener('resize', updateSidebarViewport);
+  window.addEventListener('blur', endSidebarResize);
+});
+onUnmounted(() => {
+  endSidebarResize();
+  window.removeEventListener('resize', updateSidebarViewport);
+  window.removeEventListener('blur', endSidebarResize);
+});
 
 function handleWorkbenchShortcut(event) {
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
@@ -579,9 +687,15 @@ const useError = ref("");
 const useBusy = ref(false);
 const editorError = ref("");
 const editorBusy = ref(false);
+const editorPage = ref(null), loginPage = ref(null);
+const pendingNavigation = ref(null);
 const collectionError = ref("");
+const collectionBusy = ref(false);
 const collectionCandidates = ref([]);
 const settingsOpen = ref(false);
+const settingsPage = ref('general');
+const settingsView = ref(null);
+const logoutBusy = ref(false), logoutError = ref('');
 const openedCollection = ref(null);
 const collectionMembers = ref([]);
 const query = ref("");
@@ -590,7 +704,8 @@ const collections = ref([]);
 const allLocalItems = ref([]);
 const categoryGroups = ref([]);
 const categoryTree = ref(null);
-const visibleCategoryGroups = computed(() => categoryGroups.value.filter(group => space.value === 'local' || group.is_system));
+const remoteCatalog = ref(null), remoteCategoryGroups = ref([]), catalogError = ref('');
+const visibleCategoryGroups = computed(() => space.value === 'square' && remoteCatalog.value ? remoteCategoryGroups.value : categoryGroups.value.filter(group => space.value === 'local' || group.is_system));
 const addingCategory = ref(false);
 const addingCategoryId = ref("");
 const deletingCategory = ref(null);
@@ -604,11 +719,40 @@ const publishResume = ref(false);
 const pendingPublish = ref(false);
 const publishSources = ref([]);
 const publishSourceId = ref("");
+const publishCategoryId = ref(null), publishModel = ref(null);
+watch(publishSourceId, id => {
+  const source = publishSources.value.find(item => item.id === id);
+  publishCategoryId.value = publicationCategory(source?.category_id);
+  publishModel.value = source?.model || null;
+});
 const publishBusy = ref(false);
 const favoriteBusy = ref([]);
 const operationNote = ref("");
+let layoutReady = false, layoutDisposed = false, layoutWrites = Promise.resolve();
+async function loadLayout() {
+  try {
+    const raw = await getLocalSetting('workbench_layout');
+    const saved = raw ? JSON.parse(raw) : {};
+    if (layoutDisposed) return;
+    if (Number.isFinite(saved?.width) && saved.width >= 200 && saved.width <= 400) preferredSidebarWidth.value = saved.width;
+    if (typeof saved?.collapsed === 'boolean') sidebarCollapsed.value = saved.collapsed;
+    if (['grid', 'list'].includes(saved?.view)) view.value = saved.view;
+  } catch { operationNote.value = '布局偏好读取失败，已使用默认布局。'; }
+  await nextTick();
+  layoutReady = !layoutDisposed;
+}
+function saveLayout() {
+  if (!layoutReady || layoutDisposed) return;
+  const value = JSON.stringify({ width: preferredSidebarWidth.value ?? 260, collapsed: sidebarCollapsed.value, view: view.value });
+  layoutWrites = layoutWrites.then(() => setLocalSetting('workbench_layout', value))
+    .catch(() => { operationNote.value = '布局偏好保存失败，本次调整仍可使用。'; });
+}
+watch([sidebarCollapsed, view], saveLayout);
+onMounted(loadLayout);
+onUnmounted(() => { layoutDisposed = true; });
 const squareItems = ref([]);
 const squareOffline = ref(false);
+const squareLoading = ref(false);
 const squareBlocked = ref(false);
 const favoriteIds = ref([]);
 const localFavoriteIds = ref([]);
@@ -657,7 +801,7 @@ const filterTabs = computed(() =>
 const selectedLabel = computed(() => {
   if (!selectedId.value) return t("allPrompts");
   if (selectedId.value === "__uncategorized__") return uiLanguage.value === "en" ? "Uncategorized" : "未分类";
-  for (const group of categoryGroups.value) {
+  for (const group of visibleCategoryGroups.value) {
     if (group.id === selectedId.value) return group.name;
     const child = group.children.find((item) => item.id === selectedId.value);
     if (child) return child.name;
@@ -666,22 +810,80 @@ const selectedLabel = computed(() => {
 });
 
 const modelOptions = computed(() =>
-  parseModelNames(modelCatalogText.value, customModelsText.value, seenModels.value, prompts.value),
+  space.value === 'square' && remoteCatalog.value ? remoteCatalog.value.models.map(item => item.id) : parseModelNames(modelCatalogText.value, customModelsText.value, seenModels.value, prompts.value),
 );
 const hasContentFilter = computed(() => Boolean(query.value.trim() || selectedId.value || modelFilter.value));
+const activeModelLabel = computed(() => space.value === 'square' ? remoteCatalog.value?.models.find(item => item.id === modelFilter.value)?.name || modelFilter.value : modelFilter.value);
+const resultsHeading = computed(() => {
+  if (query.value.trim()) return '搜索结果';
+  if (selectedId.value) return selectedLabel.value;
+  if (space.value === 'local') return sortTab.value === '全部' ? selectedLabel.value : sortTab.value === '最近' ? '最近使用' : '我的收藏';
+  return ({ 推荐: '推荐提示词', 最新: '最新发布', 热门: '热门提示词', 收藏: '我的收藏' })[sortTab.value];
+});
+async function clearFilters(field) {
+  cancelSearch();
+  if (!field || field === 'query') query.value = '';
+  if (!field || field === 'category') selectedId.value = null;
+  if (!field || field === 'model') modelFilter.value = '';
+  if (space.value === 'square') await loadSquare(); else await reloadPrompts();
+}
 const emptyHeading = computed(() => {
   if (space.value === 'square' && squareOffline.value) return t('emptyOffline');
   if (hasContentFilter.value) return t('emptyFiltered');
-  if (space.value === "square") return squareOffline.value ? t("emptyOffline") : t("emptySquare");
+  if (space.value === "square") return sortTab.value === '收藏' ? t('emptyFavorite') : t("emptySquare");
   if (sortTab.value === "最近") return t("emptyRecent");
   if (sortTab.value === "收藏") return t("emptyFavorite");
   return t("emptyLocal");
 });
 const emptyCopy = computed(() => {
   if (hasContentFilter.value && !(space.value === 'square' && squareOffline.value)) return t('emptyFilteredHint');
+  if (sortTab.value === '最近') return '使用过的提示词会出现在这里，方便下次继续。';
+  if (sortTab.value === '收藏') return space.value === 'local' ? '右键提示词选择收藏，在这里快速找到常用内容。' : '收藏喜欢的社区提示词后，可在这里再次找到。';
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
 const locationLabel = computed(() => (space.value === "square" ? t("square") : t("local")));
+const hasTaskPage = computed(() => Boolean(creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
+const taskTitle = computed(() => loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
+
+function guardSidebarNavigation(event) {
+  if (!hasTaskPage.value) return;
+  const button = event.target.closest('button');
+  if (!button || button.matches('.preference-toggle, .tree-expand, .category-collapse')) return;
+  event.preventDefault();
+  event.stopPropagation();
+  navigateTo(() => button.click());
+}
+
+function navigateTo(action) {
+  if (!hasTaskPage.value) { action(); return; }
+  if (editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || downloadBusy.value.length || favoriteBusy.value.length) return;
+  pendingNavigation.value = action;
+  if (loginReason.value) loginPage.value?.close();
+  else if (creating.value || editing.value) editorPage.value?.requestClose();
+  else finishNavigation();
+}
+
+function finishNavigation() {
+  const action = pendingNavigation.value;
+  if (!action) return;
+  if (settingsOpen.value) {
+    loginReason.value = '';
+    nextTick(() => settingsView.value?.requestClose());
+    return;
+  }
+  pendingNavigation.value = null;
+  creating.value = false; editing.value = null; using.value = null;
+  openedCollection.value = null; closeSquareDetail();
+  loginReason.value = ''; publishResume.value = false; pendingPublish.value = false;
+  closeCategoryDialog();
+  nextTick(action);
+}
+
+function closeLoginPage() {
+  loginReason.value = '';
+  pendingPublish.value = false;
+  finishNavigation();
+}
 const databaseLabel = computed(() => {
   if (props.databaseStatus === "ready") return "SQLite 就绪";
   if (props.databaseStatus === "failed") return "SQLite 失败";
@@ -690,11 +892,10 @@ const databaseLabel = computed(() => {
 
 function toggleGroup(group) {
   group.open = !group.open;
-  selectCategory(group.id);
 }
 
 function collapseAll() {
-  for (const group of categoryGroups.value) group.open = false;
+  for (const group of visibleCategoryGroups.value) group.open = false;
 }
 
 function selectCategory(id) {
@@ -784,8 +985,23 @@ function openLogin(reason) {
 }
 
 async function logoutFromSettings() {
-  await logoutSession();
+  if (logoutBusy.value) return;
+  logoutBusy.value = true;
+  logoutError.value = '';
+  try {
+    await logoutSession();
+    session.value = getSession();
+    favoriteIds.value = [];
+    if (space.value === 'square' && sortTab.value === '收藏') { sortTab.value = '推荐'; await loadSquare(); }
+  } catch (error) { logoutError.value = error.message || String(error); }
+  finally { logoutBusy.value = false; }
+}
+
+function openAccount() {
   session.value = getSession();
+  if (!session.value.loggedIn) { openLogin(t('login')); return; }
+  settingsPage.value = 'account';
+  settingsOpen.value = true;
 }
 
 const squareDetail = ref(null);
@@ -863,6 +1079,7 @@ async function loadPublishSources() {
 
 async function openPublish() {
   operationNote.value = "";
+  await loadRemoteCatalog();
   await loadPublishSources();
   publishResume.value = true;
 }
@@ -904,8 +1121,8 @@ async function submitPublish() {
       sourceId: publishSourceId.value,
       title: source?.title,
       content: source?.content ?? "",
-      categoryId: publicationCategory(source?.category_id),
-      model: source?.model,
+      categoryId: remoteCatalog.value ? publishCategoryId.value : publicationCategory(source?.category_id),
+      model: remoteCatalog.value ? publishModel.value : source?.model,
       ...(source.kind === "collection" ? { kind: "collection", members } : {}),
     });
     publishResume.value = false;
@@ -928,17 +1145,37 @@ async function refreshFavorites() {
   }
 }
 
-async function loadSquare() {
+let searchTimer;
+let searchComposing = false;
+function cancelSearch() { clearTimeout(searchTimer); }
+function beginSearchComposition() { searchComposing = true; cancelSearch(); ++squareRequest; ++localRequest; }
+async function finishSearchComposition() { searchComposing = false; await nextTick(); scheduleSearch(); }
+function scheduleSearch(event) {
+  cancelSearch();
+  ++squareRequest; ++localRequest;
+  if (searchComposing || event?.isComposing) return;
+  if (space.value === 'local') { reloadPrompts(); return; }
+  if (!query.value.trim()) { loadSquare(); return; }
+  searchTimer = setTimeout(() => loadSquare(), 250);
+}
+onUnmounted(() => { cancelSearch(); ++squareRequest; ++localRequest; ++catalogRequest; });
+
+async function loadSquare(refreshCatalog = false) {
+  cancelSearch();
   const request = ++squareRequest;
   squareOffline.value = false;
   squareBlocked.value = false;
+  squareLoading.value = true;
+  try {
   const access = await getLocalSetting("square_access");
+  if (request !== squareRequest || space.value !== 'square') return;
   if (access === "0") {
     squareItems.value = [];
     squareBlocked.value = true;
     return;
   }
-  try {
+    if (refreshCatalog === true || !remoteCatalog.value) await loadRemoteCatalog();
+    if (request !== squareRequest || space.value !== 'square') return;
     if (sortTab.value === "收藏") {
       if (!getSession().loggedIn) {
         squareItems.value = [];
@@ -961,13 +1198,15 @@ async function loadSquare() {
         categoryId: selectedId.value,
       });
       if (request !== squareRequest || space.value !== "square") return;
-      squareItems.value = rows.filter(squareMatchesCategory);
+      squareItems.value = rows;
     }
     rememberModels(squareItems.value);
   } catch {
     if (request !== squareRequest || space.value !== "square") return;
     squareItems.value = [];
     squareOffline.value = true;
+  } finally {
+    if (request === squareRequest) squareLoading.value = false;
   }
 }
 
@@ -975,12 +1214,37 @@ let squareRequest = 0;
 
 function squareMatchesCategory(item) {
   return !selectedId.value || item.category_id === selectedId.value
-    || categoryById(item.category_id)?.parent_id === selectedId.value;
+    || remoteCatalog.value?.category_parents?.[item.category_id] === selectedId.value
+    || (remoteCatalog.value?.categories.find(category => category.id === item.category_id) ?? categoryById(item.category_id))?.parent_id === selectedId.value;
+}
+
+let catalogRequest = 0;
+async function loadRemoteCatalog() {
+  const request = ++catalogRequest;
+  try {
+    const catalog = await fetchSquareCatalog();
+    if (request !== catalogRequest) return;
+    const opened = new Set(remoteCategoryGroups.value.filter(item => item.open).map(item => item.id));
+    const initial = remoteCatalog.value === null;
+    remoteCatalog.value = catalog;
+    remoteCategoryGroups.value = buildCategoryTree(catalog.categories.map(item => ({...item,is_system:true}))).map(group => ({...group,icon:catalog.categories.find(item=>item.id===group.id)?.icon || 'folder',open:initial ? group.open : opened.has(group.id)}));
+    catalogError.value = '';
+    if (space.value === 'square' && selectedId.value && !catalog.categories.some(item => item.id === selectedId.value)) selectedId.value = null;
+    if (space.value === 'square' && modelFilter.value && !catalog.models.some(item=>item.id===modelFilter.value)) modelFilter.value = '';
+  } catch (error) { if (request === catalogRequest) catalogError.value = error.message || '广场配置暂时不可用'; }
+}
+function remoteCategoryLabel(category) {
+  const parent = remoteCatalog.value?.categories.find(item=>item.id===category.parent_id);
+  return parent ? `${parent.name} / ${category.name}` : category.name;
 }
 
 function publicationCategory(id) {
   const category = categoryById(id);
   const parent = categoryById(category?.parent_id);
+  if (remoteCatalog.value) {
+    const enabled = new Set(remoteCatalog.value.categories.map(item=>item.id));
+    return enabled.has(id) ? id : enabled.has(parent?.id) ? parent.id : null;
+  }
   return category?.is_system ? category.id : parent?.is_system ? parent.id : null;
 }
 
@@ -1018,7 +1282,8 @@ function tabCount(tab) {
   if (space.value === "square") {
     return tab === sortTab.value ? displayedItems.value.length : 0;
   }
-  return filterLocalItems(libraryItems.value, {
+  const rows = modelFilter.value ? libraryItems.value.filter(item => item.kind === 'prompt' && item.model === modelFilter.value) : libraryItems.value;
+  return filterLocalItems(rows, {
     tab,
     favoriteIds: localFavoriteIds.value,
   }).length;
@@ -1079,8 +1344,11 @@ async function runContextAction(action) {
 }
 
 async function closeSettings() {
+  settingsPage.value = 'general';
+  logoutError.value = '';
   settingsOpen.value = false;
   await refreshLocalSettings();
+  finishNavigation();
 }
 
 async function refreshLocalSettings() {
@@ -1099,24 +1367,39 @@ function setSort(tab) {
 }
 
 function openSquare() {
+  cancelSearch(); ++localRequest;
   space.value = "square";
   if (selectedId.value === "__uncategorized__" || (selectedId.value && !categoryById(selectedId.value)?.is_system)) {
     selectedId.value = null;
   }
   sortTab.value = "推荐";
-  loadSquare();
+  loadSquare(true);
 }
 
 function openLocal() {
+  cancelSearch(); ++squareRequest;
   space.value = "local";
+  if (selectedId.value && selectedId.value !== '__uncategorized__' && !categoryById(selectedId.value)) selectedId.value = null;
   sortTab.value = "全部";
   squareOffline.value = false;
   reloadPrompts();
 }
 
 function toggleTheme() {
-  applyTheme(theme.value === "dark" ? "light" : "dark");
+  applyTheme(dark.value ? "light" : "dark");
 }
+
+let systemTheme;
+function syncSystemTheme() {
+  if (theme.value !== 'system') return;
+  dark.value = Boolean(systemTheme?.matches);
+  document.body.classList.toggle('theme-dark', dark.value);
+}
+onMounted(() => {
+  systemTheme = window.matchMedia?.('(prefers-color-scheme: dark)');
+  systemTheme?.addEventListener?.('change', syncSystemTheme);
+});
+onUnmounted(() => systemTheme?.removeEventListener?.('change', syncSystemTheme));
 
 async function applyTheme(next, persist = true) {
   if (persist) await setLocalSetting("theme", next);
@@ -1150,13 +1433,19 @@ function closeEditor() {
   creating.value = false;
   editing.value = null;
   editorError.value = "";
+  finishNavigation();
 }
 
 function coverPreview(item) {
   return parseCoverUrls(item.cover_json).slice(0, 3);
 }
 
-async function savePrompt({ id, kind, title, content, categoryId, model, coverType, coverUrls }) {
+function cardCategory(item) {
+  if (!item.category_id) return '';
+  return (space.value === 'square' ? remoteCatalog.value?.categories.find(c => c.id === item.category_id) : categoryById(item.category_id))?.name ?? '';
+}
+
+async function savePrompt({ id, kind, title, content, categoryId, model, coverType, coverUrls, assets }) {
   if (editorBusy.value) return;
   editorBusy.value = true;
   editorError.value = "";
@@ -1164,14 +1453,17 @@ async function savePrompt({ id, kind, title, content, categoryId, model, coverTy
     if (id && kind === "collection") {
       await updateLocalCollection({ id, title, categoryId, coverType, coverUrls });
     } else if (id) {
-      await updateLocalPrompt({ id, title, content, categoryId, model });
+      await updateLocalPrompt({ id, title, content, categoryId, model, assets });
     } else if (kind === "collection") {
       await createLocalCollection({ title, categoryId, coverType, coverUrls });
     } else {
-      await createLocalPrompt({ title, content, categoryId, model });
+      await createLocalPrompt({ title, content, categoryId, model, assets });
+    }
+    if (openedCollection.value) {
+      const updated = (await listLocalCollections({ query: '', categoryId: null })).find(item => item.id === openedCollection.value.id);
+      if (updated) await openCollection(updated);
     }
     closeEditor();
-    query.value = "";
     await reloadPrompts();
   } catch (error) {
     editorError.value = `保存失败：${error.message || error}`;
@@ -1179,12 +1471,17 @@ async function savePrompt({ id, kind, title, content, categoryId, model, coverTy
 }
 
 async function removePrompt(id) {
+  if (editorBusy.value) return;
+  editorBusy.value = true;
   try {
     if (editing.value?.kind === "collection") await deleteLocalCollection(id);
     else await deleteLocalPrompt(id);
+    if (openedCollection.value?.id === id) openedCollection.value = null;
+    else if (openedCollection.value) await openCollection(openedCollection.value);
     closeEditor();
     await reloadPrompts();
   } catch (error) { editorError.value = `删除失败：${error.message || error}`; }
+  finally { editorBusy.value = false; }
 }
 
 async function finishUse(text) {
@@ -1230,28 +1527,32 @@ async function openCollection(collection) {
 }
 
 async function addToOpenedCollection(promptId) {
+  if (collectionBusy.value) return;
+  collectionBusy.value = true;
   try {
     await addPromptToCollection(promptId, openedCollection.value.id);
     await openCollection(openedCollection.value);
     await reloadPrompts();
   } catch (error) { collectionError.value = `加入失败：${error.message || error}`; }
+  finally { collectionBusy.value = false; }
 }
 
 async function removeFromOpenedCollection(promptId) {
+  if (collectionBusy.value) return;
+  collectionBusy.value = true;
   try {
     await removePromptFromCollection(promptId, openedCollection.value.id);
     await openCollection(openedCollection.value);
     await reloadPrompts();
   } catch (error) { collectionError.value = `移除失败：${error.message || error}`; }
+  finally { collectionBusy.value = false; }
 }
 
 function openCollectionMember(member) {
-  openedCollection.value = null;
   editing.value = member;
 }
 
 function useCollectionMember(member) {
-  openedCollection.value = null;
   startUse(member);
 }
 
@@ -1262,7 +1563,6 @@ function startUse(member) {
 
 function editOpenedCollection() {
   editing.value = { ...openedCollection.value, kind: "collection" };
-  openedCollection.value = null;
 }
 
 onMounted(async () => {
@@ -1280,7 +1580,7 @@ onMounted(async () => {
   if (window.__TAURI_INTERNALS__) {
     const { listen } = await import("@tauri-apps/api/event");
     await listen("open-new-prompt", () => {
-      creating.value = true;
+      if (!settingsOpen.value) navigateTo(() => { creating.value = true; });
     });
   }
 });

@@ -4,6 +4,7 @@ pub use auto_backup::{set_auto_backup_in_dir, start_auto_backup_worker};
 mod categories;
 mod collections;
 mod prompts;
+pub mod assets;
 mod settings;
 mod sync;
 pub use sync::{apply_sync_changes, export_sync_changes, SyncChange};
@@ -147,6 +148,12 @@ pub fn initialize_in_dir(dir: &Path) -> Result<String, String> {
                 updated_at TEXT,
                 deleted_at TEXT,
                 author TEXT
+            );
+            CREATE TABLE IF NOT EXISTS prompt_assets (
+                prompt_id TEXT NOT NULL, id TEXT NOT NULL,
+                name TEXT NOT NULL, mime TEXT NOT NULL, data BLOB NOT NULL,
+                position INTEGER NOT NULL,
+                PRIMARY KEY (prompt_id, id)
             );
             ",
         )

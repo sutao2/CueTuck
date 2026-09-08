@@ -19,6 +19,10 @@ pub struct PromptRecord {
     pub model: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_used_at: Option<String>,
+    #[serde(default)]
+    pub asset_count: i64,
+    #[serde(default)]
+    pub image_count: i64,
 }
 
 fn open_db(dir: &Path) -> Result<Connection, String> {
@@ -42,14 +46,18 @@ pub(crate) fn map_prompt_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Prompt
         author: row.get(8)?,
         model: row.get(9)?,
         last_used_at: row.get(10)?,
+        asset_count: row.get(11)?,
+        image_count: row.get(12)?,
     })
 }
 
-fn read_prompt(connection: &Connection, id: &str) -> Result<PromptRecord, String> {
+pub(crate) fn read_prompt(connection: &Connection, id: &str) -> Result<PromptRecord, String> {
     connection
         .query_row(
             "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0),
-                    COALESCE(source, 'local'), author, model, last_used_at
+                    COALESCE(source, 'local'), author, model, last_used_at,
+                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=prompts.id),
+                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=prompts.id AND mime LIKE 'image/%')
              FROM prompts WHERE id = ?1",
             [id],
             map_prompt_row,
@@ -274,7 +282,9 @@ pub fn list_prompts_in_dir(
     let mut statement = connection
         .prepare(
             "SELECT p.id, p.title, p.summary, p.content, p.category_id, p.collection_id, COALESCE(p.use_count, 0),
-                    COALESCE(p.source, 'local'), p.author, p.model, p.last_used_at
+                    COALESCE(p.source, 'local'), p.author, p.model, p.last_used_at,
+                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=p.id),
+                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=p.id AND mime LIKE 'image/%')
              FROM prompts p
              LEFT JOIN categories c ON c.id = p.category_id
              LEFT JOIN categories parent ON parent.id = c.parent_id
