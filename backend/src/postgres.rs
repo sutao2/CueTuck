@@ -156,6 +156,7 @@ impl Pg {
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS model TEXT", self.t("publications")),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'prompt'", self.t("publications")),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS members JSONB NOT NULL DEFAULT '[]'", self.t("publications")),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS asset_refs JSONB NOT NULL DEFAULT '[]'", self.t("publications")),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ", self.t("publications")),
             format!("ALTER TABLE {} ALTER COLUMN created_at SET DEFAULT now()", self.t("publications")),
             format!("CREATE TABLE IF NOT EXISTS {} (id BIGSERIAL PRIMARY KEY, publication_id TEXT NOT NULL REFERENCES {}(id), actor_email TEXT NOT NULL, status TEXT NOT NULL, reason TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now())", self.t("review_events"), self.t("publications")),
@@ -685,7 +686,7 @@ impl Pg {
                 .await?;
         }
         sqlx::query(&format!(
-            "INSERT INTO {} (id, source_id, status, title, content, author_email, category_id, model, kind, members) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+            "INSERT INTO {} (id, source_id, status, title, content, author_email, category_id, model, kind, members, asset_refs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
             self.t("publications")
         ))
         .bind(&publication.id)
@@ -698,6 +699,7 @@ impl Pg {
         .bind(&publication.model)
         .bind(&publication.kind)
         .bind(sqlx::types::Json(&publication.members))
+        .bind(sqlx::types::Json(&publication.asset_refs))
         .execute(&mut **tx)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -706,6 +708,7 @@ impl Pg {
 
     fn publication_from_row(row: &sqlx::postgres::PgRow) -> Publication {
         Publication {
+            asset_refs: row.get::<sqlx::types::Json<Vec<crate::library::AssetReference>>, _>("asset_refs").0,
             id: row.get("id"),
             source_id: row.get("source_id"),
             status: row.get("status"),
@@ -723,7 +726,7 @@ impl Pg {
 
     pub async fn pending_publications(&self) -> Result<Vec<Publication>, StatusCode> {
         let rows = sqlx::query(&format!(
-            "SELECT id, source_id, status, title, content, author_email, category_id, model, kind, members FROM {} WHERE status = 'pending'",
+            "SELECT id, source_id, status, title, content, author_email, category_id, model, kind, members, asset_refs FROM {} WHERE status = 'pending'",
             self.t("publications")
         ))
         .fetch_all(&self.pool)
@@ -734,7 +737,7 @@ impl Pg {
 
     pub async fn publications_for(&self, email: &str) -> Result<Vec<Publication>, StatusCode> {
         let rows = sqlx::query(&format!(
-            "SELECT id, source_id, status, title, content, author_email, category_id, model, kind, members FROM {} WHERE author_email = $1 ORDER BY id",
+            "SELECT id, source_id, status, title, content, author_email, category_id, model, kind, members, asset_refs FROM {} WHERE author_email = $1 ORDER BY id",
             self.t("publications")
         ))
         .bind(email)
@@ -788,7 +791,7 @@ impl Pg {
         }
         let row = sqlx::query(&format!(
             "UPDATE {} SET status = $2 WHERE id = $1
-             RETURNING id, source_id, status, title, content, author_email, category_id, model, kind, members",
+             RETURNING id, source_id, status, title, content, author_email, category_id, model, kind, members, asset_refs",
             self.t("publications")
         ))
         .bind(id)

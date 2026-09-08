@@ -4,6 +4,11 @@ info:
   version: 0.1.0
   description: 管理合同。不把本路径写进 square.yaml。本仓库 backend 是预发，不声称生产。密码重新认证受 60 秒窗口限制（全实例 300、连接 IP 60、操作者 10 次），超限返回 429 和 Retry-After=60；限流存储故障返回 503。管理客户端 401 清空当前会话，403 保留登录并提示权限不足。
 paths:
+  /v1/admin/publications/{id}/assets/{asset_id}:
+    get:
+      operationId: getReviewPublicationAsset
+      summary: 审核角色读取本稿选中的附件
+      description: 仅 owner/admin/reviewer；传输前后检查有效 Access 与角色，401/403 表示会话或权限无效。本稿未选文件、不存在或未完成对象为 404。返回经过大小/类型/SHA-256 校验的字节，attachment、nosniff、no-store；存储失败为 502。普通私有媒体 API 仍不允许管理员读取他人对象。审核列表投稿快照增加 asset_refs 数组，旧记录缺省空数组。
   /v1/admin/overview:
     get:
       operationId: getAdminOverview

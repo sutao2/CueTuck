@@ -182,7 +182,7 @@ async fn ai_finalization_is_atomic_and_never_overwrites_humans_or_changed_policy
         "missing",
         "audit",
     ] {
-        let publication = Publication {
+        let publication = Publication { asset_refs: vec![],
             id: format!("pub.{scenario}"),
             source_id: scenario.into(),
             status: "pending".into(),

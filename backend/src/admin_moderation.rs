@@ -194,6 +194,7 @@ fn screen(config: &Policy, rules: &Rules, publication: &Publication, duplicate: 
     }
     let text = parts.join("\n");
     let mut reasons = Vec::<String>::new();
+    if !publication.asset_refs.is_empty() { reasons.push("稿件含文件附件，必须人工查看，文本审核不能替代文件审核".into()); }
     let mut score = 0u64;
     let oversized = text.len() > 200_000;
     let usable = publication.square_item().is_some()

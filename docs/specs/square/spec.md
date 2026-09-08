@@ -11,6 +11,10 @@
 
 ## Requirements
 
+### Requirement: 公开附件下载
+
+单条提示词详情 MUST 展示已批准附件清单，显式查看时联网读取；下载 MUST 先完成全部文件大小、类型和 SHA-256 校验，再与正文原子导入，新本地附件使用新 UUID。失败不留下部分提示词，重复下载沿用远端 ID 防重。未批准、下架、回收站及匿名策略约束见 [P1c 计划](../../plans/2026-09-08-publication-assets.md)。
+
 ### Requirement: 第一期不可用
 
 第一期构建 MUST NOT 请求广场 API。用户进入广场空间时 MUST 看到未开放说明。

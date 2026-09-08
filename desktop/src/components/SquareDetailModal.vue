@@ -46,6 +46,7 @@
             </article>
           </template>
           <pre v-else class="square-body" data-testid="square-detail-content">{{ item.content || '还没有正文' }}</pre>
+          <PublishedAttachments :item-id="item.id" :references="item.asset_refs || []" />
         </template>
         <p v-if="note" role="status">{{ note }}</p>
         <ReportPanel v-if="!loading && !error" :key="item.id" :target-id="item.id" />
@@ -57,6 +58,7 @@
 <script setup>
 import { vPageFocus } from "../lib/pageFocus.js";
 import ReportPanel from './ReportPanel.vue';
+import PublishedAttachments from './PublishedAttachments.vue';
 import { computed, ref, watch } from 'vue';
 import { referenceImages, referenceLink } from '../lib/squareReference.js';
 const props = defineProps({

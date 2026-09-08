@@ -532,6 +532,7 @@ pub async fn screen_publication(
     state: &AppState,
     publication: &crate::Publication,
 ) -> Result<crate::Publication, StatusCode> {
+    if !publication.asset_refs.is_empty() { return Ok(publication.clone()); }
     let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let local: Option<Value> = sqlx::query_scalar(&format!(
         "SELECT moderation FROM {} WHERE id=$1",

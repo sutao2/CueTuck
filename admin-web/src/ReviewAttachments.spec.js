@@ -1,0 +1,20 @@
+import { mount, flushPromises } from '@vue/test-utils';
+import { afterEach, expect, it, vi } from 'vitest';
+import ReviewAttachments from './ReviewAttachments.vue';
+import { fetchReviewAsset } from './reviewAssets.js';
+vi.mock('./reviewAssets.js', () => ({ fetchReviewAsset: vi.fn() }));
+let wrapper;
+afterEach(() => { wrapper?.unmount(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+it('loads on demand, shows inert text, releases URLs and preserves retry on failure', async () => {
+  const file = { id: 'f', name: 'notes.txt', mime: 'text/plain', size: 12 };
+  const create = vi.fn(() => 'blob:test'), revoke = vi.fn();
+  vi.stubGlobal('URL', { createObjectURL: create, revokeObjectURL: revoke });
+  fetchReviewAsset.mockRejectedValueOnce(new Error('读取失败')).mockResolvedValueOnce(new TextEncoder().encode('<script>unsafe()</script>'));
+  wrapper = mount(ReviewAttachments, { props: { publicationId: 'p', references: [file] } });
+  expect(fetchReviewAsset).not.toHaveBeenCalled();
+  await wrapper.get('.review-file button').trigger('click'); await flushPromises(); expect(wrapper.text()).toContain('读取失败');
+  await wrapper.get('.review-file button').trigger('click'); await flushPromises();
+  expect(wrapper.get('pre').text()).toContain('<script>'); expect(wrapper.find('script').exists()).toBe(false);
+  expect(wrapper.get('a').attributes('download')).toBe(file.name);
+  await wrapper.setProps({ publicationId: 'another' }); expect(revoke).toHaveBeenCalledWith('blob:test'); expect(wrapper.find('pre').exists()).toBe(false);
+});

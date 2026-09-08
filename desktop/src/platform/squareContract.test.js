@@ -10,6 +10,7 @@ const openapiPath = resolve(
 );
 
 const REQUIRED = [
+  { method: "GET", path: "/v1/square/items/{id}/assets/{asset_id}", auth: "none" },
   { method: "GET", path: "/v1/site", auth: "none" },
   { method: "GET", path: "/v1/reports", auth: "user" },
   { method: "POST", path: "/v1/reports", auth: "user" },

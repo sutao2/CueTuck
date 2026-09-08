@@ -4,6 +4,17 @@ import ReviewManagement from './ReviewManagement.vue';
 import { resetAdminApi, setAdminApiTransport } from './adminApi.js';
 let wrapper;
 const item = (id = 'a') => ({ id, source_id: id, title: `投稿 ${id}`, status: 'pending', content: '正文' });
+it('shows selected files and requires confirmation before approving a file publication', async () => {
+  const transport = vi.fn(request => request.kind === 'list' ? { items: [{ ...item(), asset_refs: [{ id: 'file', name: 'notes.txt', mime: 'text/plain', size: 12 }] }] } : { status: 'approved' });
+  const w = await open(transport);
+  expect(w.text()).toContain('notes.txt'); expect(w.text()).toContain('文本自动审核不验证文件安全');
+  await w.get('[data-testid=review-approve]').trigger('click'); await flushPromises();
+  expect(transport).toHaveBeenCalledTimes(1);
+  const confirm = vi.spyOn(window, 'confirm');
+  await w.get('[data-testid=review-confirm]').trigger('click'); await flushPromises();
+  expect(transport).toHaveBeenCalledTimes(2); expect(confirm).not.toHaveBeenCalled();
+  expect(w.find('[data-testid=review-approve]').exists()).toBe(false);
+});
 beforeEach(() => resetAdminApi());
 afterEach(() => { wrapper?.unmount(); vi.restoreAllMocks(); });
 async function open(transport) { setAdminApiTransport(transport); wrapper = mount(ReviewManagement); await flushPromises(); return wrapper; }

@@ -179,6 +179,8 @@ pub struct SquareItem {
 #[derive(Serialize, Deserialize)]
 pub struct SquareContentResponse {
     #[serde(default)]
+    pub asset_refs: Vec<library::AssetReference>,
+    #[serde(default)]
     pub reference: Option<serde_json::Value>,
     pub id: String,
     pub title: String,
@@ -191,6 +193,8 @@ pub struct SquareContentResponse {
 
 #[derive(Deserialize)]
 pub struct PublicationRequest {
+    #[serde(default)]
+    pub asset_refs: Vec<library::AssetReference>,
     pub source_id: String,
     pub title: Option<String>,
     pub content: Option<String>,
@@ -204,6 +208,8 @@ pub struct PublicationRequest {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Publication {
+    #[serde(default)]
+    pub asset_refs: Vec<library::AssetReference>,
     pub id: String,
     pub source_id: String,
     pub status: String,
@@ -400,6 +406,8 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/square/items/:id", get(get_square_item))
         .route("/v1/publications", post(create_publication))
+        .route("/v1/square/items/:id/assets/:asset_id", get(media::public_asset))
+        .route("/v1/admin/publications/:id/assets/:asset_id", get(media::review_asset))
         .route("/v1/publications/mine", get(list_my_publications))
         .route("/v1/me", get(me::get_me).put(me::put_me))
         .route("/v1/square/catalog", get(admin_catalog::public))
@@ -675,6 +683,7 @@ async fn create_publication(
         return Err(StatusCode::BAD_REQUEST);
     }
     let publication = Publication {
+        asset_refs: body.asset_refs,
         id: format!("pub.{}", Uuid::new_v4()),
         source_id,
         status: "pending".into(),
@@ -686,6 +695,13 @@ async fn create_publication(
         kind: body.kind,
         members: body.members,
     };
+    if !publication.asset_refs.is_empty() {
+        if publication.kind != "prompt" { return Err(StatusCode::BAD_REQUEST); }
+        let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+        library::validate_asset_refs(pg, publication.author_email.as_deref().unwrap(), &[library::LibraryChange {
+            id: publication.id.clone(), kind: "prompt".into(), payload: serde_json::json!({"asset_refs":publication.asset_refs}), updated_at:"0".into(), deleted_at:None,
+        }]).await?;
+    }
     if let Some(pg)=&state.db {
         let publication=pg.moderate_publication(&publication,&bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?).await?;
         // The snapshot is already durable. A failed external check must not turn a successful submission into a retry/duplicate.
@@ -880,6 +896,7 @@ async fn get_square_item_content(
     if !state.square_public().await? { require_user(&state, &headers).await?; }
     let item = state.get_item(&id).await?.ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(SquareContentResponse {
+        asset_refs: media::public_references(&state, &id).await?,
         reference: item.reference,
         id: item.id,
         title: item.title,
@@ -985,7 +1002,7 @@ mod tests {
     #[tokio::test]
     async fn repeated_reviews_are_idempotent_and_opposite_decisions_conflict() {
         let state = AppState::default();
-        let publication = Publication { id: "p".into(), source_id: "local".into(), status: "pending".into(), title: Some("原稿".into()),
+        let publication = Publication { asset_refs: vec![], id: "p".into(), source_id: "local".into(), status: "pending".into(), title: Some("原稿".into()),
             content: Some("正文".into()), author_email: None, category_id: None, model: None, kind: "prompt".into(), members: vec![] };
         state.insert_publication(&publication).await.unwrap();
         let (first, second) = tokio::join!(state.set_publication_status("p", "approved"), state.set_publication_status("p", "approved"));

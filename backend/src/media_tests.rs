@@ -21,6 +21,66 @@ struct Store {
     mode: Arc<AtomicUsize>,
 }
 struct Server(tokio::task::JoinHandle<()>);
+
+async fn public_fixture() -> (AppState, String, String, String, Value, String, Store, Server) {
+    let (state, a, b, admin, store, server) = fixture().await;
+    let (_, media) = upload(&state, &a, "notes.txt", "text/plain", b"selected public notes", false).await;
+    let reference = json!({"id":Uuid::new_v4().to_string(),"media_id":media["id"],"name":media["name"],"mime":media["mime"],"size":media["size"],"sha256":media["sha256"]});
+    let pg = state.db.as_ref().unwrap();
+    sqlx::query(&format!("UPDATE {} SET data=$1 WHERE id=1", pg.t("moderation_policy")))
+        .bind(json!({"enabled":true,"auto_approve":true,"require_ai":false,"check_images":false,"check_structure":false,"check_sensitive":false,"check_duplicates":false}))
+        .execute(&pg.pool).await.unwrap();
+    let (status, publication) = crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,json!({"source_id":"file-source","title":"公开资料","content":"已经确认公开的正文","asset_refs":[reference]})).await;
+    assert_eq!(status, StatusCode::OK, "{publication}");
+    assert_eq!(publication["status"], "pending", "files must never auto-approve");
+    let id = publication["id"].as_str().unwrap().to_owned();
+    (state,a,b,admin,reference,id,store,server)
+}
+
+#[tokio::test]
+async fn publication_files_require_selected_scope_review_and_online_visibility() {
+    let (state,a,b,admin,reference,id,store,_server) = public_fixture().await;
+    let public = format!("/v1/square/items/{id}/assets/{}",reference["id"].as_str().unwrap());
+    let review = format!("/v1/admin/publications/{id}/assets/{}",reference["id"].as_str().unwrap());
+    assert_eq!(get(&state,"",&public).await.status(),StatusCode::NOT_FOUND);
+    assert_eq!(get(&state,&a,&review).await.status(),StatusCode::FORBIDDEN);
+    assert_eq!(get(&state,&b,&review).await.status(),StatusCode::FORBIDDEN);
+    let response = get(&state,&admin,&review).await;
+    assert_eq!(response.status(),StatusCode::OK);
+    assert_eq!(response.headers()["cache-control"],"no-store");
+    assert_eq!(get(&state,&admin,&format!("/v1/media/{}/content",reference["media_id"].as_str().unwrap())).await.status(),StatusCode::NOT_FOUND);
+    assert_eq!(get(&state,&admin,&format!("/v1/admin/publications/{id}/assets/{}",Uuid::new_v4())).await.status(),StatusCode::NOT_FOUND);
+    let (status,_) = crate::admin_security_tests::request(&state,"POST",&format!("/v1/admin/publications/{id}/approve"),&admin,json!({})).await;
+    assert_eq!(status,StatusCode::OK);
+    assert_eq!(get(&state,"",&public).await.status(),StatusCode::OK);
+    state.set_square_public(false).await.unwrap();
+    assert_eq!(get(&state,"",&public).await.status(),StatusCode::UNAUTHORIZED);
+    assert_eq!(get(&state,&b,&public).await.status(),StatusCode::OK);
+    state.set_square_public(true).await.unwrap();
+    let (status, content) = crate::admin_security_tests::request(&state,"GET",&format!("/v1/square/items/{id}/content"),"",json!(null)).await;
+    assert_eq!(status,StatusCode::OK); assert_eq!(content["asset_refs"],json!([reference]));
+    store.mode.store(1,Ordering::SeqCst);
+    assert_eq!(get(&state,"",&public).await.status(),StatusCode::BAD_GATEWAY);
+    store.mode.store(0,Ordering::SeqCst);
+    let pg = state.db.as_ref().unwrap();
+    sqlx::query(&format!("UPDATE {} SET role='user' WHERE email='owner@example.com'",pg.t("accounts"))).execute(&pg.pool).await.unwrap();
+    assert_eq!(get(&state,&admin,&review).await.status(),StatusCode::FORBIDDEN);
+    for visibility in ["offline","trashed"] {
+        sqlx::query(&format!("UPDATE {} SET visibility=$2 WHERE id=$1",pg.t("square_items"))).bind(&id).bind(visibility).execute(&pg.pool).await.unwrap();
+        assert_eq!(get(&state,"",&public).await.status(),StatusCode::NOT_FOUND);
+    }
+}
+
+#[tokio::test]
+async fn publication_files_reject_foreign_forged_and_collection_references() {
+    let (state,a,b,_admin,reference,_id,_store,_server) = public_fixture().await;
+    let body = json!({"source_id":"another","title":"测试","content":"正文","asset_refs":[reference]});
+    assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&b,body.clone()).await.0,StatusCode::NOT_FOUND);
+    let mut forged = body.clone(); forged["asset_refs"][0]["name"] = json!("forged.txt");
+    assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,forged).await.0,StatusCode::NOT_FOUND);
+    let mut collection = body; collection["kind"] = json!("collection"); collection["members"] = json!([{"title":"member","content":"body"}]);
+    assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,collection).await.0,StatusCode::BAD_REQUEST);
+}
 impl Drop for Server {
     fn drop(&mut self) {
         self.0.abort();

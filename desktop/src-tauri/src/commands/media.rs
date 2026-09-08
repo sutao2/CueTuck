@@ -62,9 +62,22 @@ fn valid_media_id(id: &str) -> bool {
 
 #[tauri::command]
 pub async fn download_private_asset(access_token: String, reference: Reference) -> Result<Asset, String> {
+    let url = format!("{}/v1/media/{}/content", base(), reference.media_id);
+    download(url, Some(access_token), reference).await
+}
+
+#[tauri::command]
+pub async fn download_published_asset(item_id: String, access_token: Option<String>, reference: Reference) -> Result<Asset, String> {
+    let mut url = reqwest::Url::parse(&base()).map_err(|_| "附件服务地址无效")?;
+    url.path_segments_mut().map_err(|_| "附件服务地址无效")?.extend(["v1", "square", "items", &item_id, "assets", &reference.id]);
+    download(url.to_string(), access_token, reference).await
+}
+
+async fn download(url: String, access_token: Option<String>, reference: Reference) -> Result<Asset, String> {
     if !valid_media_id(&reference.media_id) || reference.size > 5 * 1024 * 1024 { return Err("附件引用无效".into()); }
-    let mut response = client()?.get(format!("{}/v1/media/{}/content", base(), reference.media_id))
-        .bearer_auth(access_token).send().await.map_err(|_| "附件下载连接失败，请重试")?;
+    let mut request = client()?.get(url);
+    if let Some(token) = access_token { request = request.bearer_auth(token); }
+    let mut response = request.send().await.map_err(|_| "附件下载连接失败，请重试")?;
     status(response.status())?;
     if response.content_length().is_some_and(|n| n > reference.size as u64) { return Err("附件长度校验失败".into()); }
     let mut bytes = Vec::with_capacity(reference.size);

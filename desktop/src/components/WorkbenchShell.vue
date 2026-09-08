@@ -432,7 +432,7 @@
         <div class="create-body">
           <label class="field">
             <span>本地内容</span>
-            <select v-model="publishSourceId" data-testid="publish-source">
+            <select v-model="publishSourceId" data-testid="publish-source" :disabled="publishBusy">
               <option value="">选择要发布的本地提示词或合集</option>
               <option v-for="item in publishSources" :key="item.id" :value="item.id">
                 {{ item.title }}
@@ -445,7 +445,14 @@
           <p v-if="catalogError" class="use-hint" role="status">{{ catalogError }}；恢复连接后请重新进入发布页更新分类。</p>
           <p v-if="operationNote" role="status" class="use-hint">{{ operationNote }}</p>
           <p>提交后本地正文仍可编辑，审核状态不会覆盖本机内容。</p>
-          <p class="use-hint">图片和文件附件仅保存在本机，本次发布不包含这些附件。</p>
+          <fieldset class="publication-files" :disabled="publishBusy || publishAssetsLoading">
+            <legend>公开附件 · 可选</legend>
+            <p class="use-hint">默认不公开任何附件。勾选的文件会上传并交由人工审核，通过后所有可访问广场的人都能下载；已下载副本无法撤回。</p>
+            <p v-if="publishAssetsLoading" role="status">正在读取附件…</p>
+            <p v-else-if="publishAssetsError" role="alert">{{ publishAssetsError }} <button type="button" @click="loadPublishAssets">重试</button></p>
+            <p v-else-if="!publishAssets.length" class="use-hint">{{ publishSources.find(item => item.id === publishSourceId)?.kind === 'collection' ? '合集本次仅发布正文，不包含成员附件。' : '所选提示词没有附件。' }}</p>
+            <label v-for="asset in publishAssets" :key="asset.id" class="publication-file"><input v-model="publishAssetIds" type="checkbox" :value="asset.id" data-testid="publish-asset"><span>{{ asset.name }}<small>{{ formatBytes(assetSize(asset)) }} · {{ asset.mime }}</small></span></label>
+          </fieldset>
         </div>
         <footer class="modal-footer">
           <button type="button" class="button ghost-button" :disabled="publishBusy" @click="publishResume = false">返回</button>
@@ -453,7 +460,7 @@
             type="button"
             class="button primary-button"
             data-testid="publish-submit"
-            :disabled="!publishSourceId || publishBusy"
+            :disabled="!publishSourceId || publishBusy || publishAssetsLoading || Boolean(publishAssetsError)"
             @click="submitPublish"
           >
             {{ publishBusy ? '正在提交…' : '提交审核' }}
@@ -560,6 +567,8 @@
 
 <script setup>
 import AppIcon from "./AppIcon.vue";
+import { listPromptAssets, assetSize, formatBytes } from '../platform/assets.js';
+import { uploadPrivateAsset } from '../platform/privateMedia.js';
 import { vDialogFocus } from "../lib/dialogFocus.js";
 import { vPageFocus } from "../lib/pageFocus.js";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
@@ -733,10 +742,25 @@ const pendingPublish = ref(false);
 const publishSources = ref([]);
 const publishSourceId = ref("");
 const publishCategoryId = ref(null), publishModel = ref(null);
+const publishAssets = ref([]), publishAssetIds = ref([]), publishAssetsLoading = ref(false), publishAssetsError = ref('');
+let publishAssetsVersion = 0;
+async function loadPublishAssets() {
+  const version = ++publishAssetsVersion;
+  publishAssets.value = []; publishAssetIds.value = []; publishAssetsError.value = '';
+  const source = publishSources.value.find(item => item.id === publishSourceId.value);
+  publishAssetsLoading.value = source?.kind === 'prompt';
+  if (!publishAssetsLoading.value) return;
+  try { const assets = await listPromptAssets(source.id); if (version === publishAssetsVersion) publishAssets.value = assets; }
+  catch (error) { if (version === publishAssetsVersion) publishAssetsError.value = `附件读取失败：${error.message || error}`; }
+  finally { if (version === publishAssetsVersion) publishAssetsLoading.value = false; }
+}
+watch(() => session.value.email, () => { publishAssetIds.value = []; });
+onUnmounted(() => { ++publishAssetsVersion; });
 watch(publishSourceId, id => {
   const source = publishSources.value.find(item => item.id === id);
   publishCategoryId.value = publicationCategory(source?.category_id);
   publishModel.value = source?.model || null;
+  loadPublishAssets();
 });
 const publishBusy = ref(false);
 const favoriteBusy = ref([]);
@@ -1152,11 +1176,22 @@ async function finishLogin() {
 }
 
 async function submitPublish() {
-  if (!publishSourceId.value || publishBusy.value) return;
+  if (!publishSourceId.value || publishBusy.value || publishAssetsLoading.value || publishAssetsError.value) return;
   publishBusy.value = true;
   const source = publishSources.value.find((item) => item.id === publishSourceId.value);
+  const account = getSession();
+  const selectedAssets = publishAssets.value.filter(asset => publishAssetIds.value.includes(asset.id));
+  const assertAccount = () => { if (!account.accessToken || getSession().accessToken !== account.accessToken) throw new Error('账号已变化，请重新确认公开附件'); };
   try {
     if (!source) throw new Error("未选择本地内容");
+    assertAccount();
+    const assetRefs = [];
+    for (const asset of selectedAssets) {
+      assertAccount();
+      operationNote.value = `正在上传 ${assetRefs.length + 1}/${selectedAssets.length}：${asset.name}`;
+      assetRefs.push(await uploadPrivateAsset(asset, account.accessToken));
+    }
+    assertAccount();
     let members;
     if (source.kind === "collection") {
       members = (await listCollectionMembers(source.id)).map((member) => ({
@@ -1165,6 +1200,7 @@ async function submitPublish() {
       if (!members.length) throw new Error("合集至少需要一条提示词才能发布");
       if (members.some((member) => !member.title?.trim() || !member.content?.trim())) throw new Error("合集成员标题和正文不能为空");
     }
+    assertAccount();
     const result = await publishWithQueue({
       sourceId: publishSourceId.value,
       title: source?.title,
@@ -1172,6 +1208,7 @@ async function submitPublish() {
       categoryId: remoteCatalog.value ? publishCategoryId.value : publicationCategory(source?.category_id),
       model: remoteCatalog.value ? publishModel.value : source?.model,
       ...(source.kind === "collection" ? { kind: "collection", members } : {}),
+      ...(assetRefs.length ? { assetRefs } : {}),
     });
     publishResume.value = false;
     operationNote.value = result.queued ? "草稿已保存在本机队列，尚未提交审核。" : "已提交审核，本地内容仍可编辑。";
@@ -1652,3 +1689,12 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.publication-files { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 20px 0; }
+.publication-files legend { font-size: 13px; font-weight: 600; padding: 0 6px; }
+.publication-file { display: flex; gap: 12px; align-items: center; padding: 12px 0; }
+.publication-file input { width: 16px; height: 16px; flex: none; }
+.publication-file span { min-width: 0; overflow-wrap: anywhere; }
+.publication-file small { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+</style>
