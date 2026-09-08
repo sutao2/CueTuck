@@ -21,6 +21,16 @@
 
 原生 HTTP 请求 MUST 有界（连接 10 秒，总请求默认 30 秒；附件可显式延长至 45 秒），网络失败后可重新同步；已推送记录不得因拉取失败而丢失。验证见 [P4–P6 计划](../../plans/2026-09-08-local-release-readiness.md)。
 
+### Requirement: 统一服务 origin
+
+桌面浏览器预览、Web 和管理端 MUST 共用 `VITE_API_BASE` 解析；原生会话、广场和附件 MUST 共用 `PROMPTARK_API_BASE`，启动环境覆盖构建期值。开发缺省为 loopback；非 loopback MUST 使用 HTTPS，MUST 拒绝含凭据、路径、查询或片段的地址。正式构建入口 MUST 检查三端 origin 一致及发行必要参数，不能把调试 App 称为签名发行包。验证：前端 `apiBase.test.js`、原生 `validates_shared_native_service_origin`、`release-check.test.mjs`。
+
+#### Scenario: 错误的部署地址
+
+- GIVEN 服务地址含凭据或明文远端地址，或正式构建缺少 origin
+- WHEN 客户端解析或运行正式构建预检
+- THEN 明确拒绝且不向该地址发送令牌；开发调试构建无需私钥
+
 #### Scenario: 登录后立即同步
 
 - GIVEN 用户已登录且本机有一条「本地仍在」

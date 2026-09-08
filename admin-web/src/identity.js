@@ -1,4 +1,5 @@
-const API_BASE=import.meta.env.VITE_API_BASE||'http://127.0.0.1:8787';
+import { apiBase } from "../../shared/apiBase.js";
+const API_BASE=apiBase();
 export async function adminIdentityRequest(action,config={}) {
   if(!['options','request','confirm'].includes(action))throw Error('不支持的验证动作');
   if(action!=='options'&&!['reset','invitation'].includes(config.kind))throw Error('管理台不提供公开管理员注册');

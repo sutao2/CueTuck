@@ -1,10 +1,11 @@
+import { apiBase } from "../../shared/apiBase.js";
 let accessToken = null;
 let accountEmail = null;
 let testTransport = null;
 let oauthProviderList = [];
 let oauthProviderOverride = false;
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
+const API_BASE = apiBase();
 
 function stripRefreshFromWebStorage() {
   for (const storage of [localStorage, sessionStorage]) {

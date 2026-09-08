@@ -1,0 +1,75 @@
+name: full-regression
+on:
+  pull_request:
+  push:
+    branches: [main, m1-desktop-skeleton]
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            desktop/package-lock.json
+            admin-web/package-lock.json
+            web/package-lock.json
+      - run: for dir in desktop admin-web web; do npm ci --prefix "$dir"; done
+      - run: node scripts/verify.mjs frontend
+      - run: cd desktop && npx playwright-cli install-browser chrome
+      - run: node scripts/verify.mjs browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-verification
+          path: |
+            output/verification/
+            output/playwright/
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pl
+          POSTGRES_PASSWORD: pl
+          POSTGRES_DB: promptark
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: backend }
+      - run: node scripts/verify.mjs backend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-verification
+          path: output/verification/
+  rust-clients:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            desktop/src-tauri
+            mcp
+      - run: npm ci --prefix desktop && npm run build --prefix desktop
+      - run: node scripts/verify.mjs native
+      - run: node scripts/verify.mjs mcp
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rust-client-verification
+          path: output/verification/

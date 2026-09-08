@@ -1,6 +1,6 @@
 # 不依赖外部凭据的完善计划
 
-状态：P0 已验收；P1a [私有传输基础](2026-09-08-private-media.md)、P1b [客户端私有附件手动同步](2026-09-08-private-asset-sync.md)、P1c [单条投稿公开附件](2026-09-08-publication-assets.md)、P1d [合集成员公开附件](2026-09-08-collection-assets.md)及 P1e [保守手动回收](2026-09-08-media-reclaim.md)已完成；P2 [MCP 广场与接入](2026-09-08-mcp-square.md)、P3a [保存与复制反馈](2026-09-08-client-operation-feedback.md)、P3b [合集加载与成员反馈](2026-09-08-collection-feedback.md)已验收。P1e 不包含未完成上传残留或存储桶扫描；P3 的发布/同步等余项、P4–P6 未实施。
+状态：本轮约定的本地交付切片已完成。P0 已验收；P1a [私有传输基础](2026-09-08-private-media.md)、P1b [客户端私有附件手动同步](2026-09-08-private-asset-sync.md)、P1c [单条投稿公开附件](2026-09-08-publication-assets.md)、P1d [合集成员公开附件](2026-09-08-collection-assets.md)及 P1e [保守手动回收](2026-09-08-media-reclaim.md)已完成；P2 [MCP 广场与接入](2026-09-08-mcp-square.md)、P3a [保存与复制反馈](2026-09-08-client-operation-feedback.md)、P3b [合集加载与成员反馈](2026-09-08-collection-feedback.md)、P3c [发布与同步反馈](2026-09-08-publish-sync-feedback.md)已验收。P4–P6 的实测及未覆盖边界统一见 [本地可靠性与发行准备](2026-09-08-local-release-readiness.md)。P1e 不包含未完成上传残留或存储桶扫描；本地完成不等于生产发行或所有平台验收完成。
 
 ## 边界与顺序
 

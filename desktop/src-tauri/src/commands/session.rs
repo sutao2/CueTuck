@@ -19,9 +19,7 @@ pub struct SessionView {
     pub access_token: String,
 }
 
-fn api_base() -> String {
-    std::env::var("PROMPTARK_API_BASE").unwrap_or_else(|_| "http://127.0.0.1:8787".into())
-}
+use crate::api_config::api_base;
 
 fn http_client(follow_redirects: bool) -> Result<reqwest::Client, String> {
     let mut builder = crate::http::client_builder()?.timeout(Duration::from_secs(10));
@@ -46,7 +44,7 @@ fn persist_pair(pair: TokenPair) -> Result<SessionView, String> {
 #[tauri::command]
 pub async fn list_oauth_providers() -> Result<Value, String> {
     let response = http_client(true)?
-        .get(format!("{}/v1/session/oauth/providers", api_base()))
+        .get(format!("{}/v1/session/oauth/providers", api_base()?))
         .send()
         .await
         .map_err(|error| error.to_string())?;
@@ -59,7 +57,7 @@ pub async fn list_oauth_providers() -> Result<Value, String> {
 #[tauri::command]
 pub async fn login_local_session(email: String, password: String) -> Result<SessionView, String> {
     let response = http_client(true)?
-        .post(format!("{}/v1/session", api_base()))
+        .post(format!("{}/v1/session", api_base()?))
         .json(&serde_json::json!({ "email": email, "password": password }))
         .send()
         .await
@@ -76,7 +74,7 @@ pub async fn identity_request(action: String, config: Value) -> Result<Value, St
     if !["options", "request", "confirm"].contains(&action.as_str()) {
         return Err("不支持的验证动作".into());
     }
-    let url = format!("{}/v1/session/identity/{action}", api_base());
+    let url = format!("{}/v1/session/identity/{action}", api_base()?);
     let client = http_client(false)?;
     let response = if action == "options" {
         client.get(url)
@@ -121,7 +119,7 @@ pub async fn start_oauth_session(provider: String) -> Result<String, String> {
     let response = http_client(false)?
         .get(format!(
             "{}/v1/session/oauth/{provider}?response_mode=browser&flow_id={flow_id}",
-            api_base()
+            api_base()?
         ))
         .send()
         .await
@@ -142,7 +140,7 @@ async fn load_ready_pair(flow_id: &str) -> Result<Option<TokenPair>, String> {
         return Err("登录未完成".to_string());
     }
     let poll = match http_client(true)?
-        .get(format!("{}/v1/session/oauth/session/{flow_id}", api_base()))
+        .get(format!("{}/v1/session/oauth/session/{flow_id}", api_base()?))
         .send()
         .await
     {
@@ -204,7 +202,7 @@ pub async fn cancel_oauth_session(flow_id: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn logout_local_session(access_token: String) -> Result<(), String> {
     let _ = http_client(true)?
-        .delete(format!("{}/v1/session", api_base()))
+        .delete(format!("{}/v1/session", api_base()?))
         .bearer_auth(&access_token)
         .send()
         .await;
@@ -217,7 +215,7 @@ pub async fn refresh_local_session() -> Result<SessionView, String> {
         .load_refresh()?
         .ok_or_else(|| "没有 refresh".to_string())?;
     let response = http_client(true)?
-        .post(format!("{}/v1/session/refresh", api_base()))
+        .post(format!("{}/v1/session/refresh", api_base()?))
         .json(&serde_json::json!({ "refresh_token": refresh }))
         .send()
         .await
@@ -232,7 +230,7 @@ pub async fn refresh_local_session() -> Result<SessionView, String> {
 #[tauri::command]
 pub async fn get_me(access_token: String) -> Result<Value, String> {
     let response = http_client(true)?
-        .get(format!("{}/v1/me", api_base()))
+        .get(format!("{}/v1/me", api_base()?))
         .bearer_auth(&access_token)
         .send()
         .await
@@ -250,7 +248,7 @@ pub async fn put_me(
     bio: Option<String>,
 ) -> Result<Value, String> {
     let response = http_client(true)?
-        .put(format!("{}/v1/me", api_base()))
+        .put(format!("{}/v1/me", api_base()?))
         .bearer_auth(&access_token)
         .json(&serde_json::json!({ "display_name": display_name, "bio": bio }))
         .send()
@@ -265,7 +263,7 @@ pub async fn put_me(
 #[tauri::command]
 pub async fn put_library_changes(access_token: String, items: Vec<Value>) -> Result<Value, String> {
     let response = http_client(true)?
-        .put(format!("{}/v1/library/changes", api_base()))
+        .put(format!("{}/v1/library/changes", api_base()?))
         .bearer_auth(&access_token)
         .json(&serde_json::json!({ "items": items }))
         .send()
@@ -283,7 +281,7 @@ pub async fn list_library_changes(
     since: Option<String>,
 ) -> Result<Value, String> {
     let response = http_client(true)?
-        .get(format!("{}/v1/library/changes", api_base()))
+        .get(format!("{}/v1/library/changes", api_base()?))
         .bearer_auth(&access_token)
         .query(&[("since", since.unwrap_or_default())])
         .send()
@@ -298,7 +296,7 @@ pub async fn list_library_changes(
 #[tauri::command]
 pub async fn get_billing_status(access_token: String) -> Result<Value, String> {
     let response = http_client(true)?
-        .get(format!("{}/v1/billing/status", api_base()))
+        .get(format!("{}/v1/billing/status", api_base()?))
         .bearer_auth(&access_token)
         .send()
         .await
@@ -316,7 +314,7 @@ pub async fn start_billing_checkout(
     request_id: Option<String>,
 ) -> Result<Value, String> {
     let response = http_client(true)?
-        .post(format!("{}/v1/billing/checkout", api_base()))
+        .post(format!("{}/v1/billing/checkout", api_base()?))
         .bearer_auth(&access_token)
         .json(&serde_json::json!({ "mock_outcome": mock_outcome, "request_id": request_id }))
         .send()
@@ -353,7 +351,7 @@ pub async fn redeem_billing_code(
         serde_json::json!({"code":code})
     };
     let response = http_client(true)?
-        .post(format!("{}/v1/billing/{path}", api_base()))
+        .post(format!("{}/v1/billing/{path}", api_base()?))
         .bearer_auth(&access_token)
         .json(&body)
         .send()

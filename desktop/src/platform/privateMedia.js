@@ -2,7 +2,8 @@ import { invokeCommand } from './tauri.js';
 import { validateAssets, assetSize } from './assets.js';
 
 const native = () => Boolean(window.__TAURI_INTERNALS__);
-const base = 'http://127.0.0.1:8787';
+import { apiBase } from '../../../shared/apiBase.js';
+const base = apiBase();
 const bytesOf = asset => Uint8Array.from(atob(asset.data), c => c.charCodeAt(0));
 export async function assetHash(asset) {
   if (native()) return invokeCommand('hash_private_asset', { asset });

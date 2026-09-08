@@ -1,10 +1,11 @@
+import { apiBase } from "../../shared/apiBase.js";
 import { getAdminSession, expireAdminSession } from './session.js';
 
 export async function fetchReviewAsset(publicationId, reference) {
   const token = getAdminSession().accessToken;
   if (!token) throw new Error('需要先登录');
   if (!Number.isSafeInteger(reference.size) || reference.size < 0 || reference.size > 5 * 1024 * 1024 || !/^[a-f0-9]{64}$/.test(reference.sha256)) throw new Error('附件引用无效');
-  const base = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8787';
+  const base = apiBase();
   const response = await fetch(`${base}/v1/admin/publications/${encodeURIComponent(publicationId)}/assets/${encodeURIComponent(reference.id)}`, { headers: { Authorization: `Bearer ${token}` }, redirect: 'error', signal: AbortSignal.timeout(45000) });
   if (response.status === 401) { expireAdminSession(token); throw new Error('登录已失效，请重新登录'); }
   if (!response.ok) throw new Error(`附件读取失败（${response.status}）`);

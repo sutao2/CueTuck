@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "build:local": "node ../scripts/release-check.mjs && tauri build --debug --bundles app --config src-tauri/tauri.local.conf.json",
+    "build:release": "node ../scripts/release-check.mjs --production && tauri build",
+    "test:browser": "node ../scripts/browser-smoke.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -18,6 +21,7 @@
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@playwright/cli": "^0.1.19",
     "@tauri-apps/cli": "^2.5.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/test-utils": "^2.4.6",

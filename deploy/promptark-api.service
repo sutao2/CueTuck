@@ -1,0 +1,22 @@
+[Unit]
+Description=PromptArk API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=promptark
+Group=promptark
+WorkingDirectory=/var/lib/promptark
+EnvironmentFile=/etc/promptark/api.env
+ExecStart=/opt/promptark/promptark-api
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/promptark
+
+[Install]
+WantedBy=multi-user.target

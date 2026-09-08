@@ -1,0 +1,31 @@
+# Independent development dependencies. Does not target existing backend-* containers.
+name: promptark-dev
+services:
+  postgres:
+    image: postgres:16
+    shm_size: 256mb
+    environment:
+      POSTGRES_USER: pl
+      POSTGRES_PASSWORD: ${PROMPTARK_DEV_DB_PASSWORD:?Set a development database password}
+      POSTGRES_DB: promptark
+    ports: ['127.0.0.1:15432:5432']
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pl -d promptark']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: redis:7
+    ports: ['127.0.0.1:16379:6379']
+  minio:
+    image: minio/minio
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${PROMPTARK_DEV_MEDIA_USER:?Set a development MinIO user}
+      MINIO_ROOT_PASSWORD: ${PROMPTARK_DEV_MEDIA_PASSWORD:?Set a development MinIO password}
+    ports: ['127.0.0.1:19000:9000', '127.0.0.1:19001:9001']
+    volumes: [media:/data]
+volumes:
+  postgres:
+  media:
