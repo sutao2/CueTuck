@@ -9,7 +9,7 @@
         </div>
         <div class="detail-actions">
           <button type="button" class="button ghost-button" :disabled="favoriteBusy" @click="$emit('favorite')">{{ favorite ? '已收藏' : '收藏' }}</button>
-          <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? '正在下载…' : '下载到本地' }}</button>
+          <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || downloaded || (item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? '正在下载…' : downloaded ? '已下载' : '下载到本地' }}</button>
         </div>
       </header>
       <div class="detail-content">
@@ -65,6 +65,7 @@ const props = defineProps({
   error: { type: String, default: '' },
   note: { type: String, default: '' },
   downloading: Boolean,
+  downloaded: Boolean,
   favorite: Boolean,
   favoriteBusy: Boolean,
 });

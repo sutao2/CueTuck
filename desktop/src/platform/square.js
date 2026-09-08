@@ -1,4 +1,4 @@
-import { applyLocalImport, importDownloadedPrompt, getLocalSetting, listLocalCategories } from "./library.js";
+import { applyLocalImport, importDownloadedPrompt, getLocalSetting, listLocalCategories, listLocalPrompts } from "./library.js";
 import { getSession } from "./session.js";
 
 let testTransport = null;
@@ -98,7 +98,17 @@ export async function fetchSquareContent(id) {
   }
 }
 
-export async function downloadSquareItem(id) {
+const activeDownloads = new Map();
+export function downloadSquareItem(id) {
+  if (activeDownloads.has(id)) return activeDownloads.get(id);
+  const task = downloadNewSquareItem(id).finally(() => activeDownloads.delete(id));
+  activeDownloads.set(id, task);
+  return task;
+}
+
+async function downloadNewSquareItem(id) {
+  const existing = (await listLocalPrompts()).find(row => row.remote_id === id);
+  if (existing) return existing;
   const payload = await fetchSquareContent(id);
   const localCategoryIds = new Set((await listLocalCategories()).map(category => category.id));
   const localCategory = id => localCategoryIds.has(id) ? id : null;
@@ -126,13 +136,13 @@ export async function downloadSquareItem(id) {
       model: payload.model,
     });
   }
-  await recordAnonymousDownload(id);
+  void recordAnonymousDownload(id);
   return row;
 }
 
 async function recordAnonymousDownload(id) {
-  if ((await getLocalSetting("anonymous_download_stats")) !== "1") return;
   try {
+    if ((await getLocalSetting("anonymous_download_stats")) !== "1") return;
     if (testStatsTransport) {
       await testStatsTransport({
         id,

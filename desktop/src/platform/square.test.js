@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { createLocalPrompt, listLocalCollections, listCollectionMembers, listLocalPrompts, resetMemoryLibrary, setLocalSetting } from "./library.js";
+import { createLocalPrompt, deleteLocalPrompt, listLocalCollections, listCollectionMembers, listLocalPrompts, resetMemoryLibrary, setLocalSetting } from "./library.js";
 import {
   createPublication,
   downloadSquareItem,
@@ -30,7 +30,30 @@ describe("square client", () => {
     expect(rows[0].title).toBe("自然光群像");
   });
 
-  it("downloads collection members atomically as independent copies with metadata", async () => {
+  it("deduplicates concurrent downloads and permits another after deletion", async () => {
+    let reads = 0, stats = 0;
+    setSquareContentTransport(async id => { reads++; return {id,title:'同一条',content:'正文'}; });
+    await setLocalSetting('anonymous_download_stats','1');
+    setDownloadStatsTransport(async () => { stats++; });
+    const [first, second] = await Promise.all([downloadSquareItem('same'),downloadSquareItem('same')]);
+    expect(first.id).toBe(second.id);
+    await downloadSquareItem('same');
+    expect(await listLocalPrompts()).toHaveLength(1);
+    expect(reads).toBe(1); expect(stats).toBe(1);
+    await deleteLocalPrompt(first.id);
+    await downloadSquareItem('same');
+    expect(await listLocalPrompts()).toHaveLength(1);
+    expect(reads).toBe(2);
+  });
+
+  it("does not delay local download success for stalled anonymous statistics", async () => {
+    setSquareContentTransport(async id => ({id,title:'完成',content:'正文'}));
+    await setLocalSetting('anonymous_download_stats','1');
+    setDownloadStatsTransport(() => new Promise(() => {}));
+    expect((await downloadSquareItem('done')).remote_id).toBe('done');
+  });
+
+  it("downloads collection members atomically without duplicate copies", async () => {
     const payload = { id: "remote", kind: "collection", title: "合集", category_id: "cat-image", members: [
       { title: "人像", content: "光影", category_id: "cat-image-0", model: "Flux" },
       { title: "代码", content: "测试", category_id: "cat-software-0", model: "GPT" },
@@ -39,7 +62,7 @@ describe("square client", () => {
     await downloadSquareItem("remote");
     await downloadSquareItem("remote");
     const collections = await listLocalCollections();
-    expect(collections).toHaveLength(2);
+    expect(collections).toHaveLength(1);
     for (const collection of collections) {
       expect(collection.category_id).toBe("cat-image");
       const members = await listCollectionMembers(collection.id);
@@ -47,12 +70,13 @@ describe("square client", () => {
       expect(members.find((row) => row.title === "人像")).toMatchObject({ content: "光影", model: "Flux", category_id: "cat-image-0", source: "downloaded", remote_id: "remote" });
     }
     payload.members[1].category_id = "missing";
-    await downloadSquareItem("remote");
-    expect(await listLocalCollections()).toHaveLength(3);
-    expect(await listLocalPrompts()).toHaveLength(6);
+    payload.id = "remote-2";
+    await downloadSquareItem("remote-2");
+    expect(await listLocalCollections()).toHaveLength(2);
+    expect(await listLocalPrompts()).toHaveLength(4);
     expect((await listLocalPrompts()).filter(item=>item.category_id===null)).toHaveLength(1);
     payload.members = [];
-    await expect(downloadSquareItem("remote")).rejects.toThrow("缺少成员快照");
+    await expect(downloadSquareItem("remote-3")).rejects.toThrow("缺少成员快照");
   });
 
   it("retains category and model when downloading", async () => {

@@ -309,10 +309,10 @@
                     type="button"
                     class="card-action"
                     data-testid="download-square"
-                    :disabled="downloadBusy.includes(item.id)"
+                    :disabled="downloadBusy.includes(item.id) || downloadedIds.includes(item.id)"
                     @click.stop="downloadSquare(item)"
                   >
-                    {{ downloadBusy.includes(item.id) ? '下载中…' : '下载' }}
+                    {{ downloadBusy.includes(item.id) ? '下载中…' : downloadedIds.includes(item.id) ? '已下载' : '下载' }}
                   </button>
                   <button
                     type="button"
@@ -407,6 +407,7 @@
       :error="squareDetailError"
       :note="operationNote"
       :downloading="downloadBusy.includes(squareDetail.id)"
+      :downloaded="downloadedIds.includes(squareDetail.id)"
       :favorite="favoriteIds.includes(squareDetail.id)"
       :favorite-busy="favoriteBusy.includes(squareDetail.id)"
       @cancel="closeSquareDetail"
@@ -481,6 +482,12 @@
       </section>
     </div>
 
+    <div v-if="downloadNotice" class="download-notice" data-testid="download-notice" role="status" aria-live="polite">
+      <span>{{ downloadNotice.text }}</span>
+      <button v-if="downloadNotice.success" type="button" @click="closeSquareDetail(); openLocal(); downloadNotice = null">前往本地</button>
+      <button type="button" aria-label="关闭下载提示" @click="downloadNotice = null">×</button>
+    </div>
+
     <SettingsModal
       ref="settingsView"
       v-if="settingsOpen"
@@ -521,6 +528,7 @@
           :key="action.id"
           type="button"
           :data-action="action.id"
+          :disabled="action.disabled"
           @click="runContextAction(action.id)"
         >
           {{ action.label }}
@@ -1008,6 +1016,22 @@ const squareDetail = ref(null);
 const squareDetailLoading = ref(false);
 const squareDetailError = ref("");
 const downloadBusy = ref([]);
+const downloadedIds = ref([]);
+const downloadNotice = ref(null);
+let downloadNoticeTimer;
+onUnmounted(() => clearTimeout(downloadNoticeTimer));
+
+function notifyDownload(text, success) {
+  clearTimeout(downloadNoticeTimer);
+  downloadNotice.value = { text, success };
+  downloadNoticeTimer = setTimeout(() => { downloadNotice.value = null; }, success ? 6000 : 12000);
+}
+
+async function refreshDownloaded() {
+  const rows = await listLocalPrompts({ query: '', categoryId: null });
+  downloadedIds.value = [...new Set(rows.map(row => row.remote_id).filter(Boolean))];
+  emit('library-changed', rows.length);
+}
 let detailRequest = 0;
 
 function closeSquareDetail() {
@@ -1033,14 +1057,22 @@ async function openSquareDetail(item) {
 
 async function downloadSquare(item) {
   if (downloadBusy.value.includes(item.id)) return;
+  if (downloadedIds.value.includes(item.id)) {
+    notifyDownload(`「${item.title}」已在本地，无需重复下载。`, true);
+    return;
+  }
   downloadBusy.value = [...downloadBusy.value, item.id];
   try {
     await downloadSquareItem(item.id);
+    downloadedIds.value = [...new Set([...downloadedIds.value, item.id])];
     operationNote.value = `「${item.title}」已下载到本地。`;
-    await reloadPrompts();
+    notifyDownload(operationNote.value, true);
   } catch (error) {
     operationNote.value = `下载失败：${error.message || error}`;
+    notifyDownload(operationNote.value, false);
   } finally { downloadBusy.value = downloadBusy.value.filter((id) => id !== item.id); }
+  // Saving succeeded independently of refreshing the visible local list.
+  try { await refreshDownloaded(); await reloadPrompts(); } catch { /* Retain confirmed download state. */ }
 }
 
 async function favoriteSquare(item) {
@@ -1167,6 +1199,7 @@ async function loadSquare(refreshCatalog = false) {
   squareBlocked.value = false;
   squareLoading.value = true;
   try {
+  await refreshDownloaded();
   const access = await getLocalSetting("square_access");
   if (request !== squareRequest || space.value !== 'square') return;
   if (access === "0") {
@@ -1296,7 +1329,7 @@ function openContextMenu(event, item) {
 function contextActions(item) {
   if (space.value === "square") {
     return [
-      { id: "download", label: t("download") },
+      { id: "download", label: downloadedIds.value.includes(item.id) ? '已下载' : downloadBusy.value.includes(item.id) ? '下载中…' : t("download"), disabled: downloadedIds.value.includes(item.id) || downloadBusy.value.includes(item.id) },
       { id: "favorite", label: favoriteIds.value.includes(item.id) ? t("unfavorite") : t("favorite") },
     ];
   }

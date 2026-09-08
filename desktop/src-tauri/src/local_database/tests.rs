@@ -316,9 +316,11 @@ async fn imports_downloaded_prompt_with_source() {
     initialize_in_dir(dir.path()).unwrap();
     let created = import_downloaded_prompt_in_dir(dir.path(), "自然光群像", "正文", Some("sq-1"), None).unwrap();
     assert_eq!(created.source, "downloaded");
+    assert_eq!(created.remote_id.as_deref(), Some("sq-1"));
     let rows = list_prompts_in_dir(dir.path(), "自然光群像", None).unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].source, "downloaded");
+    assert_eq!(rows[0].remote_id.as_deref(), Some("sq-1"));
 }
 
 #[test]
