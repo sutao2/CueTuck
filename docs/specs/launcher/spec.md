@@ -18,12 +18,23 @@
 
 滚动区域外观遵循[工作台的桌面共用规则](../workbench/spec.md)；变量表单、结果和预览分别保留自己的滚动区域，不让变量滚动条压住字段边缘。
 
+### Requirement: 本机启动器偏好
+
+`launcher_preferences` JSON 单键保存四项：`size` 为 compact（默认 620×420）、standard（680×500）、large（760×560）；`position` 为 upper（默认）或 center；`fontSize` 为 12（默认）、14、16；`resultLimit` 为 10、20（默认）、50。损坏 JSON 和非法字段逐项回退默认，启动器初始化和显式重新唤起时读取，进行中不切换填写偏好。字号仅影响变量输入和正文预览，不改变主窗口；空搜索高度仍为 64。原生尺寸不超过显示器工作区。
+
+#### Scenario: 偏好消费
+
+- GIVEN 已保存大小、位置、字号与结果数量
+- WHEN 下次唤起启动器
+- THEN 窗口大小和定位、输入/预览字号、搜索结果上限使用已保存值
+- AND 搜索与填写同尺寸、切换不重新定位，浏览器入口采用所选大小但不保证系统窗口位置
+
 #### Scenario: 快捷键唤起
 
 - GIVEN 应用已运行且本地库已就绪
 - WHEN 用户按下已配置的全局快捷键
 - THEN 启动器窗口显示并聚焦搜索框
-- AND 在当前显示器工作区横向居中，顶部位于扣除展开高度后剩余纵向空间的四分之一处；坐标按显示器缩放计算，剩余空间不足时从工作区顶部展开
+- AND 在当前显示器工作区横向居中，默认顶部位于扣除展开高度后剩余纵向空间的四分之一处；选择居中则为二分之一处。坐标按显示器缩放计算，剩余空间不足时从工作区顶部展开
 - AND 主窗口不必被提到前台
 
 #### Scenario: 关闭
@@ -123,7 +134,7 @@ M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新�
 
 - GIVEN 用户从其他应用唤起启动器并进入填写
 - WHEN 展示 0、3 或超过一屏的变量
-- THEN 填写窗与搜索结果窗均为 620 × 420 逻辑像素，空查询为 620 × 64；来回切换不缩窗，紧凑双栏中字段和预览可独立滚动，底部操作始终可见；无变量时正文通栏。浏览器预览入口使用相同展开尺寸
+- THEN 填写窗与搜索结果窗使用相同的所选尺寸（默认紧凑），空查询沿用宽度并收为 64 高；来回切换不缩窗，紧凑双栏中字段和预览可独立滚动，底部操作始终可见；无变量时正文通栏。浏览器预览入口使用相同展开尺寸
 - WHEN 回车复制成功且使用后关闭开启
 - THEN 隐藏窗口后不再给内部 DOM 聚焦，迟到的 focus 事件不得唤回窗口；下次显式唤起才恢复聚焦
 - AND macOS 在主动关闭且启动器仍聚焦时归还原应用，不主动展示无关主窗口；失焦关闭不抢回用户刚切换的应用，原目标退出也不重新弹出启动器
@@ -204,6 +215,7 @@ macOS MUST 连续确认原窗口焦点稳定后再发送按键；超时、目标
 
 | 场景 | 测试 |
 |---|---|
+| 偏好消费 | `LauncherInteraction.spec.js` 字号与结果上限、重新唤起刷新；`launcherPreferences.test.js` 浏览器尺寸；Rust `preferences_select_sizes_centering_and_fit_work_area`；验收见 `plans/2026-09-08-launcher-preferences.md` |
 | 紧凑填写与完成后退场 | `LauncherInteraction.spec.js` 隐藏后不聚焦、初始隐藏与显式恢复；`launcherWindow.test.js` 紧凑高度；`palette_reserves_expanded_space_on_small_screens` 小屏定位；原生验收边界见 `plans/2026-09-07-launcher-compact-dismiss.md` |
 | 独立窗口 label | `desktop/src/platform/launcherWindow.test.js`；`launcher_label_is_stable` |
 | 空查询 | `LauncherApp.spec.js` hides results on empty query |

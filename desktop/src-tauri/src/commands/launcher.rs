@@ -132,6 +132,20 @@ pub fn resume_launcher(app: AppHandle) -> Result<(), String> {
     window.set_focus().map_err(|error| error.to_string())
 }
 
+fn launcher_size(size: &str) -> (f64, f64) {
+    match size {
+        "standard" => (680.0, 500.0),
+        "large" => (760.0, 560.0),
+        _ => (620.0, 420.0),
+    }
+}
+
+fn read_launcher_preferences(app: &AppHandle) -> Result<serde_json::Value, String> {
+    let dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
+    let raw = crate::local_database::get_setting_in_dir(&dir, "launcher_preferences")?;
+    Ok(serde_json::from_str(&raw).unwrap_or(serde_json::Value::Null))
+}
+
 pub fn launcher_logical_height(layout: &str) -> f64 {
     match layout {
         "collapsed" => 64.0,
@@ -144,10 +158,16 @@ fn resize_launcher_window(app: &AppHandle, layout: &str) -> Result<(), String> {
         .get_webview_window(LAUNCHER_LABEL)
         .ok_or_else(|| "启动器窗口不存在".to_string())?;
     let position = window.outer_position().map_err(|error| error.to_string())?;
+    let preferences = read_launcher_preferences(app)?;
+    let (mut width, mut height) = launcher_size(preferences["size"].as_str().unwrap_or("compact"));
+    if layout == "collapsed" { height = launcher_logical_height(layout); }
+    if let Some(monitor) = window.current_monitor().map_err(|error| error.to_string())? {
+        (width, height) = fit_launcher_size((width, height), monitor.work_area(), monitor.scale_factor());
+    }
     window
         .set_size(Size::Logical(LogicalSize::new(
-            620.0,
-            launcher_logical_height(layout),
+            width,
+            height,
         )))
         .map_err(|error| error.to_string())?;
     // Keep the search bar anchored, including after dragging and on macOS resize.
@@ -157,15 +177,22 @@ fn resize_launcher_window(app: &AppHandle, layout: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn fit_launcher_size(size: (f64, f64), area: &tauri::PhysicalRect<i32, u32>, scale: f64) -> (f64, f64) {
+    (size.0.min(area.size.width as f64 / scale), size.1.min(area.size.height as f64 / scale))
+}
+
 fn launcher_show_position(
     area: &tauri::PhysicalRect<i32, u32>,
     scale: f64,
+    preferences: &serde_json::Value,
 ) -> tauri::PhysicalPosition<i32> {
+    let (width, height) = fit_launcher_size(launcher_size(preferences["size"].as_str().unwrap_or("compact")), area, scale);
+    let divisor = if preferences["position"].as_str() == Some("center") { 2.0 } else { 4.0 };
     tauri::PhysicalPosition::new(
-        area.position.x + ((area.size.width as f64 - 620.0 * scale).max(0.0) / 2.0).round() as i32,
+        area.position.x + ((area.size.width as f64 - width * scale).max(0.0) / 2.0).round() as i32,
         area.position.y
-            + ((area.size.height as f64 - launcher_logical_height("expanded") * scale).max(0.0)
-                / 4.0)
+            + ((area.size.height as f64 - height * scale).max(0.0)
+                / divisor)
                 .round() as i32,
     )
 }
@@ -185,9 +212,10 @@ fn show_launcher_window(app: &AppHandle) -> Result<(), String> {
         guard.mark_shown();
     }
     resize_launcher_window(app, "collapsed")?;
+    let preferences = read_launcher_preferences(app)?;
     if let Some(monitor) = window.current_monitor().map_err(|error| error.to_string())? {
         window
-            .set_position(launcher_show_position(monitor.work_area(), monitor.scale_factor()))
+            .set_position(launcher_show_position(monitor.work_area(), monitor.scale_factor(), &preferences))
             .map_err(|error| error.to_string())?;
     } else {
         window.center().map_err(|error| error.to_string())?;
@@ -370,7 +398,7 @@ mod tests {
                 size: tauri::PhysicalSize::new((1440.0 * scale) as u32, (980.0 * scale) as u32),
             };
             assert_eq!(
-                super::launcher_show_position(&area, scale),
+                super::launcher_show_position(&area, scale, &serde_json::Value::Null),
                 tauri::PhysicalPosition::new(x + (410.0 * scale) as i32, y + (140.0 * scale) as i32),
             );
         }
@@ -382,9 +410,22 @@ mod tests {
             position: tauri::PhysicalPosition::new(0, 24),
             size: tauri::PhysicalSize::new(1280, 696),
         };
-        let position = super::launcher_show_position(&area, 1.0);
+        let position = super::launcher_show_position(&area, 1.0, &serde_json::Value::Null);
         assert_eq!(position.y, 93);
         assert!(position.y + 420 <= 720);
+    }
+
+    #[test]
+    fn preferences_select_sizes_centering_and_fit_work_area() {
+        assert_eq!(super::launcher_size("standard"), (680.0, 500.0));
+        assert_eq!(super::launcher_size("large"), (760.0, 560.0));
+        assert_eq!(super::launcher_size("invalid"), (620.0, 420.0));
+        let area = tauri::PhysicalRect { position: tauri::PhysicalPosition::new(-2880, 48), size: tauri::PhysicalSize::new(2880, 1960) };
+        let prefs = serde_json::json!({"size":"large", "position":"center"});
+        assert_eq!(super::launcher_show_position(&area, 2.0, &prefs), tauri::PhysicalPosition::new(-2200, 468));
+        let small = tauri::PhysicalRect { position: tauri::PhysicalPosition::new(0, 24), size: tauri::PhysicalSize::new(700, 520) };
+        assert_eq!(super::fit_launcher_size(super::launcher_size("large"), &small, 1.0), (700.0, 520.0));
+        assert_eq!(super::launcher_show_position(&small, 1.0, &prefs), small.position);
     }
 }
 
