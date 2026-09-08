@@ -1,0 +1,60 @@
+{
+  "counts": {
+    "diffusiondb_scanned": 2000000,
+    "diffusiondb_rejected_safety_score": 1110495,
+    "diffusiondb_rejected_length": 589834,
+    "diffusiondb_rejected_missing_visual_directions": 61547,
+    "diffusiondb_rejected_low_information": 126704,
+    "diffusiondb_rejected_risk_terms": 53012,
+    "diffusiondb_rejected_generation_parameters": 21711,
+    "diffusiondb_rejected_keyword_stuffing": 485,
+    "diffusiondb_rejected_noise_or_links": 195,
+    "diffusiondb_rejected_malformed_parameters": 112,
+    "diffusiondb_near_duplicate": 7427,
+    "diffusiondb_selected": 20000,
+    "diffusiondb_eligible": 35905,
+    "prompts_chat_scanned": 2169,
+    "prompts_chat_selected": 1653,
+    "prompts_chat_rejected_unclear_task": 291,
+    "prompts_chat_rejected_low_information": 22,
+    "prompts_chat_rejected_noise_or_links": 44,
+    "prompts_chat_rejected_risk_terms": 83,
+    "prompts_chat_rejected_length": 56,
+    "duplicate": 2,
+    "prompts_chat_rejected_type": 18,
+    "youmind_scanned": 129,
+    "youmind_selected": 122,
+    "youmind_rejected_length": 5,
+    "youmind_rejected_noise_or_links": 1,
+    "youmind_rejected_low_information": 1
+  },
+  "total": 21775,
+  "with_preview": 122,
+  "categories": {
+    "cat-image-1": 265,
+    "cat-image-0": 1446,
+    "cat-image": 11893,
+    "cat-image-2": 6793,
+    "cat-software": 430,
+    "cat-education": 187,
+    "cat-data": 152,
+    "cat-marketing": 120,
+    "cat-life": 106,
+    "cat-office": 103,
+    "cat-writing": 174,
+    "cat-product": 51,
+    "cat-video-0": 55
+  },
+  "models": {
+    "Nano Banana": 122,
+    "ChatGPT": 1378,
+    "null": 275,
+    "Stable Diffusion": 20000
+  },
+  "method": "Automatic text/metadata screening; not exhaustive human or visual review. No generated filler. External images may fail.",
+  "inputs": {
+    "diffusiondb.parquet": "eecd341187bc91c07f5994ad0660d40228ea025616fd57a509bef8323677c68f",
+    "prompts-chat.csv": "c506bbf29106058a021e5cf85271bb97c9856c2b7fcc9f337421cdc8b00964c6",
+    "youmind.txt": "7afa5329f52592037c8e578c935bf8945db447725fb7718c7b227ce953046249"
+  }
+}
