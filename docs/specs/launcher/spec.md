@@ -123,7 +123,7 @@ M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新�
 
 - GIVEN 用户从其他应用唤起启动器并进入填写
 - WHEN 展示 0、3 或超过一屏的变量
-- THEN 填写窗与搜索结果窗均为 680 × 500 逻辑像素，来回切换不缩窗，紧凑双栏中字段和预览可独立滚动，底部操作始终可见；无变量时正文通栏
+- THEN 填写窗与搜索结果窗均为 620 × 420 逻辑像素，空查询为 620 × 64；来回切换不缩窗，紧凑双栏中字段和预览可独立滚动，底部操作始终可见；无变量时正文通栏。浏览器预览入口使用相同展开尺寸
 - WHEN 回车复制成功且使用后关闭开启
 - THEN 隐藏窗口后不再给内部 DOM 聚焦，迟到的 focus 事件不得唤回窗口；下次显式唤起才恢复聚焦
 - AND macOS 在主动关闭且启动器仍聚焦时归还原应用，不主动展示无关主窗口；失焦关闭不抢回用户刚切换的应用，原目标退出也不重新弹出启动器
@@ -144,6 +144,12 @@ M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新�
 - WHEN 状态切换完成
 - THEN 返回保留查询及高亮并聚焦搜索；关闭或失焦后的再次唤起清空旧填写并聚焦空搜索
 - AND 每次唤起重读主题偏好；复制/粘贴进行中不得因失焦丢失待完成文本或重复执行
+
+#### Scenario: 跟随系统主题
+
+- GIVEN 主题偏好为 system
+- WHEN 系统明暗主题变化
+- THEN 启动器同步更新；显式 light/dark 不受系统切换覆盖，卸载时移除监听
 
 #### Scenario: 不关闭偏好与失败
 
@@ -214,5 +220,6 @@ macOS MUST 连续确认原窗口焦点稳定后再发送按键；超时、目标
 | 多变量回车/多行/输入法/重复按键/特殊名称/焦点恢复/空复制 | `LauncherInteraction.spec.js` |
 | 使用中保护/关闭偏好/原生生命周期/读取当前变量/失败保留 | `LauncherInteraction.spec.js`（原生接口替身） |
 | 粘贴前稳定焦点与超时 | `focus_must_be_stable_before_pasting`；`unready_target_times_out_without_proceeding` |
-| macOS 启动器窗口 | `LauncherApp.spec.js` uses mac chrome on macos；空查询 `is-collapsed`；`launcherWindow.test.js` sizes the palette like the old independent window；`palette_heights_match_old_window` |
+| macOS 启动器窗口 | `LauncherApp.spec.js` uses mac chrome on macos；空查询 `is-collapsed`；`launcherWindow.test.js` keeps search and fill equally compact、配置/浏览器入口一致；`palette_heights_keep_search_and_fill_compact`；本轮验收见 `plans/2026-09-08-launcher-refinement.md` |
+| 跟随系统主题 | `LauncherInteraction.spec.js` system 实时切换、显式偏好优先与监听释放 |
 | 1 万条查询预算 | `./scripts/launcher-search-bench`（`search_ten_thousand_prompts_bench`，release，不作为 CI 红灯） |

@@ -1,9 +1,9 @@
 export const LAUNCHER_LABEL = "launcher";
-export const LAUNCHER_WIDTH = 680;
+export const LAUNCHER_WIDTH = 620;
 export const LAUNCHER_HEIGHTS = {
-  collapsed: 80,
-  expanded: 500,
-  fill: 500,
+  collapsed: 64,
+  expanded: 420,
+  fill: 420,
 };
 
 export function launcherHeightFor(layout) {
@@ -44,7 +44,7 @@ export function openLauncherWindow() {
   if (window.__TAURI_INTERNALS__) {
     return import("@tauri-apps/api/core").then(({ invoke }) => invoke("show_launcher"));
   }
-  const popup = window.open("/launcher.html", LAUNCHER_LABEL, "width=680,height=420");
+  const popup = window.open("/launcher.html", LAUNCHER_LABEL, `width=${LAUNCHER_WIDTH},height=${launcherHeightFor("expanded")}`);
   if (!popup) {
     window.location.assign("/launcher.html");
   }
