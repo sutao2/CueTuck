@@ -225,6 +225,8 @@ async fn isolated_postgres_restore_preserves_credentials_content_and_encrypted_c
         let dump = Command::new("docker")
             .args([
                 "exec",
+                "-e",
+                "PGOPTIONS=-c max_parallel_workers_per_gather=0",
                 "backend-db-1",
                 "pg_dump",
                 "-U",
@@ -240,7 +242,7 @@ async fn isolated_postgres_restore_preserves_credentials_content_and_encrypted_c
             .output()
             .map_err(|e| e.to_string())?;
         if !dump.status.success() {
-            return Err("synthetic schema dump failed".to_owned());
+            return Err(format!("synthetic schema dump failed: {}", String::from_utf8_lossy(&dump.stderr)));
         }
         let mut child = Command::new("docker")
             .args([

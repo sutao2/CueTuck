@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-08-local-release-readiness.md](plans/2026-09-08-local-release-readiness.md) | 目标 | P4–P6 本地收尾 | 故障恢复、集中回归、CI、服务配置与发行检查 |
 | [plans/2026-09-08-publish-sync-feedback.md](plans/2026-09-08-publish-sync-feedback.md) | 现行 | P3c 发布与同步反馈 | 请求隔离、分阶段反馈、队列重试；406 项前端测试已验 |
 | [plans/2026-09-08-collection-feedback.md](plans/2026-09-08-collection-feedback.md) | 现行 | P3b 合集加载与成员反馈 | 请求隔离与只读重试；400 项测试及 macOS 调试构建已验 |
 | [plans/2026-09-08-client-operation-feedback.md](plans/2026-09-08-client-operation-feedback.md) | 现行 | P3a 保存与复制反馈 | 写入/刷新分离、只读重试和保存快捷键；392 项及原生构建已验 |
