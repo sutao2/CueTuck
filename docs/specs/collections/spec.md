@@ -73,10 +73,30 @@
 - THEN 编辑保存可再次读取，删除后默认列表不再显示合集
 - AND 成员仍存在且 collection_id 为空
 
+### Requirement: 读取与成员操作反馈
+
+详情 MUST 区分读取中、读取失败与真实空合集。读取未成功时不可编辑或管理成员，但可以返回；旧请求 MUST NOT 覆盖返回后重新打开的页面（包括相同合集）。读取失败 MUST 提供只读重试。
+
+成员写入期间 MUST 防止重复提交与离开；写入失败 MUST 保留选择。写入成功后刷新失败 MUST 明确告知已加入或已移出，重试 MUST 仅重新读取，不重复写入。
+
+#### Scenario: 返回后重新打开
+
+- GIVEN 合集读取尚未完成
+- WHEN 返回后打开同一个或另一个合集，旧请求才结束
+- THEN 旧成功或失败均不改变当前页面；当前请求独立显示加载、结果或重试
+
+#### Scenario: 成员操作部分成功
+
+- GIVEN 加入或移出已写入，随后读取失败
+- WHEN 用户查看反馈并重试
+- THEN 显示操作已完成和刷新失败，只重新读取
+- AND 写入失败时保留原选择，忙碌期间重复提交不增加写入次数
+
 ## 测试映射
 
 | 场景 | 测试 |
 |---|---|
+| 返回后重新打开 / 成员操作部分成功 | `CollectionFeedback.spec.js` 8 项延迟/故障注入；`CollectionDetailModal.spec.js` 确认成员更新后恢复焦点 |
 | 筛选小分类 | `desktop/src-tauri` `selecting_parent_lists_child_prompts`（合集走同一分类过滤）；侧栏树无合集行 |
 | 新建合集 | `desktop/src-tauri` `creates_empty_collection` |
 | 向合集添加 | `desktop/src-tauri` `adds_member_via_collection_id`；`library.test.js` adds a prompt to a collection |
