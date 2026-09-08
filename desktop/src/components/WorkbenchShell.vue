@@ -496,6 +496,7 @@
     </div>
     <div v-if="operationNotice" class="download-notice" :class="{ 'notice-above-confirmation': pendingDelete }" :data-testid="operationNotice.kind + '-notice'" role="status" aria-live="polite">
       <span>{{ operationNotice.text }}</span>
+      <button v-if="operationNotice.retry" type="button" data-testid="retry-operation-refresh" :disabled="operationRefreshBusy || space !== 'local'" @click="retryOperationRefresh">{{ space !== 'local' ? '请回到本地刷新' : operationRefreshBusy ? '正在刷新…' : '重试刷新' }}</button>
       <button v-if="operationNotice.success && operationNotice.kind === 'download'" type="button" @click="closeSquareDetail(); openLocal(); operationNotice = null">前往本地</button>
       <button type="button" aria-label="关闭提示" @click="operationNotice = null">×</button>
     </div>
@@ -1066,15 +1067,39 @@ const squareDetailError = ref("");
 const downloadBusy = ref([]);
 const downloadedIds = ref([]);
 const operationNotice = ref(null);
+const operationRefreshBusy = ref(false);
 const pendingDelete = ref(null);
 const cancelDeleteButton = ref(null);
 let operationNoticeTimer;
 onUnmounted(() => clearTimeout(operationNoticeTimer));
 
-function notifyOperation(text, success, kind = 'download') {
+function notifyOperation(text, success, kind = 'download', retry = false) {
   clearTimeout(operationNoticeTimer);
-  operationNotice.value = { text, success, kind };
-  operationNoticeTimer = setTimeout(() => { operationNotice.value = null; }, success ? 6000 : 12000);
+  operationNotice.value = { text, success, kind, retry };
+  if (!retry) operationNoticeTimer = setTimeout(() => { operationNotice.value = null; }, success ? 6000 : 12000);
+}
+
+async function refreshOperationView() {
+  if (openedCollection.value) {
+    const id = openedCollection.value.id;
+    const updated = (await listLocalCollections({ query: '', categoryId: null })).find(item => item.id === id);
+    if (updated && openedCollection.value?.id === id) {
+      if (!await openCollection(updated)) throw Error(collectionError.value);
+    }
+  }
+  await reloadPrompts();
+}
+
+async function retryOperationRefresh() {
+  if (space.value !== 'local' || operationRefreshBusy.value || !operationNotice.value?.retry) return;
+  const notice = operationNotice.value;
+  operationRefreshBusy.value = true;
+  try {
+    await refreshOperationView();
+    if (operationNotice.value === notice) notifyOperation('已刷新，本次没有重复保存或复制。', true, notice.kind);
+  } catch (error) {
+    if (operationNotice.value === notice) notifyOperation(`刷新仍失败：${error.message || error}。已完成的操作不会重复执行。`, false, notice.kind, true);
+  } finally { operationRefreshBusy.value = false; }
 }
 
 async function refreshDownloaded() {
@@ -1550,6 +1575,7 @@ async function savePrompt({ id, kind, title, content, categoryId, model, coverTy
   if (editorBusy.value) return;
   editorBusy.value = true;
   editorError.value = "";
+  let saved = false;
   try {
     if (id && kind === "collection") {
       await updateLocalCollection({ id, title, categoryId, coverType, coverUrls });
@@ -1560,14 +1586,13 @@ async function savePrompt({ id, kind, title, content, categoryId, model, coverTy
     } else {
       await createLocalPrompt({ title, content, categoryId, model, assets });
     }
-    if (openedCollection.value) {
-      const updated = (await listLocalCollections({ query: '', categoryId: null })).find(item => item.id === openedCollection.value.id);
-      if (updated) await openCollection(updated);
-    }
+    saved = true;
     closeEditor();
-    await reloadPrompts();
+    notifyOperation(`已保存「${title}」。`, true, 'save');
+    await refreshOperationView();
   } catch (error) {
-    editorError.value = `保存失败：${error.message || error}`;
+    if (saved) notifyOperation(`已保存，但刷新失败：${error.message || error}`, false, 'save', true);
+    else editorError.value = `保存失败：${error.message || error}`;
   } finally { editorBusy.value = false; }
 }
 
@@ -1614,11 +1639,17 @@ async function finishUse(text) {
     useBusy.value = false;
     return;
   }
+  if (using.value?.id === prompt.id) using.value = null;
   try {
     await recordLocalPromptUse(prompt.id);
-    if (using.value?.id === prompt.id) using.value = null;
-    await reloadPrompts();
-  } catch (error) { useError.value = `已复制，但保存使用记录失败：${error.message || error}`; }
+  } catch (error) {
+    notifyOperation(`已复制，但保存使用记录失败：${error.message || error}。无需再次复制。`, false, 'copy');
+    useBusy.value = false;
+    return;
+  }
+  notifyOperation(`已复制「${prompt.title}」。`, true, 'copy');
+  try { await refreshOperationView(); }
+  catch (error) { notifyOperation(`已复制，但刷新失败：${error.message || error}`, false, 'copy', true); }
   finally { useBusy.value = false; }
 }
 
@@ -1641,7 +1672,8 @@ async function openCollection(collection) {
     [collectionMembers.value, collectionCandidates.value] = await Promise.all([
       listCollectionMembers(collection.id), listLocalPrompts({ query: "", categoryId: null }),
     ]);
-  } catch (error) { collectionError.value = `读取失败：${error.message || error}`; }
+    return true;
+  } catch (error) { collectionError.value = `读取失败：${error.message || error}`; return false; }
 }
 
 async function addToOpenedCollection(promptId) {

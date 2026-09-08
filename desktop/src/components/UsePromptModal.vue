@@ -39,7 +39,7 @@
       <footer class="modal-footer">
         <span class="create-location">{{ stepLabel }}</span>
         <div class="modal-actions">
-          <button v-if="step !== 'preview' || names.length" type="button" class="button ghost-button" @click="back">
+          <button v-if="step !== 'preview' || names.length" type="button" class="button ghost-button" :disabled="busy" @click="back">
             上一步
           </button>
           <button ref="nextButton" type="button" class="button primary-button" data-testid="use-next" :disabled="busy" @click="next">
@@ -119,6 +119,7 @@ function onValueKeydown(event) {
 }
 
 function back() {
+  if (props.busy) return;
   if (step.value === "preview" && names.length) {
     step.value = "variable";
     index.value = names.length - 1;
