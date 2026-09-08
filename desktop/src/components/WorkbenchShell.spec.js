@@ -49,6 +49,29 @@ const tauriVersion = JSON.parse(
 ).version;
 
 describe("WorkbenchShell", () => {
+  it('bounds a large square to 48 cards per page and resets after filtering', async () => {
+    setSquareTransport(async ({ query }) => query ? [{ id: 'match', title: 'Match', kind: 'prompt' }] : Array.from({ length: 20001 }, (_, i) => ({ id: `bulk-${i}`, title: `Prompt ${i}`, kind: 'prompt' })));
+    const w = mount(WorkbenchShell); await flushPromises();
+    await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+    expect(w.findAll('.prompt-card')).toHaveLength(48);
+    expect(w.get('.result-count').text()).toContain('20001');
+    await w.get('.browse-pagination button:last-child').trigger('click');
+    expect(w.findAll('.prompt-card')[0].text()).toContain('Prompt 48');
+    await w.get('.inline-search input').setValue('match');
+    await w.get('[data-sort="最新"]').trigger('click'); await flushPromises();
+    expect(w.findAll('.prompt-card')).toHaveLength(1);
+    expect(w.find('.browse-pagination').exists()).toBe(false);
+    await w.get('.inline-search input').setValue('');
+    await w.get('[data-sort="推荐"]').trigger('click'); await flushPromises();
+    await w.get('.browse-pagination button:last-child').trigger('click');
+    await w.get('.browse-pagination button:first-child').trigger('click');
+    expect(w.findAll('.prompt-card')[0].text()).toContain('Prompt 0');
+    await w.get('[data-space="local"]').trigger('click'); await flushPromises();
+    expect(w.find('.browse-pagination').exists()).toBe(false);
+    await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+    expect(w.get('.browse-pagination button:first-child').attributes('disabled')).toBeDefined();
+    w.unmount();
+  });
   it('shows site policy only in the community and keeps local tools available',async()=>{
     await createLocalPrompt({title:'离线可用',content:'本地正文'});
     setCatalogTransport(async()=>({categories:[],models:[],site:{name:'测试社区',description:'站点说明',publishing_open:false,announcement:'社区公告'}}));setSquareTransport(async()=>[]);
