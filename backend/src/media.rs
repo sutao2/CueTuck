@@ -74,6 +74,24 @@ impl MediaConfig {
             .await
             .is_ok_and(|response| response.status().is_success())
     }
+
+    pub(crate) async fn scan_page(&self,cursor:&str)->Result<rusty_s3::actions::ListObjectsV2Response,StatusCode>{
+        let (bucket,creds)=self.bucket()?;
+        let mut action=bucket.list_objects_v2(Some(&creds));action.with_prefix("promptark/");action.with_max_keys(100);
+        if !cursor.is_empty(){action.with_continuation_token(cursor)}
+        let mut response=storage_client()?.get(action.sign(Duration::from_secs(60))).send().await.map_err(|_|StatusCode::BAD_GATEWAY)?;
+        if !response.status().is_success(){return Err(StatusCode::BAD_GATEWAY)}
+        let mut bytes=vec![];
+        while let Some(chunk)=response.chunk().await.map_err(|_|StatusCode::BAD_GATEWAY)?{if bytes.len()+chunk.len()>262144{return Err(StatusCode::BAD_GATEWAY)}bytes.extend_from_slice(&chunk)}
+        let text=std::str::from_utf8(&bytes).map_err(|_|StatusCode::BAD_GATEWAY)?;
+        rusty_s3::actions::ListObjectsV2::parse_response(text).map_err(|_|StatusCode::BAD_GATEWAY)
+    }
+    pub(crate) async fn object_exists(&self,key:&str)->Result<bool,StatusCode>{
+        let (bucket,creds)=self.bucket()?;
+        let response=storage_client()?.head(bucket.head_object(Some(&creds),key).sign(Duration::from_secs(60))).send().await.map_err(|_|StatusCode::BAD_GATEWAY)?;
+        if response.status()==StatusCode::NOT_FOUND{return Ok(false)}
+        if !response.status().is_success(){return Err(StatusCode::BAD_GATEWAY)} Ok(true)
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -341,6 +359,11 @@ pub(crate) async fn delete_reclaimed_object(config: &MediaConfig, key: &str) -> 
 }
 
 async fn verified_response(state: &AppState, row: &sqlx::postgres::PgRow) -> Result<Response, StatusCode> {
+    let bytes=verified_bytes(state,row).await?;
+    let name:String=row.get("file_name");
+    Ok(([("content-type","application/octet-stream".to_string()),("content-disposition",format!("attachment; filename*=UTF-8''{}",urlencoding::encode(&name))),("x-content-type-options","nosniff".into()),("cache-control","no-store".into())],bytes).into_response())
+}
+async fn verified_bytes(state: &AppState, row: &sqlx::postgres::PgRow) -> Result<Vec<u8>, StatusCode> {
     let size: i64 = row.get("size");
     if !(0..=MAX_FILE as i64).contains(&size) {
         return Err(StatusCode::BAD_GATEWAY);
@@ -382,22 +405,24 @@ async fn verified_response(state: &AppState, row: &sqlx::postgres::PgRow) -> Res
         .get::<Option<String>, _>("content_type")
         .ok_or(StatusCode::BAD_GATEWAY)?;
     validate_file(&name, &mime, &bytes).map_err(|_| StatusCode::BAD_GATEWAY)?;
-    Ok((
-        [
-            ("content-type", "application/octet-stream".to_string()),
-            (
-                "content-disposition",
-                format!(
-                    "attachment; filename*=UTF-8''{}",
-                    urlencoding::encode(&name)
-                ),
-            ),
-            ("x-content-type-options", "nosniff".into()),
-            ("cache-control", "no-store".into()),
-        ],
-        bytes,
-    )
-        .into_response())
+    Ok(bytes)
+}
+
+pub(crate) async fn moderation_images(state:&AppState,publication:&crate::Publication)->Result<Vec<String>,String>{
+    use base64::Engine;
+    if publication.asset_refs.len()>4 {return Err("最多审核 4 张图片，超限转人工".into())}
+    let mut images=vec![];let mut total=0;
+    for file in &publication.asset_refs {
+        if !matches!(file.mime.as_str(),"image/png"|"image/jpeg"|"image/webp"){return Err("附件包含不支持的图片或文档，转人工".into())}
+        let row=publication_asset_row(state,&publication.id,&file.id,false).await.map_err(|_|"投稿图片授权不可用")?;
+        // Use verified stored MIME, never allow an author-controlled data URL or storage URL.
+        let mime:String=row.get("content_type");
+        if mime!=file.mime{return Err("图片元数据不一致，转人工".into())}
+        let bytes=verified_bytes(state,&row).await.map_err(|_|"图片读取或哈希校验失败")?;
+        total+=bytes.len();if total>10*1024*1024{return Err("图片总量超过 10 MiB，转人工".into())}
+        images.push(format!("data:{mime};base64,{}",base64::engine::general_purpose::STANDARD.encode(bytes)));
+    }
+    Ok(images)
 }
 
 pub(crate) async fn public_references(state: &AppState, id: &str) -> Result<Vec<crate::library::AssetReference>, StatusCode> {

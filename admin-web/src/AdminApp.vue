@@ -52,7 +52,8 @@
         <ReportManagement v-if="page === 'reports'" ref="riskForm" @busy-change="securityBusy = $event" />
         <SafetyRules v-if="page === 'rules'" ref="riskForm" @busy-change="securityBusy = $event" />
         <ModerationSettings v-if="page === 'moderation'" ref="riskForm" @busy-change="securityBusy = $event" />
-        <AiSettings v-if="page === 'ai-models' || page === 'ai-skills'" :key="page" ref="riskForm" :mode="page === 'ai-models' ? 'models' : 'skills'" @busy-change="securityBusy = $event" />
+        <fieldset v-if="page === 'ai-models' || page === 'ai-skills'" :disabled="aiJobsBusy" style="border:0;padding:0;margin:0;min-width:0"><AiSettings :key="page" ref="riskForm" :mode="page === 'ai-models' ? 'models' : 'skills'" @busy-change="securityBusy = $event" /></fieldset>
+        <fieldset v-if="page === 'ai-models'" :disabled="securityBusy" style="border:0;padding:0;margin:0;min-width:0"><AiJobs @busy-change="aiJobsBusy = $event" /></fieldset>
         <MailSettings v-if="page === 'mail'" ref="riskForm" @busy-change="securityBusy = $event" />
         <NotificationSettings v-if="page === 'notifications'" ref="riskForm" @busy-change="securityBusy = $event" />
         <IdentitySettings v-if="page === 'identity'" ref="riskForm" @busy-change="securityBusy = $event" />
@@ -70,6 +71,7 @@
 </template>
 
 <script setup>
+import AiJobs from './AiJobs.vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import OAuthSettings from './OAuthSettings.vue';
 import AccountSecurity from './AccountSecurity.vue';
@@ -116,13 +118,14 @@ const loginNotice = ref('');
 const identityMode = ref('');
 function identityDone(value) { email.value=value; password.value=''; identityMode.value=''; loginNotice.value='验证完成，请使用新密码登录。'; }
 const securityBusy = ref(false);
+const aiJobsBusy = ref(false);
 const oauthForm = ref(null), securityForm = ref(null), usersForm = ref(null), reviewForm = ref(null);
 const contentForm = ref(null), catalogForm = ref(null);
 const riskForm = ref(null);
 const email = ref(''), password = ref(''), error = ref(''), loggedIn = ref(false), account = ref('');
 const page = ref('review');
 const oauthProviders = ref([]), busy = ref(false), oauthWaiting = ref(false);
-const writeBusy = computed(() => securityBusy.value || Boolean(oauthForm.value?.isBusy));
+const writeBusy = computed(() => securityBusy.value || aiJobsBusy.value || Boolean(oauthForm.value?.isBusy));
 const hasUnsavedChanges = computed(() => Boolean(riskForm.value?.hasUnsavedChanges || catalogForm.value?.hasUnsavedChanges || oauthForm.value?.hasUnsavedChanges || securityForm.value?.hasUnsavedChanges || usersForm.value?.hasUnsavedChanges || reviewForm.value?.hasUnsavedChanges || contentForm.value?.hasUnsavedChanges));
 let loginAbort = new AbortController();
 function canLeave() { return !writeBusy.value && (!hasUnsavedChanges.value || window.confirm('有未保存的修改，确定放弃并离开吗？')); }
@@ -178,6 +181,7 @@ function openReview() { return navigate('review'); }
 function openOAuth() { return navigate('oauth'); }
 function openSecurity() { return navigate('security'); }
 function securitySignedOut(message) {
+  aiJobsBusy.value = false;
   securityBusy.value = false;
   cancelOAuth(); clearAdminSession(); loggedIn.value = false; account.value = ''; password.value = '';
   error.value = ''; loginNotice.value = message;

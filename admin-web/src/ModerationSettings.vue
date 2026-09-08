@@ -7,7 +7,7 @@
       <h3>检查项目</h3><label v-for="(label,key) in checks" :key="key" class="moderation-toggle"><input v-model="draft[key]" type="checkbox"><span>{{ label }}</span></label>
       <label class="moderation-toggle"><input v-model="draft.require_ai" type="checkbox" data-testid="moderation-ai"><span><strong>必须完成 AI 审核</strong><small>未配置模型时进入人工队列，不会假报 AI 通过。</small></span></label>
       <label class="moderation-toggle"><input v-model="draft.auto_approve" type="checkbox" data-testid="moderation-approve"><span><strong>允许低风险自动通过并上架</strong><small>仅当所有必需检查完成且没有转人工原因；本地规则初筛不是安全保证。</small></span></label>
-      <div class="notice"><p>图片检查发现图片引用时，在图片安全服务接通前一律转人工。没有模型凭据时，要求 AI 的策略也一律转人工。</p></div>
+      <div class="notice"><p>勾选图片检查后，稿件图片可进入已授权视觉模型的任务队列；需在审核模型启用图片发送并选择 Skill 路由。未配置、文档或外部图片引用转人工；附件最终公开仍须人工确认。</p></div>
       <footer class="provider-footer"><span class="muted">配置版本 {{ draft.revision }}</span><button class="primary" :disabled="!hasUnsavedChanges" data-testid="moderation-save">{{ busy?'保存中…':'保存策略' }}</button></footer>
     </fieldset></form>
   </section>

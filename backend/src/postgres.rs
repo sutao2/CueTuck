@@ -256,6 +256,7 @@ impl Pg {
         self.init_risk().await?;
         self.init_moderation().await?;
         self.init_ai().await?;
+        self.init_ai_jobs().await?;
         self.init_mail().await?;
         self.init_identity().await?;
         self.init_site().await?;
@@ -714,7 +715,7 @@ impl Pg {
         Ok(())
     }
 
-    fn publication_from_row(row: &sqlx::postgres::PgRow) -> Publication {
+    pub(crate) fn publication_from_row(row: &sqlx::postgres::PgRow) -> Publication {
         Publication {
             asset_refs: row.get::<sqlx::types::Json<Vec<crate::library::AssetReference>>, _>("asset_refs").0,
             id: row.get("id"),

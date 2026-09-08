@@ -38,7 +38,12 @@ paths:
     get:
       operationId: listOrphanMedia
       summary: 配置管理员显式检查可回收的云端附件
-      description: 返回 items（id/name/size/deleting/last_used_at）和 more，最多 25 项。仅完整 ready 标准对象、超过 7 天未复用且未被任何同步/投稿快照引用；包括软删除和驳回记录的引用仍保护。deleting 为可重试清理状态。无对象键、所有者邮箱、URL 或秘密。不自动清理或扫描存储桶，503 查询失败。
+      description: 返回 items（id/name/size/ready/deleting/last_used_at）和 more，最多 25 项。标准完整元数据对象，包括 ready=false 中断上传，超过 7 天未复用且未被任何同步/投稿快照引用；包括软删除和驳回记录的引用仍保护。deleting 为可重试清理状态。无对象键、所有者邮箱、URL 或秘密。不自动清理，503 查询失败。
+  /v1/admin/media/scan:
+    get:
+      operationId: scanAdminMedia
+      summary: 配置管理员显式只读分页对账
+      description: side 为 database 或 bucket，cursor 为上页 next_cursor（最长 4096）。返回 items（差异 id/status，可含 size）、checked、side、next_cursor。database 每页 25 项探测对象存在性，bucket 每页最多 100 项比较数据库引用；仅 promptark/ 前缀，不返回字节或所有者。status 为 missing/incomplete/incomplete_missing/untracked。未知桶对象仅报告，不提供删除；当前页不是完整扫描快照。总时限 25 秒，502/504 存储失败或超时；无清理副作用。
   /v1/admin/media/orphans/{id}/purge:
     post:
       operationId: purgeOrphanMedia
@@ -484,11 +489,22 @@ paths:
     put:
       operationId: saveAiConfiguration
       summary: owner 验证当前密码后追加配置版本
+      x-vision: models 支持 vision 布尔值（默认 false），明确允许稿件图片发送；同时要求站点图片检查。最多 4 张 PNG/JPEG/WebP，总量 10 MiB；文本样本接口不验证图片，含附件仍需人工确认公开。
       description: JSON revision、current_password、models、skills、secrets（模型 ID 到新密钥，留空保留）。models 最多 20 条，id/name/endpoint/model/enabled/json_mode/redact/timeout_seconds（1–15）；endpoint 为完整公网 HTTPS Chat Completions 地址。skills 最多 30 条，id/name/instruction/enabled/kinds（prompt/collection）/categories（空为全部，精确分类）/route（fallback/consensus/majority）/models（有序最多 3 ID）。密钥加密并绑定 ID；修改生成新版本，旧测试不沿用；旧 revision 409，非法输入 400/422，错误密码或非 owner 403，频率限制 429。历史快照不覆盖，审计不含凭据。
   /v1/admin/ai/history:
     get:
       operationId: getAiConfigurationHistory
       summary: owner 读取最近 50 个不可变配置版本，凭据仅返回是否已配置
+  /v1/admin/ai/jobs:
+    get:
+      operationId: listAdminAiJobs
+      summary: 配置管理员查看持久化审核任务
+      description: offset 默认为 0、上限 100000，每页 25。返回 items 和 total；items 包含 id（投稿 ID）、status（queued/running/failed/completed/cancelled）、attempts、error、updated_at，不含正文、认领令牌或密钥。
+  /v1/admin/ai/jobs/{id}/retry:
+    post:
+      operationId: retryAdminAiJob
+      summary: 配置管理员立即重新排队失败任务
+      description: 仅 failed、attempts 小于 3 且投稿仍 pending 可重试，事务复核权限并审计；返回 queued=true，不表示审核通过；否则 409。自动退避重试与手动请求共享总次数上限，不重审历史终态。
   /v1/admin/ai/test:
     post:
       operationId: testAiConfiguration

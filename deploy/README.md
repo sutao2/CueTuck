@@ -10,7 +10,9 @@
 node scripts/verify.mjs
 ```
 
-该入口跑三前端测试/构建、脚本测试、文档、后端、原生 Rust、MCP 及浏览器核心操作，任一步失败最终非零退出。日志在 `output/verification/run-*`，浏览器快照/截图在 `output/playwright/smoke-*`，请勿提交。可传 `frontend`、`backend`、`native`、`mcp`、`browser` 单独复验。浏览器使用临时会话和专用 1431 端口；占用时拒绝，不连接用户现有服务。首次运行先在 `desktop` 执行 `npx playwright-cli install-browser chrome`。
+该入口跑三前端测试/构建、脚本测试、文档、后端、原生 Rust、MCP 及浏览器核心操作，任一步失败最终非零退出。日志在 `output/verification/run-*`，浏览器快照/截图在 `output/playwright/smoke-*` 和 `output/playwright/admin-*`，请勿提交。可传 `frontend`、`backend`、`native`、`mcp`、`browser` 单独复验。浏览器使用临时会话和专用 1431（客户端）、1432（管理端）端口；占用时拒绝，不连接用户现有服务。首次运行先在 `desktop` 执行 `npx playwright-cli install-browser chrome`。
+
+管理端浏览器脚本 `node scripts/admin-browser-smoke.mjs` 使用隔离 API 替身，验证登录、列表返回、审核提交、配置保存失败/重试和退出；不代替真实后端或外部提供商联调。集中入口将后端测试并发限制为 4 个线程，以减轻本机开发数据库资源压力；测试内部的并发冲突场景仍然执行。
 
 `.github/workflows/verify.yml` 使用 CI 临时数据库和独立浏览器；提交工作流不等于远程 CI 已通过。数据库恢复/真实 MinIO 与 1 万条性能演练是显式本机命令，不在通用 CI 上假报覆盖。
 

@@ -1,5 +1,5 @@
 use crate::{admin_risk::{actor_lock, audit}, postgres::Pg, AppState};
-use axum::{extract::{Path, State}, http::{HeaderMap, StatusCode}, Json};
+use axum::{extract::{Path, Query, State}, http::{HeaderMap, StatusCode}, Json};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sqlx::{Postgres, Row, Transaction};
@@ -19,7 +19,7 @@ async fn configuration_lock(pg: &Pg, tx: &mut Transaction<'_, Postgres>, actor: 
     Ok(())
 }
 fn eligible(pg: &Pg) -> String {
-    format!(r#"m.ready AND m.file_name IS NOT NULL AND m.content_type IS NOT NULL AND m.size IS NOT NULL AND m.sha256 IS NOT NULL
+    format!(r#"m.file_name IS NOT NULL AND m.content_type IS NOT NULL AND m.size IS NOT NULL AND m.sha256 IS NOT NULL
         AND m.id ~ '^media\.[0-9a-f]{{8}}(-[0-9a-f]{{4}}){{3}}-[0-9a-f]{{12}}$' AND m.object_key='promptark/'||m.id
         AND (m.deleting OR m.last_used_at < now()-interval '7 days')
         AND NOT EXISTS (SELECT 1 FROM {} l, jsonb_array_elements(COALESCE(l.payload::jsonb->'asset_refs','[]'::jsonb)) r WHERE r->>'media_id'=m.id)
@@ -29,7 +29,7 @@ pub async fn list(State(state): State<AppState>, headers: HeaderMap) -> Result<J
     crate::require_configuration_admin(&state,&headers).await?;
     let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let mut items: Vec<Value> = tokio::time::timeout(std::time::Duration::from_secs(5),sqlx::query_scalar(&format!(
-        "SELECT jsonb_build_object('id',m.id,'name',m.file_name,'size',m.size,'deleting',m.deleting,'last_used_at',m.last_used_at) FROM {} m WHERE {} ORDER BY m.deleting DESC,m.last_used_at,m.id LIMIT 26",pg.t("media_objects"),eligible(pg))).fetch_all(&pg.pool))
+        "SELECT jsonb_build_object('id',m.id,'name',m.file_name,'size',m.size,'ready',m.ready,'deleting',m.deleting,'last_used_at',m.last_used_at) FROM {} m WHERE {} ORDER BY m.deleting DESC,m.last_used_at,m.id LIMIT 26",pg.t("media_objects"),eligible(pg))).fetch_all(&pg.pool))
         .await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?.map_err(db_error)?;
     let more=items.len()>25;items.truncate(25);
     crate::require_configuration_admin(&state,&headers).await?;
@@ -38,6 +38,38 @@ pub async fn list(State(state): State<AppState>, headers: HeaderMap) -> Result<J
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Confirm { confirm: bool }
+
+#[derive(Deserialize)]
+pub struct Scan { side:String, #[serde(default)] cursor:String }
+pub async fn scan(State(state):State<AppState>,headers:HeaderMap,Query(input):Query<Scan>)->Result<Json<Value>,StatusCode>{
+    crate::require_configuration_admin(&state,&headers).await?;
+    if input.cursor.len()>4096 || !matches!(input.side.as_str(),"bucket"|"database"){return Err(StatusCode::BAD_REQUEST)}
+    let pg=state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let config=state.media.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let result=tokio::time::timeout(std::time::Duration::from_secs(25),async {
+        if input.side=="bucket" {
+            let page=config.scan_page(&input.cursor).await?;
+            if page.contents.len()>100 || page.next_continuation_token.as_deref()==Some(input.cursor.as_str()){return Err(StatusCode::BAD_GATEWAY)}
+            let mut differences=vec![];
+            for object in &page.contents {
+                let key=urlencoding::decode(&object.key).map_err(|_|StatusCode::BAD_GATEWAY)?;
+                if !key.starts_with("promptark/"){return Err(StatusCode::BAD_GATEWAY)}
+                let known:bool=sqlx::query_scalar(&format!("SELECT EXISTS(SELECT 1 FROM {} WHERE object_key=$1)",pg.t("media_objects"))).bind(key.as_ref()).fetch_one(&pg.pool).await.map_err(db_error)?;
+                if !known {differences.push(json!({"id":key,"status":"untracked","size":object.size}));}
+            }
+            Ok(json!({"items":differences,"checked":page.contents.len(),"next_cursor":page.next_continuation_token,"side":"bucket"}))
+        } else {
+            let rows=sqlx::query(&format!("SELECT id,object_key,ready FROM {} WHERE object_key LIKE 'promptark/%' AND id>$1 ORDER BY id LIMIT 26",pg.t("media_objects"))).bind(&input.cursor).fetch_all(&pg.pool).await.map_err(db_error)?;
+            let next=if rows.len()>25{Some(rows[24].get::<String,_>("id"))}else{None};
+            let checked=rows.len().min(25);let mut workers=tokio::task::JoinSet::new();
+            for row in rows.into_iter().take(25){let config=config.clone();workers.spawn(async move{let id:String=row.get("id");let ready:bool=row.get("ready");let exists=config.object_exists(&row.get::<String,_>("object_key")).await?;Ok::<_,StatusCode>(if !exists{Some(json!({"id":id,"status":if ready{"missing"}else{"incomplete_missing"}}))}else if !ready{Some(json!({"id":id,"status":"incomplete"}))}else{None})});}
+            let mut differences=vec![];while let Some(row)=workers.join_next().await{if let Some(value)=row.map_err(|_|StatusCode::BAD_GATEWAY)??{differences.push(value)}}
+            Ok(json!({"items":differences,"checked":checked,"next_cursor":next,"side":"database"}))
+        }
+    }).await.map_err(|_|StatusCode::GATEWAY_TIMEOUT)??;
+    crate::require_configuration_admin(&state,&headers).await?;
+    Ok(Json(result))
+}
 
 pub async fn purge(State(state): State<AppState>, Path(id): Path<String>, headers: HeaderMap, Json(input): Json<Confirm>) -> Result<Json<Value>, StatusCode> {
     let actor=crate::require_configuration_admin(&state,&headers).await?;

@@ -29,6 +29,9 @@ mod admin_moderation;
 mod outbound;
 mod ai_transport;
 mod admin_ai;
+mod ai_jobs;
+#[cfg(test)]
+mod ai_jobs_tests;
 mod mail_transport;
 mod admin_mail;
 mod identity;
@@ -428,6 +431,8 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/admin/ai/config", get(admin_ai::get).put(admin_ai::save))
         .route("/v1/admin/ai/history", get(admin_ai::history))
         .route("/v1/admin/ai/test", post(admin_ai::test))
+        .route("/v1/admin/ai/jobs", get(ai_jobs::list))
+        .route("/v1/admin/ai/jobs/:id/retry", post(ai_jobs::retry))
         .route("/v1/admin/mail/config", get(admin_mail::get).put(admin_mail::save))
         .route("/v1/admin/mail/test", post(admin_mail::test))
         .route("/v1/admin/mail/deliveries", get(admin_mail::list))
@@ -473,6 +478,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/admin/audit/export", get(admin_operations::audit_export))
         .route("/v1/admin/system", get(admin_operations::system))
         .route("/v1/admin/media/orphans", get(media_reclaim::list))
+        .route("/v1/admin/media/scan", get(media_reclaim::scan))
         .route("/v1/admin/media/orphans/:id/purge", post(media_reclaim::purge))
         .route("/v1/admin/notifications/config", get(admin_notifications::get_config).put(admin_notifications::save_config))
         .route("/v1/admin/notifications/test", post(admin_notifications::test))
@@ -714,7 +720,7 @@ async fn create_publication(
     if let Some(pg)=&state.db {
         let publication=pg.moderate_publication(&publication,&bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?).await?;
         // The snapshot is already durable. A failed external check must not turn a successful submission into a retry/duplicate.
-        return Ok(Json(admin_ai::screen_publication(&state,&publication).await.unwrap_or(publication)));
+        return Ok(Json(publication));
     }
     state.insert_publication(&publication).await?;
     Ok(Json(publication))
