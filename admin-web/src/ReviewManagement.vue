@@ -33,6 +33,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { listState } from './listState.js';
 import ReviewAttachments from './ReviewAttachments.vue';
 import { approvePublication, batchReviewPublications, listPendingPublications, rejectPublication } from './adminApi.js';
 const emit = defineEmits(['busy-change']);
@@ -42,6 +43,9 @@ const items = ref([]), total = ref(0), offset = ref(0), loading = ref(false), bu
 const selected = ref([]), confirmation = ref(null), reason = ref(''), results = ref([]);
 const confirmPanel = ref(null);
 const limit = 25;
+const memory = listState('review'), previous = memory.read();
+if (previous.filters) filters.value = { ...previous.filters };
+filtersApplied.value = { ...filters.value }; offset.value = previous.offset || 0;
 let version = 0;
 const pendingIds = computed(() => items.value.filter(item => item.status === 'pending').map(item => item.id));
 const allSelected = computed(() => pendingIds.value.length > 0 && pendingIds.value.every(id => selected.value.includes(id)));
@@ -53,7 +57,7 @@ async function load(start = offset.value, apply = false) {
   const query = apply ? { ...filters.value } : { ...filtersApplied.value };
   if (query.from && query.to && query.from > query.to) { error.value = '起日不能晚于截止日'; return; }
   cancel(); selected.value = []; const current = ++version; loading.value = true; error.value = '';
-  try { const result = await listPendingPublications({ ...query, offset: start, limit }); if (current !== version) return; items.value = result.items ?? []; total.value = result.total ?? items.value.length; offset.value = start; filtersApplied.value = query; }
+  try { const result = await listPendingPublications({ ...query, offset: start, limit }); if (current !== version) return; items.value = result.items ?? []; total.value = result.total ?? items.value.length; offset.value = start; filtersApplied.value = query; memory.save({ filters: query, offset: start }); }
   catch (caught) { if (current === version) error.value = caught.message; }
   finally { if (current === version) loading.value = false; }
 }
@@ -91,7 +95,7 @@ async function confirm() {
   } catch (caught) { error.value = caught.message; }
   finally { setBusy(false); }
 }
-onMounted(() => load(0));
+onMounted(() => load(offset.value));
 onUnmounted(() => { ++version; });
 </script>
 

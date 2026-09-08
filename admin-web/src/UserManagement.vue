@@ -47,6 +47,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { listState } from './listState.js';
 import { getAdminUser, listAdminUsers, manageAdminUser, resetUserPassword } from './adminApi.js';
 import { getAdminSession } from './session.js';
 const emit = defineEmits(['busy-change']);
@@ -60,6 +61,9 @@ const needsReason = computed(() => ['disable','enable'].includes(action.value));
 const limit = 25;
 let listVersion = 0, detailVersion = 0;
 let appliedFilters = { q: '', role: '', status: '' };
+const memory = listState('users'), previous = memory.read();
+if (previous.filters) { appliedFilters = previous.filters; query.value = appliedFilters.q; role.value = appliedFilters.role; status.value = appliedFilters.status; }
+offset.value = previous.offset || 0;
 const canManage = computed(() => detail.value && selected.value !== session.email && (session.permissions.roles || detail.value.role === 'user'));
 defineExpose({ hasUnsavedChanges: computed(() => Boolean(action.value || currentPassword.value)), isBusy: busy });
 async function load(start = 0) {
@@ -71,6 +75,7 @@ async function load(start = 0) {
     const result = await listAdminUsers({ ...appliedFilters, offset: start, limit });
     if (version !== listVersion) return;
     items.value = result.items ?? []; total.value = result.total ?? items.value.length; offset.value = start;
+    memory.save({ filters: appliedFilters, offset: start });
   } catch (caught) { if (version === listVersion) { error.value = caught.message; items.value = []; total.value = 0; } }
   finally { if (version === listVersion) loading.value = false; }
 }
@@ -97,7 +102,7 @@ async function confirmAction() {
   finally { busy.value = false; emit('busy-change', false); }
   if (completed) await Promise.all([load(offset.value), showDetail(selected.value)]);
 }
-onMounted(() => load());
+onMounted(() => load(offset.value));
 onUnmounted(() => { ++listVersion; ++detailVersion; currentPassword.value = ''; });
 </script>
 

@@ -18,10 +18,12 @@
 </template>
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue';
+import { rememberListControls } from './listState.js';
 import { exportReports, getReport, listReports, updateReport } from './adminApi.js';
 import { reportStatuses, riskCategories } from './riskLabels.js';
 const emit=defineEmits(['busy-change']);
 const rows=ref([]),total=ref(0),offset=ref(0),q=ref(''),status=ref(''),category=ref(''),priority=ref('');
+rememberListControls('reports', { offset, q, status, category, priority });
 const loading=ref(false),busy=ref(false),error=ref(''),message=ref(''),detail=ref(null),assignees=ref([]),detailPanel=ref(null);
 const action=ref('start'),reason=ref(''),assignee=ref(''),editPriority=ref('normal');
 const hasUnsavedChanges=computed(()=>Boolean(detail.value && (reason.value || action.value!=='start' || editPriority.value!==detail.value.priority || assignee.value)));
@@ -33,5 +35,5 @@ async function open(id){if(!leave())return;error.value='';busy.value=true;emit('
 function close(){if(leave()){detail.value=null;reason.value='';}}
 async function save(){if(busy.value||!reason.value.trim())return;if(['offline','dismiss'].includes(action.value)&&!window.confirm(action.value==='offline'?'确认下架公开内容并结案？不会删除用户本地副本。':'确认驳回举报？原因将对举报者可见。'))return;busy.value=true;emit('busy-change',true);error.value='';message.value='';const id=detail.value.id;try{const data=await updateReport(id,{revision:detail.value.revision,action:action.value,reason:reason.value,assignee:assignee.value||null,priority:editPriority.value});if(data.id!==id||data.revision!==detail.value.revision+1)throw Error('服务端未确认处置完成');detail.value=null;reason.value='';message.value='处置已保存';}catch(e){error.value=e.message;}finally{busy.value=false;emit('busy-change',false);}if(!detail.value){await load();await open(id);}}
 async function download(){if(busy.value||!window.confirm('导出当前筛选前 500 件举报的元数据？不含举报者邮箱、描述或内容正文。'))return;busy.value=true;emit('busy-change',true);error.value='';try{const data=await exportReports(query());if(!Array.isArray(data.items))throw Error('导出响应无效');const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='promptark-reports.json';link.click();URL.revokeObjectURL(url);message.value=`已导出 ${data.items.length} 件，操作已审计`;}catch(e){error.value=e.message;}finally{busy.value=false;emit('busy-change',false);}}
-onMounted(()=>load(0));
+onMounted(()=>load(offset.value));
 </script>

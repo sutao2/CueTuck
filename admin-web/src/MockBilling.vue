@@ -15,9 +15,11 @@
   </div>
 </template>
 <script setup>
+import { rememberListControls } from './listState.js';
 import {computed,onMounted,ref} from 'vue';import {listMockBilling,changeMockBilling,createMockBatch,getMockBatch,updateMockBatch} from './adminApi.js';
 const emit=defineEmits(['busy-change']);const tabs={entitlements:'账号权益',orders:'模拟订单',batches:'测试兑换码'};const actionOutcomes={success:'模拟成功 / 授予模拟 Pro',failure:'模拟失败',cancel:'模拟取消',reset:'重置模拟权益'};const outcomes={...actionOutcomes,redeem:'测试码兑换'};
 const kind=ref('entitlements'),items=ref([]),total=ref(0),offset=ref(0),query=ref(''),enabled=ref(null),loading=ref(false),busy=ref(false),error=ref(''),message=ref(''),target=ref(''),outcome=ref('success'),changeReason=ref(''),batchName=ref(''),count=ref(10),uses=ref(1),days=ref(30),codes=ref([]),detail=ref(null);let requestKey='',requestId='',batchKey='',batchRequest=null,loadVersion=0;
+rememberListControls('billing', { kind, offset, query });
 const hasUnsavedChanges=computed(()=>!!target.value||!!batchName.value||!!codes.value.length);defineExpose({hasUnsavedChanges,isBusy:busy});function setBusy(value){busy.value=value;emit('busy-change',value);}const formatDate=v=>new Date(v).toLocaleString();
 async function load(start=offset.value){const version=++loadVersion;loading.value=true;error.value='';try{const result=await listMockBilling(kind.value,{q:query.value,offset:start});if(version!==loadVersion)return;items.value=result.items;total.value=result.total;offset.value=start;enabled.value=result.enabled;}catch(e){if(version===loadVersion)error.value=e.message;}finally{if(version===loadVersion)loading.value=false;}}
 function switchTab(value){if(kind.value===value)return;if(hasUnsavedChanges.value&&!window.confirm('离开将放弃草稿和一次性测试码，确认已保存需要的码？'))return;target.value='';changeReason.value='';batchName.value='';codes.value=[];detail.value=null;query.value='';kind.value=value;load(0);}
@@ -28,7 +30,7 @@ async function toggle(item){if(!window.confirm(`确认${item.enabled?'停用':'�
 async function showBatch(id){setBusy(true);error.value='';try{detail.value=await getMockBatch(id);}catch(e){error.value=e.message;}finally{setBusy(false);}}
 async function copyCodes(){try{await navigator.clipboard.writeText(codes.value.join('\n'));message.value='测试码已复制，请妥善保存。';}catch{error.value='复制失败，请手动选择测试码复制。';}}
 function clearCodes(){if(window.confirm('清除后无法恢复明码，确认已经保存？'))codes.value=[];}
-onMounted(()=>load(0));
+onMounted(()=>load(offset.value));
 </script>
 <style scoped>
 .mock-billing{display:grid;gap:20px;min-width:0}.mock-banner{margin:0;background:#fff6e9;border:1px solid #f0dcc0;border-radius:10px;padding:16px;line-height:1.6;font-size:13px}.mock-banner strong{display:block;color:#92652c}.mock-tabs{display:flex;gap:8px;flex-wrap:wrap}.mock-tabs [aria-selected=true]{background:#e8f2ef;color:#176c61}.mock-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.mock-form{padding:24px}.mock-grid label{display:grid;gap:8px}.mock-grid input,.mock-grid select,.mock-search input{min-width:0;width:100%;font:inherit;color:inherit;border:1px solid #dce1e4;border-radius:7px;padding:10px 12px;box-sizing:border-box}.mock-search{display:flex;gap:8px;flex-wrap:wrap}.mock-search input{width:260px}.generated-codes{padding:20px;overflow:auto;max-height:280px;font-size:13px}.mock-billing td{overflow-wrap:anywhere}.mock-billing td small{color:#7b858e}.mock-billing .table-scroll h3{margin:20px;font-size:14px}@media(max-width:650px){.mock-grid{grid-template-columns:1fr}.mock-search input{width:100%}}

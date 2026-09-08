@@ -1,4 +1,5 @@
 import { apiBase } from "../../shared/apiBase.js";
+import { clearListStates } from './listState.js';
 let accessToken = null;
 let accountEmail = null;
 let accountRole = null;
@@ -29,6 +30,7 @@ export function resetAdminSession() {
 }
 
 export function clearAdminSession() {
+  clearListStates();
   accessToken = null;
   accountEmail = null;
   accountRole = null;
