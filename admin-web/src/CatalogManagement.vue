@@ -23,12 +23,14 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { rememberListControls } from './listState.js';
 import { listCatalog, saveCatalog, deleteCatalog, migrateCatalog } from './adminApi.js';
 const props = defineProps({ kind: { type:String, required:true } });
 const emit = defineEmits(['busy-change']);
 const rows=ref([]), query=ref(''), status=ref(''), loaded=ref(false), loading=ref(false), busy=ref(false), error=ref(''), formError=ref(''), message=ref('');
 const draft=ref(null), baseline=ref(''), editing=ref(false), editor=ref(null), references=ref(0);
 const migrationTarget=ref(''),migrationReason=ref(''),collapsed=ref(new Set()),groupFilter=ref('');
+rememberListControls(props.kind, { query, status, groupFilter });
 let version=0;
 const isCategory=computed(()=>props.kind==='categories'), label=computed(()=>isCategory.value?'分类':'模型');
 const groups={language:'语言 / 推理',image:'图片生成',video:'视频生成'};

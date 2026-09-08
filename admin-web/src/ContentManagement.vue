@@ -25,6 +25,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { listState } from './listState.js';
 import { getAdminContent, listAdminContent, saveAdminContent } from './adminApi.js';
 const emit = defineEmits(['busy-change']);
 const states = { online: '已上架', offline: '已下架', trashed: '回收站' };
@@ -33,6 +34,9 @@ const selected = ref(''), detail = ref(null), draft = ref(null), reason = ref(''
 const models = ref([]);
 const limit = 25;
 let listVersion = 0, detailVersion = 0, applied = { q: '', visibility: '' };
+const memory = listState('content'), previous = memory.read();
+if (previous.filters) { applied = previous.filters; query.value = applied.q; visibility.value = applied.visibility; }
+offset.value = previous.offset || 0;
 const saved = ref('');
 const dirty = computed(() => Boolean(draft.value && (JSON.stringify(draft.value) !== saved.value || reason.value)));
 const allowedStates = computed(() => detail.value?.visibility === 'trashed' ? { trashed: '回收站', offline: '恢复为下架' } : states);
@@ -42,7 +46,7 @@ async function load(start = offset.value, apply = false) {
   if (busy.value) return;
   const current = ++listVersion, filters = apply ? { q: query.value, visibility: visibility.value } : applied;
   loading.value = true; error.value = '';
-  try { const result = await listAdminContent({ ...filters, offset: start, limit }); if (current !== listVersion) return; items.value = result.items ?? []; total.value = result.total ?? items.value.length; categories.value = result.categories ?? []; models.value = result.models ?? []; offset.value = start; applied = filters; }
+  try { const result = await listAdminContent({ ...filters, offset: start, limit }); if (current !== listVersion) return; items.value = result.items ?? []; total.value = result.total ?? items.value.length; categories.value = result.categories ?? []; models.value = result.models ?? []; offset.value = start; applied = filters; memory.save({ filters, offset: start }); }
   catch (caught) { if (current === listVersion) error.value = caught.message; }
   finally { if (current === listVersion) loading.value = false; }
 }
@@ -76,7 +80,7 @@ async function save() {
   finally { busy.value = false; emit('busy-change', false); }
   if (!detailError.value) { await load(offset.value); if (selected.value === id && detailVersion === version && !dirty.value) await open(id); }
 }
-onMounted(() => load(0));
+onMounted(() => load(offset.value));
 onUnmounted(() => { ++listVersion; ++detailVersion; });
 </script>
 

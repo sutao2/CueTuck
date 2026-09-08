@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-08-admin-hardening.md](plans/2026-09-08-admin-hardening.md) | 目标 | 管理端五项补齐 | 列表状态、持久化 AI/视觉审核、存储对账和隔离 E2E |
 | [../deploy/README.md](../deploy/README.md) | 现行 | 集中验收、部署和发行配置 | 一键回归、独立开发服务及调试/正式构建边界 |
 | [plans/2026-09-08-local-release-readiness.md](plans/2026-09-08-local-release-readiness.md) | 验收 | P4–P6 本地收尾 | 本机回归/恢复/打包已验；远程 CI、生产签名与跨平台待验 |
 | [plans/2026-09-08-publish-sync-feedback.md](plans/2026-09-08-publish-sync-feedback.md) | 现行 | P3c 发布与同步反馈 | 请求隔离、分阶段反馈、队列重试；406 项前端测试已验 |

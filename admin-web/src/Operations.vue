@@ -37,6 +37,7 @@
 </template>
 <script setup>
 import {onMounted,ref} from 'vue';
+import { rememberListControls } from './listState.js';
 import {getOperations} from './adminApi.js';
 import MediaReclaim from './MediaReclaim.vue';
 const props=defineProps({mode:{type:String,required:true}});
@@ -49,6 +50,7 @@ const dependencies=[['postgres','PostgreSQL'],['redis','Redis'],['media','对象
 const status={healthy:'可连接',unavailable:'不可用',not_configured:'未配置'};
 const mailStatus={queued:'等待发送',mail_queued:'进入邮件队列',sending:'发送中',accepted:'对端已接收',failed:'失败',expired:'已过期',config_changed:'配置已变化',quota_limited:'额度不足，已跳过',unavailable:'渠道不可用'};
 const data=ref(null),busy=ref(false),error=ref(''),notice=ref(''),days=ref(7),offset=ref(0),filters=ref({actor:'',action:'',from:'',to:''});
+rememberListControls(props.mode, { days, offset, filters });
 const number=value=>Number(value??0).toLocaleString();
 const date=value=>value?new Date(value).toLocaleString():'未记录';
 function query(){return props.mode==='overview'?{days:days.value}:props.mode==='audit'?{...filters.value,offset:offset.value}:{}}
