@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-08-download-feedback.md](plans/2026-09-08-download-feedback.md) | 现行 | 下载反馈与重复下载 | 来源 ID 持久状态、入口防重复与固定轻提示 |
 | [plans/2026-09-08-disable-worklog-gate.md](plans/2026-09-08-disable-worklog-gate.md) | 现行 | 关闭 WorkLog 提交拦截 | 用户明确停用本仓库 IDE 评审钩子，保留测试与 CI |
 | [plans/2026-09-08-community-import.md](plans/2026-09-08-community-import.md) | 现行 | 导入公开提示词样本 | 有来源许可的本机追加导入与参考图 |
 | [plans/2026-09-08-detail-image-preview.md](plans/2026-09-08-detail-image-preview.md) | 现行 | 查看详情样图排版 | 两张摄影样图、来源与限宽阅读；349 项测试及 macOS 构建 |

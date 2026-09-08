@@ -13,6 +13,8 @@ pub struct PromptRecord {
     pub collection_id: Option<String>,
     pub use_count: i64,
     pub source: String,
+    #[serde(default)]
+    pub remote_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -48,6 +50,7 @@ pub(crate) fn map_prompt_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Prompt
         last_used_at: row.get(10)?,
         asset_count: row.get(11)?,
         image_count: row.get(12)?,
+        remote_id: row.get(13)?,
     })
 }
 
@@ -57,7 +60,7 @@ pub(crate) fn read_prompt(connection: &Connection, id: &str) -> Result<PromptRec
             "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0),
                     COALESCE(source, 'local'), author, model, last_used_at,
                     (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=prompts.id),
-                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=prompts.id AND mime LIKE 'image/%')
+                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=prompts.id AND mime LIKE 'image/%'), remote_id
              FROM prompts WHERE id = ?1",
             [id],
             map_prompt_row,
@@ -284,7 +287,7 @@ pub fn list_prompts_in_dir(
             "SELECT p.id, p.title, p.summary, p.content, p.category_id, p.collection_id, COALESCE(p.use_count, 0),
                     COALESCE(p.source, 'local'), p.author, p.model, p.last_used_at,
                     (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=p.id),
-                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=p.id AND mime LIKE 'image/%')
+                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=p.id AND mime LIKE 'image/%'), p.remote_id
              FROM prompts p
              LEFT JOIN categories c ON c.id = p.category_id
              LEFT JOIN categories parent ON parent.id = c.parent_id

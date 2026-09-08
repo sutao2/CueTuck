@@ -183,7 +183,7 @@ pub fn list_collection_members_in_dir(
             "SELECT id, title, summary, content, category_id, collection_id, COALESCE(use_count, 0),
                     COALESCE(source, 'local'), author, model, last_used_at,
                     (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=prompts.id),
-                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=prompts.id AND mime LIKE 'image/%')
+                    (SELECT COUNT(*) FROM prompt_assets WHERE prompt_id=prompts.id AND mime LIKE 'image/%'), remote_id
              FROM prompts
              WHERE deleted_at IS NULL AND collection_id = ?1
              ORDER BY title",
