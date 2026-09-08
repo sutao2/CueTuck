@@ -1268,6 +1268,26 @@ describe("WorkbenchShell", () => {
     expect(w.find('[data-testid="login-modal"]').exists()).toBe(false);
   });
 
+  it("requires per-run attachment consent and prevents repeat clicks while syncing", async () => {
+    let finish;
+    setMineTransport(async () => []);
+    setLibrarySyncTransport({ put: () => new Promise(resolve => { finish = resolve; }), get: async () => ({ items: [] }) });
+    setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
+    await loginSession({ email: "dev@promptark.local", password: "devpass" });
+    const w = mount(WorkbenchShell);
+    await w.get('[data-testid="open-settings"]').trigger('click'); await flushPromises();
+    await w.get('[data-settings-page="sync"]').trigger('click');
+    expect(w.get('[data-testid="sync-include-assets"]').element.checked).toBe(false);
+    await w.get('[data-testid="sync-include-assets"]').setValue(true);
+    await w.get('[data-testid="sync-now"]').trigger('click'); await flushPromises();
+    expect(w.get('[data-testid="sync-now"]').element.disabled).toBe(true);
+    expect(w.get('[data-testid="sync-include-assets"]').element.disabled).toBe(true);
+    finish({ items: [] }); await flushPromises();
+    expect(w.get('[data-testid="sync-now"]').element.disabled).toBe(false);
+    expect(w.get('[data-testid="sync-include-assets"]').element.checked).toBe(false);
+    expect(w.get('[data-testid="sync-note"]').text()).toContain('私有附件');
+  });
+
   it("saves launch at login on macos", async () => {
     const w = mount(WorkbenchShell, { props: { host: "macos" } });
     await w.get('[data-testid="open-settings"]').trigger("click");

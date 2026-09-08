@@ -488,6 +488,9 @@ impl AppState {
         if let Some(pg) = &self.db {
             return pg.put_library_changes(email, &items).await;
         }
+        if items.iter().any(|item| item.payload.get("asset_refs").is_some()) {
+            return Err(StatusCode::SERVICE_UNAVAILABLE);
+        }
         {
             let mut map = self
                 .library

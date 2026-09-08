@@ -199,7 +199,7 @@
               >
             </label>
             <label class="setting-row" data-testid="sync-wifi-images-row">
-              <span class="setting-copy"><strong>仅在 Wi-Fi 下同步图片</strong><small>打开后，立即同步只在判定为 Wi-Fi 时推送封面。无法判定或非 Wi-Fi 时跳过封面，仍同步标题与正文。本机封面仍在。</small></span>
+              <span class="setting-copy"><strong>仅在 Wi-Fi 下同步图片与附件</strong><small>无法判定或非 Wi-Fi 时，封面和本次勾选的附件均延后；标题与正文照常同步。</small></span>
               <input
                 type="checkbox"
                 data-testid="sync-wifi-images"
@@ -208,17 +208,21 @@
               >
             </label>
             <div class="setting-row" data-testid="sync-conflict">
-              <span class="setting-copy"><strong>冲突处理</strong><small>立即同步默认按较新的 updated_at 覆盖。选择保留本地时不覆盖已有本机正文，远端独有条目仍写入。</small></span>
+              <span class="setting-copy"><strong>冲突处理</strong><small>默认采用较新正文，附件仅补齐合并。保留本地时跳过已有提示词的正文与附件下载，远端独有条目仍写入。</small></span>
               <select data-testid="sync-conflict-strategy" :value="syncConflict" @change="saveSyncConflict">
                 <option value="newer">较新者胜</option>
                 <option value="keep_local">保留本地</option>
               </select>
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>立即同步</strong><small>已登录时推拉账号库。未登录打开登录，不会假装已同步。</small></span>
-              <button type="button" class="button ghost-button" data-testid="sync-now" @click="runSyncNow">立即同步</button>
+              <label class="setting-copy" for="include-sync-assets"><strong>本次包含私有附件</strong><small>将本机库附件上传到 {{ session.email || '当前账号' }}，并补齐账号库文件，不公开。合并保留两端已有附件，不同步附件删除；每次需重新勾选。</small></label>
+              <input id="include-sync-assets" v-model="syncIncludeAssets" :disabled="syncBusy" type="checkbox" data-testid="sync-include-assets">
             </div>
-            <p v-if="syncNote" data-testid="sync-note">{{ syncNote }}</p>
+            <div class="setting-row">
+              <span class="setting-copy"><strong>立即同步</strong><small>已登录时推拉账号库。未登录打开登录，不会假装已同步。</small></span>
+              <button type="button" class="button ghost-button" data-testid="sync-now" :disabled="syncBusy" @click="runSyncNow">{{ syncBusy ? '正在同步…' : '立即同步' }}</button>
+            </div>
+            <p v-if="syncNote" role="status" data-testid="sync-note">{{ syncNote }}</p>
             </div>
           </section>
           <section v-else-if="current === 'models'">
@@ -419,7 +423,7 @@
         </main>
       </div>
       <footer class="settings-feedback" :class="{ error: feedbackError }" role="status" aria-live="polite" data-testid="settings-feedback">
-        {{ loading ? '正在读取设置…' : saving ? '正在保存…' : feedback || '开关与选择项即时保存；有保存按钮的表单需手动保存。' }}
+        {{ loading ? '正在读取设置…' : saving ? '正在保存…' : feedback || (current === 'sync' ? '附件授权仅用于本次同步，不保存；其余偏好即时保存。' : '开关与选择项即时保存；有保存按钮的表单需手动保存。') }}
       </footer>
       <div v-if="pendingAction" class="settings-confirm-layer">
         <section class="settings-confirm" role="alertdialog" aria-modal="true" aria-labelledby="settings-confirm-title" aria-describedby="settings-confirm-copy" @keydown.tab="trapConfirmationFocus">
@@ -535,6 +539,9 @@ const autoDownload = ref(false);
 const updateChannel = ref("stable");
 const syncConflict = ref("newer");
 const syncWifiImages = ref(false);
+const syncIncludeAssets = ref(false);
+const syncBusy = ref(false);
+watch(() => props.session.email, () => { syncIncludeAssets.value = false; });
 const autoSyncQueue = ref(false);
 const anonymousDownloadStats = ref(false);
 const httpProxy = ref("");
@@ -714,15 +721,18 @@ async function togglePref(key, event) {
 }
 
 async function runSyncNow() {
+  if (syncBusy.value) return;
   syncNote.value = "";
   if (!props.session.loggedIn) {
     emit("login");
     return;
   }
+  syncBusy.value = true;
   try {
-    await syncLocalLibraryNow();
+    const result = await syncLocalLibraryNow({ includeAssets: syncIncludeAssets.value, onProgress: text => { syncNote.value = text; } });
     await flushSyncQueue();
-    syncNote.value = "已同步";
+    syncNote.value = result.attachmentsDeferred ? '正文已同步；当前网络不是已确认的 Wi-Fi，附件已延后' : syncIncludeAssets.value ? '已同步，私有附件已校验并补齐' : '已同步';
+    if (syncIncludeAssets.value && !result.attachmentsDeferred && syncConflict.value === 'keep_local') syncNote.value = '已同步；保留本地策略已跳过已有提示词的附件下载';
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes("登录")) {
@@ -730,7 +740,7 @@ async function runSyncNow() {
       return;
     }
     syncNote.value = message;
-  }
+  } finally { syncBusy.value = false; syncIncludeAssets.value = false; }
 }
 
 async function toggleAutoDownload(event) {

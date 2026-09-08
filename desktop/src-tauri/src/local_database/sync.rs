@@ -102,6 +102,10 @@ fn schema(kind: &str) -> Option<(&'static str, &'static str, &'static [&'static 
 }
 
 pub fn export_sync_changes(dir: &Path) -> Result<Vec<SyncChange>, String> {
+    export_with_assets(dir, false)
+}
+
+pub fn export_with_assets(dir: &Path, include_assets: bool) -> Result<Vec<SyncChange>, String> {
     let mut database = Connection::open(dir.join("promptark.sqlite")).map_err(|e| e.to_string())?;
     let connection = database.transaction().map_err(|e| e.to_string())?;
     let mut result = Vec::new();
@@ -127,8 +131,11 @@ pub fn export_sync_changes(dir: &Path) -> Result<Vec<SyncChange>, String> {
             })
             .map_err(|e| e.to_string())?;
         for row in rows {
-            let payload = row.map_err(|e| e.to_string())?;
+            let mut payload = row.map_err(|e| e.to_string())?;
             let id = payload[key].as_str().unwrap_or("").to_string();
+            if include_assets && kind == "prompt" && payload["deleted_at"].is_null() {
+                payload["assets"] = serde_json::to_value(super::assets::read(&connection, &id)?).map_err(|e| e.to_string())?;
+            }
             if kind == "setting" && !SETTINGS.contains(&id.as_str()) {
                 continue;
             }
@@ -158,6 +165,10 @@ pub fn apply_sync_changes(
 }
 
 pub(crate) fn apply_changes(dir: &Path, items: &[SyncChange], keep_local: bool, local_import: bool) -> Result<(), String> {
+    apply_with_assets(dir, items, keep_local, local_import, false)
+}
+
+pub fn apply_with_assets(dir: &Path, items: &[SyncChange], keep_local: bool, local_import: bool, merge_assets: bool) -> Result<(), String> {
     if items.iter().any(|item| {
         schema(&item.kind).is_none()
             || item.updated_at.parse::<u64>().is_err()
@@ -214,6 +225,9 @@ pub(crate) fn apply_changes(dir: &Path, items: &[SyncChange], keep_local: bool, 
                         )
                         .map_err(|e| e.to_string())?;
                 }
+            }
+            if merge_assets && kind == "prompt" && item.deleted_at.is_none() && local.as_ref().is_some_and(|stamp| !keep_local && super::timestamp_ms(stamp) == super::timestamp_ms(&item.updated_at)) {
+                merge_prompt_assets(&transaction, id, &item.payload)?;
             }
             if local.as_ref().is_some_and(|stamp| {
                 (keep_local && kind == "prompt")
@@ -312,6 +326,9 @@ pub(crate) fn apply_changes(dir: &Path, items: &[SyncChange], keep_local: bool, 
                 let assets = serde_json::from_value::<Vec<super::assets::Asset>>(item.payload.get("assets").cloned().unwrap_or_else(|| json!([]))).map_err(|_| "附件格式错误")?;
                 super::assets::replace(&transaction, id, &assets)?;
             }
+            if merge_assets && kind == "prompt" && item.deleted_at.is_none() {
+                merge_prompt_assets(&transaction, id, &item.payload)?;
+            }
         }
     }
     let invalid_tree: bool = transaction.query_row(
@@ -329,4 +346,71 @@ pub(crate) fn apply_changes(dir: &Path, items: &[SyncChange], keep_local: bool, 
         super::observe_timestamp(super::timestamp_ms(&item.updated_at));
     }
     Ok(())
+}
+
+fn merge_prompt_assets(connection: &Connection, id: &str, payload: &Value) -> Result<(), String> {
+    let Some(value) = payload.get("assets") else { return Ok(()) };
+    let incoming: Vec<super::assets::Asset> = serde_json::from_value(value.clone()).map_err(|_| "附件格式错误")?;
+    super::assets::validate(&incoming)?;
+    let mut assets = super::assets::read(connection, id)?;
+    for asset in incoming {
+        if !assets.iter().any(|existing| existing.id == asset.id) { assets.push(asset); }
+    }
+    super::assets::replace(connection, id, &assets)
+}
+
+#[cfg(test)]
+mod asset_sync_tests {
+    use super::*;
+    use crate::local_database::{self as db, assets::{self, Asset}};
+
+    fn file() -> Asset {
+        Asset { id: uuid::Uuid::new_v4().to_string(), name: "notes.txt".into(), mime: "text/plain".into(), data: "cHJpdmF0ZQ==".into() }
+    }
+
+    #[test]
+    fn two_sqlite_libraries_round_trip_private_assets_only_with_explicit_consent() {
+        let a = tempfile::tempdir().unwrap(); let b = tempfile::tempdir().unwrap();
+        db::initialize_in_dir(a.path()).unwrap(); db::initialize_in_dir(b.path()).unwrap();
+        let original = file();
+        let prompt = assets::save_prompt(a.path(), None, "notes", "body", None, None, &[original.clone()]).unwrap();
+        let ordinary = export_sync_changes(a.path()).unwrap();
+        assert!(ordinary.iter().all(|item| item.payload.get("assets").is_none()));
+        let complete = export_with_assets(a.path(), true).unwrap();
+        apply_sync_changes(b.path(), &complete, false).unwrap();
+        assert!(assets::list(b.path(), &prompt.id).unwrap().is_empty());
+        // The text already has exactly the same version: file hydration must still work.
+        apply_with_assets(b.path(), &complete, false, false, true).unwrap();
+        let restored = assets::list(b.path(), &prompt.id).unwrap();
+        assert_eq!(restored.len(), 1); assert_eq!(restored[0].data, original.data);
+        apply_with_assets(b.path(), &complete, false, false, true).unwrap();
+        assert_eq!(assets::list(b.path(), &prompt.id).unwrap().len(), 1);
+        assert_eq!(db::list_prompts_in_dir(b.path(), "", None).unwrap()[0].asset_count, 1);
+    }
+
+    #[test]
+    fn merge_keeps_local_files_and_rolls_back_all_files_when_any_record_is_invalid() {
+        let dir = tempfile::tempdir().unwrap(); db::initialize_in_dir(dir.path()).unwrap();
+        let local = file(); let addition = file();
+        let prompt = assets::save_prompt(dir.path(), None, "original", "body", None, None, &[local.clone()]).unwrap();
+        let mut change = export_sync_changes(dir.path()).unwrap().into_iter().find(|item| item.id == prompt.id).unwrap();
+        change.payload["assets"] = json!([addition.clone()]);
+        apply_with_assets(dir.path(), &[change.clone()], true, false, true).unwrap();
+        assert_eq!(assets::list(dir.path(), &prompt.id).unwrap().len(), 1);
+        let mut bad = change.clone(); bad.id = "bad".into(); bad.payload["category_id"] = json!("missing");
+        assert!(apply_with_assets(dir.path(), &[change.clone(), bad], false, false, true).is_err());
+        assert_eq!(assets::list(dir.path(), &prompt.id).unwrap().len(), 1);
+        apply_with_assets(dir.path(), &[change.clone()], false, false, true).unwrap();
+        let merged = assets::list(dir.path(), &prompt.id).unwrap();
+        assert_eq!(merged.len(), 2); assert_eq!(merged[0].id, local.id); assert_eq!(merged[1].id, addition.id);
+        change.payload["assets"] = json!([]);
+        apply_with_assets(dir.path(), &[change.clone()], false, false, true).unwrap();
+        assert_eq!(assets::list(dir.path(), &prompt.id).unwrap().len(), 2);
+        change.updated_at = (db::timestamp_ms(&change.updated_at) + 1).to_string();
+        change.payload["title"] = json!("must not land");
+        change.payload["assets"] = json!([{"id": uuid::Uuid::new_v4().to_string(), "name":"bad.txt", "mime":"text/plain", "data":"not base64"}]);
+        assert!(apply_with_assets(dir.path(), &[change], false, false, true).is_err());
+        assert_eq!(db::list_prompts_in_dir(dir.path(), "", None).unwrap()[0].title, "original");
+        assert_eq!(assets::list(dir.path(), &prompt.id).unwrap().len(), 2);
+    }
 }

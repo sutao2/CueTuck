@@ -443,8 +443,8 @@ export async function setLocalSetting(key, value) {
   memorySettingStamps[key] = nextTimestamp();
 }
 
-export async function exportLocalSyncChanges() {
-  if (isTauri()) return tauriInvoke("export_local_sync_changes");
+export async function exportLocalSyncChanges({ includeAssets = false } = {}) {
+  if (isTauri()) return tauriInvoke("export_local_sync_changes", { include_assets: includeAssets });
   const rows = [
     ...memoryCategories.map((row) => ["category", row]),
     ...memoryCollections.map((row) => ["collection", row]),
@@ -454,23 +454,24 @@ export async function exportLocalSyncChanges() {
     }]),
   ];
   return rows.map(([kind, row]) => ({
-    id: row.id, kind, payload: { ...row }, updated_at: String(timestampMillis(row.updated_at)), deleted_at: row.deleted_at ?? null,
+    id: row.id, kind, payload: { ...row, ...(includeAssets && kind === 'prompt' && !row.deleted_at ? { assets: memoryAssets(row.id) } : {}) }, updated_at: String(timestampMillis(row.updated_at)), deleted_at: row.deleted_at ?? null,
   }));
 }
 
-export async function applyLocalSyncChanges(items, { keepLocal = false } = {}) {
-  if (isTauri()) return tauriInvoke("apply_local_sync_changes", { items, keep_local: keepLocal });
+export async function applyLocalSyncChanges(items, { keepLocal = false, includeAssets = false } = {}) {
+  if (isTauri()) return tauriInvoke("apply_local_sync_changes", { items, keep_local: keepLocal, include_assets: includeAssets });
   if (items.some((item) => !["category", "collection", "prompt", "setting"].includes(item.kind) || !/^\d+$/.test(item.updated_at))) throw new Error("同步记录类型或时间无效");
   const tables = { category: memoryCategories.map((row) => ({ ...row })), collection: memoryCollections.map((row) => ({ ...row })), prompt: memoryPrompts.map((row) => ({ ...row })) };
   const settings = { ...memorySettings };
   const stamps = { ...memorySettingStamps };
+  const pendingAssets = new Map();
   for (const kind of ["category", "collection", "prompt", "setting"]) {
     const ordered = items.filter((row) => row.kind === kind);
     if (kind === 'category') ordered.sort((a, b) => Number(a.payload?.parent_id != null) - Number(b.payload?.parent_id != null));
     for (const item of ordered) {
       if (!item.id || !item.payload || typeof item.payload !== "object" || Array.isArray(item.payload)) throw new Error("同步记录格式错误");
       const payload = { ...item.payload };
-      delete payload.assets; delete payload.asset_count; delete payload.image_count;
+      delete payload.assets; delete payload.asset_refs; delete payload.asset_count; delete payload.image_count;
       validatePayload(payload);
       if (kind === "setting") {
         const key = item.id.replace(/^setting:/, "");
@@ -483,6 +484,15 @@ export async function applyLocalSyncChanges(items, { keepLocal = false } = {}) {
         continue;
       }
       const existing = tables[kind].find((row) => row.id === item.id);
+      if (includeAssets && kind === 'prompt' && !item.deleted_at && item.payload.assets !== undefined
+        && (!existing || (!keepLocal && timestampMillis(existing.updated_at) <= timestampMillis(item.updated_at)))) {
+        validateAssets(item.payload.assets);
+        const merged = pendingAssets.get(item.id) ?? memoryAssets(item.id);
+        for (const asset of item.payload.assets) if (!merged.some(a => a.id === asset.id)) merged.push(asset);
+        validateAssets(merged);
+        pendingAssets.set(item.id, merged);
+        if (existing) { existing.asset_count = merged.length; existing.image_count = merged.filter(a => a.mime.startsWith('image/')).length; }
+      }
       if (existing && kind === "collection" && timestampMillis(existing.updated_at) === timestampMillis(item.updated_at)) {
         for (const field of ["cover_json", "cover_type"]) if (field in payload) existing[field] = payload[field];
       }
@@ -511,6 +521,11 @@ export async function applyLocalSyncChanges(items, { keepLocal = false } = {}) {
   memoryPrompts = tables.prompt;
   memorySettings = settings;
   memorySettingStamps = stamps;
+  for (const [id, assets] of pendingAssets) {
+    storeMemoryAssets(id, assets);
+    const row = memoryPrompts.find(row => row.id === id);
+    row.asset_count = assets.length; row.image_count = assets.filter(a => a.mime.startsWith('image/')).length;
+  }
   for (const item of items) memoryClock = Math.max(memoryClock, timestampMillis(item.updated_at));
 }
 

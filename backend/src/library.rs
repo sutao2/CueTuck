@@ -17,6 +17,42 @@ pub(crate) fn validate_changes(items: &[LibraryChange]) -> Result<(), StatusCode
             || item.updated_at.len() > 16 {
             return Err(StatusCode::BAD_REQUEST);
         }
+        if item.payload.get("assets").is_some() || (item.kind != "prompt" && item.payload.get("asset_refs").is_some()) {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
+    Ok(())
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct AssetReference {
+    pub id: String,
+    pub media_id: String,
+    pub name: String,
+    pub mime: String,
+    pub size: i64,
+    pub sha256: String,
+}
+
+pub(crate) async fn validate_asset_refs(pg: &crate::postgres::Pg, owner: &str, items: &[LibraryChange]) -> Result<(), StatusCode> {
+    for item in items {
+        let Some(value) = item.payload.get("asset_refs") else { continue };
+        let refs: Vec<AssetReference> = serde_json::from_value(value.clone()).map_err(|_| StatusCode::BAD_REQUEST)?;
+        if refs.len() > 12 { return Err(StatusCode::PAYLOAD_TOO_LARGE); }
+        let mut ids = std::collections::HashSet::new();
+        let mut total = 0;
+        for file in refs {
+            if uuid::Uuid::parse_str(&file.id).is_err() || !ids.insert(file.id.clone()) || !(0..=crate::media::MAX_FILE as i64).contains(&file.size) {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+            total += file.size;
+            if total > 20 * 1024 * 1024 { return Err(StatusCode::PAYLOAD_TOO_LARGE); }
+            let valid: bool = sqlx::query_scalar(&format!("SELECT EXISTS(SELECT 1 FROM {} WHERE id=$1 AND owner_email=$2 AND ready=TRUE AND file_name=$3 AND content_type=$4 AND size=$5 AND sha256=$6)", pg.t("media_objects")))
+                .bind(&file.media_id).bind(owner).bind(&file.name).bind(&file.mime).bind(file.size).bind(&file.sha256)
+                .fetch_one(&pg.pool).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+            if !valid { return Err(StatusCode::NOT_FOUND); }
+        }
     }
     Ok(())
 }

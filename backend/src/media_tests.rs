@@ -405,6 +405,10 @@ async fn real_minio_private_attachment_roundtrip() {
     let bytes = "PromptArk 附件完整性测试\n只用于隔离验收".as_bytes();
     let (status, result) = upload(&state, &a, "往返验证.txt", "text/plain", bytes, false).await;
     assert_eq!(status, StatusCode::OK);
+    let (_, retry) = upload(&state, &a, "往返验证.txt", "text/plain", bytes, false).await;
+    let reference = json!({"id":uuid::Uuid::new_v4().to_string(),"media_id":result["id"],"name":result["name"],"mime":result["mime"],"size":result["size"],"sha256":result["sha256"]});
+    let (sync_status, synced) = crate::admin_security_tests::request(&state, "PUT", "/v1/library/changes", &a,
+        json!({"items":[{"id":"real-media-sync","kind":"prompt","payload":{"title":"隔离测试","asset_refs":[reference.clone()]},"updated_at":"1"}]})).await;
     let key = format!("promptark/{}", result["id"].as_str().unwrap());
     let client = reqwest::Client::builder()
         .no_proxy()
@@ -447,6 +451,9 @@ async fn real_minio_private_attachment_roundtrip() {
     );
     assert_eq!(download_status, StatusCode::OK);
     assert_eq!(downloaded.as_ref(), bytes);
+    assert_eq!(retry, result);
+    assert_eq!(sync_status, StatusCode::OK);
+    assert_eq!(synced["items"][0]["payload"]["asset_refs"][0], reference);
 }
 
 #[tokio::test]
@@ -457,7 +464,7 @@ async fn concurrent_upload_reservations_enforce_account_quota_and_pending_is_unr
     let file = |id: &str| media::MediaUpload {
         id: id.into(),
         url: String::new(),
-        name: "a.txt".into(),
+        name: format!("{id}.txt"),
         mime: "text/plain".into(),
         size: 1,
         sha256: "a".repeat(64),
@@ -490,4 +497,38 @@ async fn concurrent_upload_reservations_enforce_account_quota_and_pending_is_unr
         media::reserve(pg, "b@example.com", "extra", &file("extra")).await,
         Err(StatusCode::CONFLICT)
     );
+}
+
+#[tokio::test]
+async fn retry_reuses_only_owners_completed_object_and_private_refs_are_validated_atomically() {
+    let (state, a, b, _, store, _server) = fixture().await;
+    let (status, file) = upload(&state, &a, "notes.txt", "text/plain", b"private notes", false).await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, retry) = upload(&state, &a, "notes.txt", "text/plain", b"private notes", false).await;
+    assert_eq!(retry, file);
+    assert_eq!(store.objects.lock().unwrap().len(), 1);
+    let (_, other) = upload(&state, &b, "notes.txt", "text/plain", b"private notes", false).await;
+    assert_ne!(other["id"], file["id"]);
+    let reference = json!({ "id": uuid::Uuid::new_v4().to_string(), "media_id": file["id"], "name": file["name"], "mime": file["mime"], "size": file["size"], "sha256": file["sha256"] });
+    let change = json!({"id":"prompt-a","kind":"prompt","payload":{"title":"私有","asset_refs":[reference.clone()]},"updated_at":"100"});
+    let request = crate::admin_security_tests::request;
+    assert_eq!(request(&state, "PUT", "/v1/library/changes", &a, json!({"items":[change.clone()]})).await.0, StatusCode::OK);
+    assert_eq!(request(&state, "PUT", "/v1/library/changes", &b, json!({"items":[change.clone()]})).await.0, StatusCode::NOT_FOUND);
+    let mut forged = change.clone(); forged["id"] = json!("forged"); forged["payload"]["asset_refs"][0]["sha256"] = json!("0".repeat(64));
+    let clean = json!({"id":"must-rollback","kind":"prompt","payload":{"title":"no"},"updated_at":"101"});
+    assert_eq!(request(&state, "PUT", "/v1/library/changes", &a, json!({"items":[clean,forged]})).await.0, StatusCode::NOT_FOUND);
+    assert_eq!(state.list_library_changes("a@example.com", "").await.unwrap().len(), 1);
+    let legacy = json!({"id":"prompt-a","kind":"prompt","payload":{"title":"正文更新"},"updated_at":"101"});
+    let (status, result) = request(&state, "PUT", "/v1/library/changes", &a, json!({"items":[legacy]})).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(result["items"][0]["payload"]["asset_refs"][0], reference);
+    let mut oversized = change.clone(); oversized["payload"]["asset_refs"] = json!(vec![reference.clone(); 13]);
+    assert_eq!(request(&state, "PUT", "/v1/library/changes", &a, json!({"items":[oversized]})).await.0, StatusCode::PAYLOAD_TOO_LARGE);
+    let mut duplicate = change.clone(); duplicate["payload"]["asset_refs"] = json!([reference.clone(), reference.clone()]);
+    assert_eq!(request(&state, "PUT", "/v1/library/changes", &a, json!({"items":[duplicate]})).await.0, StatusCode::BAD_REQUEST);
+    let pg = state.db.as_ref().unwrap();
+    sqlx::query(&format!("UPDATE {} SET ready=FALSE WHERE id=$1", pg.t("media_objects"))).bind(file["id"].as_str().unwrap()).execute(&pg.pool).await.unwrap();
+    assert_eq!(upload(&state, &a, "notes.txt", "text/plain", b"private notes", false).await.0, StatusCode::CONFLICT);
+    assert_eq!(request(&state, "PUT", "/v1/library/changes", &a, json!({"items":[change]})).await.0, StatusCode::NOT_FOUND);
+    assert_eq!(store.objects.lock().unwrap().len(), 2);
 }
