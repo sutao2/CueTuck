@@ -79,6 +79,16 @@ pub struct ContentEdit {
     reason: Option<String>,
 }
 impl Pg {
+    pub async fn should_seed_square(&self) -> Result<bool, StatusCode> {
+        sqlx::query_scalar(&format!(
+            "SELECT NOT EXISTS(SELECT 1 FROM {}) AND NOT EXISTS(SELECT 1 FROM {} WHERE key='square_seed_disabled' AND value='true')",
+            self.t("square_items"), self.t("settings")
+        ))
+        .fetch_one(&self.pool)
+        .await
+        .map_err(db_error)
+    }
+    #[cfg(test)]
     pub async fn has_square_records(&self) -> Result<bool, StatusCode> {
         sqlx::query_scalar(&format!(
             "SELECT EXISTS(SELECT 1 FROM {})",

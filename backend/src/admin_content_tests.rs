@@ -2,6 +2,26 @@ use super::*;
 use crate::admin_security_tests::{request, state};
 use serde_json::{json, Value};
 
+#[tokio::test]
+async fn cleared_square_can_persistently_disable_demo_seeding() {
+    let state = state().await;
+    let pg = state.db.as_ref().unwrap();
+    assert!(pg.should_seed_square().await.unwrap());
+    sqlx::query(&format!("INSERT INTO {} (key,value) VALUES ('square_seed_disabled','true')", pg.t("settings")))
+        .execute(&pg.pool).await.unwrap();
+    pg.apply_schema(false).await.unwrap();
+    let reopened = postgres::Pg::new(pg.pool.clone(), &pg.schema).unwrap();
+    assert!(!reopened.should_seed_square().await.unwrap());
+    assert!(reopened.list_items().await.unwrap().is_empty());
+    sqlx::query(&format!("DELETE FROM {} WHERE key='square_seed_disabled'", pg.t("settings")))
+        .execute(&pg.pool).await.unwrap();
+    assert!(reopened.should_seed_square().await.unwrap());
+    sqlx::query(&format!("INSERT INTO {} (id,title,kind,visibility) VALUES ('old','old','prompt','trashed')", pg.t("square_items")))
+        .execute(&pg.pool).await.unwrap();
+    assert!(!reopened.should_seed_square().await.unwrap());
+    sqlx::query(&format!("DROP SCHEMA {} CASCADE", pg.schema)).execute(&pg.pool).await.unwrap();
+}
+
 async fn fixture() -> (AppState, String, String, String) {
     let state = state().await;
     let pg = state.db.as_ref().unwrap();
