@@ -220,9 +220,10 @@
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>立即同步</strong><small>已登录时推拉账号库。未登录打开登录，不会假装已同步。</small></span>
-              <button type="button" class="button ghost-button" data-testid="sync-now" :disabled="syncBusy" @click="runSyncNow">{{ syncBusy ? '正在同步…' : '立即同步' }}</button>
+              <button type="button" class="button ghost-button" data-testid="sync-now" :disabled="syncBusy" @click="runSyncNow()">{{ syncBusy ? '正在同步…' : '立即同步' }}</button>
             </div>
             <p v-if="syncNote" role="status" data-testid="sync-note">{{ syncNote }}</p>
+            <button v-if="syncQueuePending" type="button" class="button ghost-button" data-testid="retry-sync-queue" :disabled="syncBusy" @click="runSyncNow(true)">重试发送队列</button>
             </div>
           </section>
           <section v-else-if="current === 'models'">
@@ -543,7 +544,9 @@ const syncConflict = ref("newer");
 const syncWifiImages = ref(false);
 const syncIncludeAssets = ref(false);
 const syncBusy = ref(false);
-watch(() => props.session.email, () => { syncIncludeAssets.value = false; });
+const syncQueuePending = ref(false);
+let syncLibrarySummary = '';
+watch(() => props.session.email, () => { syncIncludeAssets.value = false; syncNote.value = ''; syncQueuePending.value = false; syncLibrarySummary = ''; });
 const autoSyncQueue = ref(false);
 const anonymousDownloadStats = ref(false);
 const httpProxy = ref("");
@@ -604,7 +607,7 @@ function clearSearchOrReturn(event) {
   else requestClose();
 }
 function requestClose() {
-  if (saving.value || loading.value || dataBusy.value || importBusy.value || billingBusy.value) return;
+  if (saving.value || loading.value || dataBusy.value || importBusy.value || billingBusy.value || syncBusy.value) return;
   if (hasUnsaved.value) pendingAction.value = 'discard';
   else emit('cancel');
 }
@@ -722,7 +725,7 @@ async function togglePref(key, event) {
   } finally { saving.value = false; }
 }
 
-async function runSyncNow() {
+async function runSyncNow(queueOnly = false) {
   if (syncBusy.value) return;
   syncNote.value = "";
   if (!props.session.loggedIn) {
@@ -730,18 +733,32 @@ async function runSyncNow() {
     return;
   }
   syncBusy.value = true;
+  const account = getSession();
+  const sameAccount = () => getSession().accessToken === account.accessToken && props.session.email === account.email;
+  const includeAssets = syncIncludeAssets.value;
+  if (!queueOnly) syncLibrarySummary = '';
   try {
-    const result = await syncLocalLibraryNow({ includeAssets: syncIncludeAssets.value, onProgress: text => { syncNote.value = text; } });
-    await flushSyncQueue();
-    syncNote.value = result.attachmentsDeferred ? '正文已同步；当前网络不是已确认的 Wi-Fi，附件已延后' : syncIncludeAssets.value ? '已同步，私有附件已校验并补齐' : '已同步';
-    if (syncIncludeAssets.value && !result.attachmentsDeferred && syncConflict.value === 'keep_local') syncNote.value = '已同步；保留本地策略已跳过已有提示词的附件下载';
+    if (!queueOnly) {
+      const result = await syncLocalLibraryNow({ includeAssets, onProgress: text => { if (sameAccount()) syncNote.value = text; } });
+      if (!sameAccount()) throw Error('登录状态已改变，请重新同步');
+      syncLibrarySummary = result.attachmentsDeferred ? '正文已同步；当前网络不是已确认的 Wi-Fi，附件已延后' : includeAssets ? '已同步，私有附件已校验并补齐' : '个人库已同步';
+      if (includeAssets && !result.attachmentsDeferred && syncConflict.value === 'keep_local') syncLibrarySummary = '已同步；保留本地策略已跳过已有提示词的附件下载';
+    }
+    syncQueuePending.value = true;
+    syncNote.value = `${syncLibrarySummary}；正在发送收藏与发布草稿队列…`;
+    const remaining = await flushSyncQueue();
+    if (!sameAccount()) throw Error('登录状态已改变，请重新同步');
+    const count = remaining.filter(job => job.email === account.email).length;
+    syncQueuePending.value = count > 0;
+    syncNote.value = `${syncLibrarySummary}；${count ? `队列仍有 ${count} 项未送达，请重试` : '队列已处理完成'}`;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes("登录")) {
-      emit("login");
+    if (!sameAccount()) {
+      syncNote.value = '登录状态已改变，请在当前账号重新同步';
+      syncQueuePending.value = false;
       return;
     }
-    syncNote.value = message;
+    syncNote.value = `${syncLibrarySummary ? `${syncLibrarySummary}；队列处理失败：` : '同步未完成：'}${message}`;
   } finally { syncBusy.value = false; syncIncludeAssets.value = false; }
 }
 
