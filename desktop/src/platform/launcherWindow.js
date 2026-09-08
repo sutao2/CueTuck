@@ -1,3 +1,5 @@
+import { readLauncherPreferences, LAUNCHER_SIZES } from './launcherPreferences.js';
+
 export const LAUNCHER_LABEL = "launcher";
 export const LAUNCHER_WIDTH = 620;
 export const LAUNCHER_HEIGHTS = {
@@ -40,11 +42,13 @@ export async function listenLauncherLifecycle(onShown, onHidden, onFeedback) {
   } catch (error) { shown(); hidden(); throw error; }
 }
 
-export function openLauncherWindow() {
+export async function openLauncherWindow() {
   if (window.__TAURI_INTERNALS__) {
     return import("@tauri-apps/api/core").then(({ invoke }) => invoke("show_launcher"));
   }
-  const popup = window.open("/launcher.html", LAUNCHER_LABEL, `width=${LAUNCHER_WIDTH},height=${launcherHeightFor("expanded")}`);
+  const { size } = await readLauncherPreferences();
+  const { width, height } = LAUNCHER_SIZES[size];
+  const popup = window.open("/launcher.html", LAUNCHER_LABEL, `width=${width},height=${height}`);
   if (!popup) {
     window.location.assign("/launcher.html");
   }

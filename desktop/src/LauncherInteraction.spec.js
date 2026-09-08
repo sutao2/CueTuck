@@ -28,6 +28,22 @@ async function open(content = "{{姓名}} / {{任务}} / {{姓名}}") {
 }
 const button = (w, text) => w.findAll("button").find((b) => b.text() === text);
 
+it('uses saved result limit and text size, refreshing them on explicit show', async () => {
+  let shown;
+  vi.spyOn(windows, 'listenLauncherLifecycle').mockImplementation(async (handler) => { shown = handler; return () => {}; });
+  await library.setLocalSetting('launcher_preferences', JSON.stringify({ fontSize: 16, resultLimit: 10 }));
+  for (let i = 0; i < 25; i++) await library.createLocalPrompt({ title: `测试 ${i}`, content: '{{内容}}' });
+  const w = mount(LauncherApp); await flushPromises();
+  await w.get('input').setValue('测试'); await flushPromises();
+  expect(w.findAll('[role="option"]')).toHaveLength(10);
+  expect(w.get('main').element.style.getPropertyValue('--launcher-content-size')).toBe('16px');
+  await library.setLocalSetting('launcher_preferences', JSON.stringify({ fontSize: 14, resultLimit: 50 }));
+  await shown(); await flushPromises();
+  await w.get('input').setValue('测试'); await flushPromises();
+  expect(w.findAll('[role="option"]')).toHaveLength(25);
+  expect(w.get('main').element.style.getPropertyValue('--launcher-content-size')).toBe('14px');
+});
+
 it("does not focus an initially hidden native window, but focuses explicit show and error resume", async () => {
   let shown, hidden, notice;
   vi.spyOn(windows, "listenLauncherLifecycle").mockImplementation(async (...handlers) => {

@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-08-launcher-preferences.md](plans/2026-09-08-launcher-preferences.md) | 验收 | 设置启动器大小与行为 | 四项偏好及恢复默认；425 项前端、75 项原生通过，调试包已构建 |
 | [plans/2026-09-08-launcher-refinement.md](plans/2026-09-08-launcher-refinement.md) | 验收 | 启动器尺寸与主题完善 | 紧凑尺寸/系统主题、419 项前端与 74 项原生测试；调试包已更新 |
 | [plans/2026-09-08-business-acceptance.md](plans/2026-09-08-business-acceptance.md) | 验收 | 完整业务链路与远程 CI | 隔离真实后端/存储业务链路通过，修复开发重置遗漏；远程 CI 待验 |
 | [plans/2026-09-08-admin-hardening.md](plans/2026-09-08-admin-hardening.md) | 验收 | 管理端五项补齐 | 列表状态、持久化 AI/视觉审核、存储对账和隔离 E2E 已本机验收 |

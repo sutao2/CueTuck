@@ -1,6 +1,7 @@
 <template>
   <main
     class="launcher-canvas"
+    :style="{ '--launcher-content-size': `${launcherPreferences.fontSize}px` }"
     :class="{ 'host-mac': host === 'macos' }"
     aria-label="快捷搜索"
     @keydown="onCanvasKey"
@@ -146,12 +147,13 @@ import { getLocalSetting, listLocalPrompts, recordLocalPromptUse, setLocalSettin
 import { copyLauncherText, copyThenPaste } from "./platform/paste.js";
 import { supportsSelectedText } from "./platform/selectedText.js";
 import { applyHostChrome, detectHost, formatShortcutLabel } from "./platform/windowChrome.js";
+import { DEFAULT_LAUNCHER_PREFERENCES, readLauncherPreferences } from './platform/launcherPreferences.js';
 
 const props = defineProps({
   host: { type: String, default: () => detectHost() },
 });
 
-const LAUNCHER_RESULT_LIMIT = 20;
+const launcherPreferences = ref({ ...DEFAULT_LAUNCHER_PREFERENCES });
 const query = ref("");
 const inputEl = ref(null);
 const formEl = ref(null);
@@ -195,7 +197,7 @@ watch(query, async (value) => {
   }
   try {
     const rows = await listLocalPrompts({ query: needle });
-    if (request === searchRequest) results.value = rows.slice(0, LAUNCHER_RESULT_LIMIT);
+    if (request === searchRequest) results.value = rows.slice(0, launcherPreferences.value.resultLimit);
   } catch (error) {
     if (request === searchRequest) { results.value = []; feedback.value = `搜索失败：${error.message || error}`; }
   } finally { if (request === searchRequest) searching.value = false; }
@@ -413,6 +415,8 @@ async function onShown() {
   if (busy.value || disposed) return;
   hidden = false;
   resetState();
+  try { launcherPreferences.value = await readLauncherPreferences(); }
+  catch (error) { feedback.value = `读取启动器设置失败：${error}`; }
   await focusCurrent();
   try { await refreshTheme(); } catch (error) { feedback.value = `读取主题失败：${error}`; }
 }
@@ -432,6 +436,7 @@ onMounted(async () => {
       focusCurrent();
     });
     if (disposed) { unlisten(); return; }
+    launcherPreferences.value = await readLauncherPreferences();
     await refreshTheme();
   } catch (error) { feedback.value = `启动器初始化失败：${error}`; }
 });
@@ -677,6 +682,7 @@ onUnmounted(() => {
 }
 .field > span { overflow-wrap: anywhere; }
 .field textarea {
+  font-size: var(--launcher-content-size, 12px);
   width: 100%;
   height: 44px;
   min-height: 44px;
@@ -702,7 +708,7 @@ onUnmounted(() => {
   background: var(--bg);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font: 12px/1.8 var(--font-code);
+  font: var(--launcher-content-size, 12px)/1.8 var(--font-code);
 }
 h3 {
   margin: 0;

@@ -54,6 +54,24 @@
               >
             </label>
             </div>
+            <h4>启动器</h4>
+            <p>仅影响独立快捷窗口，保存后下次唤起生效。</p>
+            <div class="settings-group">
+              <label v-for="option in launcherSettingRows" :key="option.key" class="setting-row">
+                <span class="setting-copy"><strong>{{ option.label }}</strong><small>{{ option.description }}</small></span>
+                <select :data-testid="`launcher-${option.key}`" :value="launcherPreferences[option.key]" @change="changeLauncherPreference(option.key, $event)">
+                  <option v-for="choice in option.choices" :key="choice.value" :value="choice.value">{{ choice.label }}</option>
+                </select>
+              </label>
+              <div class="setting-row">
+                <span class="setting-copy"><strong>恢复启动器默认设置</strong><small>仅恢复上面四项，不修改快捷键或使用后关闭。</small></span>
+                <button type="button" class="button ghost-button" data-testid="reset-launcher-preferences" @click="saveLauncherPreferences({ ...DEFAULT_LAUNCHER_PREFERENCES })">恢复默认</button>
+              </div>
+              <div class="setting-row">
+                <span class="setting-copy"><strong>启动器快捷键</strong><small>唤起、新建与粘贴最近使用的组合键。</small></span>
+                <button type="button" class="button ghost-button" @click="current = 'shortcuts'">前往快捷键</button>
+              </div>
+            </div>
           </section>
           <section v-else-if="current === 'account'">
             <h3>账号与广场</h3>
@@ -443,6 +461,7 @@
 <script setup>
 import McpSettings from './McpSettings.vue';
 import AppIcon from "./AppIcon.vue";
+import { DEFAULT_LAUNCHER_PREFERENCES, LAUNCHER_PREFERENCES_KEY, readLauncherPreferences } from '../platform/launcherPreferences.js';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { uiText } from "../platform/uiStrings.js";
 import {
@@ -507,7 +526,7 @@ const pages = computed(() => [
 const current = ref(pages.value.some(page => page.id === props.initialPage) ? props.initialPage : 'general');
 const settingsQuery = ref(''), returnButton = ref(null);
 const searchKeywords = {
-  general: '启动 托盘 窗口 startup tray', account: '登录 邮箱 资料 订阅 账单 兑换 作者 login profile billing',
+  general: '启动器 大小 尺寸 位置 字号 搜索结果 托盘 窗口 startup tray launcher size position font', account: '登录 邮箱 资料 订阅 账单 兑换 作者 login profile billing',
   shortcuts: '快捷键 按键 启动器 录入 keyboard launcher', sync: '同步 冲突 wifi 云 sync',
   models: '模型 默认 标签 变量 建议 model ai', data: '数据 备份 恢复 导入 导出 backup restore import export',
   network: '代理 广场 网络 智能体 MCP 接入 proxy network', appearance: '外观 主题 深色 浅色 语言 密度 theme language',
@@ -556,6 +575,13 @@ const prefError = ref("");
 const launchAtLogin = ref(false);
 const minimizeToTray = ref(false);
 const closeLauncherAfterUse = ref(true);
+const launcherPreferences = ref({ ...DEFAULT_LAUNCHER_PREFERENCES });
+const launcherSettingRows = [
+  { key: 'size', label: '窗口大小', description: '搜索结果与填写页保持同样大小，小屏会限制在可用区域。', choices: [{ value: 'compact', label: '紧凑 · 620 × 420' }, { value: 'standard', label: '标准 · 680 × 500' }, { value: 'large', label: '宽敞 · 760 × 560' }] },
+  { key: 'position', label: '默认位置', description: '每次唤起的位置；本次拖动后，输入或清空不会跳位。', choices: [{ value: 'upper', label: '屏幕偏上' }, { value: 'center', label: '屏幕居中' }] },
+  { key: 'fontSize', label: '填写与预览字号', description: '只调整启动器里的变量输入和提示词正文。', choices: [12, 14, 16].map(value => ({ value, label: `${value} px` })) },
+  { key: 'resultLimit', label: '搜索结果数量', description: '最多展示的本地搜索结果，方向键可滚动选择。', choices: [10, 20, 50].map(value => ({ value, label: `${value} 条` })) },
+];
 const autoBackup = ref(false);
 const zipPath = ref("");
 const squareAccess = ref(true);
@@ -652,12 +678,30 @@ async function savePreference(key, state, value, event, apply) {
   } finally { saving.value = false; }
 }
 
+async function saveLauncherPreferences(next, event, key) {
+  if (saving.value) return;
+  saving.value = true;
+  try {
+    await setLocalSetting(LAUNCHER_PREFERENCES_KEY, JSON.stringify(next));
+    launcherPreferences.value = next;
+    showFeedback('已保存，下次唤起启动器生效');
+  } catch (error) {
+    if (event) event.target.value = launcherPreferences.value[key];
+    showFeedback(`保存失败：${error.message || error}`, true);
+  } finally { saving.value = false; }
+}
+function changeLauncherPreference(key, event) {
+  const value = ['fontSize', 'resultLimit'].includes(key) ? Number(event.target.value) : event.target.value;
+  return saveLauncherPreferences({ ...launcherPreferences.value, [key]: value }, event, key);
+}
+
 onMounted(async () => { await loadSettings(); await nextTick(); returnButton.value?.focus(); });
 
 async function loadSettings() {
   loading.value = true;
   try {
   const stored = await getLocalSetting("launcher_shortcut");
+  launcherPreferences.value = await readLauncherPreferences();
   if (stored) shortcut.value = stored;
   const storedNew = await getLocalSetting("new_prompt_shortcut");
   if (storedNew) newPromptShortcut.value = storedNew;

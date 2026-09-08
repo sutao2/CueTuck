@@ -123,6 +123,17 @@ M8 起左侧 MUST 固定十类，顺序与原型一致：常规、账号与广�
 - THEN 下次登录系统后应用会启动
 - AND 保存失败时开关回到原状并说明原因
 
+### Requirement: 启动器偏好
+
+常规页 MUST 另提供启动器大小、默认位置、填写/预览字号与结果数量，取值和默认值见[启动器规格](../launcher/spec.md)。选项即时保存、失败回滚、下次唤起生效；恢复默认仅重置这四项，不改快捷键和使用后关闭，不改变导航分类。该偏好不参与云同步。
+
+#### Scenario: 保存启动器偏好
+
+- GIVEN 常规页打开
+- WHEN 选择启动器偏好或恢复默认
+- THEN 成功后持久化并显示下次唤起生效；失败保留旧值并提示错误
+- AND 保存中禁止重复操作与退出，重新打开显示已保存选项
+
 ### Requirement: 快捷键
 
 系统 MUST 能记录并保存启动器全局快捷键。与系统冲突时 MUST 提示失败，不得静默无效。该行为 M2 已交付，MUST 保留。
@@ -470,6 +481,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 | 场景 | 测试 |
 |---|---|
+| 保存启动器偏好 | `LauncherSettings.spec.js` 保存/重开/重置/失败回滚/禁用/搜索；`launcherPreferences.test.js` 合法值及回退 |
 | 打开设置 | `WorkbenchShell.spec.js` opens settings from the sidebar |
 | 全窗口设置与返回应用、搜索设置分类 | `SettingsLayout.spec.js` 页面语义、关键词过滤、IME/Escape、草稿确认与返回工作台保留查询和入口焦点 |
 | 主题预览卡 | `SettingsLayout.spec.js` 主题卡真实保存；`SettingsInteraction.spec.js` 主题保存失败回滚 |
