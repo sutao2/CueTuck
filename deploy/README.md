@@ -14,6 +14,8 @@ node scripts/verify.mjs
 
 管理端浏览器脚本 `node scripts/admin-browser-smoke.mjs` 使用隔离 API 替身，验证登录、列表返回、审核提交、配置保存失败/重试和退出；不代替真实后端或外部提供商联调。集中入口将后端测试并发限制为 4 个线程，以减轻本机开发数据库资源压力；测试内部的并发冲突场景仍然执行。
 
+真实业务链路另在 `backend` 显式执行 `cargo test --locked real_business_browser_roundtrip -- --ignored --nocapture`，要求本机 PostgreSQL、已配置私有 MinIO、三前端依赖及 Playwright Chrome。使用随机 schema、临时 1433/1434 前端与动态 API 端口，完成后只清理本次数据。不会发外部邮件或操作用户桌面库；浏览器与原生覆盖边界见[业务验收记录](../docs/plans/2026-09-08-business-acceptance.md)。未配置 MinIO 的通用 CI 不自动运行此显式测试。
+
 `.github/workflows/verify.yml` 使用 CI 临时数据库和独立浏览器；提交工作流不等于远程 CI 已通过。数据库恢复/真实 MinIO 与 1 万条性能演练是显式本机命令，不在通用 CI 上假报覆盖。
 
 ## 服务地址
