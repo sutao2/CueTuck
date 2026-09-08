@@ -139,6 +139,9 @@ impl Pg {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
+        if result.status == "pending" && (config.require_ai || (config.check_images && !publication.asset_refs.is_empty())) {
+            sqlx::query(&format!("INSERT INTO {} (publication_id) VALUES ($1) ON CONFLICT DO NOTHING",self.t("ai_jobs"))).bind(&result.id).execute(&mut *tx).await.map_err(db_error)?;
+        }
         if result.status == "approved" {
             let item = result
                 .square_item()

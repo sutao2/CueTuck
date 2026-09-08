@@ -45,6 +45,8 @@ pub struct Model {
     pub endpoint: String,
     pub model: String,
     pub enabled: bool,
+    #[serde(default)]
+    pub vision: bool,
     pub json_mode: bool,
     pub redact: bool,
     pub timeout_seconds: u64,
@@ -373,6 +375,9 @@ pub async fn run(
     text: &str,
     only: Option<&str>,
 ) -> Run {
+    run_images(config,skill,key,text,only,&[]).await
+}
+pub async fn run_images(config:&Config,skill:&Skill,key:&[u8;32],text:&str,only:Option<&str>,images:&[String])->Run {
     let mut run = Run {
         revision: config.revision,
         skill_id: skill.id.clone(),
@@ -384,7 +389,7 @@ pub async fn run(
         config
             .models
             .iter()
-            .filter(|m| m.config.id == id && m.config.enabled)
+            .filter(|m| m.config.id == id && m.config.enabled && (images.is_empty() || m.config.vision))
             .collect()
     } else {
         skill
@@ -394,7 +399,7 @@ pub async fn run(
                 config
                     .models
                     .iter()
-                    .find(|m| m.config.id == *id && m.config.enabled)
+                    .find(|m| m.config.id == *id && m.config.enabled && (images.is_empty() || m.config.vision))
             })
             .collect()
     };
@@ -443,7 +448,7 @@ pub async fn run(
                 } else {
                     text.to_owned()
                 };
-                ai_transport::send(
+                ai_transport::send_images(
                     &client,
                     &m.endpoint,
                     &secret,
@@ -451,6 +456,7 @@ pub async fn run(
                     &skill.instruction,
                     &input,
                     m.json_mode,
+                    images,
                 )
                 .await
             }
@@ -531,8 +537,8 @@ pub async fn test(
 pub async fn screen_publication(
     state: &AppState,
     publication: &crate::Publication,
+    claim: Option<&str>,
 ) -> Result<crate::Publication, StatusCode> {
-    if !publication.asset_refs.is_empty() { return Ok(publication.clone()); }
     let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let local: Option<Value> = sqlx::query_scalar(&format!(
         "SELECT moderation FROM {} WHERE id=$1",
@@ -545,7 +551,7 @@ pub async fn screen_publication(
     let Some(local) = local else {
         return Ok(publication.clone());
     };
-    if publication.status != "pending" || local["checks"]["require_ai"] != true {
+    if publication.status != "pending" || (local["checks"]["require_ai"] != true && !(local["checks"]["images"]==true && !publication.asset_refs.is_empty())) {
         return Ok(publication.clone());
     }
     let config = pg.ai_config().await?;
@@ -560,11 +566,32 @@ pub async fn screen_publication(
     let text = parts.join("\n");
     let mut runs = vec![];
     let mut error = None;
+    let has_images = !publication.asset_refs.is_empty();
+    let policy:Value=sqlx::query_scalar(&format!("SELECT data FROM {} WHERE id=1",pg.t("moderation_policy"))).fetch_one(&pg.pool).await.map_err(db_error)?;
+    if policy["enabled"]!=true || (has_images && (policy["check_images"]!=true || local["checks"]["images"]!=true)) || (!has_images && policy["require_ai"]!=true) {
+        return pg.finish_ai_claim(publication,&local,config.revision,&runs,Some("当前策略未允许此审核，转人工".into()),claim).await;
+    }
+    // Fetch only when a saved, explicitly enabled vision model can consume the selected images.
+    let mut images=vec![];
+    if has_images {
+        if !config.models.iter().any(|m|m.config.enabled && m.config.vision) {
+            error=Some("未启用视觉模型，附件继续人工审核".into());
+        } else {
+            match tokio::time::timeout(std::time::Duration::from_secs(25),crate::media::moderation_images(state,publication)).await {
+                Ok(Ok(value))=>images=value,
+                Ok(Err(reason))=>error=Some(reason),
+                Err(_)=>error=Some("图片读取超过 25 秒，转人工".into()),
+            }
+        }
+    }
+    if error.is_some() {
+        return pg.finish_ai_claim(publication,&local,config.revision,&runs,error,claim).await;
+    }
     if text.len() > 32000 {
         error = Some("投稿超出 AI 单次 32 KB 文本范围，转人工".to_owned())
     } else if local["local_reasons"]
         .as_array()
-        .is_some_and(|v| !v.is_empty())
+        .is_some_and(|v| v.iter().any(|r| !has_images || !r.as_str().is_some_and(|s|s.starts_with("稿件含文件附件"))))
     {
         error = Some("本地检查已要求人工复核，未发送模型".into())
     } else {
@@ -578,7 +605,7 @@ pub async fn screen_publication(
                             .as_ref()
                             .is_some_and(|id| s.categories.contains(id)))
             }) {
-                runs.push(run(&config, skill, &state.oauth_config.key, &text, None).await);
+                runs.push(run_images(&config, skill, &state.oauth_config.key, &text, None,&images).await);
             }
         };
         if tokio::time::timeout(std::time::Duration::from_secs(25), work)
@@ -591,17 +618,24 @@ pub async fn screen_publication(
             error = Some("没有匹配的启用 Skill，转人工".into())
         }
     }
-    pg.finish_ai(publication, &local, config.revision, &runs, error)
+    pg.finish_ai_claim(publication, &local, config.revision, &runs, error, claim)
         .await
 }
 impl Pg {
+    #[cfg(test)]
     pub(crate) async fn finish_ai(
         &self,
         publication: &crate::Publication,
         local: &Value,
         revision: i64,
         runs: &[Run],
-        mut error: Option<String>,
+        error: Option<String>,
+    ) -> Result<crate::Publication, StatusCode> {
+        self.finish_ai_claim(publication,local,revision,runs,error,None).await
+    }
+    pub(crate) async fn finish_ai_claim(
+        &self, publication: &crate::Publication, local: &Value, revision: i64,
+        runs: &[Run], mut error: Option<String>, claim: Option<&str>,
     ) -> Result<crate::Publication, StatusCode> {
         use crate::admin_moderation::Policy;
         let mut tx = self.pool.begin().await.map_err(db_error)?;
@@ -638,11 +672,12 @@ impl Pg {
             || local["policy_revision"] != policy.revision
             || local["rules_revision"] != rules["revision"]
             || !policy.enabled
-            || !policy.require_ai
+            || !(policy.require_ai || (policy.check_images && !publication.asset_refs.is_empty()))
         {
             error = Some("审核期间策略、词库或模型/Skill 版本变化，转人工".into())
         }
         self.catalog_lock(&mut tx).await?;
+        if let Some(claim)=claim { crate::ai_jobs::lock_claim(self,&mut tx,&publication.id,claim).await?; }
         if let Some(mut item)=publication.square_item() {
             if self.resolve_catalog_item(&mut tx,&mut item).await? {
                 error=Some("审核期间分类或模型已迁移，转人工复核".into());
@@ -659,6 +694,7 @@ impl Pg {
         let mut result = publication.clone();
         result.status = status;
         if result.status != "pending" {
+            if let Some(claim)=claim { crate::ai_jobs::finish(self,&mut tx,&publication.id,claim,None).await?; tx.commit().await.map_err(db_error)?; }
             return Ok(result);
         } // A human decision always wins.
         let local_clear = local["local_reasons"]
@@ -739,6 +775,10 @@ impl Pg {
         .await
         .map_err(db_error)?;
         audit(self,&mut tx,"system:ai","publication_ai_screened",json!({"publication_id":result.id,"status":result.status,"revision":revision,"score":score})).await?;
+        if let Some(claim)=claim {
+            let failed = runs.iter().any(|r| r.error.is_some()) || moderation["ai"]["error"].as_str().is_some_and(|s| s.contains("超过"));
+            crate::ai_jobs::finish(self,&mut tx,&publication.id,claim,failed.then_some("模型链路失败，将有限重试；可人工处置")).await?;
+        }
         tx.commit().await.map_err(db_error)?;
         Ok(result)
     }

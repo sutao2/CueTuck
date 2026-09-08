@@ -12,10 +12,10 @@ const steps = {
     ['tool-tests', '.', node, ['--test', 'scripts/release-check.test.mjs', 'scripts/import-community.test.mjs']],
     ...['desktop', 'web', 'admin-web'].flatMap(dir => [[`${dir}-tests`, dir, npm, ['test']], [`${dir}-build`, dir, npm, ['run', 'build']]]),
   ],
-  backend: [['backend', 'backend', 'cargo', ['test', '--locked']]],
+  backend: [['backend', 'backend', 'cargo', ['test', '--locked', '--', '--test-threads=4']]],
   native: [['native', 'desktop/src-tauri', 'cargo', ['test', '--locked']]],
   mcp: [['mcp', 'mcp', 'cargo', ['test', '--locked']]],
-  browser: [['browser', '.', node, ['scripts/browser-smoke.mjs']]],
+  browser: [['browser', '.', node, ['scripts/browser-smoke.mjs']], ['admin-browser', '.', node, ['scripts/admin-browser-smoke.mjs']]],
 };
 if (mode !== 'all' && !steps[mode]) throw Error('Usage: node scripts/verify.mjs [all|frontend|backend|native|mcp|browser]');
 const selected = mode === 'all' ? Object.values(steps).flat() : steps[mode];

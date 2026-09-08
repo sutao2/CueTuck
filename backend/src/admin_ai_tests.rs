@@ -41,6 +41,7 @@ async fn ai_configuration_encryption_versions_permissions_and_history() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(saved["revision"], 1);
     assert_eq!(saved["models"][0]["secret_configured"], true);
+    assert_eq!(saved["models"][0]["vision"], false, "old model configurations must not opt into image transmission");
     assert!(!saved.to_string().contains("super-secret"));
     assert!(pg.has_ai_secrets().await.unwrap());
     let raw: serde_json::Value = sqlx::query_scalar(&format!(

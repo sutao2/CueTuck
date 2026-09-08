@@ -23,6 +23,49 @@ struct Store {
 }
 struct Server(tokio::task::JoinHandle<()>);
 
+#[tokio::test]
+async fn bucket_scan_paginates_decodes_keys_and_never_removes_unknown_objects(){
+    let (state,a,_b,admin,store,_server)=fixture().await;
+    let (_,known)=upload(&state,&a,"known.txt","text/plain",b"test",false).await;
+    for n in 0..3 {store.objects.lock().unwrap().insert(format!("private-test/promptark/unknown-{n}"),b"test".to_vec());}
+    let mut cursor=String::new();let mut unknown=vec![];let mut checked=0;
+    loop {
+        let (status,page)=crate::admin_security_tests::request(&state,"GET",&format!("/v1/admin/media/scan?side=bucket&cursor={cursor}"),&admin,json!({})).await;
+        assert_eq!(status,StatusCode::OK,"{page}");checked+=page["checked"].as_u64().unwrap();unknown.extend(page["items"].as_array().unwrap().clone());
+        let Some(next)=page["next_cursor"].as_str() else {break};cursor=next.to_string();
+    }
+    assert_eq!(checked,4);assert_eq!(unknown.len(),3);assert_eq!(store.deletes.load(Ordering::SeqCst),0);
+    store.objects.lock().unwrap().remove(&format!("private-test/promptark/{}",known["id"].as_str().unwrap()));
+    let (_,page)=crate::admin_security_tests::request(&state,"GET","/v1/admin/media/scan?side=database",&admin,json!({})).await;assert_eq!(page["items"][0]["status"],"missing");
+    store.mode.store(3,Ordering::SeqCst);assert_eq!(crate::admin_security_tests::request(&state,"GET","/v1/admin/media/scan?side=bucket",&admin,json!({})).await.0,StatusCode::BAD_GATEWAY);
+}
+
+#[tokio::test]
+async fn interrupted_upload_cleanup_is_aged_explicit_and_scan_is_read_only(){
+    let (state,a,_b,admin,store,_server)=fixture().await;let pg=state.db.as_ref().unwrap();
+    let (_,file)=upload(&state,&a,"interrupted.txt","text/plain",b"test",false).await;let id=file["id"].as_str().unwrap();
+    sqlx::query(&format!("UPDATE {} SET ready=FALSE WHERE id=$1",pg.t("media_objects"))).bind(id).execute(&pg.pool).await.unwrap();
+    assert_eq!(reclaim(&state,&admin,id).await.0,StatusCode::CONFLICT);
+    let (status,scan)=crate::admin_security_tests::request(&state,"GET","/v1/admin/media/scan?side=database",&admin,json!({})).await;
+    assert_eq!(status,StatusCode::OK);assert_eq!(scan["items"][0]["status"],"incomplete");assert_eq!(store.deletes.load(Ordering::SeqCst),0);
+    assert_eq!(crate::admin_security_tests::request(&state,"GET","/v1/admin/media/scan?side=database",&a,json!({})).await.0,StatusCode::FORBIDDEN);
+    age_media(&state,id).await;let (_,list)=crate::admin_security_tests::request(&state,"GET","/v1/admin/media/orphans",&admin,json!({})).await;assert_eq!(list["items"][0]["ready"],false);
+    assert_eq!(reclaim(&state,&admin,id).await.0,StatusCode::OK);assert_eq!(store.deletes.load(Ordering::SeqCst),1);
+}
+
+#[tokio::test]
+async fn vision_reads_only_selected_owned_verified_images(){
+    let (state,a,_b,_admin,store,_server)=fixture().await;
+    let (_,file)=upload(&state,&a,"preview.png","image/png",b"\x89PNG\r\n\x1a\nfixture",false).await;
+    let reference=json!({"id":Uuid::new_v4().to_string(),"media_id":file["id"],"name":file["name"],"mime":file["mime"],"size":file["size"],"sha256":file["sha256"]});
+    let (_,p)=crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,json!({"source_id":"vision","title":"Image","content":"Check image","asset_refs":[reference]})).await;
+    let publication:Publication=serde_json::from_value(p).unwrap();
+    let images=media::moderation_images(&state,&publication).await.unwrap();assert_eq!(images.len(),1);assert!(images[0].starts_with("data:image/png;base64,"));
+    let payload=crate::ai_transport::user_content("check",&images);assert_eq!(payload[1]["image_url"]["url"],images[0]);
+    store.mode.store(1,Ordering::SeqCst);assert!(media::moderation_images(&state,&publication).await.is_err());
+    let mut forged=publication;forged.asset_refs[0].id=Uuid::new_v4().to_string();assert!(media::moderation_images(&state,&forged).await.is_err());
+}
+
 async fn public_fixture() -> (AppState, String, String, String, Value, String, Store, Server) {
     let (state, a, b, admin, store, server) = fixture().await;
     let (_, media) = upload(&state, &a, "notes.txt", "text/plain", b"selected public notes", false).await;
@@ -123,6 +166,14 @@ impl Drop for Server {
 async fn fixture() -> (AppState, String, String, String, Store, Server) {
     let store = Store::default();
     let router = Router::new()
+        .route("/private-test/",axum::routing::get(|State(s):State<Store>,axum::extract::Query(q):axum::extract::Query<HashMap<String,String>>|async move{
+            if s.mode.load(Ordering::SeqCst)==3{return (StatusCode::BAD_GATEWAY,String::new())}
+            let mut keys:Vec<_>=s.objects.lock().unwrap().keys().filter_map(|k|k.strip_prefix("private-test/").map(str::to_owned)).collect();keys.sort();
+            let start=q.get("continuation-token").and_then(|v|v.parse::<usize>().ok()).unwrap_or(0);
+            let entries=keys.iter().skip(start).take(2).map(|k|format!("<Contents><Key>{}</Key><ETag>fixture</ETag><Size>4</Size><LastModified>2026-01-01T00:00:00Z</LastModified></Contents>",urlencoding::encode(k))).collect::<String>();
+            let next=if start+2<keys.len(){format!("<NextContinuationToken>{}</NextContinuationToken>",start+2)}else{String::new()};
+            (StatusCode::OK,format!("<ListBucketResult>{entries}{next}</ListBucketResult>"))
+        }))
         .route(
             "/*key",
             put(
@@ -212,7 +263,7 @@ async fn reclaim(state: &AppState, admin: &str, id: &str) -> (StatusCode,Value) 
 }
 
 #[tokio::test]
-async fn reclaim_excludes_recent_incomplete_legacy_and_all_historical_references() {
+async fn reclaim_excludes_recent_legacy_and_all_historical_references() {
     let (state,a,b,admin,store,_server)=fixture().await;
     let pg=state.db.as_ref().unwrap();
     let mut ids=vec![];
@@ -231,9 +282,11 @@ async fn reclaim_excludes_recent_incomplete_legacy_and_all_historical_references
     }
     for token in [&a,&b,""] {assert!(crate::admin_security_tests::request(&state,"GET","/v1/admin/media/orphans",token,json!(null)).await.0.is_client_error());assert!(reclaim(&state,token,&ids[5]).await.0.is_client_error());}
     let (_,list)=crate::admin_security_tests::request(&state,"GET","/v1/admin/media/orphans",&admin,json!(null)).await;
-    assert_eq!(list["items"].as_array().unwrap().len(),1);assert_eq!(list["items"][0]["id"],ids[5]);
+    assert_eq!(list["items"].as_array().unwrap().len(),2);
+    assert!(list["items"].as_array().unwrap().iter().any(|r|r["id"]==ids[5]));
+    assert!(list["items"].as_array().unwrap().iter().any(|r|r["id"]==ids[1] && r["ready"]==false));
     assert!(!list.to_string().contains("object_key"));assert!(!list.to_string().contains("owner_email"));
-    for id in &ids[..5] {assert_eq!(reclaim(&state,&admin,id).await.0,StatusCode::CONFLICT);}
+    for index in [0,2,3,4] {assert_eq!(reclaim(&state,&admin,&ids[index]).await.0,StatusCode::CONFLICT);}
     age_media(&state,&ids[0]).await;
     sqlx::query(&format!("UPDATE {} SET file_name=NULL WHERE id=$1",pg.t("media_objects"))).bind(&ids[0]).execute(&pg.pool).await.unwrap();
     assert_eq!(reclaim(&state,&admin,&ids[0]).await.0,StatusCode::CONFLICT);
@@ -595,6 +648,8 @@ async fn real_minio_private_attachment_roundtrip() {
     let (mut state, a, _, _, _, _server) = fixture().await;
     let config = media::MediaConfig::from_env().unwrap();
     assert!(config.ping().await, "local MinIO bucket required");
+    let scan=config.scan_page("").await.expect("real MinIO list-v2 parsing and prefix scan");
+    assert!(scan.contents.len()<=100);
     let bucket = rusty_s3::Bucket::new(
         url::Url::parse(&config.endpoint).unwrap(),
         rusty_s3::UrlStyle::Path,

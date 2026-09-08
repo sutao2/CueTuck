@@ -5,6 +5,14 @@ import {setAdminApiTransport,resetAdminApi,listOrphanMedia,purgeOrphanMedia} fro
 import {loginAdmin,resetAdminSession,setAdminTransport} from './session.js';
 let wrapper;
 const file={id:'media.test',name:'example.txt',size:1024,deleting:false};
+it('scans read-only pages explicitly and never offers deletion for unknown bucket objects',async()=>{
+  const calls=[];setAdminApiTransport(r=>{calls.push(r);return {items:[{id:'promptark/unknown',status:'untracked'}],checked:100,side:'bucket',next_cursor:'next'}});
+  wrapper=mount(MediaReclaim);await flushPromises();expect(calls).toHaveLength(0);
+  await wrapper.findAll('button').find(b=>b.text()==='检查存储桶对象').trigger('click');await flushPromises();
+  expect(wrapper.text()).toContain('仅报告');expect(wrapper.find('[data-testid=media-confirm]').exists()).toBe(false);
+  await wrapper.findAll('button').find(b=>b.text()==='检查下一页').trigger('click');await flushPromises();
+  expect(calls[1].riskPath).toBe('media/scan?side=bucket&cursor=next');expect(calls.every(c=>!c.method)).toBe(true);
+});
 afterEach(()=>{wrapper?.unmount();resetAdminApi();resetAdminSession();vi.unstubAllGlobals()});
 async function inspect(){await wrapper.get('[data-testid=media-inspect]').trigger('click');await flushPromises()}
 async function select(){await wrapper.get('.reclaim-row button').trigger('click')}
