@@ -90,8 +90,8 @@ impl AppState {
                     .await
                     .map_err(|_| "seed user".to_string())?;
             }
-            if !pg
-                .has_square_records()
+            if pg
+                .should_seed_square()
                 .await
                 .map_err(|_| "检查广场数据失败，不执行种子写入".to_string())?
             {

@@ -11,6 +11,16 @@
 
 ## Requirements
 
+### Requirement: 清空后不重建演示内容
+
+后端运行设置 `square_seed_disabled=true` MUST 阻止空广场启动时自动写入演示条目；已有内容不得因该标志改写。缺省保留现有开发初始化行为，数据库读取失败不得执行种子写入。
+
+#### Scenario: 已清空实例重启
+
+- GIVEN 维护操作已备份并清空内容，同时设置持久化禁用种子标志
+- WHEN 重启后端
+- THEN 广场保持为空，账号和其他配置保留
+
 ### Requirement: 智能体有界检索
 
 独立只读分页接口 MUST 按标题/id 稳定排序、过滤非 online 条目，支持标题/摘要字面关键词、分类含子级、模型及有界 limit/offset；禁止匿名时返回 401，不改变现有工作台列表响应。不得读取本地库或记下载统计，见 [P2 计划](../../plans/2026-09-08-mcp-square.md)。
@@ -217,6 +227,7 @@ offline/trashed 条目 MUST 从所有公开读取路径排除，已知 ID 详情
 
 | 场景 | 测试 |
 |---|---|
+| 已清空实例重启 | `cleared_square_can_persistently_disable_demo_seeding`；本机重启空列表/旧正文 404 验收见清空计划 |
 | M2 构建无广场请求 | 已由 M5 浏览替代；离线不阻断本地 |
 | 离线 | `WorkbenchShell.spec.js` shows a non-blocking offline notice and can return to local；`LauncherApp.spec.js` does not request square while searching locally |
 | 未登录下载 | `WorkbenchShell.spec.js` downloads a square prompt without login as source=downloaded；`square.test.js` writes a local copy with source=downloaded；`imports_downloaded_prompt_with_source`；`serves_square_item_content_without_login` |
