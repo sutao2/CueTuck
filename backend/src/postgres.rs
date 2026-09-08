@@ -194,6 +194,7 @@ impl Pg {
                 self.t("media_objects"),
                 self.t("accounts")
             ),
+            format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS file_name TEXT, ADD COLUMN IF NOT EXISTS size BIGINT, ADD COLUMN IF NOT EXISTS sha256 TEXT, ADD COLUMN IF NOT EXISTS ready BOOLEAN NOT NULL DEFAULT FALSE", self.t("media_objects")),
             format!(
                 "CREATE TABLE IF NOT EXISTS {} (
                   owner_email TEXT NOT NULL REFERENCES {}(email) ON DELETE CASCADE,
@@ -1001,39 +1002,6 @@ impl Pg {
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         Ok(email)
-    }
-
-    pub async fn insert_media(
-        &self,
-        id: &str,
-        owner: &str,
-        key: &str,
-        content_type: Option<&str>,
-    ) -> Result<(), StatusCode> {
-        sqlx::query(&format!(
-            "INSERT INTO {} (id, owner_email, object_key, content_type) VALUES ($1,$2,$3,$4)",
-            self.t("media_objects")
-        ))
-        .bind(id)
-        .bind(owner)
-        .bind(key)
-        .bind(content_type)
-        .execute(&self.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        Ok(())
-    }
-
-    pub async fn media_key(&self, id: &str) -> Result<Option<String>, StatusCode> {
-        let row = sqlx::query(&format!(
-            "SELECT object_key FROM {} WHERE id = $1",
-            self.t("media_objects")
-        ))
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        Ok(row.map(|row| row.get("object_key")))
     }
 
     pub async fn ping(&self) -> bool {

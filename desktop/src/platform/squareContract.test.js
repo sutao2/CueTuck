@@ -44,7 +44,8 @@ const REQUIRED = [
   { method: "GET", path: "/v1/session/oauth/session/{flowId}", auth: "none" },
   { method: "GET", path: "/v1/session/oauth/{provider}", auth: "none" },
   { method: "POST", path: "/v1/media/upload", auth: "user" },
-  { method: "GET", path: "/v1/media/{id}/url", auth: "none" },
+  { method: "GET", path: "/v1/media/{id}/url", auth: "user" },
+  { method: "GET", path: "/v1/media/{id}/content", auth: "user" },
 ];
 
 describe("square OpenAPI mapping", () => {
