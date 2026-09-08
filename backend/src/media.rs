@@ -158,12 +158,15 @@ pub(crate) async fn reserve(
     .fetch_one(&mut *tx)
     .await
     .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
-    let existing = sqlx::query(&format!("SELECT id,ready FROM {} WHERE owner_email=$1 AND file_name=$2 AND content_type=$3 AND size=$4 AND sha256=$5 ORDER BY ready DESC LIMIT 1", pg.t("media_objects")))
+    crate::media_reclaim::reference_lock(pg, &mut tx).await?;
+    let existing = sqlx::query(&format!("SELECT id,ready FROM {} WHERE owner_email=$1 AND file_name=$2 AND content_type=$3 AND size=$4 AND sha256=$5 AND NOT deleting ORDER BY ready DESC LIMIT 1", pg.t("media_objects")))
         .bind(owner).bind(&file.name).bind(&file.mime).bind(file.size as i64).bind(&file.sha256)
         .fetch_optional(&mut *tx).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     if let Some(row) = existing {
         if !row.get::<bool, _>("ready") { return Err(StatusCode::CONFLICT); }
         let id: String = row.get("id");
+        sqlx::query(&format!("UPDATE {} SET last_used_at=now() WHERE id=$1",pg.t("media_objects"))).bind(&id).execute(&mut *tx).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+        tx.commit().await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
         return Ok(Some(MediaUpload { url: format!("/v1/media/{id}/content"), id,
             name: file.name.clone(), mime: file.mime.clone(), size: file.size, sha256: file.sha256.clone() }));
     }
@@ -246,7 +249,7 @@ pub async fn upload(
         }
         crate::require_user(&state, &headers).await?;
         let changed = sqlx::query(&format!(
-            "UPDATE {} SET ready=TRUE WHERE id=$1 AND owner_email=$2",
+            "UPDATE {} SET ready=TRUE,last_used_at=now() WHERE id=$1 AND owner_email=$2 AND NOT deleting",
             pg.t("media_objects")
         ))
         .bind(&result.id)
@@ -303,7 +306,7 @@ async fn owned(
     id: &str,
 ) -> Result<sqlx::postgres::PgRow, StatusCode> {
     let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
-    let row = sqlx::query(&format!("SELECT object_key,file_name,content_type,size,sha256,ready FROM {} WHERE id=$1 AND owner_email=$2", pg.t("media_objects")))
+    let row = sqlx::query(&format!("SELECT object_key,file_name,content_type,size,sha256,ready FROM {} WHERE id=$1 AND owner_email=$2 AND NOT deleting", pg.t("media_objects")))
         .bind(id).bind(email).fetch_optional(&pg.pool).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?.ok_or(StatusCode::NOT_FOUND)?;
     if row.get::<Option<String>, _>("sha256").is_none()
         || row.get::<Option<i64>, _>("size").is_none()
@@ -326,7 +329,15 @@ pub async fn download(
     let row = owned(&state, &email, &id).await?;
     let response = verified_response(&state, &row).await?;
     crate::require_user(&state, &headers).await?;
+    owned(&state, &email, &id).await?;
     Ok(response)
+}
+
+pub(crate) async fn delete_reclaimed_object(config: &MediaConfig, key: &str) -> Result<(), StatusCode> {
+    let (bucket, creds) = config.bucket()?;
+    let response = storage_client()?.delete(bucket.delete_object(Some(&creds),key).sign(Duration::from_secs(60)))
+        .send().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
+    if response.status().is_success() || response.status() == StatusCode::NOT_FOUND { Ok(()) } else { Err(StatusCode::BAD_GATEWAY) }
 }
 
 async fn verified_response(state: &AppState, row: &sqlx::postgres::PgRow) -> Result<Response, StatusCode> {

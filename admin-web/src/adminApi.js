@@ -66,6 +66,11 @@ async function request(kind, extra = {}) {
   if (response.status === 403) throw new Error(['putOAuth','aiSave','mailSave','notificationSave','invite','userPasswordReset'].includes(kind) ? '请检查操作权限和当前密码，服务端未执行本次操作' : "当前账号没有此操作权限");
   if (response.status === 401) { expireAdminSession(accessToken); throw new Error('登录已失效，请重新登录'); }
   if (response.status === 429) throw new Error('操作过于频繁，请一分钟后重试');
+  if (extra.riskPath?.startsWith('media/orphans') && !response.ok) {
+    if (kind==='mediaOrphans') throw new Error('候选读取失败，本次没有执行清理，请重试');
+    if (response.status === 409) throw new Error('候选已变化、被引用或正在清理，请重新检查；未按旧列表强制删除');
+    throw new Error('回收未完成，请重新检查候选后重试；已声明清理的记录会保留，不能假定文件仍可读取');
+  }
   if (response.status === 409 && extra.riskPath?.startsWith('mock-billing/')) throw new Error('模拟未启用、版本冲突或请求已经处理。测试码若已生成不会再次返回明码，请查批次记录后停用旧批次再生成');
   if (response.status === 400 && extra.riskPath?.startsWith('mock-billing/')) throw new Error('请检查目标账号、原因、数量、额度和有效期');
   if (response.status === 400 && extra.riskPath === 'site') throw new Error('请检查名称长度、HTTPS 图片、邮箱和公告起止时间');
@@ -124,6 +129,8 @@ export const retryMail = (id,config) => request('mailRetry', {riskPath:`mail/del
 export const getIdentityPolicy = () => request('identityPolicy', {riskPath:'identity/policy'});
 export const getSiteConfig = () => request('siteConfig', {riskPath:'site'});
 export const getOperations = (page,query={}) => request('operations', {riskPath:`${page}?${new URLSearchParams(query)}`});
+export const listOrphanMedia = () => request('mediaOrphans',{riskPath:'media/orphans'});
+export const purgeOrphanMedia = id => request('mediaPurge',{riskPath:`media/orphans/${encodeURIComponent(id)}/purge`,method:'POST',config:{confirm:true}});
 export const listMockBilling = (kind,query) => request('mockList', {riskPath:`mock-billing/${kind}?${new URLSearchParams(query)}`});
 export const changeMockBilling = config => request('mockChange', {riskPath:'mock-billing/actions',method:'POST',config});
 export const createMockBatch = config => request('mockBatchCreate', {riskPath:'mock-billing/batches',method:'POST',config});

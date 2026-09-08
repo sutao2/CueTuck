@@ -35,7 +35,7 @@ pub struct AssetReference {
     pub sha256: String,
 }
 
-pub(crate) async fn validate_asset_refs(pg: &crate::postgres::Pg, owner: &str, items: &[LibraryChange]) -> Result<(), StatusCode> {
+pub(crate) async fn validate_asset_refs(pg: &crate::postgres::Pg, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, owner: &str, items: &[LibraryChange]) -> Result<(), StatusCode> {
     for item in items {
         let Some(value) = item.payload.get("asset_refs") else { continue };
         let refs: Vec<AssetReference> = serde_json::from_value(value.clone()).map_err(|_| StatusCode::BAD_REQUEST)?;
@@ -48,9 +48,9 @@ pub(crate) async fn validate_asset_refs(pg: &crate::postgres::Pg, owner: &str, i
             }
             total += file.size;
             if total > 20 * 1024 * 1024 { return Err(StatusCode::PAYLOAD_TOO_LARGE); }
-            let valid: bool = sqlx::query_scalar(&format!("SELECT EXISTS(SELECT 1 FROM {} WHERE id=$1 AND owner_email=$2 AND ready=TRUE AND file_name=$3 AND content_type=$4 AND size=$5 AND sha256=$6)", pg.t("media_objects")))
+            let valid: bool = sqlx::query_scalar(&format!("SELECT EXISTS(SELECT 1 FROM {} WHERE id=$1 AND owner_email=$2 AND ready=TRUE AND NOT deleting AND file_name=$3 AND content_type=$4 AND size=$5 AND sha256=$6)", pg.t("media_objects")))
                 .bind(&file.media_id).bind(owner).bind(&file.name).bind(&file.mime).bind(file.size).bind(&file.sha256)
-                .fetch_one(&pg.pool).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+                .fetch_one(&mut **tx).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
             if !valid { return Err(StatusCode::NOT_FOUND); }
         }
     }
