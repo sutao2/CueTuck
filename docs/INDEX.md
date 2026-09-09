@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-09-square-performance.md](plans/2026-09-09-square-performance.md) | 进行中 | 广场卡顿与滚动加载 | SQL 有界分页、取消请求、虚拟网格与性能验收 |
 | [plans/2026-09-08-prompt-corpus.md](plans/2026-09-08-prompt-corpus.md) | 验收 | 批量筛选公开提示词 | 已导入 21,775 条/122 条带图；数据包、幂等导入与分页已验，原生重启待解锁 |
 | [plans/2026-09-08-clear-prompt-content.md](plans/2026-09-08-clear-prompt-content.md) | 验收 | 清空本机内容与关闭演示回填 | 已备份清空广场/本地、保留账号设置；禁用重启回填 |
 | [plans/2026-09-08-launcher-preferences.md](plans/2026-09-08-launcher-preferences.md) | 验收 | 设置启动器大小与行为 | 四项偏好及恢复默认；425 项前端、75 项原生通过，调试包已构建 |
