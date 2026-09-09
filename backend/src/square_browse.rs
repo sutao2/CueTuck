@@ -29,7 +29,7 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         if let Some(pg) = &state.db { pg.catalog_entries("categories", false).await? } else { crate::admin_catalog::seed_categories() }
     } else { vec![] };
     let ids: Vec<String> = category.iter().cloned().chain(categories.iter().filter(|c| c.parent_id.as_ref() == category.as_ref()).map(|c| c.id.clone())).collect();
-    let (total, mut items): (i64, Vec<Value>) = if let Some(pg) = &state.db {
+    let (total, mut items, category_counts): (i64, Vec<Value>, Option<serde_json::Map<String, Value>>) = if let Some(pg) = &state.db {
         let pattern = (!query.is_empty()).then(|| format!("%{}%", query.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")));
         let favorite = format!("EXISTS(SELECT 1 FROM {} f WHERE f.email=$4 AND f.item_id=s.id)", pg.t("favorites"));
         let filter = format!(r#"s.visibility='online'
@@ -53,13 +53,25 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
             sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY").execute(&mut *tx).await?;
             let total: i64 = sqlx::query_scalar(&count_sql).bind(&pattern).bind(&model).bind(&ids).bind(&email).bind(sort == "favorites").fetch_one(&mut *tx).await?;
             let items: Vec<Value> = sqlx::query_scalar(&page_sql).bind(&pattern).bind(&model).bind(&ids).bind(&email).bind(sort == "favorites").bind(limit + 1).bind(offset).fetch_all(&mut *tx).await?;
+            let category_counts = if offset == 0 {
+                let counts: Vec<(String, i64)> = sqlx::query_as(&format!("SELECT COALESCE(category_id,''),count(*) FROM {} WHERE visibility='online' GROUP BY COALESCE(category_id,'')", pg.t("square_items"))).fetch_all(&mut *tx).await?;
+                Some(counts.into_iter().map(|(id,count)| (id,json!(count))).collect())
+            } else { None };
             tx.commit().await?;
-            Ok::<_, sqlx::Error>((total, items))
+            Ok::<_, sqlx::Error>((total, items, category_counts))
         }).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
     } else {
         let favorites = if let Some(email) = &email { state.favorite_ids(email).await? } else { vec![] };
         let needle = query.to_lowercase();
         let mut rows = state.all_items().await?;
+        let category_counts = if offset == 0 {
+            let mut counts = serde_json::Map::new();
+            for row in &rows {
+                let entry = counts.entry(row.category_id.clone().unwrap_or_default()).or_insert(json!(0));
+                *entry = json!(entry.as_i64().unwrap_or(0) + 1);
+            }
+            Some(counts)
+        } else { None };
         rows.retain(|p| (needle.is_empty() || p.title.to_lowercase().contains(&needle) || p.excerpt.as_deref().unwrap_or("").to_lowercase().contains(&needle)
                 || p.reference.as_ref().and_then(|r|r["author"].as_str()).unwrap_or("").to_lowercase().contains(&needle))
             && model.as_ref().is_none_or(|m|p.model.as_ref()==Some(m))
@@ -74,12 +86,13 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         (total, rows.into_iter().skip(offset as usize).take(limit as usize+1).map(|p| {
             let image = p.reference.as_ref().and_then(|r|r["images"][0].as_str()).map(|s|s.chars().take(2048).collect::<String>());
             json!({"id":p.id,"title":p.title.chars().take(160).collect::<String>(),"kind":p.kind,"excerpt":p.excerpt.map(|s|s.chars().take(240).collect::<String>()),"model":p.model,"category_id":p.category_id,"member_count":p.member_count,"is_favorite":favorites.contains(&p.id),"reference":image.map(|url|json!({"images":[url]}))})
-        }).collect())
+        }).collect(), category_counts)
     };
     let more = items.len() > limit as usize;
     items.truncate(limit as usize);
     if !state.square_public().await? || sort == "favorites" { crate::require_user(&state, &headers).await?; }
-    Ok(Json(json!({"items":items,"total":total,"limit":limit,"offset":offset,"next_offset":if more && offset+limit <= 100_000 {Some(offset+limit)} else {None}})))
+    let category_total = category_counts.as_ref().map(|counts| counts.values().filter_map(Value::as_i64).sum::<i64>());
+    Ok(Json(json!({"items":items,"total":total,"category_counts":category_counts,"category_total":category_total,"limit":limit,"offset":offset,"next_offset":if more && offset+limit <= 100_000 {Some(offset+limit)} else {None}})))
 }
 
 #[cfg(test)]
@@ -97,10 +110,16 @@ mod tests {
         let path = "/v1/square/browse?q=100%25&category_id=cat-image&model=Flux";
         let (code, first) = request(&state,"GET",path,"",json!(null)).await;
         assert_eq!(code,StatusCode::OK); assert_eq!(first["total"],109); assert_eq!(first["items"].as_array().unwrap().len(),48); assert_eq!(first["next_offset"],48);
+        assert_eq!(first["category_counts"]["cat-image-0"],109);
+        assert!(first["category_total"].as_i64().unwrap() >= 109);
         assert!(first.to_string().len()<250_000); assert!(!first.to_string().contains("large body"));
         assert_eq!(first["items"][0]["reference"]["images"].as_array().unwrap().len(),1);
         let (_, second) = request(&state,"GET",&format!("{path}&offset=48"),"",json!(null)).await;
         assert_ne!(first["items"][0]["id"],second["items"][0]["id"]);
+        assert!(second["category_counts"].is_null());
+        let (_, filtered) = request(&state,"GET","/v1/square/browse?q=no-such-prompt&model=unknown","",json!(null)).await;
+        assert_eq!(filtered["total"],0);
+        assert_eq!(filtered["category_counts"],first["category_counts"]);
         let (_, last) = request(&state,"GET",&format!("{path}&offset=96"),"",json!(null)).await;
         assert_eq!(last["items"].as_array().unwrap().len(),13); assert!(last["next_offset"].is_null());
         let (_, empty) = request(&state,"GET",&format!("{path}&offset=110"),"",json!(null)).await;
@@ -120,6 +139,10 @@ mod tests {
         assert_eq!(saved["total"],1); assert_eq!(saved["items"][0]["id"],"qa-003"); assert_eq!(saved["items"][0]["is_favorite"],true);
         let (_, isolated) = request(&state,"GET","/v1/square/browse?sort=favorites",&other.access_token,json!(null)).await;
         assert_eq!(isolated["total"],0);
+        assert_eq!(isolated["category_counts"],first["category_counts"]);
+        sqlx::query(&format!("UPDATE {} SET visibility='offline'",pg.t("square_items"))).execute(&pg.pool).await.unwrap();
+        let (_, empty_counts) = request(&state,"GET","/v1/square/browse","",json!(null)).await;
+        assert_eq!(empty_counts["category_total"],0); assert_eq!(empty_counts["category_counts"],json!({}));
         state.set_square_public(false).await.unwrap();
         assert_eq!(request(&state,"GET",path,"",json!(null)).await.0,StatusCode::UNAUTHORIZED);
         sqlx::query(&format!("DROP SCHEMA {} CASCADE",pg.schema)).execute(&pg.pool).await.unwrap();

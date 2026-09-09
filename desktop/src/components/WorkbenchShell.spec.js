@@ -50,6 +50,34 @@ const tauriVersion = JSON.parse(
 ).version;
 
 describe("WorkbenchShell", () => {
+  it('shows full square category counts including child and disabled-child assignments without counting loaded cards', async () => {
+    setCatalogTransport(async () => ({ categories: [
+      { id: 'root', name: '测试大分类', parent_id: null },
+      { id: 'child', name: '测试子分类', parent_id: 'root' },
+      { id: 'empty', name: '空分类', parent_id: null },
+    ], category_parents: { root: null, child: 'root', disabled: 'root', empty: null }, models: [] }));
+    let fail = false;
+    setSquarePageTransport(async ({ offset }) => {
+      if (fail) throw new Error('offline');
+      return { items: [{ id: `one-${offset}`, title: '只有一张卡', kind: 'prompt', category_id: 'child' }], total: 110, next_offset: offset ? null : 48,
+        category_counts: offset ? null : { root: 2, child: 100, disabled: 3, '': 5 }, category_total: offset ? null : 110 };
+    });
+    const w = mount(WorkbenchShell); await flushPromises();
+    await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+    const count = name => w.findAll('.category-tree .tree-row').find(row => row.text().includes(name)).get('.tree-count').text();
+    expect(count('全部提示词')).toBe('110');
+    expect(count('测试大分类')).toBe('105');
+    expect(count('测试子分类')).toBe('100');
+    expect(count('空分类')).toBe('0');
+    await w.get('[data-testid="square-load-more"]').trigger('click'); await flushPromises();
+    expect(count('测试大分类')).toBe('105');
+    fail = true;
+    await w.get('[data-sort="最新"]').trigger('click'); await flushPromises();
+    expect(count('测试大分类')).toBe('—');
+    await w.get('[data-space="local"]').trigger('click'); await flushPromises();
+    expect(count('全部提示词')).toBe('0');
+    w.unmount();
+  });
   it('loads bounded pages while keeping DOM windowed and resets after filtering', async () => {
     const transport = vi.fn(async ({ query, offset }) => query ? { items: [{ id: 'match', title: 'Match', kind: 'prompt' }], total: 1, next_offset: null } : { items: Array.from({ length: 48 }, (_, i) => ({ id: `bulk-${offset+i}`, title: `Prompt ${offset+i}`, kind: 'prompt' })), total: 20001, next_offset: offset+48 });
     setSquarePageTransport(transport);
