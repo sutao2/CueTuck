@@ -1,0 +1,26 @@
+{
+  "sources": [
+    {
+      "repository": "aj-geddes/useful-ai-prompts",
+      "commit": "3f5182cfd739fc113f4af5244a1cf342ad7f7911",
+      "snapshot_sha256": "6429f1ab3a191bfc58ea8b1410f97bf87b966e404ea00432d40ea73795fd6f11",
+      "license": "MIT",
+      "license_file": "aj-geddes-text-license.txt"
+    },
+    {
+      "repository": "pnp/copilot-prompts",
+      "commit": "553c45336be9af21befcafa89c90ca6736236120",
+      "snapshot_sha256": "6bb871e30cd355fb1fb2bdd543680acb708878c03fcdc54abd35fe72324c1a43",
+      "license": "MIT",
+      "license_file": "pnp-text-license.txt"
+    },
+    {
+      "repository": "jamesmcroft/everyday-prompts",
+      "commit": "5f2eaa6487c4bce26265db98cb3a259a011304ed",
+      "snapshot_sha256": "2710bac3ce4797848f6fe9b08392e27ae9223525374e3219e2b7e1bc233b7d08",
+      "license": "MIT",
+      "license_file": "jamesmcroft-text-license.txt"
+    }
+  ],
+  "uncompressed_sha256": "d7ea1270fe52bf11d9d9b48169e7d109bf8f54cb402af854bc333d5137ec70e3"
+}

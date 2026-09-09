@@ -1,0 +1,31 @@
+{
+  "scanned": 859,
+  "selected": 616,
+  "rules": {
+    "scanned": 859,
+    "rejected_unclear_or_visual_task": 57,
+    "rejected_noise_or_links": 3,
+    "rejected_specialist_risk_scope": 160,
+    "rejected_risk_terms": 7,
+    "rejected_structure": 8,
+    "rejected_duplicate": 1,
+    "rejected_length": 7
+  },
+  "categories": {
+    "cat-education": 91,
+    "cat-data": 17,
+    "cat-office": 256,
+    "cat-marketing": 36,
+    "cat-life": 42,
+    "cat-writing": 38,
+    "cat-video-0": 2,
+    "cat-product": 40,
+    "cat-software": 94
+  },
+  "sources": {
+    "aj-geddes/useful-ai-prompts": 512,
+    "pnp/copilot-prompts": 76,
+    "jamesmcroft/everyday-prompts": 28
+  },
+  "note": "Automatic heuristic screening plus documented spot checks, not individual human review or effectiveness/safety certification."
+}

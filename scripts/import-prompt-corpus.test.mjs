@@ -17,3 +17,12 @@ test('uses an atomic append-only transaction with literal SQL data and no attrib
   assert.ok(sql.includes('Existing ID has different body'));
   assert.ok(!/DELETE FROM|TRUNCATE|UPDATE public/.test(sql));
 });
+test('requires separate MIT notice for reviewed text sources', () => {
+  const record = { ...row(), reference: { ...row().reference, repository: 'aj-geddes/useful-ai-prompts', license: 'MIT', url: 'https://github.com/aj-geddes/useful-ai-prompts/blob/commit/prompts/test.md' } };
+  assert.throws(() => validateCorpus([record]), /MIT notice/);
+  record.reference.license_text = 'MIT License\nCopyright (c) Author\nPermission is hereby granted';
+  assert.equal(validateCorpus([record]), 1);
+  assert.equal(record.content, row().content);
+  record.reference.repository = 'unreviewed/source';
+  assert.throws(() => validateCorpus([record]));
+});
