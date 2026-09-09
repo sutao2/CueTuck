@@ -11,6 +11,7 @@ mod admin_operations_tests;
 mod media;
 mod media_reclaim;
 mod square_search;
+mod square_browse;
 #[cfg(test)]
 mod media_tests;
 #[cfg(test)]
@@ -412,6 +413,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/media/:id/content", get(media::download))
         .route("/v1/square/items", get(list_square_items))
         .route("/v1/square/search", get(square_search::search))
+        .route("/v1/square/browse", get(square_browse::browse))
         .route("/v1/square/items/:id/downloads", post(square_downloads::record))
         .route("/v1/square/items/:id/content", get(get_square_item_content))
         .route("/v1/square/items/:id", get(get_square_item))

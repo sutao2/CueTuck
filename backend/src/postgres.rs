@@ -168,6 +168,10 @@ impl Pg {
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS recommended BOOLEAN NOT NULL DEFAULT false", self.t("square_items")),
             format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS listed_at TIMESTAMPTZ", self.t("square_items")),
             format!("ALTER TABLE {} ALTER COLUMN listed_at SET DEFAULT now()", self.t("square_items")),
+            format!("CREATE INDEX IF NOT EXISTS square_browse_recommended ON {} (recommended DESC,sort_index,id) WHERE visibility='online'",self.t("square_items")),
+            format!("CREATE INDEX IF NOT EXISTS square_browse_latest ON {} (listed_at DESC NULLS LAST,id) WHERE visibility='online'",self.t("square_items")),
+            format!("CREATE INDEX IF NOT EXISTS square_browse_hot ON {} (download_count DESC,title,id) WHERE visibility='online'",self.t("square_items")),
+            format!("CREATE INDEX IF NOT EXISTS square_browse_category_model ON {} (category_id,model) WHERE visibility='online'",self.t("square_items")),
             format!(
                 "CREATE TABLE IF NOT EXISTS {} (
                   email TEXT NOT NULL REFERENCES {}(email) ON DELETE CASCADE,
