@@ -26,6 +26,7 @@ sha2 = "0.10"
 open = "5"
 tauri-plugin-updater = "2"
 url = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-global-shortcut = "2"
@@ -33,6 +34,3 @@ enigo = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "NSRunningApplication", "NSWorkspace"] }
-
-[dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

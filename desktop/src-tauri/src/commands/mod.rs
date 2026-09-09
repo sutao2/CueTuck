@@ -6,4 +6,5 @@ pub mod mcp;
 pub mod paste;
 pub mod session;
 pub mod square;
+pub mod square_page;
 pub mod updates;
