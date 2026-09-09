@@ -10,6 +10,9 @@ const licenses = {
   'poloclub/diffusiondb': 'CC0 1.0',
   'f/prompts.chat': 'CC0 1.0',
   'YouMind-OpenLab/awesome-nano-banana-pro-prompts': 'CC BY 4.0',
+  'aj-geddes/useful-ai-prompts': 'MIT',
+  'pnp/copilot-prompts': 'MIT',
+  'jamesmcroft/everyday-prompts': 'MIT',
 };
 export function validateCorpus(records) {
   if (!Array.isArray(records) || records.length < 1 || records.length > 50000) throw Error('Expected 1–50000 curated records');
@@ -26,6 +29,10 @@ export function validateCorpus(records) {
       if (u.protocol !== 'https:' || u.username || u.password) throw Error('Only safe HTTPS references');
     }
     if (r.reference.images.length > 4 || r.reference.images.some(url => new URL(url).hostname !== 'cms-assets.youmind.com')) throw Error('Unreviewed image host');
+    if (r.reference.license === 'MIT' && (typeof r.reference.license_text !== 'string'
+      || !r.reference.license_text.startsWith('MIT License') || !r.reference.license_text.includes('Copyright (c)')
+      || !r.reference.license_text.includes('Permission is hereby granted')
+      || !r.reference.url.startsWith(`https://github.com/${r.reference.repository}/blob/`))) throw Error('MIT notice and source path required');
     if (r.content.includes('\n来源：') && r.content.includes('\n许可：')) throw Error('Attribution must not be appended to the prompt');
     ids.add(r.id); bodies.add(key);
   }
