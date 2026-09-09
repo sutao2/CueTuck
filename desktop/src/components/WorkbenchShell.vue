@@ -71,7 +71,7 @@
             <span class="chevron ghost">›</span>
             <span class="tree-icon warm"><AppIcon name="square" /></span>
             <span>{{ t("allPrompts") }}</span>
-            <span v-if="space === 'local'" class="tree-count">{{ allLocalItems.length }}</span>
+            <span class="tree-count" :title="space === 'square' ? '全广场公开条目数，不受当前筛选影响' : undefined">{{ space === 'local' ? allLocalItems.length : squareCategoryTotal ?? '—' }}</span>
           </button>
           <button v-if="space === 'local'" type="button" class="tree-row" data-testid="uncategorized"
             :class="{ active: selectedId === '__uncategorized__' }" @click="selectCategory('__uncategorized__')">
@@ -86,7 +86,7 @@
             <button type="button" class="tree-row tree-parent" :class="{ active: selectedId === group.id }" @click="selectCategory(group.id)">
               <span class="tree-icon" :class="group.tone" :style="space === 'square' && group.color ? { color:group.color } : undefined"><AppIcon :name="space === 'square' && group.icon ? group.icon : group.tone" /></span>
               <span>{{ group.name }}</span>
-              <span v-if="space === 'local'" class="tree-count">{{ categoryCount(group.id) }}</span>
+              <span class="tree-count" :title="space === 'square' ? '公开条目数（含子分类），不受当前筛选影响' : undefined">{{ categoryCount(group.id) }}</span>
             </button>
             <button v-if="space === 'local' && !group.is_system" type="button" class="category-delete"
               :aria-label="`删除分类 ${group.name}`" :title="`删除分类 ${group.name}`" @click="startDeleteCategory(group)">×</button>
@@ -100,7 +100,7 @@
                 @click="selectCategory(child.id)"
               >
                 <span>{{ child.name }}</span>
-                <span v-if="space === 'local'" class="tree-count">{{ categoryCount(child.id) }}</span>
+                <span class="tree-count" :title="space === 'square' ? '公开条目数，不受当前筛选影响' : undefined">{{ categoryCount(child.id) }}</span>
               </button>
               <button v-if="space === 'local' && !child.is_system" type="button" class="category-delete"
                 :aria-label="`删除分类 ${child.name}`" :title="`删除分类 ${child.name}`" @click="startDeleteCategory(child)">×</button>
@@ -832,6 +832,7 @@ watch([sidebarCollapsed, view], saveLayout);
 onMounted(loadLayout);
 onUnmounted(() => { layoutDisposed = true; });
 const squareItems = ref([]);
+const squareCategoryCounts = ref(null), squareCategoryTotal = ref(null);
 const contentScroller = ref(null);
 const squareTotal = ref(0), squareNextOffset = ref(null), squareMoreLoading = ref(false), squareMoreError = ref(false);
 let squareController;
@@ -994,6 +995,11 @@ function selectCategory(id) {
 }
 
 function categoryCount(id) {
+  if (space.value === 'square') {
+    if (!squareCategoryCounts.value) return '—';
+    const parents = remoteCatalog.value?.category_parents ?? Object.fromEntries((remoteCatalog.value?.categories ?? []).map(category => [category.id, category.parent_id]));
+    return Object.entries(squareCategoryCounts.value).reduce((total, [category, count]) => total + (category === id || parents[category] === id ? count : 0), 0);
+  }
   return allLocalItems.value.filter((item) => {
     const category = categoryById(item.category_id);
     if (id === "__uncategorized__") return !category;
@@ -1357,6 +1363,7 @@ async function loadSquare(refreshCatalog = false) {
   squareController = new AbortController();
   const signal = squareController.signal;
   squareItems.value = [];
+  squareCategoryCounts.value = null; squareCategoryTotal.value = null;
   squareTotal.value = 0; squareNextOffset.value = null;
   squareMoreLoading.value = false; squareMoreError.value = false;
   failedReferenceImages.value = {};
@@ -1379,6 +1386,9 @@ async function loadSquare(refreshCatalog = false) {
     const page = await listSquarePage({ sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, signal });
     if (request !== squareRequest || space.value !== 'square') return;
     squareItems.value = page.items;
+    if (page.category_counts && Number.isInteger(page.category_total)) {
+      squareCategoryCounts.value = page.category_counts; squareCategoryTotal.value = page.category_total;
+    }
     squareTotal.value = page.total; squareNextOffset.value = page.next_offset;
     await refreshFavorites();
     rememberModels(squareItems.value);
