@@ -136,7 +136,7 @@
         @pointerup="endSidebarResize" @pointercancel="endSidebarResize"
         @lostpointercapture="endSidebarResize" @keydown="resizeSidebarByKey" />
 
-      <main v-show="!hasTaskPage" data-region="content" class="content-area">
+      <main ref="contentScroller" v-show="!hasTaskPage" data-region="content" class="content-area">
         <section class="content-header">
           <div class="content-heading">
             <SiteNotice v-if="space === 'square' && remoteCatalog?.site" :site="remoteCatalog.site" heading />
@@ -257,21 +257,24 @@
             <div>
               <h2>{{ resultsHeading }}</h2>
             </div>
-            <span class="result-count">{{ space === 'square' && squareLoading ? '正在加载…' : `共 ${displayedItems.length} 个结果` }}</span>
+            <span class="result-count">{{ space === 'square' && squareLoading ? '正在加载…' : `共 ${space === 'square' ? squareTotal : displayedItems.length} 个结果` }}</span>
           </div>
           <div v-if="space === 'square' && squareLoading" class="browse-loading" role="status" data-testid="browse-loading">
             <span>正在加载提示词…</span><div v-for="n in 3" :key="n" class="loading-row" aria-hidden="true"><i></i><i></i><i></i></div>
           </div>
-          <div
+          <WindowedPromptGrid
             v-else-if="displayedItems.length"
-            class="prompt-grid"
-            :class="{ 'list-view': view === 'list' }"
+            :items="space === 'square' ? displayedItems : pagedItems"
+            :enabled="space === 'square'"
+            :list="view === 'list'"
+            :scroll-root="contentScroller"
+            @near-end="loadMoreSquare()"
             data-testid="library-view"
             :data-layout="view"
           >
+            <template #default="{ item, cardHeight }">
             <article
-              v-for="item in pagedItems"
-              :key="item.kind + item.id"
+              :style="cardHeight ? { height: `${cardHeight}px` } : undefined"
               class="prompt-card"
               :class="{ collection: item.kind === 'collection', 'as-row': view === 'list' }"
               @click="openItem(item)"
@@ -328,7 +331,8 @@
                 <button v-else type="button" class="card-action" @click.stop="openItem(item)">打开合集</button>
               </div>
             </article>
-          </div>
+            </template>
+          </WindowedPromptGrid>
           <div v-else class="empty-state">
             <span class="empty-glyph"><AppIcon :name="space === 'square' ? 'square' : 'library'" /></span>
             <h3>{{ emptyHeading }}</h3>
@@ -336,7 +340,15 @@
             <button v-if="hasContentFilter" type="button" class="button" @click="clearFilters()">清除筛选</button>
             <button v-else-if="space === 'local' && sortTab === '全部'" type="button" class="button" @click="creating = true">新建提示词</button>
           </div>
-          <nav v-if="pageCount > 1 && !squareLoading" class="browse-pagination" aria-label="提示词分页">
+          <div v-if="space === 'square' && !squareLoading && squareItems.length" class="browse-pagination" role="status">
+            <span v-if="squareMoreLoading">正在加载更多…</span>
+            <template v-else-if="squareNextOffset !== null">
+              <span v-if="squareMoreError">加载失败，已有内容仍可浏览。</span>
+              <button type="button" class="button" data-testid="square-load-more" @click="loadMoreSquare(true)">{{ squareMoreError ? '重试加载' : '加载更多' }}</button>
+            </template>
+            <span v-else>已显示全部 {{ squareTotal }} 条</span>
+          </div>
+          <nav v-if="space === 'local' && pageCount > 1" class="browse-pagination" aria-label="提示词分页">
             <button type="button" class="button" :disabled="browsePage === 1" @click="browsePage--">上一页</button>
             <span role="status">第 {{ browsePage }} / {{ pageCount }} 页 · 每页 48 条</span>
             <button type="button" class="button" :disabled="browsePage === pageCount" @click="browsePage++">下一页</button>
@@ -595,7 +607,8 @@ import { getSession, logoutSession } from "../platform/session.js";
 import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
 import { parseModelNames } from "../platform/modelCatalog.js";
 import { uiText } from "../platform/uiStrings.js";
-import { downloadSquareItem, fetchSquareContent, fetchSquareCatalog, listFavorites, listSquareItems } from "../platform/square.js";
+import { downloadSquareItem, fetchSquareContent, fetchSquareCatalog, listSquarePage } from "../platform/square.js";
+import WindowedPromptGrid from './WindowedPromptGrid.vue';
 import SiteNotice from '../../../shared/SiteNotice.vue';
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
 import { parseCoverUrls } from "../lib/cover.js";
@@ -819,6 +832,10 @@ watch([sidebarCollapsed, view], saveLayout);
 onMounted(loadLayout);
 onUnmounted(() => { layoutDisposed = true; });
 const squareItems = ref([]);
+const contentScroller = ref(null);
+const squareTotal = ref(0), squareNextOffset = ref(null), squareMoreLoading = ref(false), squareMoreError = ref(false);
+let squareController;
+function cancelSquare() { squareController?.abort(); }
 const squareOffline = ref(false);
 const squareLoading = ref(false);
 const squareBlocked = ref(false);
@@ -1073,7 +1090,7 @@ async function logoutFromSettings() {
     await logoutSession();
     session.value = getSession();
     favoriteIds.value = [];
-    if (space.value === 'square' && sortTab.value === '收藏') { sortTab.value = '推荐'; await loadSquare(); }
+    if (space.value === 'square') { if (sortTab.value === '收藏') sortTab.value = '推荐'; await loadSquare(); }
   } catch (error) { logoutError.value = error.message || String(error); }
   finally { logoutBusy.value = false; }
 }
@@ -1190,8 +1207,15 @@ async function favoriteSquare(item) {
     favoriteIds.value = removing
       ? favoriteIds.value.filter((id) => id !== item.id)
       : [...favoriteIds.value, item.id];
+    squareItems.value = squareItems.value.map(row => row.id === item.id ? { ...row, is_favorite: !removing } : row);
     operationNote.value = result.queued ? "已保存到本机队列，尚未送达服务器。" : (removing ? "已取消收藏。" : "已收藏。");
-    if (removing && sortTab.value === "收藏") squareItems.value = squareItems.value.filter((row) => row.id !== item.id);
+    if (removing && sortTab.value === "收藏" && squareItems.value.some(row => row.id === item.id)) {
+      // A deletion shifts subsequent SQL offsets; invalidate any in-flight continuation.
+      cancelSquare(); ++squareRequest; squareController = new AbortController(); squareMoreLoading.value = false;
+      squareItems.value = squareItems.value.filter((row) => row.id !== item.id);
+      squareTotal.value = Math.max(0, squareTotal.value - 1);
+      if (!result.queued && squareNextOffset.value !== null) squareNextOffset.value = Math.max(0, squareNextOffset.value - 1);
+    }
   } catch (error) {
     operationNote.value = `收藏操作失败：${error.message || error}`;
   } finally { favoriteBusy.value = favoriteBusy.value.filter((id) => id !== item.id); }
@@ -1240,6 +1264,7 @@ async function finishLogin() {
   session.value = getSession();
   loginReason.value = "";
   await refreshFavorites();
+  if (space.value === 'square') await loadSquare();
   if (pendingPublish.value) {
     pendingPublish.value = false;
     await openPublish();
@@ -1299,8 +1324,10 @@ async function refreshFavorites() {
     return;
   }
   try {
-    const rows = await listFavorites();
-    favoriteIds.value = await applyQueuedFavorites(rows.map((row) => row.id));
+    const account = getSession().email;
+    const rows = squareItems.value;
+    const ids = await applyQueuedFavorites(rows.filter(row => row.is_favorite).map(row => row.id));
+    if (account === getSession().email && rows === squareItems.value) favoriteIds.value = ids;
   } catch {
     favoriteIds.value = [];
   }
@@ -1309,21 +1336,31 @@ async function refreshFavorites() {
 let searchTimer;
 let searchComposing = false;
 function cancelSearch() { clearTimeout(searchTimer); }
-function beginSearchComposition() { searchComposing = true; cancelSearch(); ++squareRequest; ++localRequest; }
+function beginSearchComposition() { searchComposing = true; cancelSearch(); cancelSquare(); ++squareRequest; ++localRequest; }
 async function finishSearchComposition() { searchComposing = false; await nextTick(); scheduleSearch(); }
 function scheduleSearch(event) {
   cancelSearch();
+  cancelSquare();
   ++squareRequest; ++localRequest;
   if (searchComposing || event?.isComposing) return;
   if (space.value === 'local') { reloadPrompts(); return; }
+  squareLoading.value = true;
   if (!query.value.trim()) { loadSquare(); return; }
   searchTimer = setTimeout(() => loadSquare(), 250);
 }
-onUnmounted(() => { cancelSearch(); ++squareRequest; ++localRequest; ++catalogRequest; });
+onUnmounted(() => { cancelSearch(); cancelSquare(); ++squareRequest; ++localRequest; ++catalogRequest; });
 
 async function loadSquare(refreshCatalog = false) {
   cancelSearch();
+  cancelSquare();
   const request = ++squareRequest;
+  squareController = new AbortController();
+  const signal = squareController.signal;
+  squareItems.value = [];
+  squareTotal.value = 0; squareNextOffset.value = null;
+  squareMoreLoading.value = false; squareMoreError.value = false;
+  failedReferenceImages.value = {};
+  if (contentScroller.value) contentScroller.value.scrollTop = 0;
   squareOffline.value = false;
   squareBlocked.value = false;
   squareLoading.value = true;
@@ -1338,30 +1375,12 @@ async function loadSquare(refreshCatalog = false) {
   }
     if (refreshCatalog === true || !remoteCatalog.value) await loadRemoteCatalog();
     if (request !== squareRequest || space.value !== 'square') return;
-    if (sortTab.value === "收藏") {
-      if (!getSession().loggedIn) {
-        squareItems.value = [];
-        openLogin("收藏需要登录");
-        return;
-      }
-      let rows = await listFavorites();
-      if (request !== squareRequest || space.value !== "square") return;
-      rows = rows.filter((item) => squareMatchesCategory(item)
-        && (!query.value.trim() || item.title.toLowerCase().includes(query.value.trim().toLowerCase())));
-      if (modelFilter.value) {
-        rows = rows.filter((row) => row.model === modelFilter.value);
-      }
-      squareItems.value = rows;
-    } else {
-      const rows = await listSquareItems({
-        sort: sortTab.value,
-        query: query.value,
-        model: modelFilter.value,
-        categoryId: selectedId.value,
-      });
-      if (request !== squareRequest || space.value !== "square") return;
-      squareItems.value = rows;
-    }
+    if (sortTab.value === '收藏' && !getSession().loggedIn) { openLogin('收藏需要登录'); return; }
+    const page = await listSquarePage({ sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, signal });
+    if (request !== squareRequest || space.value !== 'square') return;
+    squareItems.value = page.items;
+    squareTotal.value = page.total; squareNextOffset.value = page.next_offset;
+    await refreshFavorites();
     rememberModels(squareItems.value);
   } catch {
     if (request !== squareRequest || space.value !== "square") return;
@@ -1372,13 +1391,23 @@ async function loadSquare(refreshCatalog = false) {
   }
 }
 
-let squareRequest = 0;
-
-function squareMatchesCategory(item) {
-  return !selectedId.value || item.category_id === selectedId.value
-    || remoteCatalog.value?.category_parents?.[item.category_id] === selectedId.value
-    || (remoteCatalog.value?.categories.find(category => category.id === item.category_id) ?? categoryById(item.category_id))?.parent_id === selectedId.value;
+async function loadMoreSquare(retry = false) {
+  if (space.value !== 'square' || hasTaskPage.value || squareLoading.value || squareMoreLoading.value || squareNextOffset.value === null || (squareMoreError.value && !retry)) return;
+  const request = squareRequest, offset = squareNextOffset.value;
+  squareMoreLoading.value = true; squareMoreError.value = false;
+  try {
+    const page = await listSquarePage({ sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, offset, signal: squareController.signal });
+    if (request !== squareRequest || space.value !== 'square') return;
+    const ids = new Set(squareItems.value.map(item => item.id));
+    squareItems.value = [...squareItems.value, ...page.items.filter(item => !ids.has(item.id) && ids.add(item.id))];
+    squareTotal.value = page.total; squareNextOffset.value = page.next_offset;
+    await refreshFavorites();
+  } catch {
+    if (request === squareRequest) squareMoreError.value = true;
+  } finally { if (request === squareRequest) squareMoreLoading.value = false; }
 }
+
+let squareRequest = 0;
 
 let catalogRequest = 0;
 async function loadRemoteCatalog() {
@@ -1442,7 +1471,7 @@ function onModelFilter() {
 
 function tabCount(tab) {
   if (space.value === "square") {
-    return tab === sortTab.value ? displayedItems.value.length : 0;
+    return tab === sortTab.value ? squareTotal.value : 0;
   }
   const rows = modelFilter.value ? libraryItems.value.filter(item => item.kind === 'prompt' && item.model === modelFilter.value) : libraryItems.value;
   return filterLocalItems(rows, {
@@ -1539,7 +1568,7 @@ function openSquare() {
 }
 
 function openLocal() {
-  cancelSearch(); ++squareRequest;
+  cancelSearch(); cancelSquare(); ++squareRequest;
   space.value = "local";
   if (selectedId.value && selectedId.value !== '__uncategorized__' && !categoryById(selectedId.value)) selectedId.value = null;
   sortTab.value = "全部";

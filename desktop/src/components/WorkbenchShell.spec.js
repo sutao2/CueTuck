@@ -38,6 +38,7 @@ import {
   setSquareContentTransport,
   setSquareTransport,
   setCatalogTransport,
+  setSquarePageTransport,
 } from "../platform/square.js";
 import { listSyncQueue } from "../platform/syncQueue.js";
 
@@ -49,27 +50,72 @@ const tauriVersion = JSON.parse(
 ).version;
 
 describe("WorkbenchShell", () => {
-  it('bounds a large square to 48 cards per page and resets after filtering', async () => {
-    setSquareTransport(async ({ query }) => query ? [{ id: 'match', title: 'Match', kind: 'prompt' }] : Array.from({ length: 20001 }, (_, i) => ({ id: `bulk-${i}`, title: `Prompt ${i}`, kind: 'prompt' })));
+  it('loads bounded pages while keeping DOM windowed and resets after filtering', async () => {
+    const transport = vi.fn(async ({ query, offset }) => query ? { items: [{ id: 'match', title: 'Match', kind: 'prompt' }], total: 1, next_offset: null } : { items: Array.from({ length: 48 }, (_, i) => ({ id: `bulk-${offset+i}`, title: `Prompt ${offset+i}`, kind: 'prompt' })), total: 20001, next_offset: offset+48 });
+    setSquarePageTransport(transport);
     const w = mount(WorkbenchShell); await flushPromises();
     await w.get('[data-space="square"]').trigger('click'); await flushPromises();
-    expect(w.findAll('.prompt-card')).toHaveLength(48);
+    expect(w.findAll('.prompt-card').length).toBeLessThan(48);
     expect(w.get('.result-count').text()).toContain('20001');
-    await w.get('.browse-pagination button:last-child').trigger('click');
-    expect(w.findAll('.prompt-card')[0].text()).toContain('Prompt 48');
+    await w.get('[data-testid="square-load-more"]').trigger('click'); await flushPromises();
+    expect(transport.mock.calls.at(-1)[0].offset).toBe(48);
+    expect(w.findAll('.prompt-card').length).toBeLessThan(48);
     await w.get('.inline-search input').setValue('match');
     await w.get('[data-sort="最新"]').trigger('click'); await flushPromises();
     expect(w.findAll('.prompt-card')).toHaveLength(1);
-    expect(w.find('.browse-pagination').exists()).toBe(false);
+    expect(w.find('[data-testid="square-load-more"]').exists()).toBe(false);
     await w.get('.inline-search input').setValue('');
     await w.get('[data-sort="推荐"]').trigger('click'); await flushPromises();
-    await w.get('.browse-pagination button:last-child').trigger('click');
-    await w.get('.browse-pagination button:first-child').trigger('click');
     expect(w.findAll('.prompt-card')[0].text()).toContain('Prompt 0');
     await w.get('[data-space="local"]').trigger('click'); await flushPromises();
     expect(w.find('.browse-pagination').exists()).toBe(false);
     await w.get('[data-space="square"]').trigger('click'); await flushPromises();
-    expect(w.get('.browse-pagination button:first-child').attributes('disabled')).toBeDefined();
+    expect(transport.mock.calls.at(-1)[0].offset).toBe(0);
+    w.unmount();
+  });
+  it('isolates canceled continuations and retries a failed offset without duplicating cards', async () => {
+    let resolveMore, fail = true;
+    const item = id => ({ id, title: id, kind: 'prompt' });
+    const transport = vi.fn(async ({ offset, query }) => {
+      if (query) return { items: [item('new-result')], total: 1, next_offset: null };
+      if (!offset) return { items: [item('first')], total: 3, next_offset: 1 };
+      if (fail) throw new Error('offline');
+      return new Promise(resolve => { resolveMore = resolve; });
+    });
+    setSquarePageTransport(transport);
+    const w = mount(WorkbenchShell); await flushPromises();
+    await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+    await w.get('[data-testid="square-load-more"]').trigger('click'); await flushPromises();
+    expect(w.text()).toContain('加载失败，已有内容仍可浏览');
+    expect(w.findAll('.prompt-card')).toHaveLength(1);
+    fail = false;
+    await w.get('[data-testid="square-load-more"]').trigger('click'); await flushPromises();
+    const pending = transport.mock.calls.at(-1)[0];
+    expect(pending.offset).toBe(1);
+    await w.findComponent({ name: 'WindowedPromptGrid' }).vm.$emit('near-end');
+    expect(transport).toHaveBeenCalledTimes(3);
+    await w.get('.inline-search input').setValue('new');
+    expect(pending.signal.aborted).toBe(true);
+    await w.get('[data-sort="最新"]').trigger('click'); await flushPromises();
+    resolveMore({ items: [item('first'), item('stale')], total: 3, next_offset: null }); await flushPromises();
+    expect(w.findAll('.prompt-card')).toHaveLength(1);
+    expect(w.find('.prompt-card').text()).toContain('new-result');
+    expect(w.find('[data-testid="square-load-more"]').exists()).toBe(false);
+    w.unmount();
+  });
+  it('deduplicates overlapping pages and stops at the end', async () => {
+    const item = id => ({ id, title: id, kind: 'prompt' });
+    const transport = vi.fn(async ({ offset }) => offset
+      ? { items: [item('first'), item('second'), item('second')], total: 2, next_offset: null }
+      : { items: [item('first')], total: 2, next_offset: 1 });
+    setSquarePageTransport(transport);
+    const w = mount(WorkbenchShell); await flushPromises();
+    await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+    await w.get('[data-testid="square-load-more"]').trigger('click'); await flushPromises();
+    expect(w.findAll('.prompt-card')).toHaveLength(2);
+    expect(w.find('[data-testid="square-load-more"]').exists()).toBe(false);
+    w.findComponent({ name: 'WindowedPromptGrid' }).vm.$emit('near-end'); await flushPromises();
+    expect(transport).toHaveBeenCalledTimes(2);
     w.unmount();
   });
   it('shows site policy only in the community and keeps local tools available',async()=>{

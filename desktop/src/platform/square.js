@@ -9,6 +9,7 @@ let testFavoriteTransport = null;
 let testMineTransport = null;
 let testStatsTransport = null;
 let testCatalogTransport = null;
+let testPageTransport = null;
 
 function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -26,6 +27,45 @@ export function resetSquare() {
   testMineTransport = null;
   testStatsTransport = null;
   testCatalogTransport = null;
+  testPageTransport = null;
+}
+
+export function setSquarePageTransport(transport) { testPageTransport = transport; }
+export async function listSquarePage({ sort = '推荐', query = '', model = '', categoryId = null, offset = 0, signal } = {}) {
+  signal?.throwIfAborted();
+  let payload;
+  if (testPageTransport) payload = await testPageTransport({ sort, query, model, categoryId, offset, signal });
+  else if (testTransport || testFavoriteTransport) {
+    // Legacy fixtures only; production must never fall back to the unbounded endpoint.
+    const favorites = testFavoriteTransport && getSession().loggedIn ? await listFavorites() : [];
+    const rows = sort === '收藏' ? favorites.filter(row => (!model || row.model === model) && (!query || row.title.toLowerCase().includes(query.toLowerCase()))) : await listSquareItems({ sort, query, model, categoryId });
+    payload = { items: rows.slice(offset, offset + 48).map(row => ({ ...row, is_favorite: favorites.some(f => f.id === row.id) })), total: rows.length, next_offset: offset + 48 < rows.length ? offset + 48 : null };
+  } else if (isTauri()) {
+    const requestId = crypto.randomUUID();
+    const cancel = () => { tauriInvoke('cancel_square_page', { request_id: requestId }).catch(() => {}); };
+    signal?.addEventListener('abort', cancel, { once: true });
+    try {
+      payload = await tauriInvoke('list_square_page', { sort, query, model, category_id: categoryId, offset, request_id: requestId, access_token: getSession().accessToken || null });
+    } finally { signal?.removeEventListener('abort', cancel); }
+  } else {
+    const params = new URLSearchParams({ sort, q: query, offset: String(offset), limit: '48' });
+    if (model) params.set('model', model);
+    if (categoryId) params.set('category_id', categoryId);
+    const token = getSession().accessToken;
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    signal?.addEventListener('abort', abort, { once: true });
+    const timer = setTimeout(abort, 10_000);
+    try {
+      const response = await fetch(`${apiBase()}/v1/square/browse?${params}`, { signal: controller.signal, headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!response.ok) throw new Error('广场暂时不可用');
+      payload = await response.json();
+    } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
+  }
+  signal?.throwIfAborted();
+  if (!Array.isArray(payload?.items) || payload.items.length > 48 || !Number.isInteger(payload.total) || payload.total < 0
+    || (payload.next_offset !== null && (!Number.isInteger(payload.next_offset) || payload.next_offset <= offset || !payload.items.length))) throw new Error('广场分页响应无效');
+  return payload;
 }
 
 export function setSquareTransport(transport) {

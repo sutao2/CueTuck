@@ -94,6 +94,8 @@ pub fn run() {
             commands::updates::check_for_updates,
             commands::updates::queue_update_install,
             commands::square::list_square_items,
+            commands::square_page::list_square_page,
+            commands::square_page::cancel_square_page,
             commands::square::get_square_catalog,
             commands::square::square_reports,
             commands::square::get_square_content,
