@@ -51,10 +51,18 @@
           </select>
         </label>
         </div>
-        <label v-if="kind === 'prompt'" class="field">
-          <span>提示词内容</span>
-          <textarea v-model="content" rows="8" placeholder="输入 {} 创建独立占位符，或 {{变量名}} 创建同名共用的变量"></textarea>
-        </label>
+        <div v-if="kind === 'prompt'" class="editor-writing">
+          <div class="editor-tools">
+            <button type="button" class="button ghost-button" data-testid="insert-variable" @click="insertVariable">＋ 插入变量</button>
+            <button type="button" class="button ghost-button" :aria-expanded="trialOpen" data-testid="toggle-trial" @click="trialOpen = !trialOpen">{{ trialOpen ? '收起试填' : '试填预览' }}</button>
+          </div>
+          <div class="editor-writing-grid" :class="{ 'with-trial': trialOpen }">
+            <label class="field"><span>提示词内容</span>
+              <textarea ref="contentInput" v-model="content" rows="12" placeholder="输入 {} 创建独立占位符，或 {{变量名}} 创建同名共用的变量"></textarea>
+            </label>
+            <PromptTrial v-if="trialOpen" :content="content" />
+          </div>
+        </div>
         <label v-else class="field">
           <span>封面</span>
           <select v-model="coverType">
@@ -96,6 +104,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, ref } from "vue";
+import PromptTrial from './PromptTrial.vue';
 import AttachmentPanel from './AttachmentPanel.vue';
 import { listPromptAssets } from '../platform/assets.js';
 import { vPageFocus } from "../lib/pageFocus.js";
@@ -115,6 +124,16 @@ const emit = defineEmits(["cancel", "save", "remove", "stay"]);
 const kind = ref(props.prompt?.kind ?? "prompt");
 const title = ref(props.prompt?.title ?? "");
 const content = ref(props.prompt?.content ?? "");
+const contentInput = ref(null), trialOpen = ref(false);
+async function insertVariable() {
+  if (props.busy || assetBusy.value) return;
+  const input = contentInput.value;
+  const start = input.selectionStart, end = input.selectionEnd;
+  const selected = content.value.slice(start, end).trim();
+  const name = selected && !/[{}\n]/.test(selected) ? selected : '变量名';
+  content.value = content.value.slice(0, start) + '{{' + name + '}}' + content.value.slice(end);
+  await nextTick(); input.focus(); input.setSelectionRange(start + 2, start + 2 + name.length);
+}
 const categoryId = ref(props.prompt ? (props.prompt.category_id ?? "") : props.defaultCategoryId);
 const model = ref(props.prompt ? (props.prompt.model ?? "") : (props.defaultModel ?? ""));
 const coverType = ref(props.prompt?.cover_type ?? "none");
@@ -192,3 +211,11 @@ function onSaveKeydown(event) {
   if (!event.repeat) submit();
 }
 </script>
+
+<style scoped>
+.editor-tools { display: flex; gap: 8px; margin-bottom: 14px; }
+.editor-writing-grid { display: grid; gap: 20px; }
+.editor-writing-grid > * { min-width: 0; }
+.editor-writing-grid textarea { min-height: 240px; }
+@media (min-width: 1100px) { .editor-writing-grid.with-trial { grid-template-columns: 1fr 1fr; align-items: start; } }
+</style>

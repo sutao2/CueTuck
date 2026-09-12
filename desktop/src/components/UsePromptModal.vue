@@ -8,6 +8,12 @@
         <button type="button" class="page-back" aria-label="返回" :disabled="busy" @click="$emit('cancel')">← 返回</button>
       </header>
       <div class="create-body">
+        <nav v-if="names.length" class="variable-steps" aria-label="填写步骤">
+          <button v-for="(name, position) in names" :key="name" type="button" :disabled="busy" :aria-current="step === 'variable' && index === position ? 'step' : undefined" :data-variable-step="position" @click="jump(position)">
+            <span>{{ position + 1 }}</span> {{ name }} <small>{{ resolved(name) ? '已填' : '待填' }}</small>
+          </button>
+          <button type="button" :disabled="busy" :aria-current="step === 'preview' ? 'step' : undefined" data-testid="jump-preview" @click="showPreview">预览</button>
+        </nav>
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <template v-if="step === 'variable'">
           <p class="use-hint">填写后进入下一步。留空时使用默认值，没有默认值则保留原占位符。</p>
@@ -27,6 +33,7 @@
         </template>
         <template v-else>
           <p class="use-hint">确认后复制到剪贴板，并记一次使用。</p>
+          <p v-if="missing.length" class="use-hint" data-testid="missing-variables">还有 {{ missing.length }} 项未填写，复制时将保留占位符。点击上方参数可补填。</p>
           <pre class="preview-box" data-testid="use-preview">{{ preview }}</pre>
         </template>
         <details v-if="prompt.asset_count" class="use-assets" @toggle="loadAssets">
@@ -91,6 +98,24 @@ const currentName = computed(() => names[index.value] ?? "");
 const currentHint = computed(() =>
   props.hintsEnabled ? hintForVariable(currentName.value) : "",
 );
+const defaults = variableDefaults(props.prompt.content);
+function resolved(name) {
+  const value = step.value === 'variable' && currentName.value === name ? currentValue.value : values.value[name];
+  return (Object.hasOwn(values.value, name) || name === currentName.value) && value !== '' && value != null || Object.hasOwn(defaults, name);
+}
+const missing = computed(() => names.filter(name => !resolved(name)));
+function preserveValue() {
+  if (step.value === 'variable') values.value = { ...values.value, [currentName.value]: currentValue.value };
+}
+function jump(position) {
+  if (props.busy) return;
+  preserveValue(); index.value = position; step.value = 'variable';
+  currentValue.value = Object.hasOwn(values.value, names[position]) ? values.value[names[position]] : '';
+}
+function showPreview() {
+  if (props.busy) return;
+  preserveValue(); step.value = 'preview';
+}
 const preview = computed(() => renderPrompt(props.prompt.content, values.value));
 const heading = computed(() => (step.value === "preview" ? "确认并使用提示词" : currentName.value));
 const stepLabel = computed(() =>
@@ -135,3 +160,10 @@ function back() {
   emit("cancel");
 }
 </script>
+
+<style scoped>
+.variable-steps { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.variable-steps button { display: flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; max-width: 100%; overflow-wrap: anywhere; }
+.variable-steps button[aria-current] { border-color: var(--text); color: var(--text); background: var(--sidebar); }
+.variable-steps small { font-size: 10px; flex-shrink: 0; }
+</style>

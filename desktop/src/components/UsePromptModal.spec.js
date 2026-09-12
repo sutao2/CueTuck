@@ -62,7 +62,7 @@ describe("UsePromptModal", () => {
     });
     expect(w.get('[data-testid="use-variable"]').text()).toBe("城市");
     expect(w.find('[data-testid="variable-hint"]').exists()).toBe(false);
-    expect(w.text()).not.toContain("天数");
+    expect(w.get('[data-variable-step="1"]').text()).toContain("天数");
     await w.get('[data-testid="use-value"]').setValue("京都");
     await w.get('[data-testid="use-next"]').trigger("click");
     expect(w.get('[data-testid="use-variable"]').text()).toBe("天数");
