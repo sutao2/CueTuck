@@ -120,7 +120,7 @@ try {
   await fill(/textbox "预算"/, '2000'); await click(/button "预览"/);
   await target(/还有 1 项未填写/);
   await click(/button "1 城市 待填"/); await fill(/textbox "城市"/, '上海');
-  await click(/button "预览"/); await target(/上海 2000/); await run('screenshot');
+  await click(/button "更新预览"/); await target(/上海 2000/); await run('screenshot');
   await click(/button "复制并完成"/); await click(/button "(?:← )?返回"/);
   await click(/button "批量整理"/); await run('check', await target(/checkbox "选择 交互验收"/));
   await run('select', await target(/combobox "目标分类"/), 'cat-image');
@@ -150,7 +150,26 @@ try {
   await target(/隔离验收投稿/); await run('screenshot');
   await click(/button "(?:← )?返回"/); await click(/button "切换浅色主题"/);
   await run('resize', '1280', '850'); await run('screenshot');
-  console.log('Browser smoke passed: create/edit/variables/copy/delete-cancel/delete/settings-return/image-download/supplement/zoom/narrow-viewer/trial-preview/parameter-navigation/batch-category/searchable-collection/file-import/publications/light-and-dark.');
+  // Fresh, isolated multi-page fixture; never touch the native library.
+  await run('run-code', `async page => { await page.evaluate(async () => {
+    const library = await import('/src/platform/library.js'); library.resetMemoryLibrary();
+    await library.createLocalCollection({ title: '分页合集' });
+    for (let i = 0; i < 50; i++) await library.createLocalPrompt({ title: '跨页 ' + i, content: '连续操作验收' });
+  }); }`);
+  await click(/tab "提示词广场"/); await click(/tab "本地提示词(?: \d+)?"/);
+  await click(/button "批量整理"/); await click(/button "选择本页"/); await target(/已选 47 条/);
+  await click(/button "下一页"/); await target(/已选 47 条/);
+  await click(/button "选择本页"/); await target(/已选 50 条/);
+  await run('resize', '800', '700'); await run('screenshot');
+  await click(/button "应用到所选"/); await target(/已完成 50 条/); await target(/第 2 \/ 2 页/);
+  await click(/button "取消多选"/); await click(/button "跨页 \d+"/); await click(/button "编辑"/);
+  await fill(/textbox "提示词内容"/, '保留第二页'); await click(/button "保存"/);
+  await click(/button "(?:← )?返回"/); await target(/第 2 \/ 2 页/);
+  await click(/button "列表视图"/); await click(/button "批量整理"/); await click(/button "选择本页"/);
+  await target(/已选 3 条/); await run('screenshot');
+  const overflow = await run('eval', 'document.documentElement.scrollWidth > window.innerWidth');
+  assert.match(overflow, /false/);
+  console.log('Browser smoke passed: create/edit/variables/copy/delete-cancel/delete/settings-return/image-download/supplement/zoom/narrow-viewer/trial-preview/parameter-navigation/batch-category/searchable-collection/file-import/publications/light-and-dark/cross-page-selection/return-position.');
 } finally {
   await writeFile(resolve(artifacts, 'actions.log'), actions);
   await writeFile(resolve(artifacts, 'vite.log'), serverError);
