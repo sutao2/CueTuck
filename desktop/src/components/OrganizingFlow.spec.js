@@ -45,3 +45,47 @@ it('searches and adds multiple collection members while preserving existing text
   expect(members).toHaveLength(2);
   expect(members.map(p => p.content)).toEqual(expect.arrayContaining(['正文 A', '正文 B']));
 });
+it('selects only this page of prompts, retains other pages, and clears on a new filter', async () => {
+  await library.createLocalCollection({ title: '不参与选择的合集' });
+  for (let i = 0; i < 50; i++) await library.createLocalPrompt({ title: `分页 ${i}`, content: '正文' });
+  w = mount(WorkbenchShell); await flushPromises();
+  await w.get('[data-testid=select-prompts]').trigger('click');
+  await w.get('[data-testid=select-page]').trigger('click');
+  expect(w.get('.batch-controls strong').text()).toBe('已选 47 条');
+  expect(w.get('[data-testid=select-page]').element.disabled).toBe(true);
+  const scroller = w.get('[data-region=content]').element; scroller.scrollTop = 500;
+  await w.get('[aria-label=提示词分页]').findAll('button')[1].trigger('click');
+  expect(scroller.scrollTop).toBe(0);
+  expect(w.get('.batch-controls strong').text()).toBe('已选 47 条');
+  await w.get('[data-testid=select-page]').trigger('click');
+  expect(w.get('.batch-controls strong').text()).toBe('已选 50 条');
+  await w.get('[aria-label=提示词分页]').findAll('button')[0].trigger('click');
+  expect(w.findAll('[data-select-prompt]').every(input => input.element.checked)).toBe(true);
+  await w.get('[data-testid=clear-selection]').trigger('click');
+  expect(w.get('.batch-controls strong').text()).toBe('已选 0 条');
+  await w.get('[data-testid=select-page]').trigger('click');
+  await w.get('.inline-search input').setValue('分页 1'); await flushPromises();
+  expect(w.get('.batch-controls strong').text()).toBe('已选 0 条');
+});
+it('locks pagination and filter clearing during a batch then clamps a shrinking last page', async () => {
+  for (let i = 0; i < 49; i++) await library.createLocalPrompt({ title: `待整理 ${i}`, content: '正文', category_id: 'cat-image' });
+  w = mount(WorkbenchShell); await flushPromises();
+  await w.get('.inline-search input').setValue('待整理'); await flushPromises();
+  await w.get('[data-testid=select-prompts]').trigger('click');
+  await w.get('[aria-label=提示词分页]').findAll('button')[1].trigger('click');
+  await w.get('[data-testid=select-page]').trigger('click');
+  let finish;
+  vi.spyOn(library, 'moveLocalPromptCategory').mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  const selectedId = w.get('[data-select-prompt]').attributes('data-select-prompt');
+  await w.get('[data-testid=apply-batch]').trigger('click');
+  expect(w.get('[aria-label=提示词分页]').findAll('button').every(button => button.element.disabled)).toBe(true);
+  expect(w.get('[data-testid=clear-selection]').element.disabled).toBe(true);
+  await w.get('[data-testid=clear-filters]').trigger('click');
+  expect(w.get('.inline-search input').element.value).toBe('待整理');
+  // Simulate the selected row disappearing before the completion refresh.
+  await library.deleteLocalPrompt(selectedId);
+  finish(); await flushPromises();
+  expect(w.find('[aria-label=提示词分页]').exists()).toBe(false);
+  expect(w.findAll('[data-select-prompt]')).toHaveLength(48);
+  expect(w.get('.batch-controls strong').text()).toBe('已选 0 条');
+});
