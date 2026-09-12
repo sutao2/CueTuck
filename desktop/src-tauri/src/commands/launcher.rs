@@ -18,19 +18,30 @@ fn wait_for_stable_focus(mut ready: impl FnMut() -> bool, mut sleep: impl FnMut(
 }
 
 #[derive(Default)]
-pub struct LauncherFocusGuard(Mutex<Option<Instant>>);
+pub struct LauncherFocusGuard {
+    shown: Mutex<Option<Instant>>,
+    layout: Mutex<Option<&'static str>>,
+}
 
 impl LauncherFocusGuard {
     pub fn mark_shown(&self) {
-        *self.0.lock().unwrap() = Some(Instant::now());
+        *self.shown.lock().unwrap() = Some(Instant::now());
     }
 
     pub fn in_grace_period(&self) -> bool {
-        self.0
+        self.shown
             .lock()
             .unwrap()
             .map(|shown| shown.elapsed() < FOCUS_GRACE)
             .unwrap_or(false)
+    }
+
+    fn remember_layout(&self, layout: &str) {
+        *self.layout.lock().unwrap() = Some(match layout { "fill" => "fill", "expanded" => "expanded", _ => "collapsed" });
+    }
+
+    fn current_layout(&self) -> &'static str {
+        self.layout.lock().unwrap().unwrap_or("collapsed")
     }
 }
 
@@ -178,6 +189,7 @@ fn resize_launcher_window(app: &AppHandle, layout: &str) -> Result<(), String> {
     window
         .set_position(position)
         .map_err(|error| error.to_string())?;
+    if let Some(guard) = app.try_state::<LauncherFocusGuard>() { guard.remember_layout(layout); }
     Ok(())
 }
 
@@ -215,7 +227,8 @@ fn show_launcher_window(app: &AppHandle) -> Result<(), String> {
     if let Some(guard) = app.try_state::<LauncherFocusGuard>() {
         guard.mark_shown();
     }
-    resize_launcher_window(app, "collapsed")?;
+    let layout = app.try_state::<LauncherFocusGuard>().map(|guard| guard.current_layout()).unwrap_or("collapsed");
+    resize_launcher_window(app, layout)?;
     let preferences = read_launcher_preferences(app)?;
     if let Some(monitor) = window.current_monitor().map_err(|error| error.to_string())? {
         window
@@ -241,6 +254,7 @@ pub async fn hide_launcher(app: AppHandle) -> Result<(), String> {
     let return_focus = app.get_webview_window(LAUNCHER_LABEL)
         .is_some_and(|window| window.is_visible().unwrap_or(false) && window.is_focused().unwrap_or(false));
     hide_launcher_window(&app)?;
+    if let Some(guard) = app.try_state::<LauncherFocusGuard>() { guard.remember_layout("collapsed"); }
     app.emit_to(LAUNCHER_LABEL, "launcher-hidden", ()).map_err(|error| error.to_string())?;
     // A dismiss is not a paste: restore only if we still owned focus, never reopen on failure.
     #[cfg(target_os = "macos")]
@@ -264,7 +278,9 @@ pub async fn hide_launcher_if_idle(app: AppHandle) -> Result<bool, String> {
             return Ok(false);
         }
     }
-    hide_launcher(app).await?;
+    // Passive blur suspends the draft; it must not restore focus or reset the layout.
+    hide_launcher_window(&app)?;
+    app.emit_to(LAUNCHER_LABEL, "launcher-hidden", "blur").map_err(|error| error.to_string())?;
     Ok(true)
 }
 
@@ -356,6 +372,14 @@ fn copy_text_to_clipboard(text: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn remembers_fill_layout_until_explicit_reset() {
+        let guard=super::LauncherFocusGuard::default();
+        assert_eq!(guard.current_layout(),"collapsed");
+        guard.remember_layout("fill");guard.mark_shown();
+        assert_eq!(guard.current_layout(),"fill");
+        guard.remember_layout("collapsed");assert_eq!(guard.current_layout(),"collapsed");
+    }
     use super::{LauncherFocusGuard, LAUNCHER_LABEL};
 
     #[test]

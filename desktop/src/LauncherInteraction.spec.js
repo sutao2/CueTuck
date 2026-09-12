@@ -282,6 +282,49 @@ it("resets on native hide/show, restores focus/theme, and releases event listene
   expect(cleanup).toHaveBeenCalledTimes(1);
 });
 
+it('resumes the same draft, default edits, focused field and scroll across passive hide/show',async()=>{
+  let shown,hidden;
+  vi.spyOn(windows,'listenLauncherLifecycle').mockImplementation(async(a,b)=>{shown=a;hidden=b;return()=>{};});
+  const resize=vi.spyOn(windows,'resizeLauncherWindow').mockResolvedValue();
+  const w=await open('{argument name="甲" default="默认"} {{乙}}');
+  const fields=w.findAll('textarea');await fields[0].setValue('已经填写');fields[1].element.focus();
+  w.get('form').element.scrollTop=42;
+  for(let i=0;i<2;i++) {
+    hidden({payload:'blur'});await flushPromises();expect(w.find('form').exists()).toBe(true);
+    await shown();await flushPromises();
+    expect(w.findAll('textarea')[0].element.value).toBe('已经填写');expect(document.activeElement).toBe(fields[1].element);
+    expect(w.get('form').element.scrollTop).toBe(42);expect(resize).toHaveBeenLastCalledWith('fill');
+  }
+  await fields[1].setValue('外部复制的参数');await fields[1].trigger('keydown',{key:'Enter'});await flushPromises();
+  expect(writeText).toHaveBeenCalledWith('已经填写 外部复制的参数');
+  await w.get('main').trigger('keydown',{key:'Escape'});await flushPromises();await shown();await flushPromises();
+  expect(w.get('input').element.value).toBe('');
+});
+
+it('preserves a no-variable preview and ignores an old blur completion after reactivation',async()=>{
+  let shown,finish;
+  vi.spyOn(windows,'listenLauncherLifecycle').mockImplementation(async handler=>{shown=handler;return()=>{};});
+  vi.spyOn(windows,'resizeLauncherWindow').mockResolvedValue();
+  vi.spyOn(windows,'launcherCommand').mockImplementation(command=>command==='hide_launcher_if_idle'?new Promise(resolve=>{finish=resolve;}):Promise.resolve());
+  const w=await open('没有变量的正文');
+  window.__TAURI_INTERNALS__={};window.dispatchEvent(new Event('blur'));await flushPromises();
+  await shown();await flushPromises();finish(true);await flushPromises();
+  expect(w.find('.preview').exists()).toBe(true);
+  const copy=button(w,'复制');copy.element.blur();window.dispatchEvent(new Event('focus'));await flushPromises();
+  expect(document.activeElement).toBe(copy.element);
+});
+
+it('preserves filling when the passive-hide command resolves without an event',async()=>{
+  let shown;
+  vi.spyOn(windows,'listenLauncherLifecycle').mockImplementation(async handler=>{shown=handler;return()=>{};});
+  vi.spyOn(windows,'resizeLauncherWindow').mockResolvedValue();
+  vi.spyOn(windows,'launcherCommand').mockResolvedValue(true);
+  const w=await open('{{甲}}');await w.get('textarea').setValue('暂存');
+  window.__TAURI_INTERNALS__={};window.dispatchEvent(new Event('blur'));await flushPromises();
+  expect(w.get('textarea').element.value).toBe('暂存');await shown();await flushPromises();
+  expect(w.get('textarea').element.value).toBe('暂存');expect(document.activeElement).toBe(w.get('textarea').element);
+});
+
 it("follows system theme live without overriding explicit preference and removes its listener", async () => {
   const media = { matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() };
   vi.stubGlobal("matchMedia", vi.fn(() => media));
