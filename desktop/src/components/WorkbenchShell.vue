@@ -281,6 +281,7 @@
               @contextmenu.prevent="openContextMenu($event, item)"
             >
               <img v-if="space === 'square' && referenceImages(item).length && !failedReferenceImages[item.id]" class="square-reference-cover" :src="referenceImages(item)[0]" :alt="item.title" loading="lazy" referrerpolicy="no-referrer" @error="failedReferenceImages[item.id] = true">
+              <LocalPromptCover v-if="space === 'local' && item.kind === 'prompt' && item.image_count" :prompt-id="item.id" :title="item.title" :revision="item.updated_at" />
               <div
                 v-if="item.kind === 'collection' && coverPreview(item).length"
                 class="collection-card-preview"
@@ -614,6 +615,7 @@ import SiteNotice from '../../../shared/SiteNotice.vue';
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
 import { parseCoverUrls } from "../lib/cover.js";
 import { referenceImages } from "../lib/squareReference.js";
+import LocalPromptCover from './LocalPromptCover.vue';
 const failedReferenceImages = ref({});
 import { DEFAULT_LAUNCHER_SHORTCUT } from "../platform/shortcut.js";
 import { applyHostChrome, detectHost, formatShortcutLabel, trafficLightInsetPx } from "../platform/windowChrome.js";

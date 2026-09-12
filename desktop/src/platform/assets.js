@@ -61,6 +61,12 @@ export async function listPromptAssets(promptId) {
   return native() ? invokeCommand('list_local_prompt_assets', { prompt_id: promptId }) : memoryAssets(promptId);
 }
 
+export async function firstPromptImage(promptId) {
+  if (native()) return invokeCommand('get_local_prompt_image', { prompt_id: promptId });
+  const asset = memory.get(promptId)?.find(asset => asset.mime.startsWith('image/'));
+  return asset ? structuredClone(asset) : null;
+}
+
 export async function exportPromptAsset(promptId, asset) {
   if (native()) return invokeCommand('export_local_prompt_asset', { prompt_id: promptId, asset_id: asset.id });
   const bytes = Uint8Array.from(atob(asset.data), c => c.charCodeAt(0));

@@ -96,7 +96,12 @@ try {
   await click(/button "下载到本地"/);await target(/button "补全参考图"/);
   await click(/button "补全参考图"/);await target(/参考图已补全/);
   await run('run-code',`async page=>{await page.evaluate(async()=>{const lib=await import('/src/platform/library.js');const rows=await lib.listLocalPrompts();const row=rows.find(row=>row.remote_id==='image-smoke');const assets=await (await import('/src/platform/assets.js')).listPromptAssets(row.id);if(assets.length!==1||row.content!=='只复制正文')throw Error('Image import or dedup failed');});}`);
-  await click(/button "返回"/);await click(/tab "本地提示词/);await click(/button "图片下载验收"/);await click(/button "查看 参考图-1.png"/);
+  await click(/button "返回"/);await click(/tab "本地提示词/);
+  await target(/button "查看 图片下载验收 的图片"/);await run('screenshot');
+  await click(/button "查看 图片下载验收 的图片"/);await target(/dialog "图片预览：图片下载验收"/);await run('press','Escape');
+  await click(/button "列表视图"/);await target(/button "查看 图片下载验收 的图片"/);await run('screenshot');
+  assert.match(await run('eval',`(()=>{const cover=document.querySelector('.local-prompt-cover'),card=cover.closest('article');return JSON.stringify({width:cover.getBoundingClientRect().width,row:card.classList.contains('as-row'),overflow:document.documentElement.scrollWidth>innerWidth});})()`),/\\"width\\":80,\\"row\\":true,\\"overflow\\":false/);
+  await click(/button "图片下载验收"/);await click(/button "查看 参考图-1.png"/);
   await click(/button "放大图片"/);await run('screenshot');await run('resize','600','700');await click(/button "适应窗口"/);await run('screenshot');await run('press','Escape');await target(/textbox "提示词内容"/);
   console.log('Browser smoke passed: create/edit/variables/copy/delete-cancel/delete/settings-return/image-download/supplement/zoom/narrow-viewer.');
 } finally {
