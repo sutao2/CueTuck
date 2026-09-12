@@ -14,21 +14,18 @@ it('shows original reference images with attribution without replacing prompt co
   expect(w.get('[data-testid="square-detail-content"]').text()).toBe('原始正文');
   expect(w.get('[data-testid="square-detail-download"]').attributes('disabled')).toBeUndefined();
 });
-it('loads examples only on request and does not attach them to downloaded content', async () => {
+it('does not offer unrelated example images in real content', async () => {
   render(); expect(w.find('img').exists()).toBe(false);
-  await w.get('.detail-example-button').trigger('click');
-  expect(w.get('.gallery-label').text()).toContain('非提示词生成结果');
-  expect(w.get('figcaption a').attributes('href')).toContain('pexels.com/photo/');
-  expect(w.get('.gallery-stage img').attributes('referrerpolicy')).toBe('no-referrer');
+  expect(w.find('.detail-example-button').exists()).toBe(false);
   await w.get('[data-testid="square-detail-download"]').trigger('click');
   expect(w.emitted('download')[0]).toEqual([]);
   expect(w.get('[data-testid="square-detail-content"]').text()).toBe('真实正文');
   expect(w.find('[aria-modal]').exists()).toBe(false);
 });
 it('switches previews, retries failures and resets when the item changes', async () => {
-  render(); await w.get('.detail-example-button').trigger('click');
+  render(); await w.setProps({ item: { id: 'one', title: '有图', content: '正文', reference: { images: ['https://cms-assets.youmind.com/media/one.jpg', 'https://cms-assets.youmind.com/media/two.jpg'] } } });
   await w.get('[aria-label="预览图片 2"]').trigger('click');
-  expect(w.get('.gallery-stage img').attributes('src')).toContain('7972677');
+  expect(w.get('.gallery-stage img').attributes('src')).toContain('two.jpg');
   await w.get('.gallery-stage img').trigger('error');
   expect(w.get('.gallery-fallback').text()).toContain('暂时无法加载');
   await w.get('.gallery-fallback button').trigger('click');

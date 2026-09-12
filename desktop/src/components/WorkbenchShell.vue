@@ -142,13 +142,7 @@
             <SiteNotice v-if="space === 'square' && remoteCatalog?.site" :site="remoteCatalog.site" heading />
             <template v-else>
             <h1>{{ space === "square" ? "发现好用的提示词" : "我的提示词" }}</h1>
-            <p>
-              {{
-                space === "square"
-                  ? "从社区创作者的实践中寻找灵感，下载后可离线编辑与使用。"
-                  : "所有内容保存在本机，即使断网也可以继续编辑、整理与使用。"
-              }}
-            </p>
+
             </template>
           </div>
           <div class="content-actions">
@@ -313,10 +307,10 @@
                     type="button"
                     class="card-action"
                     data-testid="download-square"
-                    :disabled="downloadBusy.includes(item.id) || downloadedIds.includes(item.id)"
+                    :disabled="downloadBusy.includes(item.id)"
                     @click.stop="downloadSquare(item)"
                   >
-                    {{ downloadBusy.includes(item.id) ? '下载中…' : downloadedIds.includes(item.id) ? '已下载' : '下载' }}
+                    {{ downloadBusy.includes(item.id) ? '下载中…' : downloadedIds.includes(item.id) ? '打开本地副本' : '下载' }}
                   </button>
                   <button
                     type="button"
@@ -328,8 +322,12 @@
                     {{ favoriteIds.includes(item.id) ? "已收藏" : "收藏" }}
                   </button>
                 </template>
-                <button v-else-if="item.kind === 'prompt'" type="button" class="card-action" @click.stop="startUse(item)">使用</button>
+                <template v-else-if="item.kind === 'prompt'">
+                  <button type="button" class="card-action" @click.stop="startUse(item)">使用</button>
+                  <button v-if="!extractVariables(item.content).length" type="button" class="card-action" :disabled="useBusy" @click.stop="quickCopy(item)">复制</button>
+                </template>
                 <button v-else type="button" class="card-action" @click.stop="openItem(item)">打开合集</button>
+                <button type="button" class="card-action card-more" data-testid="card-more" :aria-label="`${item.title}的更多操作`" aria-haspopup="menu" @click.stop="openContextMenu($event, item)">···</button>
               </div>
             </article>
             </template>
@@ -339,7 +337,11 @@
             <h3>{{ emptyHeading }}</h3>
             <p>{{ emptyCopy }}</p>
             <button v-if="hasContentFilter" type="button" class="button" @click="clearFilters()">清除筛选</button>
-            <button v-else-if="space === 'local' && sortTab === '全部'" type="button" class="button" @click="creating = true">新建提示词</button>
+            <div v-else-if="space === 'local' && sortTab === '全部'" class="empty-actions">
+              <button type="button" class="button primary-button" @click="creating = true">新建提示词</button>
+              <button type="button" class="button" @click="settingsPage = 'data'; settingsOpen = true">导入文件</button>
+              <button type="button" class="button" @click="openSquare">去广场挑选</button>
+            </div>
           </div>
           <div v-if="space === 'square' && !squareLoading && squareItems.length" class="browse-pagination" role="status">
             <span v-if="squareMoreLoading">正在加载更多…</span>
@@ -392,6 +394,8 @@
       @save="savePrompt"
       @remove="removePrompt"
     />
+    <LocalPromptDetail v-if="reading" :key="reading.id" v-show="!editing && !using && !loginReason"
+      :prompt="reading" @cancel="reading = null" @edit="editing = reading" @use="startUse(reading)" />
     <UsePromptModal
       v-if="using"
       v-show="!loginReason"
@@ -405,7 +409,7 @@
     <CollectionDetailModal
       v-if="openedCollection"
       :key="openedCollection.id"
-      v-show="!editing && !creating && !using && !loginReason"
+      v-show="!reading && !editing && !creating && !using && !loginReason"
       :collection="openedCollection"
       :members="collectionMembers"
       :prompts="collectionCandidates"
@@ -553,6 +557,7 @@
       v-if="contextMenu"
       class="context-menu-layer"
       data-testid="context-menu-layer"
+      @keydown.esc.stop="contextMenu = null"
       @click="contextMenu = null"
       @contextmenu.prevent="contextMenu = null"
     >
@@ -604,6 +609,8 @@ import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import SquareDetailModal from "./SquareDetailModal.vue";
+import LocalPromptDetail from './LocalPromptDetail.vue';
+import { extractVariables } from '../lib/renderPrompt.js';
 import UsePromptModal from "./UsePromptModal.vue";
 import { getSession, logoutSession } from "../platform/session.js";
 import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
@@ -715,7 +722,7 @@ function handleWorkbenchShortcut(event) {
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
   if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
   if (addingCategory.value || deletingCategory.value) return;
-  if (creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
+  if (reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
   if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
   if (event.key.toLowerCase() === 'f' && !settingsOpen.value && !publishResume.value) {
     event.preventDefault(); focusSearch(); return;
@@ -733,6 +740,7 @@ const view = ref("grid");
 const sortTab = ref("全部");
 const creating = ref(false);
 const editing = ref(null);
+const reading = ref(null);
 const using = ref(null);
 const useError = ref("");
 const useBusy = ref(false);
@@ -935,8 +943,8 @@ const emptyCopy = computed(() => {
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
 const locationLabel = computed(() => (space.value === "square" ? t("square") : t("local")));
-const hasTaskPage = computed(() => Boolean(creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
-const taskTitle = computed(() => loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
+const hasTaskPage = computed(() => Boolean(reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
+const taskTitle = computed(() => reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
 
 function guardSidebarNavigation(event) {
   if (!hasTaskPage.value) return;
@@ -966,7 +974,7 @@ function finishNavigation() {
   }
   pendingNavigation.value = null;
   pendingDelete.value = null;
-  creating.value = false; editing.value = null; using.value = null;
+  creating.value = false; editing.value = null; using.value = null; reading.value = null;
   openedCollection.value = null; closeSquareDetail();
   loginReason.value = ''; publishResume.value = false; pendingPublish.value = false;
   closeCategoryDialog();
@@ -1184,7 +1192,7 @@ async function openSquareDetail(item) {
 async function downloadSquare(item) {
   if (downloadBusy.value.includes(item.id)) return;
   if (downloadedIds.value.includes(item.id)) {
-    notifyOperation(`「${item.title}」已在本地，无需重复下载。`, true);
+    await openDownloaded(item);
     return;
   }
   downloadBusy.value = [...downloadBusy.value, item.id];
@@ -1505,13 +1513,15 @@ function tabCount(tab) {
 }
 
 function openContextMenu(event, item) {
-  contextMenu.value = { x: event.clientX, y: event.clientY, item };
+  const rect = event.currentTarget?.getBoundingClientRect();
+  contextMenu.value = { x: Math.max(8, Math.min(event.clientX || rect?.left || 8, window.innerWidth - 190)), y: Math.max(8, Math.min(event.clientY || rect?.bottom || 8, window.innerHeight - 300)), item };
+  nextTick(() => document.querySelector('[data-testid="context-menu"] button')?.focus());
 }
 
 function contextActions(item) {
   if (space.value === "square") {
     return [
-      { id: "download", label: downloadedIds.value.includes(item.id) ? '已下载' : downloadBusy.value.includes(item.id) ? '下载中…' : t("download"), disabled: downloadedIds.value.includes(item.id) || downloadBusy.value.includes(item.id) },
+      { id: "download", label: downloadedIds.value.includes(item.id) ? '打开本地副本' : downloadBusy.value.includes(item.id) ? '下载中…' : t("download"), disabled: downloadBusy.value.includes(item.id) },
       { id: "favorite", label: favoriteIds.value.includes(item.id) ? t("unfavorite") : t("favorite") },
     ];
   }
@@ -1520,6 +1530,8 @@ function contextActions(item) {
   }
   return [
     { id: "edit", label: t("edit") },
+    ...(!extractVariables(item.content).length ? [{ id: 'copy', label: '直接复制' }] : []),
+    { id: 'duplicate', label: '复制副本' },
     { id: "use", label: t("use") },
     {
       id: "favorite",
@@ -1534,9 +1546,11 @@ async function runContextAction(action) {
   contextMenu.value = null;
   if (!item) return;
   if (action === "edit" || action === "open") {
-    openItem(item);
+    if (action === "edit") editing.value = item; else openItem(item);
     return;
   }
+  if (action === "copy") { await quickCopy(item); return; }
+  if (action === "duplicate") { await duplicatePrompt(item); return; }
   if (action === "use") {
     startUse(item);
     return;
@@ -1680,6 +1694,7 @@ async function savePrompt({ id, kind, title, content, categoryId, model, coverTy
     closeEditor();
     notifyOperation(`已保存「${title}」。`, true, 'save');
     await refreshOperationView();
+    if (reading.value?.id === id) reading.value = (await listLocalPrompts()).find(row => row.id === id) || null;
   } catch (error) {
     if (saved) notifyOperation(`已保存，但刷新失败：${error.message || error}`, false, 'save', true);
     else editorError.value = `保存失败：${error.message || error}`;
@@ -1688,7 +1703,7 @@ async function savePrompt({ id, kind, title, content, categoryId, model, coverTy
 
 function removePrompt(id) {
   if (editorBusy.value) return;
-  const item = editing.value?.id === id ? editing.value : prompts.value.find(row => row.id === id);
+  const item = editing.value?.id === id ? editing.value : reading.value?.id === id ? reading.value : prompts.value.find(row => row.id === id);
   if (!item) return;
   operationNotice.value = null;
   pendingDelete.value = { id, title: item.title, kind: item.kind };
@@ -1707,6 +1722,7 @@ async function confirmRemovePrompt() {
     pendingDelete.value = null;
     notifyOperation(`已删除「${title}」。${kind === 'collection' ? '合集内的提示词已保留。' : ''}`, true, 'delete');
     if (editing.value?.id === id) closeEditor();
+    if (reading.value?.id === id) reading.value = null;
     if (openedCollection.value?.id === id) openedCollection.value = null;
     else if (openedCollection.value) await openCollection(openedCollection.value);
     await reloadPrompts();
@@ -1743,6 +1759,45 @@ async function finishUse(text) {
   finally { useBusy.value = false; }
 }
 
+async function openDownloaded(item) {
+  try {
+    const rows = await listLocalPrompts();
+    const row = rows.find(p => p.remote_id === item.id);
+    if (!row) { await refreshDownloaded(); notifyOperation('本地副本已移除，可以重新下载。', false); return; }
+    const collection = item.kind === 'collection' && row.collection_id
+      ? (await listLocalCollections()).find(c => c.id === row.collection_id) : null;
+    closeSquareDetail();
+    openLocal();
+    if (collection) await openCollection(collection); else reading.value = row;
+  } catch (error) { notifyOperation(`打开失败：${error.message || error}`, false); }
+}
+
+async function quickCopy(item) {
+  if (useBusy.value) return;
+  useBusy.value = true;
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(item.content); copied = true;
+    await recordLocalPromptUse(item.id);
+    notifyOperation(`已复制「${item.title}」。`, true, 'copy');
+    await refreshOperationView();
+  } catch (error) { notifyOperation(`${copied ? '已复制，但记录或刷新失败' : '复制失败'}：${error.message || error}`, false, 'copy'); }
+  finally { useBusy.value = false; }
+}
+
+async function duplicatePrompt(item) {
+  if (editorBusy.value) return;
+  editorBusy.value = true;
+  let saved = false;
+  try {
+    const assets = item.asset_count ? await listPromptAssets(item.id) : [];
+    await createLocalPrompt({ title: `${item.title}（副本）`, content: item.content, categoryId: item.category_id, model: item.model, assets: assets.map(a => ({ ...a, id: crypto.randomUUID() })) });
+    saved = true; await reloadPrompts();
+    notifyOperation('已创建副本。', true, 'save');
+  } catch (error) { notifyOperation(`${saved ? '已创建副本，但刷新失败' : '复制副本失败'}：${error.message || error}`, false, 'save', saved); }
+  finally { editorBusy.value = false; }
+}
+
 function openItem(item) {
   if (space.value === "square") {
     openSquareDetail(item);
@@ -1752,7 +1807,7 @@ function openItem(item) {
     openCollection(item);
     return;
   }
-  editing.value = item;
+  reading.value = item;
 }
 
 async function openCollection(collection) {
@@ -1807,7 +1862,7 @@ async function changeCollectionMember(promptId, adding) {
 }
 
 function openCollectionMember(member) {
-  editing.value = member;
+  reading.value = member;
 }
 
 function useCollectionMember(member) {
@@ -1845,6 +1900,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.card-more { margin-left: auto; font-size: 18px; }
+.title-tool > span, .title-tool > kbd { display: none; }
+.sidebar-brand-row .frame-icon-button { opacity: .55; }
 .browse-pagination { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 24px 0; color: var(--muted); font-size: 12px; }
 .publication-files { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 20px 0; }
 .publication-files legend { font-size: 13px; font-weight: 600; padding: 0 6px; }

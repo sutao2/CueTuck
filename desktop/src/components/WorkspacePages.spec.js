@@ -59,9 +59,12 @@ it('returns from member editing to its collection and refreshes the edited membe
   await shell();
   await w.findAll('.prompt-card').find(card => card.text().includes('My collection')).trigger('click'); await flushPromises();
   await w.get('.member-title').trigger('click');
+  await w.get('[data-testid=detail-edit]').trigger('click');
   expect(w.get('[data-testid="collection-detail"]').isVisible()).toBe(false);
   await editor().get('input').setValue('Updated member');
   await editor().get('.modal-footer .primary-button').trigger('click'); await flushPromises();
+  expect(w.get('[data-testid=local-detail]').text()).toContain('Updated member');
+  await w.get('[data-testid=local-detail] .page-back').trigger('click');
   expect(w.get('[data-testid="collection-detail"]').isVisible()).toBe(true);
   expect(w.get('.member-title').text()).toBe('Updated member');
   await w.get('[data-testid="edit-collection"]').trigger('click');
