@@ -812,13 +812,9 @@ body.theme-dark .settings-content input[type="checkbox"]:checked::before { backg
 .settings-content .author-profile .button { justify-self: start; }
 .settings-content .profile-field { display: grid; gap: 7px; color: var(--text); font-size: 12px; }
 .settings-content .profile-field :is(input, textarea) { width: 100%; }
-.settings-content .publications-row:has(.mine-list) { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.settings-content .mine-list { list-style: none; padding: 0; }
-.settings-content .mine-list li { padding: 8px 10px; border-radius: 6px; background: var(--sidebar); margin-top: 6px; }
 .settings-content [data-testid="release-notes"] { white-space: pre-wrap; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--sidebar); }
 .settings-content .author-profile > span:has(button) { display: flex; flex-wrap: wrap; gap: 6px; }
 .settings-content .author-profile > span > button { border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 10px; background: var(--surface); }
-.setting-control .mine-list { margin: 0; padding-left: 1.1em; white-space: normal; text-align: left; }
 .author-profile { display: flex; flex-direction: column; align-items: stretch; gap: 8px; white-space: normal; }
 .author-profile input,
 .author-profile textarea { min-width: 0; }

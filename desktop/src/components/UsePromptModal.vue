@@ -21,6 +21,8 @@
             <span data-testid="use-variable">{{ currentName }}</span>
             <textarea
               ref="variableInput"
+              :aria-label="currentName"
+              aria-describedby="variable-input-help"
               v-model="currentValue"
               rows="4"
               data-testid="use-value"
@@ -28,7 +30,7 @@
               @keydown="onValueKeydown"
             ></textarea>
             <small v-if="currentHint" data-testid="variable-hint">{{ currentHint }}</small>
-            <small class="field-help">Enter 下一步 · Shift+Enter 换行</small>
+            <small id="variable-input-help" class="field-help">Enter 下一步 · Shift+Enter 换行</small>
           </label>
         </template>
         <template v-else>
