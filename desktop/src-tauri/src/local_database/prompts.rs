@@ -309,3 +309,22 @@ pub fn list_prompts_in_dir(
         .map_err(|error| error.to_string())?;
     Ok(rows)
 }
+
+
+pub fn move_prompt_category_in_dir(dir: &Path, id: &str, category_id: Option<&str>) -> Result<(), String> {
+    let mut connection = open_db(dir)?;
+    let transaction = connection.transaction().map_err(|e| e.to_string())?;
+    if let Some(category_id) = category_id {
+        let exists: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM categories WHERE id=?1 AND deleted_at IS NULL)",
+            [category_id], |row| row.get(0),
+        ).map_err(|e| e.to_string())?;
+        if !exists { return Err("分类不存在".into()); }
+    }
+    let changed = transaction.execute(
+        "UPDATE prompts SET category_id=?1, updated_at=?2 WHERE id=?3 AND deleted_at IS NULL",
+        rusqlite::params![category_id, now_iso(), id],
+    ).map_err(|e| e.to_string())?;
+    if changed == 0 { return Err("提示词不存在".into()); }
+    transaction.commit().map_err(|e| e.to_string())
+}

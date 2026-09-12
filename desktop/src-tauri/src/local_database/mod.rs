@@ -23,7 +23,7 @@ pub use collections::{
     list_collection_members_in_dir, list_collections_in_dir, CollectionRecord,
 };
 pub use prompts::{
-    import_downloaded_prompt_with_metadata,
+    import_downloaded_prompt_with_metadata, move_prompt_category_in_dir,
     clear_prompt_use_in_dir, create_prompt_in_dir, create_prompt_in_dir_with_model, delete_prompt_in_dir,
     import_downloaded_prompt_in_dir, list_prompts_in_dir, prompt_deleted_at, prompt_use_count,
     record_prompt_use_in_dir, update_prompt_in_dir, update_prompt_in_dir_with_model,

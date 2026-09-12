@@ -343,3 +343,9 @@ pub fn export_library_zip(app: AppHandle, dest: Option<String>) -> Result<String
 pub fn clear_local_prompt_use(app: AppHandle) -> Result<(), String> {
     clear_prompt_use_in_dir(&data_dir(&app)?)
 }
+
+
+#[tauri::command]
+pub fn move_local_prompt_category(app: AppHandle, id: String, category_id: Option<String>) -> Result<(), String> {
+    crate::local_database::move_prompt_category_in_dir(&data_dir(&app)?, &id, category_id.as_deref())
+}

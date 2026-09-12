@@ -7,11 +7,11 @@ describe("CollectionDetailModal", () => {
     const w = mount(CollectionDetailModal, { attachTo: document.body, props: {
       collection: { id: 'c', title: 'Collection' }, prompts: [{ id: 'p', title: 'Prompt' }],
     } });
-    await w.get('select').setValue('p');
+    await w.get('[data-member-choice=p]').setValue(true);
     const add = w.findAll('button').find(button => button.text() === '加入合集');
     add.element.focus();
     await add.trigger('click');
-    expect(w.get('select').element.value).toBe('p');
+    expect(w.get('[data-member-choice=p]').element.checked).toBe(true);
     await w.setProps({ prompts: [{ id: 'p', title: 'Prompt', collection_id: 'c' }] });
     await flushPromises();
     expect(document.activeElement).toBe(w.get('[role="region"]').element);
@@ -22,7 +22,7 @@ describe("CollectionDetailModal", () => {
   it('explains an empty collection and keeps member actions separate from the title', async () => {
     const w = mount(CollectionDetailModal, { props: { collection: { id: 'c', title: '工作' } } });
     expect(w.get('.collection-empty').text()).toContain('从下方选择');
-    expect(w.get('select').text()).toContain('暂无可加入');
+    expect(w.get('.member-choices').text()).toContain('暂无可加入');
     const member = { id: 'p', title: '长标题'.repeat(20), collection_id: 'c' };
     await w.setProps({ members: [member], prompts: [member] });
     expect(w.find('.collection-empty').exists()).toBe(false);

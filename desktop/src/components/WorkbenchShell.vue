@@ -145,7 +145,8 @@
 
             </template>
           </div>
-          <div class="content-actions">
+          <div class="content-actions" :inert="batchBusy ? '' : undefined">
+            <button v-if="space === 'local' && prompts.length" type="button" class="button ghost-button" data-testid="select-prompts" @click="selecting = !selecting; selectedPrompts = []">{{ selecting ? '取消多选' : '批量整理' }}</button>
             <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="loadSquare(true)"><AppIcon name="refresh" />{{ t("refresh") }}</button>
             <button
               v-if="space === 'square'"
@@ -168,7 +169,7 @@
           </div>
         </section>
 
-        <section class="filter-bar">
+        <section class="filter-bar" :inert="batchBusy ? '' : undefined">
           <label class="inline-search">
             <AppIcon name="search" />
             <input
@@ -239,6 +240,8 @@
 
         <p v-if="operationNote" role="status" data-testid="operation-note" class="use-hint">{{ operationNote }}</p>
         <p v-if="space === 'square' && catalogError && !squareOffline" role="status" class="use-hint">{{ catalogError }}；当前保留上次可用分类，点击刷新重试。</p>
+        <BatchOrganize v-if="selecting && space === 'local'" :prompts="selectedRows" :groups="categoryGroups" :collections="allLocalItems.filter(item => item.member_count !== undefined)"
+          @busy="batchBusy = $event" :complete="finishBatch" />
         <section class="prompt-section" :aria-busy="space === 'square' && squareLoading">
           <div v-if="hasContentFilter" class="active-filters" aria-label="当前筛选">
             <button v-if="query.trim()" type="button" :title="query" @click="clearFilters('query')">搜索：{{ query }} <span aria-hidden="true">×</span></button>
@@ -271,7 +274,8 @@
               :style="cardHeight ? { height: `${cardHeight}px` } : undefined"
               class="prompt-card"
               :class="{ collection: item.kind === 'collection', 'as-row': view === 'list' }"
-              @click="openItem(item)"
+              @click="selecting && space === 'local' && item.kind === 'prompt' ? selectPrompt(item.id) : openItem(item)"
+              :inert="batchBusy ? '' : undefined"
               @contextmenu.prevent="openContextMenu($event, item)"
             >
               <img v-if="space === 'square' && referenceImages(item).length && !failedReferenceImages[item.id]" class="square-reference-cover" :src="referenceImages(item)[0]" :alt="item.title" loading="lazy" referrerpolicy="no-referrer" @error="failedReferenceImages[item.id] = true">
@@ -283,6 +287,9 @@
               >
                 <img v-for="(src, index) in coverPreview(item)" :key="index" :src="src" alt="">
               </div>
+              <label v-if="selecting && space === 'local' && item.kind === 'prompt'" class="card-selection" @click.stop>
+                <input type="checkbox" :checked="selectedPrompts.includes(item.id)" :aria-label="`选择 ${item.title}`" :data-select-prompt="item.id" @change="selectPrompt(item.id)" />选择
+              </label>
               <div class="card-top">
                 <span class="type-badge"><AppIcon :name="item.kind === 'collection' ? 'folder' : 'file'" />{{ item.kind === "collection" ? "合集" : space === "square" ? "广场" : item.source === 'downloaded' ? '已下载' : '提示词' }}</span>
                 <span v-if="cardCategory(item)" class="card-category" :title="cardCategory(item)">{{ cardCategory(item) }}</span>
@@ -609,6 +616,7 @@ import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import SquareDetailModal from "./SquareDetailModal.vue";
+import BatchOrganize from './BatchOrganize.vue';
 import LocalPromptDetail from './LocalPromptDetail.vue';
 import { extractVariables } from '../lib/renderPrompt.js';
 import UsePromptModal from "./UsePromptModal.vue";
@@ -719,6 +727,7 @@ onUnmounted(() => {
 });
 
 function handleWorkbenchShortcut(event) {
+  if (batchBusy.value) return;
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
   if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
   if (addingCategory.value || deletingCategory.value) return;
@@ -741,6 +750,17 @@ const sortTab = ref("全部");
 const creating = ref(false);
 const editing = ref(null);
 const reading = ref(null);
+const selecting = ref(false), selectedPrompts = ref([]), batchBusy = ref(false);
+const selectedRows = computed(() => prompts.value.filter(p => selectedPrompts.value.includes(p.id)));
+function selectPrompt(id) {
+  if (batchBusy.value) return;
+  selectedPrompts.value = selectedPrompts.value.includes(id) ? selectedPrompts.value.filter(value => value !== id) : [...selectedPrompts.value, id];
+}
+async function finishBatch(ids) {
+  selectedPrompts.value = selectedPrompts.value.filter(id => !ids.includes(id));
+  try { await reloadPrompts(); }
+  catch (error) { notifyOperation(`整理已完成，但刷新失败：${error.message || error}`, false, 'collection', true); }
+}
 const using = ref(null);
 const useError = ref("");
 const useBusy = ref(false);
@@ -885,6 +905,7 @@ const browsePage = ref(1);
 const pageCount = computed(() => Math.max(1, Math.ceil(displayedItems.value.length / 48)));
 const pagedItems = computed(() => displayedItems.value.slice((browsePage.value - 1) * 48, browsePage.value * 48));
 watch([displayedItems, space, query, selectedId, modelFilter, sortTab], () => { browsePage.value = 1; });
+watch([space, query, selectedId, modelFilter, sortTab, browsePage], () => { if (!batchBusy.value) selectedPrompts.value = []; });
 const filterTabs = computed(() =>
   space.value === "square"
     ? [
@@ -947,6 +968,7 @@ const hasTaskPage = computed(() => Boolean(reading.value || creating.value || ed
 const taskTitle = computed(() => reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
 
 function guardSidebarNavigation(event) {
+  if (batchBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
   if (!hasTaskPage.value) return;
   const button = event.target.closest('button');
   if (!button || button.matches('.preference-toggle, .tree-expand, .category-collapse')) return;
@@ -956,6 +978,7 @@ function guardSidebarNavigation(event) {
 }
 
 function navigateTo(action) {
+  if (batchBusy.value) return;
   if (!hasTaskPage.value) { action(); return; }
   if (editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || downloadBusy.value.length || favoriteBusy.value.length) return;
   pendingNavigation.value = action;
@@ -1834,8 +1857,24 @@ async function openCollection(collection) {
   } finally { if (isCurrent()) collectionLoading.value = false; }
 }
 
-async function addToOpenedCollection(promptId) {
-  await changeCollectionMember(promptId, true);
+async function addToOpenedCollection(promptIds) {
+  if (collectionBusy.value || !collectionReady.value || !openedCollection.value) return;
+  collectionBusy.value = true; collectionError.value = '';
+  const collection = openedCollection.value, failed = [];
+  let count = 0;
+  for (const id of promptIds) {
+    try { await addPromptToCollection(id, collection.id); count++; }
+    catch (error) { failed.push(`${collectionCandidates.value.find(p => p.id === id)?.title || id}：${error.message || error}`); }
+  }
+  if (count) {
+    const refreshed = await openCollection(collection);
+    try { await reloadPrompts(); }
+    catch (error) { notifyOperation(`已加入合集，但刷新失败：${error.message || error}`, false, 'collection', true); }
+    if (!refreshed) notifyOperation(`已加入合集，但刷新失败：${collectionError.value}`, false, 'collection', true);
+    else notifyOperation(`已加入合集，共 ${count} 条${failed.length ? `；${failed.length} 条失败，请重试剩余项` : ''}。`, !failed.length, 'collection');
+  }
+  if (failed.length) collectionError.value = `加入失败：${failed.join('；')}`;
+  collectionBusy.value = false;
 }
 
 async function removeFromOpenedCollection(promptId) {
@@ -1901,6 +1940,8 @@ onMounted(async () => {
 
 <style scoped>
 .empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.card-selection { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+.card-selection input { width: 16px; height: 16px; }
 .card-more { margin-left: auto; font-size: 18px; }
 .title-tool > span, .title-tool > kbd { display: none; }
 .sidebar-brand-row .frame-icon-button { opacity: .55; }
