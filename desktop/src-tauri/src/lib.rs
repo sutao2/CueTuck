@@ -31,6 +31,7 @@ pub fn run() {
             commands::database::save_local_prompt_with_assets,
             commands::database::list_local_prompt_assets,
             commands::database::get_local_prompt_image,
+            commands::database::get_local_prompt_thumbnail,
             commands::database::append_downloaded_assets,
             commands::database::export_local_prompt_asset,
             commands::media::upload_private_asset,

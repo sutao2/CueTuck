@@ -78,6 +78,30 @@ pub fn first_image(dir: &Path, prompt_id: &str) -> Result<Option<Asset>, String>
     Ok(asset)
 }
 
+pub fn first_thumbnail(dir: &Path, prompt_id: &str) -> Result<Option<Asset>, String> {
+    use image::ImageDecoder;
+    use std::io::Cursor;
+    let Some(mut asset) = first_image(dir, prompt_id)? else { return Ok(None); };
+    let bytes = STANDARD.decode(&asset.data).map_err(|e| e.to_string())?;
+    let mut reader = image::ImageReader::new(Cursor::new(bytes)).with_guessed_format().map_err(|e| e.to_string())?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(8192);
+    limits.max_image_height = Some(8192);
+    limits.max_alloc = Some(64 * 1024 * 1024);
+    reader.limits(limits);
+    let mut decoder = reader.into_decoder().map_err(|e| e.to_string())?;
+    if decoder.total_bytes() > 64 * 1024 * 1024 { return Err("图片过大，无法生成缩略图".into()); }
+    let orientation = decoder.orientation().unwrap_or(image::metadata::Orientation::NoTransforms);
+    let mut picture = image::DynamicImage::from_decoder(decoder).map_err(|e| e.to_string())?;
+    if picture.width() > 480 || picture.height() > 480 { picture = picture.thumbnail(480, 480); }
+    picture.apply_orientation(orientation);
+    let mut output = Cursor::new(Vec::new());
+    picture.write_to(&mut output, image::ImageFormat::Png).map_err(|e| e.to_string())?;
+    asset.data = STANDARD.encode(output.into_inner());
+    asset.mime = "image/png".into(); asset.name = "thumbnail.png".into();
+    Ok(Some(asset))
+}
+
 pub fn save_prompt(dir: &Path, id: Option<&str>, title: &str, content: &str, category: Option<&str>, model: Option<&str>, assets: &[Asset]) -> Result<super::PromptRecord, String> {
     if title.trim().is_empty() { return Err("标题不能为空".into()); }
     validate(assets)?;
@@ -163,6 +187,40 @@ mod tests {
         conn.execute("UPDATE prompts SET deleted_at=1 WHERE id=?1",[&row.id]).unwrap();
         assert!(first_image(dir.path(),&row.id).unwrap().is_none());
         assert!(first_image(dir.path(),"missing").unwrap().is_none());
+    }
+    #[test]
+    fn thumbnail_bounds_pixels_preserves_alpha_and_never_replaces_original() {
+        let dir = tempfile::tempdir().unwrap(); super::super::initialize_in_dir(dir.path()).unwrap();
+        let mut bytes = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(1600, 800, image::Rgba([80, 120, 200, 100])))
+            .write_to(&mut bytes, image::ImageFormat::Png).unwrap();
+        let original = file("large.png", bytes.get_ref(), "image/png");
+        let row = save_prompt(dir.path(), None, "cover", "full text", None, None, std::slice::from_ref(&original)).unwrap();
+        let thumbnail = first_thumbnail(dir.path(), &row.id).unwrap().unwrap();
+        let decoded = image::load_from_memory(&STANDARD.decode(&thumbnail.data).unwrap()).unwrap().into_rgba8();
+        assert_eq!(decoded.dimensions(), (480, 240));
+        assert_eq!(decoded.get_pixel(0, 0).0[3], 100);
+        assert!(thumbnail.data.len() < original.data.len());
+        assert_eq!(first_image(dir.path(), &row.id).unwrap().unwrap().data, original.data);
+    }
+    #[test]
+    fn thumbnail_handles_supported_formats_small_images_invalid_data_and_limits() {
+        let dir = tempfile::tempdir().unwrap(); super::super::initialize_in_dir(dir.path()).unwrap();
+        for (format, name, mime) in [(image::ImageFormat::Jpeg, "test.jpg", "image/jpeg"), (image::ImageFormat::Gif, "test.gif", "image/gif"), (image::ImageFormat::WebP, "test.webp", "image/webp")] {
+            let mut bytes = std::io::Cursor::new(Vec::new());
+            image::DynamicImage::new_rgb8(32, 16).write_to(&mut bytes, format).unwrap();
+            let row = save_prompt(dir.path(), None, "cover", "body", None, None, &[file(name, bytes.get_ref(), mime)]).unwrap();
+            let thumbnail = first_thumbnail(dir.path(), &row.id).unwrap().unwrap();
+            let picture = image::load_from_memory(&STANDARD.decode(thumbnail.data).unwrap()).unwrap();
+            assert_eq!((picture.width(), picture.height()), (32, 16));
+        }
+        let row = save_prompt(dir.path(), None, "bad", "body", None, None, &[file("bad.png", b"\x89PNG\r\n\x1a\n", "image/png")]).unwrap();
+        assert!(first_thumbnail(dir.path(), &row.id).is_err());
+        let mut bytes = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::new_rgb8(8193, 1).write_to(&mut bytes, image::ImageFormat::Png).unwrap();
+        save_prompt(dir.path(), Some(&row.id), "wide", "body", None, None, &[file("wide.png", bytes.get_ref(), "image/png")]).unwrap();
+        assert!(first_thumbnail(dir.path(), &row.id).is_err());
+        assert!(first_thumbnail(dir.path(), "missing").unwrap().is_none());
     }
     #[test]
     fn supplemental_images_preserve_text_deduplicate_and_rollback_on_failure() {
