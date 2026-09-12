@@ -8,4 +8,4 @@ async function load(){if(busy.value)return;busy.value=true;error.value='';try{co
 async function retry(item){if(busy.value)return;busy.value=true;emit('busy-change',true);error.value='';message.value='';let queued=false;try{const data=await retryAiJob(item.id);if(!data.queued)throw Error('服务器未确认入队');queued=true;message.value='已重新排队，不代表审核通过。'}catch(e){error.value=e.message}finally{busy.value=false;emit('busy-change',false)}if(queued)await load();}
 onMounted(load);
 </script>
-<style scoped>.ai-jobs{padding:24px;margin-top:24px}.ai-jobs article{padding:16px 0;border-bottom:1px solid #e5e8eb;overflow-wrap:anywhere}.ai-jobs p{color:var(--muted);font-size:13px;line-height:1.6}.ai-jobs footer{display:flex;justify-content:space-between;margin-top:16px}</style>
+<style scoped>.ai-jobs{padding:24px;margin-top:24px}.ai-jobs article{padding:16px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.ai-jobs p{color:var(--muted);font-size:13px;line-height:1.6}.ai-jobs footer{display:flex;justify-content:space-between;margin-top:16px}</style>

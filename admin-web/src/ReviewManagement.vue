@@ -104,24 +104,24 @@ onUnmounted(() => { ++version; });
 .review-filters fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
 .review-filters label { flex: 1 1 160px; min-width: 0; }
 .review-filters input, .review-filters select { width: 100%; min-width: 0; }
-.review-batch { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 24px; border-bottom: 1px solid #e5e8eb; }
+.review-batch { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
 .review-batch label, .review-title { display: flex; flex-direction: row; align-items: center; gap: 10px; margin: 0; }
 .review-title { font-size: 15px; color: inherit; }
 input[type=checkbox] { width: 16px; height: 16px; flex: none; margin: 0; }
-.review-filters select, .review-confirm textarea { font: inherit; border: 1px solid #dce1e4; border-radius: 7px; padding: 10px 12px; background: #fff; color: #242b30; margin-top: 8px; }
+.review-filters select, .review-confirm textarea { font: inherit; border: 1px solid var(--line-strong); border-radius: 7px; padding: 10px 12px; background: #fff; color: var(--text); margin-top: 8px; }
 .review-confirm, .review-results { padding: 24px; }
 .review-confirm textarea { width: 100%; resize: vertical; }
 .review-confirm .review-actions { margin-top: 16px; }
 .review-history { list-style: none; padding: 0; }
 .review-history li { padding: 12px 0; display: grid; gap: 6px; }
 .review-history p { white-space: pre-wrap; overflow-wrap: anywhere; }
-.review-history small { color: #7c858d; }
+.review-history small { color: var(--muted); }
 .review-results ul { list-style: none; padding: 0; }
 .review-results li { display: flex; flex-wrap: wrap; gap: 16px; padding: 8px 0; overflow-wrap: anywhere; }
 .review-summary { min-width: 0; overflow-wrap: anywhere; }
 .panel-heading { gap: 12px; }
 .panel-heading .badge { margin-right: auto; }
-.users-pagination { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 16px 24px; border-top: 1px solid #e5e8eb; }
-.users-pagination > span { margin-right: auto; color: #7c858d; }
+.users-pagination { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--line); }
+.users-pagination > span { margin-right: auto; color: var(--muted); }
 @media(max-width: 640px) { .review-batch, .review-confirm, .review-results { padding: 16px; } .review-row { display: flex; flex-direction: column; align-items: stretch; } }
 </style>
