@@ -30,6 +30,11 @@ pub fn list_local_prompt_assets(app: AppHandle, prompt_id: String) -> Result<Vec
 }
 
 #[tauri::command]
+pub fn get_local_prompt_image(app: AppHandle, prompt_id: String) -> Result<Option<crate::local_database::assets::Asset>, String> {
+    crate::local_database::assets::first_image(&data_dir(&app)?, &prompt_id)
+}
+
+#[tauri::command]
 pub fn append_downloaded_assets(app: AppHandle, prompt_id: String, remote_id: String, assets: Vec<crate::local_database::assets::Asset>) -> Result<PromptRecord,String> {
     crate::local_database::assets::append_downloaded(&data_dir(&app)?,&prompt_id,&remote_id,&assets)
 }

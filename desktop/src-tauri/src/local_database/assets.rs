@@ -68,6 +68,16 @@ pub fn list(dir: &Path, prompt_id: &str) -> Result<Vec<Asset>, String> {
     Ok(assets)
 }
 
+pub fn first_image(dir: &Path, prompt_id: &str) -> Result<Option<Asset>, String> {
+    use rusqlite::OptionalExtension;
+    let connection = Connection::open(dir.join("promptark.sqlite")).map_err(|e|e.to_string())?;
+    let asset = connection.query_row("SELECT a.id,a.name,a.mime,a.data FROM prompt_assets a JOIN prompts p ON p.id=a.prompt_id WHERE p.id=?1 AND p.deleted_at IS NULL AND a.mime IN ('image/png','image/jpeg','image/gif','image/webp') ORDER BY a.position LIMIT 1", [prompt_id], |row| Ok(Asset {
+        id:row.get(0)?,name:row.get(1)?,mime:row.get(2)?,data:STANDARD.encode(row.get::<_,Vec<u8>>(3)?),
+    })).optional().map_err(|e|e.to_string())?;
+    if let Some(ref asset) = asset { validate(std::slice::from_ref(asset))?; }
+    Ok(asset)
+}
+
 pub fn save_prompt(dir: &Path, id: Option<&str>, title: &str, content: &str, category: Option<&str>, model: Option<&str>, assets: &[Asset]) -> Result<super::PromptRecord, String> {
     if title.trim().is_empty() { return Err("标题不能为空".into()); }
     validate(assets)?;
@@ -135,6 +145,24 @@ mod tests {
         assert!(!serde_json::to_string(&rows).unwrap().contains(&assets[0].data));
         let path = export_file(dir.path(), &prompt.id, &assets[0].id).unwrap();
         assert_eq!(std::fs::read(path).unwrap(), "离线资料".as_bytes());
+    }
+    #[test]
+    fn cover_reads_only_first_image_and_ignores_deleted_prompts() {
+        let dir=tempfile::tempdir().unwrap();super::super::initialize_in_dir(dir.path()).unwrap();
+        let text=file("note.txt",b"notes","text/plain");
+        let first=file("first.png",b"\x89PNG\r\n\x1a\n","image/png");
+        let second=file("second.gif",b"GIF89a","image/gif");
+        let row=save_prompt(dir.path(),None,"cover","body",None,None,&[text.clone(),first.clone(),second]).unwrap();
+        let conn=Connection::open(dir.path().join("promptark.sqlite")).unwrap();
+        // A malformed other attachment must not be read or validated for the cover.
+        conn.execute("UPDATE prompt_assets SET data=x'00' WHERE prompt_id=?1 AND position=2",[&row.id]).unwrap();
+        assert_eq!(first_image(dir.path(),&row.id).unwrap().unwrap().id,first.id);
+        save_prompt(dir.path(),Some(&row.id),"cover","body",None,None,&[text]).unwrap();
+        assert!(first_image(dir.path(),&row.id).unwrap().is_none());
+        save_prompt(dir.path(),Some(&row.id),"cover","body",None,None,&[first]).unwrap();
+        conn.execute("UPDATE prompts SET deleted_at=1 WHERE id=?1",[&row.id]).unwrap();
+        assert!(first_image(dir.path(),&row.id).unwrap().is_none());
+        assert!(first_image(dir.path(),"missing").unwrap().is_none());
     }
     #[test]
     fn supplemental_images_preserve_text_deduplicate_and_rollback_on_failure() {

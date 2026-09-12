@@ -488,7 +488,12 @@ body.theme-dark .primary-button { color: #202020; }
 .prompt-card h3 { margin: 0 0 8px; font: 550 15px/1.5 var(--font-display); overflow-wrap: anywhere; }
 .prompt-card:not(.as-row) h3 { order: 1; }
 .square-reference-cover { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; margin-bottom: 14px; background: var(--sidebar); }
+.local-prompt-cover { height: 150px; aspect-ratio: auto; }
 .prompt-card.as-row .square-reference-cover { display: none; }
+.prompt-card.as-row:has(.local-prompt-cover) { grid-template-columns: 80px minmax(0, 1fr) auto; column-gap: 16px; }
+.prompt-card.as-row .local-prompt-cover { display: block; width: 80px; height: 64px; margin: 0; grid-column: 1; grid-row: 1 / span 5; align-self: center; }
+.prompt-card.as-row:has(.local-prompt-cover) :is(.card-top,h3,.prompt-author,.prompt-excerpt,.card-assets) { grid-column: 2; }
+.prompt-card.as-row:has(.local-prompt-cover) .card-footer { grid-column: 3; }
 .prompt-card:not(.as-row) .prompt-excerpt { order: 2; }
 .prompt-card:not(.as-row) .card-top { order: 3; margin-top: 14px; }
 .prompt-card:not(.as-row) .prompt-author { order: 4; margin: 8px 0 0; }
