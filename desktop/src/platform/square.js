@@ -1,4 +1,7 @@
-import { applyLocalImport, importDownloadedPrompt, getLocalSetting, listLocalCategories, listLocalPrompts } from "./library.js";
+import { applyLocalImport, importDownloadedPrompt, getLocalSetting, listLocalCategories, listLocalPrompts, appendDownloadedAssets } from "./library.js";
+import { downloadReferenceImages } from './referenceAssets.js';
+import { referenceImages } from '../lib/squareReference.js';
+import { validateAssets } from './assets.js';
 import { getSession } from "./session.js";
 import { downloadPublishedAsset, validateReferences, validateCollectionAssets } from './privateMedia.js';
 
@@ -140,6 +143,19 @@ export async function fetchSquareContent(id) {
 }
 
 const activeDownloads = new Map();
+export async function completeSquareImages(id) {
+  if (activeDownloads.has(id)) return activeDownloads.get(id);
+  const task = (async () => {
+    const existing = (await listLocalPrompts()).find(row => row.remote_id === id);
+    if (!existing) throw Error('本地副本不存在，请重新下载');
+    const payload = await fetchSquareContent(id);
+    if (payload.kind === 'collection') throw Error('合集参考图不属于单条成员附件');
+    const assets = await downloadReferenceImages(payload);
+    if (!assets.length) throw Error('此条目没有可补全的参考图');
+    return appendDownloadedAssets(existing.id, id, assets);
+  })().finally(() => activeDownloads.delete(id));
+  activeDownloads.set(id, task); return task;
+}
 export function downloadSquareItem(id) {
   if (activeDownloads.has(id)) return activeDownloads.get(id);
   const task = downloadNewSquareItem(id).finally(() => activeDownloads.delete(id));
@@ -170,10 +186,12 @@ async function downloadNewSquareItem(id) {
         assets: (member.asset_ids ?? []).map(id => assets.get(id)),
       })),
     }));
-  } else if (refs.length) {
+  } else if (refs.length || referenceImages(payload).length) {
     const assets = [];
     const token = getSession().accessToken;
     for (const reference of refs) assets.push({ ...await downloadPublishedAsset(id, reference, token), id: crypto.randomUUID() });
+    assets.push(...await downloadReferenceImages(payload));
+    validateAssets(assets);
     const keepAuthor = (await getLocalSetting('keep_author_on_download')) === '1';
     row = await applyLocalImport(JSON.stringify({ version: 2, prompts: [{
       title: payload.title, content: payload.content ?? '', category_id: localCategory(payload.category_id),

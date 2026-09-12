@@ -82,7 +82,23 @@ try {
   await run('screenshot');
   await click(/button "返回应用"/);
   await target(/本地库是空的/);
-  console.log('Browser smoke passed: create/edit/variables/copy/delete-cancel/delete/settings-return.');
+  // Isolated reference-image fixture. No real public download or local desktop write.
+  await run('run-code', `async page => {
+    await page.route('https://cms-assets.youmind.com/image-smoke.png',route=>route.fulfill({status:200,contentType:'image/png',path:${JSON.stringify(resolve(root,'desktop/src/assets/app-icon.png'))},headers:{'access-control-allow-origin':'*'}}));
+    await page.evaluate(async()=>{
+      const square=await import('/src/platform/square.js');
+      const item={id:'image-smoke',title:'图片下载验收',kind:'prompt',content:'只复制正文',reference:{images:['https://cms-assets.youmind.com/image-smoke.png']}};
+      square.setSquareTransport(async()=>[item]);square.setSquareContentTransport(async()=>item);square.setCatalogTransport(async()=>({categories:[],models:[]}));
+    });
+  }`);
+  await click(/tab "提示词广场"/);await click(/button "图片下载验收"/);await click(/button "查看大图"/);
+  await click(/button "100%"/);await run('screenshot');await run('press','Escape');await target(/heading "图片下载验收"/);
+  await click(/button "下载到本地"/);await target(/button "补全参考图"/);
+  await click(/button "补全参考图"/);await target(/参考图已补全/);
+  await run('run-code',`async page=>{await page.evaluate(async()=>{const lib=await import('/src/platform/library.js');const rows=await lib.listLocalPrompts();const row=rows.find(row=>row.remote_id==='image-smoke');const assets=await (await import('/src/platform/assets.js')).listPromptAssets(row.id);if(assets.length!==1||row.content!=='只复制正文')throw Error('Image import or dedup failed');});}`);
+  await click(/button "返回"/);await click(/tab "本地提示词/);await click(/button "图片下载验收"/);await click(/button "查看 参考图-1.png"/);
+  await click(/button "放大图片"/);await run('screenshot');await run('resize','600','700');await click(/button "适应窗口"/);await run('screenshot');await run('press','Escape');await target(/textbox "提示词内容"/);
+  console.log('Browser smoke passed: create/edit/variables/copy/delete-cancel/delete/settings-return/image-download/supplement/zoom/narrow-viewer.');
 } finally {
   await writeFile(resolve(artifacts, 'actions.log'), actions);
   await writeFile(resolve(artifacts, 'vite.log'), serverError);

@@ -641,7 +641,8 @@ body.theme-dark .primary-button { color: #202020; }
 .attachment-preview > header { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin-bottom: 14px; }
 .attachment-preview > header > strong { min-width: 0; overflow-wrap: anywhere; font-size: 12px; }
 .attachment-preview > header > div { display: flex; gap: 6px; flex-shrink: 0; }
-.attachment-preview > img { display: block; max-width: 100%; max-height: 420px; margin: auto; object-fit: contain; border-radius: 6px; }
+.image-preview-trigger { display: block; width: 100%; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.image-preview-trigger > img { display: block; max-width: 100%; max-height: 420px; margin: auto; object-fit: contain; border-radius: 6px; }
 .attachment-preview pre { max-height: 300px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.7 var(--font-code); }
 .attachment-preview > p { font-size: 12px; color: var(--muted); line-height: 1.7; }
 .use-assets { margin-top: 18px; }

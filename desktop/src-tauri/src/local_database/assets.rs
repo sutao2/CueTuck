@@ -98,6 +98,26 @@ pub fn export_file(dir: &Path, prompt_id: &str, asset_id: &str) -> Result<String
     Ok(path.to_string_lossy().into_owned())
 }
 
+pub fn append_downloaded(dir: &Path, prompt_id: &str, remote_id: &str, additions: &[Asset]) -> Result<super::PromptRecord, String> {
+    validate(additions)?;
+    let mut connection = Connection::open(dir.join("promptark.sqlite")).map_err(|e|e.to_string())?;
+    let tx = connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate).map_err(|e|e.to_string())?;
+    let exists: bool = tx.query_row("SELECT EXISTS(SELECT 1 FROM prompts WHERE id=?1 AND remote_id=?2 AND deleted_at IS NULL)",params![prompt_id,remote_id],|r|r.get(0)).map_err(|e|e.to_string())?;
+    if !exists { return Err("本地副本不存在或来源已变化".into()); }
+    let mut assets = read(&tx,prompt_id)?; let before = assets.len();
+    for asset in additions {
+        if !assets.iter().any(|old|old.mime==asset.mime && old.data==asset.data) {
+            let mut asset = asset.clone(); asset.id=Uuid::new_v4().to_string(); assets.push(asset);
+        }
+    }
+    if assets.len()>before {
+        replace(&tx,prompt_id,&assets)?;
+        tx.execute("UPDATE prompts SET updated_at=?1 WHERE id=?2",params![super::now_millis(),prompt_id]).map_err(|e|e.to_string())?;
+    }
+    let row = super::prompts::read_prompt(&tx,prompt_id)?;
+    tx.commit().map_err(|e|e.to_string())?; Ok(row)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,6 +135,23 @@ mod tests {
         assert!(!serde_json::to_string(&rows).unwrap().contains(&assets[0].data));
         let path = export_file(dir.path(), &prompt.id, &assets[0].id).unwrap();
         assert_eq!(std::fs::read(path).unwrap(), "离线资料".as_bytes());
+    }
+    #[test]
+    fn supplemental_images_preserve_text_deduplicate_and_rollback_on_failure() {
+        let dir=tempfile::tempdir().unwrap(); super::super::initialize_in_dir(dir.path()).unwrap();
+        let prompt=save_prompt(dir.path(),None,"edited","keep body",None,None,&[file("old.txt",b"keep file","text/plain")]).unwrap();
+        let conn=Connection::open(dir.path().join("promptark.sqlite")).unwrap();
+        conn.execute("UPDATE prompts SET remote_id='square-test' WHERE id=?1",[&prompt.id]).unwrap();
+        let image=file("image.png",b"\x89PNG\r\n\x1a\n","image/png");
+        let row=append_downloaded(dir.path(),&prompt.id,"square-test",std::slice::from_ref(&image)).unwrap();
+        assert_eq!(row.content,"keep body");assert_eq!(row.title,"edited");assert_eq!(row.asset_count,2);
+        assert_eq!(append_downloaded(dir.path(),&prompt.id,"square-test",std::slice::from_ref(&image)).unwrap().asset_count,2);
+        assert!(append_downloaded(dir.path(),&prompt.id,"wrong",std::slice::from_ref(&image)).is_err());
+        conn.execute_batch("CREATE TRIGGER reject_extra BEFORE INSERT ON prompt_assets BEGIN SELECT RAISE(ABORT,'failure'); END;").unwrap();
+        assert!(append_downloaded(dir.path(),&prompt.id,"square-test",&[file("another.png",b"\x89PNG\r\n\x1a\nother","image/png")]).is_err());
+        assert_eq!(list(dir.path(),&prompt.id).unwrap().len(),2);
+        conn.execute("UPDATE prompts SET deleted_at=1 WHERE id=?1",[&prompt.id]).unwrap();
+        assert!(append_downloaded(dir.path(),&prompt.id,"square-test",&[image]).is_err());
     }
     #[test]
     fn attachment_failure_rolls_back_text_and_existing_files() {

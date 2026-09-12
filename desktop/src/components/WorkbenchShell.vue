@@ -434,6 +434,7 @@
       @cancel="closeSquareDetail"
       @retry="openSquareDetail(squareDetail)"
       @download="downloadSquare(squareDetail)"
+      @complete-images="completeImages(squareDetail)"
       @favorite="favoriteSquare(squareDetail)"
     />
     <LoginModal
@@ -607,7 +608,7 @@ import { getSession, logoutSession } from "../platform/session.js";
 import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
 import { parseModelNames } from "../platform/modelCatalog.js";
 import { uiText } from "../platform/uiStrings.js";
-import { downloadSquareItem, fetchSquareContent, fetchSquareCatalog, listSquarePage } from "../platform/square.js";
+import { downloadSquareItem, completeSquareImages, fetchSquareContent, fetchSquareCatalog, listSquarePage } from "../platform/square.js";
 import WindowedPromptGrid from './WindowedPromptGrid.vue';
 import SiteNotice from '../../../shared/SiteNotice.vue';
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
@@ -1196,6 +1197,17 @@ async function downloadSquare(item) {
   } finally { downloadBusy.value = downloadBusy.value.filter((id) => id !== item.id); }
   // Saving succeeded independently of refreshing the visible local list.
   try { await refreshDownloaded(); await reloadPrompts(); } catch { /* Retain confirmed download state. */ }
+}
+
+async function completeImages(item) {
+  if(downloadBusy.value.includes(item.id)) return;
+  downloadBusy.value=[...downloadBusy.value,item.id];
+  try {
+    await completeSquareImages(item.id);
+    notifyOperation(`「${item.title}」参考图已补全，正文和已有附件保持不变。`,true);
+  } catch(error) { notifyOperation(`补图失败：${error.message || error}`,false); }
+  finally { downloadBusy.value=downloadBusy.value.filter(id=>id!==item.id); }
+  try { await refreshDownloaded(); await reloadPrompts(); } catch { /* Saved images remain available after refresh. */ }
 }
 
 async function favoriteSquare(item) {

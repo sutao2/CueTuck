@@ -12,7 +12,7 @@
     </button>
     <div v-if="modelValue.length" class="attachment-grid">
       <article v-for="asset in modelValue" :key="asset.id" class="attachment-item" :class="{ selected: selectedId === asset.id }">
-        <button type="button" class="attachment-open" :aria-label="`查看 ${asset.name}`" @click="selectedId = selectedId === asset.id ? '' : asset.id">
+        <button type="button" class="attachment-open" :aria-label="`查看 ${asset.name}`" @click="openAsset(asset)">
           <img v-if="asset.mime.startsWith('image/')" :src="assetUrl(asset)" alt="" loading="lazy">
           <span v-else class="attachment-file-icon"><AppIcon name="file" /></span>
           <span class="attachment-label"><strong :title="asset.name">{{ asset.name }}</strong><small>{{ formatBytes(assetSize(asset)) }}</small></span>
@@ -22,21 +22,25 @@
     </div>
     <section v-if="selected" class="attachment-preview" :aria-label="selected.name">
       <header><strong>{{ selected.name }}</strong><div><button type="button" class="button" :disabled="working || !savedIds.includes(selected.id)" @click="exportFile">{{ savedIds.includes(selected.id) ? '导出副本' : '保存后可导出' }}</button><button type="button" class="button ghost-button" aria-label="收起附件预览" @click="selectedId = ''">收起</button></div></header>
-      <img v-if="selected.mime.startsWith('image/')" :src="assetUrl(selected)" :alt="selected.name">
+      <button v-if="selected.mime.startsWith('image/')" type="button" class="image-preview-trigger" aria-label="查看大图" @click="image = selected"><img :src="assetUrl(selected)" :alt="selected.name"></button>
       <pre v-else-if="selected.mime === 'text/plain'">{{ textPreview(selected) }}</pre>
       <p v-else>此文档不在应用内执行或解析。导出副本后，可使用系统应用打开。</p>
     </section>
+    <ImageViewer v-if="image" :src="assetUrl(image)" :title="image.name" @close="image = null" />
   </section>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue';
 import AppIcon from './AppIcon.vue';
+import ImageViewer from './ImageViewer.vue';
 import { ASSET_ACCEPT, readAssetFiles, assetUrl, assetSize, formatBytes, exportPromptAsset, textPreview } from '../platform/assets.js';
 const props = defineProps({ modelValue: { type: Array, default: () => [] }, promptId: String, savedIds: { type: Array, default: () => [] }, readonly: Boolean, disabled: Boolean });
 const emit = defineEmits(['update:modelValue', 'busy']);
 const picker = ref(null), working = ref(false), error = ref(''), note = ref(''), selectedId = ref('');
 const selected = computed(() => props.modelValue.find(a => a.id === selectedId.value));
+const image = ref(null);
+function openAsset(asset) { selectedId.value = selectedId.value === asset.id ? '' : asset.id; if(asset.mime.startsWith('image/')) image.value=asset; }
 async function add(files) {
   if (props.readonly || props.disabled || working.value || !files.length) return;
   working.value = true; emit('busy', true); error.value = ''; note.value = '';

@@ -8,6 +8,7 @@
           <div class="detail-meta"><span>{{ item.kind === 'collection' ? '提示词合集' : '提示词' }}</span><span v-if="item.model">{{ item.model }}</span><span v-if="item.author">{{ item.author }}</span></div>
         </div>
         <div class="detail-actions">
+          <button v-if="downloaded && sourceImages.length && item.kind !== 'collection'" type="button" class="button ghost-button" :disabled="loading || Boolean(error) || downloading" data-testid="complete-square-images" @click="$emit('complete-images')">{{ downloading ? '正在补图…' : '补全参考图' }}</button>
           <button type="button" class="button ghost-button" :disabled="favoriteBusy" @click="$emit('favorite')">{{ favorite ? '已收藏' : '收藏' }}</button>
           <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || downloaded || (item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? '正在下载…' : downloaded ? '已下载' : '下载到本地' }}</button>
         </div>
@@ -23,7 +24,7 @@
             <div class="gallery-label"><span>{{ sourceImages.length ? '来源参考图 · 非本软件生成' : '排版示例 · 非提示词生成结果' }}</span><button v-if="!sourceImages.length" type="button" @click="showExamples = false">关闭示例</button></div>
             <figure>
               <div class="gallery-stage">
-                <img v-if="!imageFailed" :key="imageKey" :src="activeImage.url" :alt="activeImage.alt" referrerpolicy="no-referrer" @error="imageFailed = true" @load="imageLoaded = true">
+                <button v-if="!imageFailed" type="button" class="gallery-open" aria-label="查看大图" @click="largeImage = activeImage"><img :key="imageKey" :src="activeImage.url" :alt="activeImage.alt" referrerpolicy="no-referrer" @error="imageFailed = true" @load="imageLoaded = true"></button>
                 <div v-if="imageFailed" class="gallery-fallback" role="status">图片暂时无法加载 <button class="button" type="button" @click="retryImage">重试图片</button></div>
                 <span v-else-if="!imageLoaded" class="gallery-loading" role="status">正在加载图片…</span>
               </div>
@@ -53,6 +54,7 @@
         <ReportPanel v-if="!loading && !error" :key="item.id" :target-id="item.id" />
       </div>
       </div>
+      <ImageViewer v-if="largeImage" :src="largeImage.url" :title="largeImage.alt" @close="largeImage = null" />
     </section>
 </template>
 
@@ -60,6 +62,7 @@
 import { vPageFocus } from "../lib/pageFocus.js";
 import ReportPanel from './ReportPanel.vue';
 import PublishedAttachments from './PublishedAttachments.vue';
+import ImageViewer from './ImageViewer.vue';
 import { computed, ref, watch } from 'vue';
 import { referenceImages, referenceLink } from '../lib/squareReference.js';
 const props = defineProps({
@@ -72,7 +75,8 @@ const props = defineProps({
   favorite: Boolean,
   favoriteBusy: Boolean,
 });
-defineEmits(['cancel', 'retry', 'download', 'favorite']);
+defineEmits(['cancel', 'retry', 'download', 'favorite', 'complete-images']);
+const largeImage = ref(null);
 const examples = [
   { url: 'https://images.pexels.com/photos/7972671/pexels-photo-7972671.jpeg?auto=compress&dpr=1&h=750&w=1260', alt: '自然光下，朋友们在草地上交谈', source: 'https://www.pexels.com/photo/photo-of-a-group-of-friends-sitting-on-the-grass-7972671/' },
   { url: 'https://images.pexels.com/photos/7972677/pexels-photo-7972677.jpeg?auto=compress&dpr=1&h=750&w=1260', alt: '春日公园里的朋友聚会', source: 'https://www.pexels.com/photo/a-group-of-friends-talking-while-sitting-on-the-grass-7972677/' },
@@ -83,7 +87,7 @@ const galleryImages = computed(() => sourceImages.value.length ? sourceImages.va
 const activeImage = computed(() => galleryImages.value[imageIndex.value] || galleryImages.value[0]);
 function retryImage() { imageFailed.value = false; imageLoaded.value = false; imageKey.value++; }
 function selectImage(index) { imageIndex.value = index; retryImage(); }
-watch(() => props.item.id, () => { showExamples.value = false; selectImage(0); });
+watch(() => props.item.id, () => { largeImage.value=null; showExamples.value = false; selectImage(0); });
 watch(showExamples, () => retryImage());
 </script>
 
@@ -107,7 +111,8 @@ watch(showExamples, () => retryImage());
 .gallery-label button { border: 0; background: transparent; color: inherit; }
 .detail-gallery figure { margin: 0; }
 .gallery-stage { position: relative; aspect-ratio: 16 / 9; background: var(--sidebar); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: grid; place-items: center; }
-.gallery-stage > img { width: 100%; height: 100%; object-fit: contain; min-height: 0; }
+.gallery-open { width: 100%; height: 100%; padding: 0; border: 0; background: transparent; min-height: 0; cursor: zoom-in; }
+.gallery-open > img { width: 100%; height: 100%; object-fit: contain; min-height: 0; }
 .gallery-loading { position: absolute; color: var(--muted); font-size: 12px; }
 .gallery-fallback { display: grid; justify-items: center; gap: 12px; color: var(--muted); }
 figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; margin-top: 10px; }

@@ -243,6 +243,20 @@ export async function importDownloadedPrompt({ title, content, remoteId = null, 
   return row;
 }
 
+export async function appendDownloadedAssets(id, remoteId, additions) {
+  validateAssets(additions);
+  if (isTauri()) return tauriInvoke('append_downloaded_assets', {prompt_id:id,remote_id:remoteId,assets:additions});
+  const row = memoryPrompts.find(row => row.id === id && !row.deleted_at && row.remote_id === remoteId);
+  if (!row) throw Error('本地副本不存在或来源已变化');
+  const assets = memoryAssets(id), before = assets.length;
+  for (const asset of additions) if (!assets.some(old => old.mime === asset.mime && old.data === asset.data)) assets.push({...asset,id:crypto.randomUUID()});
+  validateAssets(assets);
+  if (assets.length > before) {
+    storeMemoryAssets(id,assets); row.asset_count=assets.length; row.image_count=assets.filter(a=>a.mime.startsWith('image/')).length; row.updated_at=String(Date.now());
+  }
+  return structuredClone(row);
+}
+
 export async function updateLocalPrompt({ id, title, content, categoryId = null, model, assets } = {}) {
   if (assets !== undefined) validateAssets(assets);
   if (isTauri() && assets !== undefined) return tauriInvoke('save_local_prompt_with_assets', { id, title, content, category_id: categoryId, model, assets });

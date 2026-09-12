@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-12-downloaded-images.md](plans/2026-09-12-downloaded-images.md) | 验收 | 下载缺图片与查看大图 | 参考图离线保存、旧副本补图和大图；前端/原生/浏览器/桌面验收 |
 | [plans/2026-09-12-qq-mail.md](plans/2026-09-12-qq-mail.md) | 验收 | 配置 QQ / Foxmail SMTP | 快捷配置已验；真实保存待 owner 重认证，测试发信待确认 |
 | [plans/2026-09-12-admin-client-style.md](plans/2026-09-12-admin-client-style.md) | 已完成 | 管理端视觉对齐客户端 | 共用 tokens、分组导航、控件统一及隔离浏览器验收 |
 | [plans/2026-09-12-launcher-defaults.md](plans/2026-09-12-launcher-defaults.md) | 验收 | 启动器无法打开 | 已修复缺省偏好，按钮/搜索/Esc 原生通过，真实快捷键待确认 |

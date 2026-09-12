@@ -4,7 +4,8 @@
     <p>查看时联网加载；下载到本地会一并保存全部附件。</p>
     <div v-for="file in references" :key="file.id" class="file-row"><div><strong>{{ file.name }}</strong><small>{{ formatBytes(file.size) }} · {{ file.mime }}</small></div><button type="button" class="button ghost-button" :disabled="Boolean(busy)" @click="preview(file)">{{ busy === file.id ? '正在加载…' : '查看' }}</button></div>
     <p v-if="error" role="alert">{{ error }}</p>
-    <div v-if="asset" class="file-preview"><header><strong>{{ asset.name }}</strong><button class="button ghost-button" @click="asset = null">收起</button></header><img v-if="asset.mime.startsWith('image/')" :src="assetUrl(asset)" :alt="asset.name"><pre v-else-if="asset.mime === 'text/plain'">{{ textPreview(asset) }}</pre><p v-else>此文档不在应用内执行。请下载提示词到本地后，在附件区导出查看。</p></div>
+    <div v-if="asset" class="file-preview"><header><strong>{{ asset.name }}</strong><button class="button ghost-button" @click="asset = null">收起</button></header><button v-if="asset.mime.startsWith('image/')" class="image-preview-trigger" type="button" aria-label="查看大图" @click="image = asset"><img :src="assetUrl(asset)" :alt="asset.name"></button><pre v-else-if="asset.mime === 'text/plain'">{{ textPreview(asset) }}</pre><p v-else>此文档不在应用内执行。请下载提示词到本地后，在附件区导出查看。</p></div>
+    <ImageViewer v-if="image" :src="assetUrl(image)" :title="image.name" @close="image = null" />
   </section>
 </template>
 <script setup>
@@ -12,10 +13,12 @@ import { ref, watch, onUnmounted } from 'vue';
 import { formatBytes, assetUrl, textPreview } from '../platform/assets.js';
 import { downloadPublishedAsset } from '../platform/privateMedia.js';
 import { getSession } from '../platform/session.js';
+import ImageViewer from './ImageViewer.vue';
 const props = defineProps({ itemId: { type: String, required: true }, references: { type: Array, default: () => [] } });
 const asset = ref(null), busy = ref(''), error = ref('');
+const image = ref(null);
 let version = 0;
-function reset() { ++version; asset.value = null; busy.value = ''; error.value = ''; }
+function reset() { ++version; asset.value = null; image.value = null; busy.value = ''; error.value = ''; }
 watch(() => [props.itemId, props.references], reset);
 onUnmounted(reset);
 async function preview(file) {

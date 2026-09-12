@@ -30,6 +30,11 @@ pub fn list_local_prompt_assets(app: AppHandle, prompt_id: String) -> Result<Vec
 }
 
 #[tauri::command]
+pub fn append_downloaded_assets(app: AppHandle, prompt_id: String, remote_id: String, assets: Vec<crate::local_database::assets::Asset>) -> Result<PromptRecord,String> {
+    crate::local_database::assets::append_downloaded(&data_dir(&app)?,&prompt_id,&remote_id,&assets)
+}
+
+#[tauri::command]
 pub fn export_local_prompt_asset(app: AppHandle, prompt_id: String, asset_id: String) -> Result<String, String> {
     let path = crate::local_database::assets::export_file(&data_dir(&app)?, &prompt_id, &asset_id)?;
     // Reveal the containing directory, never execute the attachment.
