@@ -1,8 +1,8 @@
 // Imported references are data, never HTML. Only the reviewed image host is loaded.
 export function referenceImages(item) {
-  return (Array.isArray(item?.reference?.images) ? item.reference.images : [])
+  return [...new Set(Array.isArray(item?.reference?.images) ? item.reference.images : [])]
     .filter(url => {
-      try { const u = new URL(url); return u.protocol === 'https:' && u.hostname === 'cms-assets.youmind.com' && !u.username && !u.password; }
+      try { const u = new URL(url); return u.protocol === 'https:' && u.hostname === 'cms-assets.youmind.com' && !u.username && !u.password && !u.port; }
       catch { return false; }
     }).slice(0, 6);
 }
