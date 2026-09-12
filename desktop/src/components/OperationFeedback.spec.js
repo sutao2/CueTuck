@@ -16,7 +16,7 @@ it.each(['createPrompt','editPrompt','createCollection','editCollection'])('sepa
   const collection=mode.includes('Collection'),editing=mode.startsWith('edit');
   if(editing)await (collection?library.createLocalCollection:library.createLocalPrompt)({title:'original',content:'body'});
   await shell();
-  if(editing){await w.get('.prompt-card').trigger('click');await flushPromises();if(collection)await w.get('[data-testid=edit-collection]').trigger('click')}
+  if(editing){await w.get('.prompt-card').trigger('click');await flushPromises();if(collection)await w.get('[data-testid=edit-collection]').trigger('click');else await w.get('[data-testid=detail-edit]').trigger('click')}
   else {await w.get('.content-actions .primary-button').trigger('click');if(collection)await editor().findAll('.create-type')[1].trigger('click')}
   await editor().get('input').setValue('saved title');
   const method=editing?(collection?'updateLocalCollection':'updateLocalPrompt'):(collection?'createLocalCollection':'createLocalPrompt');

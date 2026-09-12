@@ -56,6 +56,7 @@ it('does not misreport successful deletion when refreshing the list fails', asyn
 });
 it('keeps editor changes when deletion is cancelled', async () => {
   await setup(); await w.get('.prompt-card').trigger('click'); await flushPromises();
+  await w.get('[data-testid=detail-edit]').trigger('click');
   const editor = w.get('[data-testid="prompt-editor"]');
   await editor.get('textarea').setValue('未保存修改');
   await editor.get('.danger-button').trigger('click');

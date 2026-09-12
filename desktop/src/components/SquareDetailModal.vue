@@ -10,7 +10,7 @@
         <div class="detail-actions">
           <button v-if="downloaded && sourceImages.length && item.kind !== 'collection'" type="button" class="button ghost-button" :disabled="loading || Boolean(error) || downloading" data-testid="complete-square-images" @click="$emit('complete-images')">{{ downloading ? '正在补图…' : '补全参考图' }}</button>
           <button type="button" class="button ghost-button" :disabled="favoriteBusy" @click="$emit('favorite')">{{ favorite ? '已收藏' : '收藏' }}</button>
-          <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || downloaded || (item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? '正在下载…' : downloaded ? '已下载' : '下载到本地' }}</button>
+          <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (!downloaded && item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? '正在下载…' : downloaded ? '打开本地副本' : '下载到本地' }}</button>
         </div>
       </header>
       <div class="detail-content">
@@ -20,21 +20,20 @@
           <button type="button" class="button ghost-button" data-testid="square-detail-retry" @click="$emit('retry')">重试</button>
         </div>
         <template v-else>
-          <section v-if="sourceImages.length || showExamples" class="detail-gallery" :aria-label="sourceImages.length ? '来源参考图' : '摄影排版示例'">
-            <div class="gallery-label"><span>{{ sourceImages.length ? '来源参考图 · 非本软件生成' : '排版示例 · 非提示词生成结果' }}</span><button v-if="!sourceImages.length" type="button" @click="showExamples = false">关闭示例</button></div>
+          <section v-if="sourceImages.length" class="detail-gallery" aria-label="来源参考图">
+            <div class="gallery-label"><span>来源参考图 · 非本软件生成</span></div>
             <figure>
               <div class="gallery-stage">
                 <button v-if="!imageFailed" type="button" class="gallery-open" aria-label="查看大图" @click="largeImage = activeImage"><img :key="imageKey" :src="activeImage.url" :alt="activeImage.alt" referrerpolicy="no-referrer" @error="imageFailed = true" @load="imageLoaded = true"></button>
                 <div v-if="imageFailed" class="gallery-fallback" role="status">图片暂时无法加载 <button class="button" type="button" @click="retryImage">重试图片</button></div>
                 <span v-else-if="!imageLoaded" class="gallery-loading" role="status">正在加载图片…</span>
               </div>
-              <figcaption><span>{{ activeImage.alt }}</span><a v-if="activeImage.source" :href="activeImage.source" target="_blank" rel="noopener noreferrer">{{ sourceImages.length ? item.reference.author : 'George Pak / Pexels' }} ↗</a></figcaption>
+              <figcaption><span>{{ activeImage.alt }}</span><a v-if="activeImage.source" :href="activeImage.source" target="_blank" rel="noopener noreferrer">{{ item.reference.author }} ↗</a></figcaption>
             </figure>
             <div class="gallery-thumbs" aria-label="选择预览图片">
               <button v-for="(image, index) in galleryImages" :key="image.url" type="button" :aria-label="`预览图片 ${index + 1}`" :aria-pressed="imageIndex === index" @click="selectImage(index)"><img :src="image.url" alt="" loading="lazy" referrerpolicy="no-referrer"><span>{{ index + 1 }}</span></button>
             </div>
           </section>
-          <button v-else class="detail-example-button" type="button" @click="showExamples = true">＋ 加载示例图片（联网，仅预览排版）</button>
           <p v-if="item.reference" class="reference-credit"><a v-if="referenceLink(item.reference.url)" :href="referenceLink(item.reference.url)" target="_blank" rel="noopener noreferrer">{{ item.reference.repository }} ↗</a> · {{ item.reference.author }} · <a v-if="referenceLink(item.reference.license_url)" :href="referenceLink(item.reference.license_url)" target="_blank" rel="noopener noreferrer">{{ item.reference.license }}</a></p>
           <h3 class="detail-section-label">{{ item.kind === 'collection' ? '合集内容' : '提示词正文' }}</h3>
           <template v-if="item.kind === 'collection'">
@@ -77,18 +76,13 @@ const props = defineProps({
 });
 defineEmits(['cancel', 'retry', 'download', 'favorite', 'complete-images']);
 const largeImage = ref(null);
-const examples = [
-  { url: 'https://images.pexels.com/photos/7972671/pexels-photo-7972671.jpeg?auto=compress&dpr=1&h=750&w=1260', alt: '自然光下，朋友们在草地上交谈', source: 'https://www.pexels.com/photo/photo-of-a-group-of-friends-sitting-on-the-grass-7972671/' },
-  { url: 'https://images.pexels.com/photos/7972677/pexels-photo-7972677.jpeg?auto=compress&dpr=1&h=750&w=1260', alt: '春日公园里的朋友聚会', source: 'https://www.pexels.com/photo/a-group-of-friends-talking-while-sitting-on-the-grass-7972677/' },
-];
-const showExamples = ref(false), imageIndex = ref(0), imageFailed = ref(false), imageLoaded = ref(false), imageKey = ref(0);
+const imageIndex = ref(0), imageFailed = ref(false), imageLoaded = ref(false), imageKey = ref(0);
 const sourceImages = computed(() => referenceImages(props.item));
-const galleryImages = computed(() => sourceImages.value.length ? sourceImages.value.map(url => ({ url, alt: props.item.title, source: referenceLink(props.item.reference.url) })) : examples);
+const galleryImages = computed(() => sourceImages.value.map(url => ({ url, alt: props.item.title, source: referenceLink(props.item.reference.url) })));
 const activeImage = computed(() => galleryImages.value[imageIndex.value] || galleryImages.value[0]);
 function retryImage() { imageFailed.value = false; imageLoaded.value = false; imageKey.value++; }
 function selectImage(index) { imageIndex.value = index; retryImage(); }
-watch(() => props.item.id, () => { largeImage.value=null; showExamples.value = false; selectImage(0); });
-watch(showExamples, () => retryImage());
+watch(() => props.item.id, () => { largeImage.value=null; selectImage(0); });
 </script>
 
 <style scoped>
@@ -104,7 +98,6 @@ watch(showExamples, () => retryImage());
 .detail-actions { display: flex; flex-shrink: 0; gap: 8px; padding-top: 3px; }
 .detail-section-label { font-size: 12px; font-weight: 600; color: var(--muted); margin: 28px 0 12px; }
 .detail-content .square-body { margin: 0; padding: 0; border: 0; background: transparent; font-size: 14px; line-height: 1.9; }
-.detail-example-button { padding: 9px 0; border: 0; background: transparent; color: var(--muted); font-size: 12px; }
 .reference-credit { color: var(--muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
 .reference-credit a { color: inherit; }
 .gallery-label { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11px; margin-bottom: 10px; }

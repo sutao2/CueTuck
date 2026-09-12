@@ -443,6 +443,7 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell);
     await flushPromises();
     await w.get(".prompt-card").trigger("click");
+    await w.get('[data-testid="detail-edit"]').trigger("click");
     expect(w.get('[data-testid="prompt-category"]').element.value).toBe("cat-image");
     await w.get(".modal-footer .primary-button").trigger("click");
     await flushPromises();
@@ -1003,6 +1004,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-space="local"]').trigger("click");
     await flushPromises();
     await w.get(".prompt-card").trigger("click");
+    await w.get('[data-testid="detail-edit"]').trigger("click");
     expect(w.get('[data-testid="prompt-editor"] textarea').element.disabled).toBe(false);
     await w.get('[data-testid="prompt-editor"] textarea').setValue("新正文");
     await w.get(".modal-footer .primary-button").trigger("click");
@@ -1828,6 +1830,7 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell);
     await flushPromises();
     await w.get(".prompt-card").trigger("click");
+    await w.get('[data-testid="detail-edit"]').trigger("click");
     expect(w.get('[data-testid="prompt-model"]').element.value).toBe("");
   });
 

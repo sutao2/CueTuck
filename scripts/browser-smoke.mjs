@@ -59,15 +59,16 @@ try {
   await click(/button "保存"/);
   await target(/button "E2E 临时提示词"/);
   await click(/button "E2E 临时提示词"/);
+  await click(/button "编辑"/);
   await fill(/textbox "提示词内容"/, '欢迎 {{姓名}}');
   await click(/button "保存"/);
-  await click(/button "使用"/);
+  await click(/button "使用提示词"/);
   await fill(/textbox/, 'Ada');
   await click(/button "下一步"/);
   assert.match(snapshot, /欢迎 Ada/);
   await click(/button "复制并完成"/);
   assert.match(await run('eval', 'window.smokeClipboard'), /欢迎 Ada/);
-  await click(/button "E2E 临时提示词"/);
+  await click(/button "编辑"/);
   await click(/button "删除"/);
   await click(/button "取消"/, true);
   assert.match(snapshot, /E2E 临时提示词/);
