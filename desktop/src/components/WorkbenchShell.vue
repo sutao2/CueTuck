@@ -300,11 +300,7 @@
               <h3><button type="button" class="prompt-title" @click.stop="openItem(item)">{{ item.title }}</button></h3>
               <p v-if="item.author" class="prompt-author" data-testid="prompt-author">{{ item.author }}</p>
               <p class="prompt-excerpt">
-                {{
-                  item.kind === "collection"
-                    ? `${item.member_count ?? 0} 个提示词`
-                    : item.content || item.excerpt || "还没有正文"
-                }}
+                {{ cardExcerpt(item) }}
               </p>
               <div v-if="item.asset_count" class="card-assets" data-testid="card-assets">
                 <span v-if="item.image_count"><AppIcon name="image" />{{ item.image_count }} 张图片</span>
@@ -895,6 +891,12 @@ const uiLanguage = ref("zh");
 
 function t(key) {
   return uiText(uiLanguage.value, key);
+}
+function cardExcerpt(item) {
+  if (item.kind === 'collection') return `${item.member_count ?? 0} 个提示词`;
+  const text = item.content || item.excerpt || '还没有正文';
+  const excerpt = Array.from(text.slice(0, 482)).slice(0, 240).join('');
+  return excerpt.length < text.length ? `${excerpt}…` : text;
 }
 const libraryItems = computed(() => [
   ...collections.value.map((item) => ({ ...item, kind: "collection" })),
