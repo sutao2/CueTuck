@@ -1,7 +1,7 @@
 <template>
   <main v-if="!loggedIn" class="login-layout">
-    <aside class="login-brand"><div class="brand"><span class="brand-mark">P</span>提示方舟 <small>ADMIN</small></div><div><p class="eyebrow">PROMPTARK CONSOLE</p><h1>让好用的提示词，<br>被更多人发现。</h1><p>管理社区内容、用户与登录服务。<br>一个清晰、有序的工作空间。</p></div><small>管理控制台 · 仅限管理员访问</small></aside>
-    <div class="login-content"><IdentityForm v-if="identityMode" :mode="identityMode" :request="adminIdentityRequest" :initial-email="email" @back="identityMode=''" @done="identityDone" /><form v-else class="login" @submit.prevent="submitLogin"><span class="eyebrow">WELCOME BACK</span><h2>登录管理台</h2><p class="muted">使用管理员账号继续。</p>
+    <header class="login-brand"><div class="brand"><img :src="appIcon" alt="" class="brand-mark">提示方舟 <small>管理控制台</small></div></header>
+    <div class="login-content"><IdentityForm v-if="identityMode" :mode="identityMode" :request="adminIdentityRequest" :initial-email="email" @back="identityMode=''" @done="identityDone" /><form v-else class="login" @submit.prevent="submitLogin"><h2>登录管理台</h2><p class="muted">使用管理员账号继续。</p>
       <label>邮箱<input v-model="email" type="email" data-testid="admin-email" autocomplete="username" placeholder="name@example.com" :disabled="busy" required></label>
       <label>密码<input v-model="password" type="password" data-testid="admin-password" autocomplete="current-password" placeholder="输入密码" :disabled="busy" required></label>
       <p v-if="loginNotice" role="status" class="success-message">{{ loginNotice }}</p>
@@ -16,36 +16,20 @@
   </main>
   <main v-else class="admin-layout">
     <aside class="admin-sidebar">
-      <div class="brand"><span class="brand-mark">P</span><div>提示方舟<small>管理控制台</small></div></div>
-      <p class="nav-label">工作空间</p>
+      <div class="brand"><img :src="appIcon" alt="" class="brand-mark"><div>提示方舟<small>管理控制台</small></div></div>
       <nav aria-label="管理导航"><fieldset class="admin-nav" :disabled="writeBusy">
-        <button v-if="permissions.users" :aria-current="page === 'overview' ? 'page' : undefined" @click="navigate('overview')"><span class="nav-symbol">◷</span>概览</button>
-        <button data-testid="nav-review" :aria-current="page === 'review' ? 'page' : undefined" @click="openReview"><span class="nav-symbol">▤</span>内容审核</button>
-        <button v-if="permissions.users" data-testid="nav-users" :aria-current="page === 'users' ? 'page' : undefined" @click="openUsers"><span class="nav-symbol">♧</span>用户</button>
-        <button v-if="permissions.users" data-testid="nav-content" :aria-current="page === 'content' ? 'page' : undefined" @click="navigate('content')"><span class="nav-symbol">▦</span>广场内容</button>
-        <button v-if="permissions.users" data-testid="nav-billing" :aria-current="page === 'billing' ? 'page' : undefined" @click="navigate('billing')"><span class="nav-symbol">▤</span>模拟账单</button>
-        <p class="nav-label">配置</p>
-        <button v-if="permissions.configuration" data-testid="nav-moderation" :aria-current="page === 'moderation' ? 'page' : undefined" @click="navigate('moderation')"><span class="nav-symbol">◎</span>自动审核</button>
-        <button v-if="permissions.configuration" data-testid="nav-ai-models" :aria-current="page === 'ai-models' ? 'page' : undefined" @click="navigate('ai-models')"><span class="nav-symbol">◇</span>审核模型</button>
-        <button v-if="permissions.configuration" data-testid="nav-ai-skills" :aria-current="page === 'ai-skills' ? 'page' : undefined" @click="navigate('ai-skills')"><span class="nav-symbol">≋</span>审核 Skills</button>
-        <button v-if="permissions.configuration" data-testid="nav-mail" :aria-current="page === 'mail' ? 'page' : undefined" @click="navigate('mail')"><span class="nav-symbol">✉</span>邮件服务</button>
-        <button v-if="permissions.configuration" :aria-current="page === 'notifications' ? 'page' : undefined" @click="navigate('notifications')"><span class="nav-symbol">♧</span>通知与日志</button>
-        <button v-if="permissions.configuration" data-testid="nav-identity" :aria-current="page === 'identity' ? 'page' : undefined" @click="navigate('identity')"><span class="nav-symbol">♧</span>注册与邀请</button>
-        <button v-if="permissions.users" data-testid="nav-reports" :aria-current="page === 'reports' ? 'page' : undefined" @click="navigate('reports')"><span class="nav-symbol">⚑</span>举报与风控</button>
-        <button v-if="permissions.users" data-testid="nav-rules" :aria-current="page === 'rules' ? 'page' : undefined" @click="navigate('rules')"><span class="nav-symbol">▱</span>安全规则</button>
-        <button v-if="permissions.users" data-testid="nav-categories" :aria-current="page === 'categories' ? 'page' : undefined" @click="navigate('categories')"><span class="nav-symbol">▧</span>分类管理</button>
-        <button v-if="permissions.users" data-testid="nav-models" :aria-current="page === 'models' ? 'page' : undefined" @click="navigate('models')"><span class="nav-symbol">◇</span>模型管理</button>
-        <button v-if="permissions.configuration" data-testid="nav-oauth" :aria-current="page === 'oauth' ? 'page' : undefined" @click="openOAuth"><span class="nav-symbol">⌘</span>第三方登录</button>
-        <button v-if="permissions.configuration" data-testid="nav-settings" :aria-current="page === 'settings' ? 'page' : undefined" @click="openSettings"><span class="nav-symbol">☷</span>站点设置</button>
-        <button data-testid="nav-security" :aria-current="page === 'security' ? 'page' : undefined" @click="openSecurity"><span class="nav-symbol">◇</span>账号安全</button>
-        <button v-if="permissions.configuration" :aria-current="page === 'audit' ? 'page' : undefined" @click="navigate('audit')"><span class="nav-symbol">≡</span>操作审计</button>
-        <button v-if="permissions.configuration" :aria-current="page === 'system' ? 'page' : undefined" @click="navigate('system')"><span class="nav-symbol">◉</span>系统状态</button>
+        <section v-for="group in visibleGroups" :key="group.label" class="nav-group" :aria-label="group.label">
+          <p class="nav-label">{{ group.label }}</p>
+          <button v-for="item in group.items" :key="item.page" :data-testid="'nav-' + item.page" :aria-current="page === item.page ? 'page' : undefined" @click="navigate(item.page)">
+            <AppIcon :name="item.icon" /><span>{{ titles[item.page] }}</span>
+          </button>
+        </section>
       </fieldset></nav>
-      <div class="sidebar-account"><span class="account-avatar">{{ account[0]?.toUpperCase() }}</span><div><strong>{{ roleNames[accountRole] || '管理员' }}</strong><small data-testid="admin-account" :title="account">{{ account }}</small></div><button class="logout-button" :disabled="writeBusy" data-testid="admin-logout" @click="logout" title="退出登录" aria-label="退出登录">↗</button></div>
+      <div class="sidebar-account"><span class="account-avatar">{{ account[0]?.toUpperCase() }}</span><div><strong>{{ roleNames[accountRole] || '管理员' }}</strong><small data-testid="admin-account" :title="account">{{ account }}</small></div><button class="logout-button" :disabled="writeBusy" data-testid="admin-logout" @click="logout" title="退出登录" aria-label="退出登录"><AppIcon name="logout" /></button></div>
     </aside>
-    <div class="admin-workspace">
-      <header class="workspace-bar"><span>控制台 <span class="breadcrumb-slash">/</span> {{ titles[page] }}</span><span class="environment-label">管理工作空间</span></header>
-      <div class="workspace-content">
+    <div ref="workspace" class="admin-workspace">
+      <header class="workspace-bar"><span class="workspace-title"><AppIcon :name="pageIcon" />{{ titles[page] }}</span><span class="environment-label">提示方舟 / 管理控制台</span></header>
+      <div class="workspace-content" :class="{ 'configuration-page': configurationPages.includes(page) }">
         <header class="page-heading"><div><h1>{{ titles[page] }}</h1><p>{{ descriptions[page] }}</p></div></header>
         <p v-if="error" role="alert" data-testid="admin-error" class="error-banner">{{ error }}</p>
         <OAuthSettings v-if="page === 'oauth'" ref="oauthForm" />
@@ -72,6 +56,9 @@
 
 <script setup>
 import AiJobs from './AiJobs.vue';
+import AppIcon from '../../desktop/src/components/AppIcon.vue';
+import appIcon from '../../desktop/src/assets/app-icon.png';
+import { adminNavGroups } from './navigation.js';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import OAuthSettings from './OAuthSettings.vue';
 import AccountSecurity from './AccountSecurity.vue';
@@ -96,7 +83,10 @@ import { permittedPage, requestedPage } from './navigation.js';
 import './admin.css';
 const titles = { review: '内容审核', content: '广场内容', users: '用户', categories: '分类管理', models: '模型管理', oauth: '第三方登录', settings: '站点设置', security: '账号安全' };
 const descriptions = { review: '检查社区投稿，维护广场内容质量。', content: '管理公开展示、推荐排序与上下架，保留作者原始内容。', users: '检索账号、查看公开资料，安全地管理状态与权限。', oauth: '连接登录提供商，让用户使用已有账号登录提示方舟。', settings: '管理社区的访问方式与公开范围。', security: '管理本人的登录密码与所有设备的会话。' };
-const permissions = ref({}), accountRole = ref('');
+const permissions = ref({}), accountRole = ref(''), workspace = ref(null);
+const visibleGroups = computed(() => adminNavGroups.map(group => ({ ...group, items: group.items.filter(item => permittedPage(item.page, permissions.value)) })).filter(group => group.items.length));
+const pageIcon = computed(() => adminNavGroups.flatMap(group => group.items).find(item => item.page === page.value)?.icon || 'settings');
+const configurationPages = ['oauth','settings','security','moderation','mail','notifications','identity','ai-skills'];
 titles.reports='举报与风控'; titles.rules='安全规则';
 titles.moderation='自动审核'; descriptions.moderation='设置投稿限额、初筛检查与人工复核边界。';
 titles['ai-models']='审核模型'; descriptions['ai-models']='加密接口配置、连接测试与真实审核结果。';
@@ -177,9 +167,6 @@ async function logout() {
   if (!await logoutAdmin()) error.value = '本机已退出，但服务端注销失败，请检查网络。';
   await loadProviders();
 }
-function openReview() { return navigate('review'); }
-function openOAuth() { return navigate('oauth'); }
-function openSecurity() { return navigate('security'); }
 function securitySignedOut(message) {
   aiJobsBusy.value = false;
   securityBusy.value = false;
@@ -187,8 +174,6 @@ function securitySignedOut(message) {
   error.value = ''; loginNotice.value = message;
   loadProviders();
 }
-function openUsers() { return navigate('users'); }
-function openSettings() { return navigate('settings'); }
 async function navigate(target, options = {}) {
   if (!options.force && !canLeave()) {
     if (options.history) window.history.replaceState(null, '', `#/${page.value}`);
@@ -198,6 +183,7 @@ async function navigate(target, options = {}) {
   target = allowed ? target : 'review';
   const address = `#/${target}`;
   if (window.location.hash !== address) window.history[options.replace || options.history ? 'replaceState' : 'pushState'](null, '', address);
+  if (page.value !== target) workspace.value?.scrollTo?.({ top: 0, left: 0 });
   page.value = target; error.value = allowed ? '' : '当前账号没有该页面的访问权限';
 }
 </script>

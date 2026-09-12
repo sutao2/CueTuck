@@ -25,6 +25,9 @@ const api=createServer(async(req,res)=>{
   if(url.pathname==='/v1/admin/reviews'){queries.push(Object.fromEntries(url.searchParams));return send(200,{items:status==='pending'?[{id:'fixture-publication',source_id:'fixture',title:'Smoke review',content:'Fixture public text',status,kind:'prompt',asset_refs:[],members:[],history:[]}]:[],total:status==='pending'?1:0,limit:25,offset:0});}
   if(url.pathname==='/v1/admin/publications/fixture-publication/reject'){assert.equal(body.reason,'Needs revision');status='rejected';return send(200,{status});}
   if(url.pathname==='/v1/admin/users')return send(200,{items:[],total:0,limit:25,offset:0});
+  if(url.pathname==='/v1/admin/content')return send(200,{items:Array.from({length:8},(_,i)=>({id:`content-${i}`,title:['自然光下的人像摄影：柔和光影与真实质感','高质量代码审查与测试方案','品牌设计与创意文案'][i%3],kind:'prompt',model:i%2?'Claude':'Flux',download_count:1280+i,visibility:'online',recommended:i===0})),total:8});
+  if(url.pathname==='/v1/admin/overview')return send(200,{accounts:128,active_accounts:120,online_content:22391,pending:12,recorded_downloads:3840,favorites:216,new_accounts:8,new_publications:32,days:7});
+  if(url.pathname==='/v1/admin/oauth')return send(200,{items:['google','github'].map(provider=>({provider,revision:0,enabled:false,client_id:'',redirect_uri:'http://localhost:8787/v1/session/oauth/callback',secret_configured:false}))});
   if(url.pathname==='/v1/admin/site'){if(req.method==='PUT'){if(++saves===1)return send(503,{});site={...body,revision:site.revision+1};}return send(200,site);}
   return send(404,{});
 });
@@ -34,9 +37,20 @@ vite.stdout.on('data',c=>serverLog+=c);vite.stderr.on('data',c=>serverLog+=c);
 async function run(...args){const {stdout}=await exec(process.execPath,[resolve(root,'desktop/node_modules/@playwright/cli/playwright-cli.js'),`-s=${session}`,...args],{cwd:artifacts,timeout:60000,maxBuffer:2097152});actions+=stdout;if(stdout.includes('### Error'))throw Error(stdout);const path=stdout.match(/\[Snapshot\]\(([^)]+)\)/)?.[1];if(path)snapshot=await readFile(resolve(artifacts,path),'utf8');snapshot=stdout.match(/```yaml\n([\s\S]*?)```/)?.[1]||snapshot;return stdout;}
 async function target(pattern){for(let i=0;i<8;i++){await run('snapshot');const line=snapshot.split('\n').find(l=>pattern.test(l)&&!l.includes('[disabled]'));if(line)return line.match(/\[ref=(e\d+)\]/)?.[1];}throw Error(`Missing ${pattern}\n${snapshot}`);}
 const click=async pattern=>run('click',await target(pattern));const fill=async(pattern,value)=>run('fill',await target(pattern),value);
+async function capture(name) {
+  await run('run-code',`async page => {
+    const layout = await page.evaluate(() => {
+      const workspace=document.querySelector('.admin-workspace'), account=document.querySelector('.sidebar-account');
+      return { document:document.documentElement.scrollWidth<=innerWidth, workspace:!workspace||workspace.scrollWidth<=workspace.clientWidth+1, account:!account||account.getBoundingClientRect().bottom<=innerHeight+1 };
+    });
+    if(Object.values(layout).some(value=>!value)) throw Error(JSON.stringify(layout));
+    await page.screenshot({path:${JSON.stringify(resolve(artifacts,`${name}.png`))}});
+  }`);
+}
 try{
   for(let i=0;i<100&&!serverLog.includes('Local:');i++){if(vite.exitCode!==null)throw Error(serverLog);await new Promise(r=>setTimeout(r,50));}assert.match(serverLog,/Local:/);
   await run('open',origin,'--browser','chrome');
+  await run('resize','1440','1000');await target(/登录管理台/);await capture('login');
   await fill(/textbox "邮箱"/,'owner@fixture.test');await fill(/textbox "密码"/,'Fixture-only-password');await click(/button "登录"/);
   await fill(/textbox "搜索投稿"/,'Smoke');await click(/button "查询"/);await target(/Smoke review/);
   await click(/button ".*用户"/);await target(/搜索用户/);await click(/button ".*内容审核"/);await target(/Smoke review/);assert.equal(queries.at(-1).q,'Smoke');
@@ -44,7 +58,12 @@ try{
   await click(/button ".*站点设置"/);await fill(/textbox "站点名称"/,'Saved fixture community');await click(/button "保存设置"/);await target(/alert/);
   assert.equal(site.name,'Fixture community');assert.match(snapshot,/Saved fixture community/);
   await click(/button "保存设置"/);await target(/设置已保存/);assert.equal(site.name,'Saved fixture community');assert.equal(saves,2);
-  await run('screenshot');await run('resize','800','700');await run('screenshot');
+  await capture('settings');
+  for(const [label,ready,name] of [['概览','全部账号','overview'],['广场内容','自然光下','content'],['第三方登录','Client ID','oauth']]) {
+    await click(new RegExp(`button ".*${label}"`));await target(new RegExp(ready));await capture(name);
+    await run('resize','800','700');await capture(`${name}-800`);
+    await run('resize','390','844');await capture(`${name}-390`);await run('resize','1440','1000');
+  }
   await click(/button "退出登录"/);await target(/登录管理台/);
-  console.log('Admin smoke passed: isolated login, list-return, rejection, failed-save/retry, logout.');
+  console.log('Admin smoke passed: isolated login, list-return, rejection, failed-save/retry, logout; overview, content and OAuth at 1440/800/390 widths without workspace overflow or clipped account controls.');
 }finally{await writeFile(resolve(artifacts,'actions.log'),actions);await writeFile(resolve(artifacts,'vite.log'),serverLog);await run('close').catch(()=>{});vite.kill('SIGTERM');api.closeAllConnections();await new Promise(done=>api.close(done));console.log(`Artifacts: ${artifacts}`);}

@@ -3,9 +3,20 @@ import { mount, flushPromises } from '@vue/test-utils';
 import AdminApp from './AdminApp.vue';
 import { getAdminSession, loginAdmin, resetAdminSession, setAdminTransport, setOAuthProviderList } from './session.js';
 import { getAccountSecurity, resetAdminApi, setAdminApiTransport } from './adminApi.js';
-import { requestedPage, permittedPage, adminPages } from './navigation.js';
+import { requestedPage, permittedPage, adminPages, adminNavGroups } from './navigation.js';
 
 let wrappers;
+it('groups every page exactly once', () => {
+  expect(adminNavGroups.flatMap(group => group.items.map(item => item.page)).sort()).toEqual([...adminPages].sort());
+});
+it.each(['owner','admin','reviewer'])('renders complete permitted navigation without empty groups for %s', async role => {
+  await login(role);
+  const w=mountApp(); await flushPromises();
+  const permissions=getAdminSession().permissions;
+  expect(w.findAll('nav button').map(button=>button.attributes('data-testid').slice(4)).sort()).toEqual(adminPages.filter(page=>permittedPage(page,permissions)).sort());
+  for(const group of w.findAll('.nav-group')) expect(group.findAll('button').length).toBeGreaterThan(0);
+  expect(w.findAll('nav [aria-current="page"]')).toHaveLength(1);
+});
 const mountApp = () => { const w=mount(AdminApp); wrappers.push(w); return w; };
 async function login(role='owner', token='acc.owner') {
   setAdminTransport(async () => ({ email:'owner@example.com', access_token:token, role }));
@@ -21,7 +32,9 @@ afterEach(() => { wrappers.forEach(w=>w.unmount()); vi.restoreAllMocks(); vi.uns
 it('opens a direct page and handles browser navigation without persisting tokens', async () => {
   window.history.replaceState(null,'','#/users');
   const w=mountApp(); await flushPromises(); expect(w.find('[data-testid="user-list"]').exists()).toBe(true);
+  const scrollTo=vi.fn(); w.get('.admin-workspace').element.scrollTo=scrollTo;
   await w.get('[data-testid="nav-security"]').trigger('click'); await flushPromises();
+  expect(scrollTo).toHaveBeenCalledWith({top:0,left:0});
   expect(location.hash).toBe('#/security');
   window.history.replaceState(null,'','#/users'); window.dispatchEvent(new PopStateEvent('popstate')); await flushPromises();
   expect(w.find('[data-testid="user-list"]').exists()).toBe(true);

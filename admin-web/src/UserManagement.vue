@@ -110,8 +110,8 @@ onUnmounted(() => { ++listVersion; ++detailVersion; currentPassword.value = ''; 
 .users-workspace { display: grid; gap: 20px; }
 .user-filters { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
 .user-search { flex: 1; min-width: 180px; }
-select { display: block; width: 100%; margin-top: 8px; padding: 10px 28px 10px 12px; border: 1px solid #dce1e4; border-radius: 7px; color: inherit; background: white; font: inherit; }
-.users-head, .users-row { display: grid; grid-template-columns: minmax(0, 1fr) 145px 75px 62px; gap: 12px; align-items: center; padding: 15px 24px; border-bottom: 1px solid #edf0f2; }
+select { display: block; width: 100%; margin-top: 8px; padding: 10px 28px 10px 12px; border: 1px solid var(--line-strong); border-radius: 7px; color: inherit; background: white; font: inherit; }
+.users-head, .users-row { display: grid; grid-template-columns: minmax(0, 1fr) 145px 75px 62px; gap: 12px; align-items: center; padding: 15px 24px; border-bottom: 1px solid var(--line); }
 .users-head { font-size: 12px; color: #818b91; background: #fafbfc; }
 .user-identity { overflow-wrap: anywhere; } .user-identity strong { font-size: 13px; font-weight: 500; } .user-identity small { display: block; color: #818b91; }
 .users-row .badge { justify-self: start; }
@@ -121,7 +121,7 @@ select { display: block; width: 100%; margin-top: 8px; padding: 10px 28px 10px 1
 .user-facts dt { color: #818b91; font-size: 12px; } .user-facts dd { margin: 5px 0 0; overflow-wrap: anywhere; } .bio { grid-column: 1 / -1; }
 .panel-note { padding: 0 24px 20px; font-size: 12px; }
 .user-operations { display: flex; gap: 10px; flex-wrap: wrap; padding: 0 24px 24px; }
-.user-confirm { border-top: 1px solid #edf0f2; padding: 24px; display: grid; gap: 14px; background: #fafbfc; }
+.user-confirm { border-top: 1px solid var(--line); padding: 24px; display: grid; gap: 14px; background: #fafbfc; }
 .user-confirm .user-operations { padding: 0; } .user-confirm label { max-width: 440px; } .user-confirm h3 { overflow-wrap: anywhere; }
 @media(max-width: 760px) { .users-head { display: none; } .users-row { grid-template-columns: 1fr auto; padding: 18px; } .user-identity { grid-column: 1 / -1; } .users-row button { grid-column: 2; grid-row: 2 / 4; } .users-row .badge { justify-self: start; } .user-facts { grid-template-columns: 1fr; } .users-pagination { padding: 14px; } }
 </style>

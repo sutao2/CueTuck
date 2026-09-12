@@ -23,5 +23,5 @@ async function save(){if(busy.value||!loaded.value)return;if(draft.value.enabled
 onMounted(load);
 </script>
 <style scoped>
-.moderation-form {padding:24px;}.moderation-toggle {display:flex;gap:12px;align-items:flex-start;margin:20px 0;}.moderation-toggle input {margin-top:4px;}.moderation-toggle small {display:block;color:#7c858d;font-weight:400;margin-top:4px;}.moderation-numbers {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0;}.provider-footer {padding:20px 0 0;}@media(max-width:700px){.moderation-numbers{grid-template-columns:1fr;}}
+.moderation-form {padding:24px;}.moderation-toggle {display:flex;gap:12px;align-items:flex-start;margin:20px 0;}.moderation-toggle input {margin-top:4px;}.moderation-toggle small {display:block;color:var(--muted);font-weight:400;margin-top:4px;}.moderation-numbers {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0;}.provider-footer {padding:20px 0 0;}@media(max-width:700px){.moderation-numbers{grid-template-columns:1fr;}}
 </style>

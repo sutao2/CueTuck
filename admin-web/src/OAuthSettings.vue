@@ -76,5 +76,5 @@ async function verify(item){
 onMounted(load);
 </script>
 <style scoped>
-.oauth-password{display:block;margin:0 24px 24px}.provider-verification{margin:0 24px 24px;padding:20px 0 0;border-top:1px solid #e6eaed;display:grid;gap:14px}.provider-verification p,.provider-verification small{font-size:12px;color:#79828a;line-height:1.7}.provider-verification small{display:block;margin-top:6px}.provider-verification>div:last-of-type{display:flex;gap:10px;flex-wrap:wrap}.provider-verification a{font-size:12px}
+.oauth-password{display:block;margin:0 24px 24px}.provider-verification{margin:0 24px 24px;padding:20px 0 0;border-top:1px solid var(--line);display:grid;gap:14px}.provider-verification p,.provider-verification small{font-size:12px;color:var(--muted);line-height:1.7}.provider-verification small{display:block;margin-top:6px}.provider-verification>div:last-of-type{display:flex;gap:10px;flex-wrap:wrap}.provider-verification a{font-size:12px}
 </style>
