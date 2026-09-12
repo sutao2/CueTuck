@@ -1,4 +1,4 @@
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::collections::HashMap;
@@ -42,15 +42,20 @@ pub fn set_setting_in_dir(dir: &Path, key: &str, value: &str) -> Result<(), Stri
 }
 
 pub fn get_setting_in_dir(dir: &Path, key: &str) -> Result<String, String> {
+    get_optional_setting_in_dir(dir, key)?.ok_or_else(|| rusqlite::Error::QueryReturnedNoRows.to_string())
+}
+
+pub fn get_optional_setting_in_dir(dir: &Path, key: &str) -> Result<Option<String>, String> {
     let connection = open_db(dir)?;
-    let raw: String = connection
+    let raw: Option<String> = connection
         .query_row(
             "SELECT value_json FROM settings WHERE key = ?1",
             [key],
             |row| row.get(0),
         )
+        .optional()
         .map_err(|error| error.to_string())?;
-    serde_json::from_str(&raw).map_err(|error| error.to_string())
+    raw.map(|value| serde_json::from_str(&value).map_err(|error| error.to_string())).transpose()
 }
 
 pub fn preview_import_json_in_dir(dir: &Path, json: &str) -> Result<ImportPreview, String> {

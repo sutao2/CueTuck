@@ -22,6 +22,13 @@
 
 `launcher_preferences` JSON 单键保存四项：`size` 为 compact（默认 620×420）、standard（680×500）、large（760×560）；`position` 为 upper（默认）或 center；`fontSize` 为 12（默认）、14、16；`resultLimit` 为 10、20（默认）、50。损坏 JSON 和非法字段逐项回退默认，启动器初始化和显式重新唤起时读取，进行中不切换填写偏好。字号仅影响变量输入和正文预览，不改变主窗口；空搜索高度仍为 64。原生尺寸不超过显示器工作区。
 
+#### Scenario: 未设置偏好
+
+- GIVEN 新安装或旧库中没有 `launcher_preferences` 记录
+- WHEN 通过按钮或全局快捷键唤起启动器
+- THEN 原生读取使用默认偏好，窗口正常显示，不强制用户先保存设置
+- AND 不新增或覆盖设置记录；真实数据库错误仍返回失败。修复与验收见[缺省偏好计划](../../plans/2026-09-12-launcher-defaults.md)
+
 #### Scenario: 偏好消费
 
 - GIVEN 已保存大小、位置、字号与结果数量
