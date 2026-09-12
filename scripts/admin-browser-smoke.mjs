@@ -28,6 +28,8 @@ const api=createServer(async(req,res)=>{
   if(url.pathname==='/v1/admin/content')return send(200,{items:Array.from({length:8},(_,i)=>({id:`content-${i}`,title:['自然光下的人像摄影：柔和光影与真实质感','高质量代码审查与测试方案','品牌设计与创意文案'][i%3],kind:'prompt',model:i%2?'Claude':'Flux',download_count:1280+i,visibility:'online',recommended:i===0})),total:8});
   if(url.pathname==='/v1/admin/overview')return send(200,{accounts:128,active_accounts:120,online_content:22391,pending:12,recorded_downloads:3840,favorites:216,new_accounts:8,new_publications:32,days:7});
   if(url.pathname==='/v1/admin/oauth')return send(200,{items:['google','github'].map(provider=>({provider,revision:0,enabled:false,client_id:'',redirect_uri:'http://localhost:8787/v1/session/oauth/callback',secret_configured:false}))});
+  if(url.pathname==='/v1/admin/mail/config')return send(200,{revision:0,enabled:false,host:'',port:465,tls:'implicit',from:'',username:'',secret_configured:false,last_test:null});
+  if(url.pathname==='/v1/admin/mail/deliveries')return send(200,{items:[],total:0});
   if(url.pathname==='/v1/admin/site'){if(req.method==='PUT'){if(++saves===1)return send(503,{});site={...body,revision:site.revision+1};}return send(200,site);}
   return send(404,{});
 });
@@ -64,6 +66,9 @@ try{
     await run('resize','800','700');await capture(`${name}-800`);
     await run('resize','390','844');await capture(`${name}-390`);await run('resize','1440','1000');
   }
+  await click(/button "邮件服务"/);await click(/button "使用 QQ \/ Foxmail 参数"/);await target(/不是 QQ 登录密码/);
+  assert.match(snapshot,/smtp.qq.com/);await capture('mail-qq');await run('resize','390','844');await capture('mail-qq-390');
+  await click(/button "重新加载"/);await run('dialog-accept');await target(/SMTP 主机/);
   await click(/button "退出登录"/);await target(/登录管理台/);
   console.log('Admin smoke passed: isolated login, list-return, rejection, failed-save/retry, logout; overview, content and OAuth at 1440/800/390 widths without workspace overflow or clipped account controls.');
 }finally{await writeFile(resolve(artifacts,'actions.log'),actions);await writeFile(resolve(artifacts,'vite.log'),serverLog);await run('close').catch(()=>{});vite.kill('SIGTERM');api.closeAllConnections();await new Promise(done=>api.close(done));console.log(`Artifacts: ${artifacts}`);}
