@@ -30,8 +30,20 @@ pub fn list_local_prompt_assets(app: AppHandle, prompt_id: String) -> Result<Vec
 }
 
 #[tauri::command]
-pub fn get_local_prompt_image(app: AppHandle, prompt_id: String) -> Result<Option<crate::local_database::assets::Asset>, String> {
-    crate::local_database::assets::first_image(&data_dir(&app)?, &prompt_id)
+pub async fn get_local_prompt_image(app: AppHandle, prompt_id: String) -> Result<Option<crate::local_database::assets::Asset>, String> {
+    let dir = data_dir(&app)?;
+    tauri::async_runtime::spawn_blocking(move || crate::local_database::assets::first_image(&dir, &prompt_id)).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_local_prompt_thumbnail(app: AppHandle, prompt_id: String) -> Result<Option<crate::local_database::assets::Asset>, String> {
+    static WORKERS: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
+    let dir = data_dir(&app)?;
+    let permit = WORKERS.acquire().await.map_err(|e| e.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _permit = permit;
+        crate::local_database::assets::first_thumbnail(&dir, &prompt_id)
+    }).await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

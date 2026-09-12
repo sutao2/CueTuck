@@ -67,6 +67,21 @@ export async function firstPromptImage(promptId) {
   return asset ? structuredClone(asset) : null;
 }
 
+// Browser-only memory adapter; the desktop resizes in a bounded native worker.
+export async function firstPromptThumbnail(promptId) {
+  if (native()) return invokeCommand('get_local_prompt_thumbnail', { prompt_id: promptId });
+  const asset = await firstPromptImage(promptId);
+  if (!asset) return null;
+  const image = new Image(); image.decoding = 'async'; image.src = assetUrl(asset);
+  await image.decode();
+  const scale = Math.min(1, 480 / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+  return { ...asset, name: 'thumbnail.png', mime: 'image/png', data: canvas.toDataURL('image/png').split(',')[1] };
+}
+
 export async function exportPromptAsset(promptId, asset) {
   if (native()) return invokeCommand('export_local_prompt_asset', { prompt_id: promptId, asset_id: asset.id });
   const bytes = Uint8Array.from(atob(asset.data), c => c.charCodeAt(0));

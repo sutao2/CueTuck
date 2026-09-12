@@ -1,6 +1,8 @@
 import { serializeCoverUrls } from "../lib/cover.js";
 import { validateAssets, resetMemoryAssets, memoryAssets, storeMemoryAssets } from './assets.js';
 
+import { clearThumbnailCache } from './thumbnailCache.js';
+
 const TONES = {
   软件开发: { icon: "</>", tone: "blue" },
   图片生成: { icon: "◇", tone: "violet" },
@@ -60,6 +62,7 @@ function nextMemoryId(prefix) {
 
 export function resetMemoryLibrary() {
   resetMemoryAssets();
+  clearThumbnailCache();
   memoryPrompts = [];
   memoryCollections = [];
   memorySettings = { theme: "light" };
@@ -641,7 +644,9 @@ export async function previewLocalImport(json) {
 
 export async function applyLocalImport(json) {
   if (isTauri()) {
-    return tauriInvoke("apply_local_import", { json });
+    const result = await tauriInvoke("apply_local_import", { json });
+    clearThumbnailCache();
+    return result;
   }
   const preview = previewImportJson(json);
   const { changes } = prepareImport(json, nextTimestamp());
@@ -652,6 +657,7 @@ export async function applyLocalImport(json) {
     const row = memoryPrompts.find(p => p.id === change.id);
     row.asset_count = assets.length; row.image_count = assets.filter(a => a.mime.startsWith('image/')).length;
   }
+  clearThumbnailCache();
   return preview;
 }
 
@@ -671,7 +677,9 @@ export async function setAutoBackup(enabled) {
 
 export async function restoreLocalLibrary(src) {
   if (isTauri()) {
-    return tauriInvoke("restore_local_library", { src });
+    const result = await tauriInvoke("restore_local_library", { src });
+    clearThumbnailCache();
+    return result;
   }
   throw new Error(FILE_BACKUP_DESKTOP_ONLY);
 }
