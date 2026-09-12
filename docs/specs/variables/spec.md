@@ -67,6 +67,15 @@
 - AND Shift+Enter 不前进，用于换行
 - AND 输入法组字中的 Enter 不前进；复制进行中不重复提交
 
+#### Scenario: 从预览修改参数
+
+- GIVEN 主窗口已进入预览
+- WHEN 点击任意参数并修改，随后点击「更新预览」或按 Enter
+- THEN 直接返回完整预览，连续跳转保留输入与此返回方式，不触发复制
+- AND 首次填写仍逐步前进，Shift+Enter、组字和忙碌保护保持有效
+
+实施与验收见[连续操作计划](../../plans/2026-09-12-workbench-continuity.md)。
+
 ### Requirement: 启动器填写
 
 启动器填写态可以一屏展示全部变量，但解析规则 MUST 与主窗口相同。渲染函数 MUST 共用同一实现。
