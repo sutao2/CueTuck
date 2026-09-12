@@ -349,3 +349,16 @@ pub fn clear_local_prompt_use(app: AppHandle) -> Result<(), String> {
 pub fn move_local_prompt_category(app: AppHandle, id: String, category_id: Option<String>) -> Result<(), String> {
     crate::local_database::move_prompt_category_in_dir(&data_dir(&app)?, &id, category_id.as_deref())
 }
+
+
+#[tauri::command]
+pub async fn choose_library_backup(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    tauri::async_runtime::spawn_blocking(move || {
+        app.dialog().file().set_title("选择提示词库备份")
+            .add_filter("SQLite 备份", &["sqlite", "sqlite3", "db"])
+            .blocking_pick_file()
+            .map(|file| file.into_path().map(|path| path.to_string_lossy().into_owned()).map_err(|error| error.to_string()))
+            .transpose()
+    }).await.map_err(|error| error.to_string())?
+}

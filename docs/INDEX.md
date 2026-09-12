@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-12-workbench-usability.md](plans/2026-09-12-workbench-usability.md) | 实施 | 优化页面与日常交互 | 阅读、填写与批量整理已验；账号与文件入口进行中 |
+| [plans/2026-09-12-workbench-usability.md](plans/2026-09-12-workbench-usability.md) | 实施 | 优化页面与日常交互 | 四片代码与前端/原生回归完成；连续浏览器与桌面构建验收中 |
 | [plans/2026-09-12-launcher-draft-resume.md](plans/2026-09-12-launcher-draft-resume.md) | 验收 | 启动器切换应用后丢填写 | 草稿恢复、455 项前端和 82 项原生通过；已重启验证入口恢复，物理快捷键待复验 |
 | [plans/2026-09-12-argument-variables.md](plans/2026-09-12-argument-variables.md) | 验收 | 导入 argument 参数不能填写 | 默认值与双入口测试通过，桌面逐步填写和最终预览已验 |
 | [plans/2026-09-12-local-thumbnails.md](plans/2026-09-12-local-thumbnails.md) | 验收 | 本地列表缩略图 | 网格/行缩略图及按需读取已验，桌面包已构建、重启待确认 |

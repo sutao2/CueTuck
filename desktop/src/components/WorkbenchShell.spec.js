@@ -1500,7 +1500,7 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="current-account"]').text()).toContain("未登录");
   });
 
-  it("lists my pending publications on the account page", async () => {
+  it("opens my publications from the account settings", async () => {
     setSessionTransport(async () => ({ email: "dev@promptark.local", access_token: "tok" }));
     await loginSession({ email: "dev@promptark.local", password: "devpass" });
     setMineTransport(async () => [
@@ -1513,9 +1513,11 @@ describe("WorkbenchShell", () => {
     await flushPromises();
     await w.get('[data-settings-page="account"]').trigger("click");
     await flushPromises();
+    await w.get('[data-testid="settings-publications"]').trigger("click");
+    await flushPromises();
     const mine = w.get('[data-testid="my-publications"]');
     expect(mine.text()).toContain("新稿");
-    expect(mine.text()).toContain("pending");
+    expect(mine.text()).toContain("待审核");
     expect(mine.text()).toContain("驳回原因：请补充使用说明");
     expect(mine.text()).toContain("广场：已下架");
     expect(w.text()).not.toMatch(/QQ|LinuxDo|Google/);
