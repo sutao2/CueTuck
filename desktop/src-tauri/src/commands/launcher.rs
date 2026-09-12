@@ -142,7 +142,11 @@ fn launcher_size(size: &str) -> (f64, f64) {
 
 fn read_launcher_preferences(app: &AppHandle) -> Result<serde_json::Value, String> {
     let dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
-    let raw = crate::local_database::get_setting_in_dir(&dir, "launcher_preferences")?;
+    read_launcher_preferences_in_dir(&dir)
+}
+
+fn read_launcher_preferences_in_dir(dir: &std::path::Path) -> Result<serde_json::Value, String> {
+    let raw = crate::local_database::get_optional_setting_in_dir(dir, "launcher_preferences")?.unwrap_or_default();
     Ok(serde_json::from_str(&raw).unwrap_or(serde_json::Value::Null))
 }
 
@@ -353,6 +357,27 @@ fn copy_text_to_clipboard(text: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{LauncherFocusGuard, LAUNCHER_LABEL};
+
+    #[test]
+    fn missing_launcher_preferences_use_defaults_without_writing_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        crate::local_database::LocalDatabase::default().initialize(dir.path()).unwrap();
+        let preferences = super::read_launcher_preferences_in_dir(dir.path()).unwrap();
+        assert!(preferences.is_null());
+        assert_eq!(super::launcher_size(preferences["size"].as_str().unwrap_or("compact")), (620.0, 420.0));
+        assert!(crate::local_database::get_setting_in_dir(dir.path(), "launcher_preferences").is_err());
+    }
+
+    #[test]
+    fn launcher_preferences_preserve_saved_values_and_database_errors() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(super::read_launcher_preferences_in_dir(dir.path()).is_err());
+        crate::local_database::LocalDatabase::default().initialize(dir.path()).unwrap();
+        crate::local_database::set_setting_in_dir(dir.path(), "launcher_preferences", r#"{"size":"large","position":"center"}"#).unwrap();
+        assert_eq!(super::read_launcher_preferences_in_dir(dir.path()).unwrap()["size"], "large");
+        crate::local_database::set_setting_in_dir(dir.path(), "launcher_preferences", "invalid json").unwrap();
+        assert!(super::read_launcher_preferences_in_dir(dir.path()).unwrap().is_null());
+    }
 
     #[test]
     fn launcher_label_is_stable() {

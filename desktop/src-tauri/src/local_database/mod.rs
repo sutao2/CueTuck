@@ -31,7 +31,7 @@ pub use prompts::{
 };
 pub use backup::{backup_library_in_dir, export_library_zip_in_dir, restore_library_in_dir};
 pub use settings::{
-    apply_import_json_in_dir, export_library_json_in_dir, get_setting_in_dir,
+    apply_import_json_in_dir, export_library_json_in_dir, get_setting_in_dir, get_optional_setting_in_dir,
     preview_import_json_in_dir, set_setting_in_dir, ImportPreview,
 };
 

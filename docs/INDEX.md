@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-12-launcher-defaults.md](plans/2026-09-12-launcher-defaults.md) | 验收 | 启动器无法打开 | 已修复缺省偏好，按钮/搜索/Esc 原生通过，真实快捷键待确认 |
 | [plans/2026-09-09-text-corpus.md](plans/2026-09-09-text-corpus.md) | 验收 | 补充非图片提示词 | 三个 MIT 来源追加 616 条，分类、许可、幂等与分页已验 |
 | [plans/2026-09-09-category-counts.md](plans/2026-09-09-category-counts.md) | 已完成 | 广场分类数量 | 首批聚合统计、父子汇总与轻量展示 |
 | [plans/2026-09-09-square-performance.md](plans/2026-09-09-square-performance.md) | 已完成 | 广场卡顿与滚动加载 | SQL 有界分页、取消请求、虚拟网格与性能验收 |
