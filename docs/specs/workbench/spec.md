@@ -234,6 +234,15 @@
 
 验证范围及限制见[滚动优化计划](../../plans/2026-09-12-scroll-smoothness.md)。
 
+#### Scenario: 长正文的卡片摘要
+
+- GIVEN 正文超过 240 个字符
+- WHEN 浏览卡片或行列表
+- THEN 卡片 DOM 只包含前 240 个 Unicode 码点及省略号，不拆开代理对
+- AND 全文搜索、详情、编辑与复制仍使用完整存储正文，不保存截断文本
+
+实现与验收见[缩略图与摘要计划](../../plans/2026-09-12-thumbnail-cache.md)。
+
 ### Requirement: 宿主窗口样式
 
 系统 MUST 按宿主操作系统画窗口控件与快捷键记号。原型只定四区节奏与内容，不定 Windows 风窗框。macOS 上 MUST 使用系统红绿灯（左上），自定义顶栏 MUST 为红绿灯留出 inset，不得把无框矩形窗 + 右侧工具簇当成成品。快捷键展示 MUST 用 Mac 符号（如 `⌃Space`），不得写 `Ctrl Space`。
