@@ -242,9 +242,10 @@
         <p v-if="operationNote" role="status" data-testid="operation-note" class="use-hint">{{ operationNote }}</p>
         <p v-if="space === 'square' && catalogError && !squareOffline" role="status" class="use-hint">{{ catalogError }}；当前保留上次可用分类，点击刷新重试。</p>
         <BatchOrganize v-if="selecting && space === 'local'" :prompts="selectedRows" :groups="categoryGroups" :collections="allLocalItems.filter(item => item.member_count !== undefined)"
-          @busy="batchBusy = $event" :complete="finishBatch" />
+          :can-select-page="pagePromptIds.some(id => !selectedPrompts.includes(id))"
+          @select-page="selectPage" @clear-selection="clearSelection" @busy="batchBusy = $event" :complete="finishBatch" />
         <section class="prompt-section" :aria-busy="space === 'square' && squareLoading">
-          <div v-if="hasContentFilter" class="active-filters" aria-label="当前筛选">
+          <div v-if="hasContentFilter" class="active-filters" aria-label="当前筛选" :inert="batchBusy ? '' : undefined">
             <button v-if="query.trim()" type="button" :title="query" @click="clearFilters('query')">搜索：{{ query }} <span aria-hidden="true">×</span></button>
             <button v-if="selectedId" type="button" @click="clearFilters('category')">{{ selectedLabel }} <span aria-hidden="true">×</span></button>
             <button v-if="modelFilter" type="button" @click="clearFilters('model')">{{ activeModelLabel }} <span aria-hidden="true">×</span></button>
@@ -360,9 +361,9 @@
             <span v-else>已显示全部 {{ squareTotal }} 条</span>
           </div>
           <nav v-if="space === 'local' && pageCount > 1" class="browse-pagination" aria-label="提示词分页">
-            <button type="button" class="button" :disabled="browsePage === 1" @click="browsePage--">上一页</button>
+            <button type="button" class="button" :disabled="batchBusy || browsePage === 1" @click="changePage(browsePage - 1)">上一页</button>
             <span role="status">第 {{ browsePage }} / {{ pageCount }} 页 · 每页 48 条</span>
-            <button type="button" class="button" :disabled="browsePage === pageCount" @click="browsePage++">下一页</button>
+            <button type="button" class="button" :disabled="batchBusy || browsePage === pageCount" @click="changePage(browsePage + 1)">下一页</button>
           </nav>
           </template>
         </section>
@@ -913,8 +914,24 @@ const displayedItems = computed(() => {
 const browsePage = ref(1);
 const pageCount = computed(() => Math.max(1, Math.ceil(displayedItems.value.length / 48)));
 const pagedItems = computed(() => displayedItems.value.slice((browsePage.value - 1) * 48, browsePage.value * 48));
-watch([displayedItems, space, query, selectedId, modelFilter, sortTab], () => { browsePage.value = 1; });
-watch([space, query, selectedId, modelFilter, sortTab, browsePage], () => { if (!batchBusy.value) selectedPrompts.value = []; });
+const pagePromptIds = computed(() => pagedItems.value.filter(item => item.kind === 'prompt').map(item => item.id));
+function selectPage() {
+  if (!batchBusy.value) selectedPrompts.value = [...new Set([...selectedPrompts.value, ...pagePromptIds.value])];
+}
+function clearSelection() {
+  if (!batchBusy.value) selectedPrompts.value = [];
+}
+async function changePage(page) {
+  if (batchBusy.value) return;
+  browsePage.value = Math.max(1, Math.min(page, pageCount.value));
+  await nextTick();
+  if (contentScroller.value) contentScroller.value.scrollTop = 0;
+}
+watch([space, query, selectedId, modelFilter, sortTab], () => {
+  browsePage.value = 1;
+  clearSelection();
+});
+watch(pageCount, count => { browsePage.value = Math.min(browsePage.value, count); });
 const filterTabs = computed(() =>
   space.value === "square"
     ? [
@@ -952,6 +969,7 @@ const resultsHeading = computed(() => {
   return ({ 推荐: '推荐提示词', 最新: '最新发布', 热门: '热门提示词', 收藏: '我的收藏' })[sortTab.value];
 });
 async function clearFilters(field) {
+  if (batchBusy.value) return;
   cancelSearch();
   if (!field || field === 'query') query.value = '';
   if (!field || field === 'category') selectedId.value = null;

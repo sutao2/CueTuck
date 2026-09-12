@@ -107,3 +107,17 @@ it('blocks sidebar navigation while saving and keeps failed drafts editable', as
   expect(editor().get('input').element.value).toBe('Keep me');
   expect(editor().text()).toContain('保存失败');
 });
+
+it('keeps the second page and scroll after editing and returning from reading', async () => {
+  for (let i = 0; i < 50; i++) await library.createLocalPrompt({ title: `条目 ${i}`, content: '原正文' });
+  await shell();
+  await w.get('[aria-label=提示词分页]').findAll('button')[1].trigger('click');
+  w.get('[data-region=content]').element.scrollTop = 120;
+  await w.findAll('.prompt-title')[0].trigger('click');
+  await w.get('[data-testid=detail-edit]').trigger('click');
+  await editor().get('textarea').setValue('修改正文');
+  await editor().get('.modal-footer .primary-button').trigger('click'); await flushPromises();
+  await w.get('[data-testid=local-detail] .page-back').trigger('click');
+  expect(w.get('[aria-label=提示词分页]').text()).toContain('第 2 / 2 页');
+  expect(w.get('[data-region=content]').element.scrollTop).toBe(120);
+});

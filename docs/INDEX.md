@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-12-workbench-continuity.md](plans/2026-09-12-workbench-continuity.md) | 目标 | 优化跨页整理与预览修改 | 跨页选择与返回位置已验；参数修改直达预览待实现 |
 | [plans/2026-09-12-workbench-usability.md](plans/2026-09-12-workbench-usability.md) | 验收 | 优化页面与日常交互 | 四片已提交；467 项前端、83 项原生、浏览器链路与 macOS 构建通过 |
 | [plans/2026-09-12-launcher-draft-resume.md](plans/2026-09-12-launcher-draft-resume.md) | 验收 | 启动器切换应用后丢填写 | 草稿恢复、455 项前端和 82 项原生通过；已重启验证入口恢复，物理快捷键待复验 |
 | [plans/2026-09-12-argument-variables.md](plans/2026-09-12-argument-variables.md) | 验收 | 导入 argument 参数不能填写 | 默认值与双入口测试通过，桌面逐步填写和最终预览已验 |
