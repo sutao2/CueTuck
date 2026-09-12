@@ -174,6 +174,7 @@ let disposed = false;
 let unlisten = () => {};
 let blurTimer;
 let hidden = !!window.__TAURI_INTERNALS__;
+let lifecycleVersion = 0;
 const canReadSelected = !!window.__TAURI_INTERNALS__ && supportsSelectedText();
 
 const variableNames = computed(() => extractVariables(active.value?.content ?? ""));
@@ -364,9 +365,11 @@ async function readSelected() {
 
 async function onBlur() {
   if (!window.__TAURI_INTERNALS__ || busy.value || disposed || hidden) return;
+  const version = lifecycleVersion;
   try {
     const didHide = await launcherCommand("hide_launcher_if_idle");
-    if (didHide) { hidden = true; resetState(); }
+    if (disposed || version !== lifecycleVersion) return;
+    if (didHide) { hidden = true; if (step.value !== 'fill') resetState(); }
     else {
       clearTimeout(blurTimer);
       blurTimer = setTimeout(() => { if (!document.hasFocus()) onBlur(); }, 650);
@@ -414,10 +417,14 @@ async function refreshTheme() {
 
 async function onShown() {
   if (busy.value || disposed) return;
+  lifecycleVersion++;
+  clearTimeout(blurTimer);
   hidden = false;
-  resetState();
+  if (step.value !== 'fill') resetState();
   try { launcherPreferences.value = await readLauncherPreferences(); }
   catch (error) { feedback.value = `读取启动器设置失败：${error}`; }
+  try { await resizeLauncherWindow(launcherLayout.value); }
+  catch (error) { feedback.value = `窗口调整失败：${error}`; }
   await focusCurrent();
   try { await refreshTheme(); } catch (error) { feedback.value = `读取主题失败：${error}`; }
 }
@@ -431,7 +438,10 @@ onMounted(async () => {
   window.addEventListener("focus", onFocus);
   focusCurrent();
   try {
-    unlisten = await listenLauncherLifecycle(onShown, () => { hidden = true; if (!busy.value) resetState(); }, (event) => {
+    unlisten = await listenLauncherLifecycle(onShown, (event) => {
+      hidden = true;
+      if (!busy.value && (event?.payload !== 'blur' || step.value !== 'fill')) resetState();
+    }, (event) => {
       hidden = false;
       feedback.value = event.payload;
       focusCurrent();

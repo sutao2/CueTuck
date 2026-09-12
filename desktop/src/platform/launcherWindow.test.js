@@ -40,7 +40,8 @@ describe("launcher window", () => {
     expect(resize.indexOf(".set_size(")).toBeLessThan(resize.indexOf(".set_position(position)"));
     expect(resize).toContain(".set_position(position)");
     expect(show).toContain(".set_position(launcher_show_position(monitor.work_area(), monitor.scale_factor(), &preferences))");
-    expect(show.indexOf("resize_launcher_window(app, \"collapsed\")")).toBeLessThan(show.indexOf(".set_position("));
+    expect(show).toContain('guard.current_layout()');
+    expect(show.indexOf("resize_launcher_window(app, layout)")).toBeLessThan(show.indexOf(".set_position("));
     expect(show.indexOf(".set_position(")).toBeLessThan(show.indexOf(".show()"));
   });
 });
