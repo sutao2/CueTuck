@@ -16,7 +16,7 @@
         </nav>
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <template v-if="step === 'variable'">
-          <p class="use-hint">填写后进入下一步。留空时使用默认值，没有默认值则保留原占位符。</p>
+          <p class="use-hint">{{ returnToPreview ? '修改后直接更新预览。' : '填写后进入下一步。' }}留空时使用默认值，没有默认值则保留原占位符。</p>
           <label class="field">
             <span data-testid="use-variable">{{ currentName }}</span>
             <textarea
@@ -30,7 +30,7 @@
               @keydown="onValueKeydown"
             ></textarea>
             <small v-if="currentHint" data-testid="variable-hint">{{ currentHint }}</small>
-            <small id="variable-input-help" class="field-help">Enter 下一步 · Shift+Enter 换行</small>
+            <small id="variable-input-help" class="field-help">Enter {{ returnToPreview ? '更新预览' : '下一步' }} · Shift+Enter 换行</small>
           </label>
         </template>
         <template v-else>
@@ -52,7 +52,7 @@
             上一步
           </button>
           <button ref="nextButton" type="button" class="button primary-button" data-testid="use-next" :disabled="busy" @click="next">
-            {{ busy ? '正在复制…' : step === "preview" ? "复制并完成" : "下一步" }}
+            {{ busy ? '正在复制…' : step === "preview" ? "复制并完成" : returnToPreview ? "更新预览" : "下一步" }}
           </button>
         </div>
       </footer>
@@ -90,6 +90,7 @@ const values = ref(variableDefaults(props.prompt.content));
 const index = ref(0);
 const currentValue = ref(Object.hasOwn(values.value,names[0]) ? values.value[names[0]] : "");
 const step = ref(names.length ? "variable" : "preview");
+const returnToPreview = ref(false);
 const variableInput = ref(null);
 const nextButton = ref(null);
 watch([step, index], () => {
@@ -111,6 +112,7 @@ function preserveValue() {
 }
 function jump(position) {
   if (props.busy) return;
+  if (step.value === 'preview') returnToPreview.value = true;
   preserveValue(); index.value = position; step.value = 'variable';
   currentValue.value = Object.hasOwn(values.value, names[position]) ? values.value[names[position]] : '';
 }
@@ -128,7 +130,7 @@ function next() {
   if (props.busy) return;
   if (step.value === "variable") {
     values.value = { ...values.value, [currentName.value]: currentValue.value };
-    if (index.value < names.length - 1) {
+    if (!returnToPreview.value && index.value < names.length - 1) {
       index.value += 1;
       currentValue.value = Object.hasOwn(values.value,names[index.value]) ? values.value[names[index.value]] : "";
       return;
@@ -148,9 +150,7 @@ function onValueKeydown(event) {
 function back() {
   if (props.busy) return;
   if (step.value === "preview" && names.length) {
-    step.value = "variable";
-    index.value = names.length - 1;
-    currentValue.value = Object.hasOwn(values.value,currentName.value) ? values.value[currentName.value] : "";
+    jump(names.length - 1);
     return;
   }
   if (index.value > 0) {
