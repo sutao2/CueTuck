@@ -1,0 +1,34 @@
+import { mount, flushPromises } from '@vue/test-utils';
+import { expect, it } from 'vitest';
+import UsePromptModal from './UsePromptModal.vue';
+import CreatePromptModal from './CreatePromptModal.vue';
+it('preserves the active value across direct jumps and shows unresolved fields in preview', async () => {
+  const w = mount(UsePromptModal, { props: { prompt: { title: '行程', content: '{{城市}} {{天数}} {{预算}}' } } });
+  await w.get('[data-testid=use-value]').setValue('京都');
+  await w.get('[data-variable-step="2"]').trigger('click');
+  await w.get('[data-testid=use-value]').setValue('1000');
+  await w.get('[data-testid=jump-preview]').trigger('click');
+  expect(w.get('[data-testid=use-preview]').text()).toBe('京都 {{天数}} 1000');
+  expect(w.get('[data-testid=missing-variables]').text()).toContain('1 项');
+  await w.get('[data-variable-step="0"]').trigger('click');
+  expect(w.get('[data-testid=use-value]').element.value).toBe('京都');
+  await w.setProps({ busy: true });
+  await w.get('[data-variable-step="1"]').trigger('click');
+  expect(w.get('[data-testid=use-variable]').text()).toBe('城市');
+  w.unmount();
+});
+it('inserts a named variable at the selection and trial filling does not alter saved content', async () => {
+  const w = mount(CreatePromptModal, { props: { prompt: { id: 'p', title: '模板', content: '你好 姓名！' } }, attachTo: document.body });
+  await flushPromises();
+  const input = w.get('textarea').element; input.setSelectionRange(3, 5);
+  await w.get('[data-testid=insert-variable]').trigger('click');
+  expect(input.value).toBe('你好 {{姓名}}！');
+  expect(input.value.slice(input.selectionStart, input.selectionEnd)).toBe('姓名');
+  await w.get('[data-testid=toggle-trial]').trigger('click');
+  await w.get('[data-testid=prompt-trial] input').setValue('小明');
+  expect(w.get('[data-testid=trial-result]').text()).toBe('你好 小明！');
+  await w.get('.modal-footer .primary-button').trigger('click');
+  expect(w.emitted('save')[0][0].content).toBe('你好 {{姓名}}！');
+  expect(w.emitted('copied')).toBeUndefined();
+  w.unmount();
+});
