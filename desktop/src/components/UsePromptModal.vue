@@ -10,7 +10,7 @@
       <div class="create-body">
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <template v-if="step === 'variable'">
-          <p class="use-hint">填写后进入下一步。未填会在最终文本里保留原占位符。</p>
+          <p class="use-hint">填写后进入下一步。留空时使用默认值，没有默认值则保留原占位符。</p>
           <label class="field">
             <span data-testid="use-variable">{{ currentName }}</span>
             <textarea
@@ -53,7 +53,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { vPageFocus } from "../lib/pageFocus.js";
-import { extractVariables, renderPrompt } from "../lib/renderPrompt.js";
+import { extractVariables, renderPrompt, variableDefaults } from "../lib/renderPrompt.js";
 import { hintForVariable } from "../platform/variableHints.js";
 import AttachmentPanel from './AttachmentPanel.vue';
 import { listPromptAssets } from '../platform/assets.js';
@@ -77,9 +77,9 @@ const props = defineProps({
 const emit = defineEmits(["cancel", "copied"]);
 
 const names = extractVariables(props.prompt.content);
-const values = ref({});
+const values = ref(variableDefaults(props.prompt.content));
 const index = ref(0);
-const currentValue = ref("");
+const currentValue = ref(Object.hasOwn(values.value,names[0]) ? values.value[names[0]] : "");
 const step = ref(names.length ? "variable" : "preview");
 const variableInput = ref(null);
 const nextButton = ref(null);
@@ -103,7 +103,7 @@ function next() {
     values.value = { ...values.value, [currentName.value]: currentValue.value };
     if (index.value < names.length - 1) {
       index.value += 1;
-      currentValue.value = values.value[names[index.value]] ?? "";
+      currentValue.value = Object.hasOwn(values.value,names[index.value]) ? values.value[names[index.value]] : "";
       return;
     }
     step.value = "preview";
@@ -123,13 +123,13 @@ function back() {
   if (step.value === "preview" && names.length) {
     step.value = "variable";
     index.value = names.length - 1;
-    currentValue.value = values.value[currentName.value] ?? "";
+    currentValue.value = Object.hasOwn(values.value,currentName.value) ? values.value[currentName.value] : "";
     return;
   }
   if (index.value > 0) {
     values.value = { ...values.value, [currentName.value]: currentValue.value };
     index.value -= 1;
-    currentValue.value = values.value[currentName.value] ?? "";
+    currentValue.value = Object.hasOwn(values.value,currentName.value) ? values.value[currentName.value] : "";
     return;
   }
   emit("cancel");

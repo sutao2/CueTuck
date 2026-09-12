@@ -95,7 +95,7 @@
         <div class="launcher-list launcher-fill-body">
           <div class="form-layout" :class="{ 'preview-only': !variableNames.length }">
             <form v-if="variableNames.length" ref="formEl" class="stack variable-form" @submit.prevent="copyRendered">
-              <div class="form-heading"><h3>填写变量</h3><span>留空保留占位符</span></div>
+              <div class="form-heading"><h3>填写变量</h3><span>留空使用默认值，无默认值则保留占位符</span></div>
               <label v-for="(name, index) in variableNames" :key="name" class="field">
                 <span>{{ name }}</span>
                 <textarea :value="values.get(name) ?? ''" rows="1" :placeholder="`填写 ${name}`" :disabled="busy" @input="values.set(name, $event.target.value)" @focus="focusedVariable = name" @keydown="onVariableKey($event, index)"></textarea>
@@ -135,7 +135,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import appIcon from "./assets/app-icon.png";
-import { extractVariables, renderPrompt } from "./lib/renderPrompt.js";
+import { extractVariables, renderPrompt, variableDefaults } from "./lib/renderPrompt.js";
 import { handleLauncherSearchKey } from "./platform/launcherKeyboard.js";
 import {
   resizeLauncherWindow,
@@ -243,6 +243,7 @@ async function activate(row, mode) {
   feedback.value = "";
   active.value = row;
   values.clear();
+  for (const [name,value] of Object.entries(variableDefaults(row.content))) values.set(name,value);
   if (mode === "copy") {
     copyRendered();
     return;

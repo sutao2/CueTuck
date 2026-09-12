@@ -3,6 +3,16 @@ import { describe, expect, it, vi } from "vitest";
 import UsePromptModal from "./UsePromptModal.vue";
 
 describe("UsePromptModal", () => {
+  it('prefills imported defaults, preserves edits on back and copies resolved arguments',async()=>{
+    const w=mount(UsePromptModal,{props:{prompt:{title:'广告',content:'{argument name="aspect ratio" default="21:9 全景"} / {argument name="background color" default="产品主色调"}'}}});
+    expect(w.get('[data-testid="use-value"]').element.value).toBe('21:9 全景');
+    await w.get('[data-testid="use-value"]').setValue('16:9');await w.get('[data-testid="use-next"]').trigger('click');
+    expect(w.get('[data-testid="use-value"]').element.value).toBe('产品主色调');
+    await w.get('.ghost-button').trigger('click');expect(w.get('[data-testid="use-value"]').element.value).toBe('16:9');
+    await w.get('[data-testid="use-next"]').trigger('click');
+    await w.get('[data-testid="use-next"]').trigger('click');expect(w.get('[data-testid="use-preview"]').text()).toBe('16:9 / 产品主色调');
+    await w.get('[data-testid="use-next"]').trigger('click');expect(w.emitted('copied')[0][0]).toBe('16:9 / 产品主色调');w.unmount();
+  });
   it("fills anonymous slots independently in the main-window wizard", async () => {
     const w = mount(UsePromptModal, {
       props: { prompt: { title: "Mysql", content: "Sql {} dejk fer {}. hdjjf dev {} jhdfhk sd" } },
