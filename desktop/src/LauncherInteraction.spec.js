@@ -28,6 +28,14 @@ async function open(content = "{{姓名}} / {{任务}} / {{姓名}}") {
 }
 const button = (w, text) => w.findAll("button").find((b) => b.text() === text);
 
+it('prefills argument defaults and copies final values with last-field Enter',async()=>{
+  const w=await open('{argument name="aspect ratio" default="21:9 全景"} / {argument name="background color" default="产品主色调"} / {argument name="hand gesture" default="做出射网手势的红色网纹手套"}');
+  const fields=w.findAll('textarea');expect(fields).toHaveLength(3);
+  expect(fields.map(field=>field.element.value)).toEqual(['21:9 全景','产品主色调','做出射网手势的红色网纹手套']);
+  await fields[1].setValue('蓝色');await fields[2].trigger('keydown',{key:'Enter'});await flushPromises();
+  expect(writeText).toHaveBeenCalledWith('21:9 全景 / 蓝色 / 做出射网手势的红色网纹手套');
+});
+
 it('uses saved result limit and text size, refreshing them on explicit show', async () => {
   let shown;
   vi.spyOn(windows, 'listenLauncherLifecycle').mockImplementation(async (handler) => { shown = handler; return () => {}; });

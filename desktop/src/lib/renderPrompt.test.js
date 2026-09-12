@@ -1,7 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { extractVariables, renderPrompt } from "./renderPrompt.js";
+import { extractVariables, renderPrompt, variableDefaults } from "./renderPrompt.js";
 
 describe("renderPrompt", () => {
+  it('recognizes imported advertisement arguments and uses defaults without rewriting the source',()=>{
+    const source='创建一个 {argument name="aspect ratio" default="21:9 全景"} 格式。背景 {argument name="background color" default="产品主色调"}，手势 {argument name="hand gesture" default="做出射网手势的红色网纹手套"}。';
+    expect(extractVariables(source)).toEqual(['aspect ratio','background color','hand gesture']);
+    expect(variableDefaults(source)).toEqual({'aspect ratio':'21:9 全景','background color':'产品主色调','hand gesture':'做出射网手势的红色网纹手套'});
+    expect(renderPrompt(source,{'background color':'蓝色'})).toBe('创建一个 21:9 全景 格式。背景 蓝色，手势 做出射网手势的红色网纹手套。');
+    expect(source).toContain('{argument');
+  });
+  it('shares names and the first declared default with double braces, preserving literal inserted values',()=>{
+    const source=`{{x}} {argument default='A {{nested}} {}' name='x'} {argument name="x" default="B"} {} {argument name="empty" default=""}`;
+    expect(extractVariables(source)).toEqual(['x','占位符 1','empty']);
+    expect(renderPrompt(source)).toBe('A {{nested}} {} A {{nested}} {} A {{nested}} {} {} ');
+    expect(renderPrompt(source,{x:'$&\n{}'})).toBe('$&\n{} $&\n{} $&\n{} {} ');
+    expect(renderPrompt('{argument name="x" default="A"}',{x:''})).toBe('A');
+  });
+  it('supports explicit arguments inside code strings, quotes and safe special names',()=>{
+    const source=String.raw`const player = "{argument name="__proto__" default="A \"quote\""}"; {argument name='constructor'} {argument name="__v_isReactive" default="yes"}`;
+    expect(extractVariables(source)).toEqual(['__proto__','constructor','__v_isReactive']);
+    expect(Object.hasOwn(variableDefaults(source),'__proto__')).toBe(true);
+    expect(renderPrompt(source)).toContain('A "quote"');
+    expect(renderPrompt(source)).toContain("{argument name='constructor'}");
+  });
+  it('keeps invalid attributes and escaped declarations literal',()=>{
+    for(const source of ['{argument name="" default="A"}','{argument name="x" name="y"}','{argument name="x" type="text"}','{argument default="A"}','{argument name="x" default=no}','{argument name="x"',String.raw`\{argument name="x" default="A"}`]) {
+      expect(extractVariables(source)).toEqual([]);expect(renderPrompt(source)).toBe(source);
+    }
+  });
   it("fills the three anonymous placeholders from the reported screenshot independently", () => {
     const content = "Sql {} dejk fer {}. hdjjf dev {} jhdfhk sd";
     expect(extractVariables(content)).toEqual(["占位符 1", "占位符 2", "占位符 3"]);

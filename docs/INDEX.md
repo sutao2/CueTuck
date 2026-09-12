@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-12-argument-variables.md](plans/2026-09-12-argument-variables.md) | 验收 | 导入 argument 参数不能填写 | 默认值与双入口测试通过，桌面逐步填写和最终预览已验 |
 | [plans/2026-09-12-local-thumbnails.md](plans/2026-09-12-local-thumbnails.md) | 验收 | 本地列表缩略图 | 网格/行缩略图及按需读取已验，桌面包已构建、重启待确认 |
 | [plans/2026-09-12-downloaded-images.md](plans/2026-09-12-downloaded-images.md) | 验收 | 下载缺图片与查看大图 | 参考图离线保存、旧副本补图和大图；前端/原生/浏览器/桌面验收 |
 | [plans/2026-09-12-qq-mail.md](plans/2026-09-12-qq-mail.md) | 验收 | 配置 QQ / Foxmail SMTP | 快捷配置已验；真实保存待 owner 重认证，测试发信待确认 |
