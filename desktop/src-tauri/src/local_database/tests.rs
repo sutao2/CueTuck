@@ -703,3 +703,18 @@ async fn search_ten_thousand_prompts_bench() {
     );
     assert!(!rows.is_empty());
 }
+
+#[test]
+fn moving_category_preserves_content_and_rejects_missing_targets() {
+    let dir = tempfile::tempdir().unwrap();
+    initialize_in_dir(dir.path()).unwrap();
+    let prompt = create_prompt_in_dir(dir.path(), "最新标题", "最新正文", None).unwrap();
+    super::move_prompt_category_in_dir(dir.path(), &prompt.id, Some("cat-image")).unwrap();
+    let row = list_prompts_in_dir(dir.path(), "", None).unwrap().remove(0);
+    assert_eq!(row.content, "最新正文");
+    assert_eq!(row.title, "最新标题");
+    assert_eq!(row.category_id.as_deref(), Some("cat-image"));
+    assert!(super::move_prompt_category_in_dir(dir.path(), &prompt.id, Some("missing")).is_err());
+    super::delete_prompt_in_dir(dir.path(), &prompt.id).unwrap();
+    assert!(super::move_prompt_category_in_dir(dir.path(), &prompt.id, None).is_err());
+}

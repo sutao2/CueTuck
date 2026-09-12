@@ -712,3 +712,12 @@ export async function clearLocalPromptUse() {
     row.updated_at = nextTimestamp();
   });
 }
+
+
+export async function moveLocalPromptCategory(id, categoryId) {
+  if (isTauri()) return tauriInvoke('move_local_prompt_category', { id, category_id: categoryId });
+  const row = memoryPrompts.find(item => item.id === id && !item.deleted_at);
+  if (!row) throw new Error('提示词不存在');
+  if (categoryId && !memoryCategories.some(item => item.id === categoryId && !item.deleted_at)) throw new Error('分类不存在');
+  row.category_id = categoryId; row.updated_at = nextTimestamp();
+}

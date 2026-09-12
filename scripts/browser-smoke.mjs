@@ -103,7 +103,7 @@ try {
   await click(/button "列表视图"/);await target(/button "查看 图片下载验收 的图片"/);await run('screenshot');
   assert.match(await run('eval',`(()=>{const cover=document.querySelector('.local-prompt-cover'),card=cover.closest('article');return JSON.stringify({width:cover.getBoundingClientRect().width,row:card.classList.contains('as-row'),overflow:document.documentElement.scrollWidth>innerWidth});})()`),/\\"width\\":80,\\"row\\":true,\\"overflow\\":false/);
   await click(/button "图片下载验收"/);await click(/button "查看 参考图-1.png"/);
-  await click(/button "放大图片"/);await run('screenshot');await run('resize','600','700');await click(/button "适应窗口"/);await run('screenshot');await run('press','Escape');await target(/textbox "提示词内容"/);
+  await click(/button "放大图片"/);await run('screenshot');await run('resize','600','700');await click(/button "适应窗口"/);await run('screenshot');await run('press','Escape');await target(/heading "图片下载验收"/);
   console.log('Browser smoke passed: create/edit/variables/copy/delete-cancel/delete/settings-return/image-download/supplement/zoom/narrow-viewer.');
 } finally {
   await writeFile(resolve(artifacts, 'actions.log'), actions);

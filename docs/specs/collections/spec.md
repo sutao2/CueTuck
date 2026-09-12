@@ -33,6 +33,8 @@
 - THEN 本地存在该合集
 - AND 打开合集详情时条目数可以为 0
 
+合集搜索多选与本地批量整理 MUST 遵循[工作台优化计划](../../plans/2026-09-12-workbench-usability.md)切片 3；每条仍只属于一个合集，加入前明确移动归属。
+
 ### Requirement: 成员
 
 系统 MUST 用 `prompts.collection_id` 归属成员。第一期一条提示词最多属于一个合集。

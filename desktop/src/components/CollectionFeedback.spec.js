@@ -58,7 +58,7 @@ it('offers a read-only retry instead of presenting a failed read as an empty col
 
 it('retains the selected member on a failed write and guards repeated submission and navigation', async () => {
   const { prompt } = await setup(); await open();
-  await detail().get('select').setValue(prompt.id); let fail;
+  await detail().get(`[data-member-choice="${prompt.id}"]`).setValue(true); let fail;
   const write = vi.spyOn(library, 'addPromptToCollection').mockImplementationOnce(() => new Promise((_, reject) => { fail = reject; }));
   await add().trigger('click'); await add().trigger('click');
   await detail().get('.page-back').trigger('click');
@@ -66,11 +66,11 @@ it('retains the selected member on a failed write and guards repeated submission
   expect(detail().exists()).toBe(true); expect(write).toHaveBeenCalledTimes(1);
   fail(Error('disk full')); await flushPromises();
   expect(detail().text()).toContain('加入失败');
-  expect(detail().get('select').element.value).toBe(prompt.id);
+  expect(detail().get(`[data-member-choice="${prompt.id}"]`).element.checked).toBe(true);
   await add().trigger('click'); await flushPromises();
   expect(write).toHaveBeenCalledTimes(2);
   expect(detail().get('.member-title').text()).toBe('member');
-  expect(detail().get('select').element.value).toBe('');
+  expect(detail().find(`[data-member-choice="${prompt.id}"]`).exists()).toBe(false);
 });
 
 it.each(['add', 'remove'])('reports durable %s success when refresh fails; retry never repeats the write', async action => {
@@ -79,7 +79,7 @@ it.each(['add', 'remove'])('reports durable %s success when refresh fails; retry
   await open();
   const write = vi.spyOn(library, action === 'add' ? 'addPromptToCollection' : 'removePromptFromCollection');
   vi.spyOn(library, 'listCollectionMembers').mockRejectedValueOnce(Error('refresh failed'));
-  if (action === 'add') { await detail().get('select').setValue(prompt.id); await add().trigger('click'); }
+  if (action === 'add') { await detail().get(`[data-member-choice="${prompt.id}"]`).setValue(true); await add().trigger('click'); }
   else await detail().get('[data-testid=remove-member]').trigger('click');
   await flushPromises();
   expect(w.get('[data-testid=collection-notice]').text()).toContain(action === 'add' ? '已加入合集，但刷新失败' : '已移出合集，但刷新失败');
@@ -93,7 +93,7 @@ it.each(['add', 'remove'])('reports durable %s success when refresh fails; retry
 it('does not let a delayed metadata refresh replace a reopened collection', async () => {
   const { collection, prompt } = await setup(); await open();
   vi.spyOn(library, 'listCollectionMembers').mockRejectedValueOnce(Error('read failed'));
-  await detail().get('select').setValue(prompt.id); await add().trigger('click'); await flushPromises();
+  await detail().get(`[data-member-choice="${prompt.id}"]`).setValue(true); await add().trigger('click'); await flushPromises();
   let resolve;
   vi.spyOn(library, 'listLocalCollections').mockImplementationOnce(() => new Promise(yes => { resolve = yes; }));
   await w.get('[data-testid=retry-operation-refresh]').trigger('click');

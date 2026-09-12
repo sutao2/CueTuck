@@ -42,6 +42,7 @@ pub fn run() {
             commands::database::upsert_synced_local_prompt,
             commands::database::list_local_prompts,
             commands::database::update_local_prompt,
+            commands::database::move_local_prompt_category,
             commands::database::delete_local_prompt,
             commands::database::list_local_categories,
             commands::database::create_local_category,
