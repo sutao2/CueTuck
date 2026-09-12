@@ -307,9 +307,8 @@ body.theme-dark .primary-button { color: #202020; }
   position: sticky;
   top: 0;
   z-index: 8;
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(12px);
 }
 .inline-search {
   width: clamp(220px, 28vw, 360px);

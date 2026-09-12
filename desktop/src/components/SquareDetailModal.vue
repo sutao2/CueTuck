@@ -24,14 +24,14 @@
             <div class="gallery-label"><span>来源参考图 · 非本软件生成</span></div>
             <figure>
               <div class="gallery-stage">
-                <button v-if="!imageFailed" type="button" class="gallery-open" aria-label="查看大图" @click="largeImage = activeImage"><img :key="imageKey" :src="activeImage.url" :alt="activeImage.alt" referrerpolicy="no-referrer" @error="imageFailed = true" @load="imageLoaded = true"></button>
+                <button v-if="!imageFailed" type="button" class="gallery-open" aria-label="查看大图" @click="largeImage = activeImage"><img decoding="async" :key="imageKey" :src="activeImage.url" :alt="activeImage.alt" referrerpolicy="no-referrer" @error="imageFailed = true" @load="imageLoaded = true"></button>
                 <div v-if="imageFailed" class="gallery-fallback" role="status">图片暂时无法加载 <button class="button" type="button" @click="retryImage">重试图片</button></div>
                 <span v-else-if="!imageLoaded" class="gallery-loading" role="status">正在加载图片…</span>
               </div>
               <figcaption><span>{{ activeImage.alt }}</span><a v-if="activeImage.source" :href="activeImage.source" target="_blank" rel="noopener noreferrer">{{ item.reference.author }} ↗</a></figcaption>
             </figure>
             <div class="gallery-thumbs" aria-label="选择预览图片">
-              <button v-for="(image, index) in galleryImages" :key="image.url" type="button" :aria-label="`预览图片 ${index + 1}`" :aria-pressed="imageIndex === index" @click="selectImage(index)"><img :src="image.url" alt="" loading="lazy" referrerpolicy="no-referrer"><span>{{ index + 1 }}</span></button>
+              <button v-for="(image, index) in galleryImages" :key="image.url" type="button" :aria-label="`预览图片 ${index + 1}`" :aria-pressed="imageIndex === index" @click="selectImage(index)"><img decoding="async" :src="image.url" alt="" loading="lazy" referrerpolicy="no-referrer"><span>{{ index + 1 }}</span></button>
             </div>
           </section>
           <p v-if="item.reference" class="reference-credit"><a v-if="referenceLink(item.reference.url)" :href="referenceLink(item.reference.url)" target="_blank" rel="noopener noreferrer">{{ item.reference.repository }} ↗</a> · {{ item.reference.author }} · <a v-if="referenceLink(item.reference.license_url)" :href="referenceLink(item.reference.license_url)" target="_blank" rel="noopener noreferrer">{{ item.reference.license }}</a></p>

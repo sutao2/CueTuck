@@ -280,14 +280,14 @@
               :inert="batchBusy ? '' : undefined"
               @contextmenu.prevent="openContextMenu($event, item)"
             >
-              <img v-if="space === 'square' && referenceImages(item).length && !failedReferenceImages[item.id]" class="square-reference-cover" :src="referenceImages(item)[0]" :alt="item.title" loading="lazy" referrerpolicy="no-referrer" @error="failedReferenceImages[item.id] = true">
+              <img decoding="async" v-if="space === 'square' && referenceImages(item).length && !failedReferenceImages[item.id]" class="square-reference-cover" :src="referenceImages(item)[0]" :alt="item.title" loading="lazy" referrerpolicy="no-referrer" @error="failedReferenceImages[item.id] = true">
               <LocalPromptCover v-if="space === 'local' && item.kind === 'prompt' && item.image_count" :prompt-id="item.id" :title="item.title" :revision="item.updated_at" />
               <div
                 v-if="item.kind === 'collection' && coverPreview(item).length"
                 class="collection-card-preview"
                 data-testid="collection-cover-preview"
               >
-                <img v-for="(src, index) in coverPreview(item)" :key="index" :src="src" alt="">
+                <img decoding="async" v-for="(src, index) in coverPreview(item)" :key="index" :src="src" alt="">
               </div>
               <label v-if="selecting && space === 'local' && item.kind === 'prompt'" class="card-selection" @click.stop>
                 <input type="checkbox" :checked="selectedPrompts.includes(item.id)" :aria-label="`选择 ${item.title}`" :data-select-prompt="item.id" @change="selectPrompt(item.id)" />选择
