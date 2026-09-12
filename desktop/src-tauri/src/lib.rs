@@ -13,6 +13,7 @@ pub fn run() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         .manage(LocalDatabase::default())
         .manage(LauncherFocusGuard::default());
     #[cfg(target_os = "macos")]
@@ -43,6 +44,7 @@ pub fn run() {
             commands::database::list_local_prompts,
             commands::database::update_local_prompt,
             commands::database::move_local_prompt_category,
+            commands::database::choose_library_backup,
             commands::database::delete_local_prompt,
             commands::database::list_local_categories,
             commands::database::create_local_category,

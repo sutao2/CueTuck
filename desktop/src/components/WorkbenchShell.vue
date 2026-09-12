@@ -110,6 +110,7 @@
         </nav>
 
         <div class="sidebar-bottom">
+          <button v-if="session.loggedIn" type="button" data-testid="open-publications" @click="publicationsOpen = true"><AppIcon name="file" /><span>我的发布</span><span class="sidebar-bottom-action">›</span></button>
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
             <AppIcon name="settings" /><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
           </button>
@@ -401,6 +402,7 @@
       @save="savePrompt"
       @remove="removePrompt"
     />
+    <MyPublications v-if="publicationsOpen" v-show="!loginReason" :session="session" @cancel="publicationsOpen = false" @login="openLogin('查看我的发布')" />
     <LocalPromptDetail v-if="reading" :key="reading.id" v-show="!editing && !using && !loginReason"
       :prompt="reading" @cancel="reading = null" @edit="editing = reading" @use="startUse(reading)" />
     <UsePromptModal
@@ -553,6 +555,7 @@
       @stay="pendingNavigation = null"
       @language="applyUiLanguage"
       @theme="applyTheme($event, false)"
+      @publications="openPublicationsFromSettings"
       @imported="refreshLocalSettings"
       @history-cleared="reloadPrompts"
       @launcher-shortcut-saved="launcherShortcut = $event"
@@ -616,6 +619,7 @@ import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
 import SquareDetailModal from "./SquareDetailModal.vue";
+import MyPublications from './MyPublications.vue';
 import BatchOrganize from './BatchOrganize.vue';
 import LocalPromptDetail from './LocalPromptDetail.vue';
 import { extractVariables } from '../lib/renderPrompt.js';
@@ -731,7 +735,7 @@ function handleWorkbenchShortcut(event) {
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
   if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
   if (addingCategory.value || deletingCategory.value) return;
-  if (reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
+  if (publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
   if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
   if (event.key.toLowerCase() === 'f' && !settingsOpen.value && !publishResume.value) {
     event.preventDefault(); focusSearch(); return;
@@ -750,6 +754,7 @@ const sortTab = ref("全部");
 const creating = ref(false);
 const editing = ref(null);
 const reading = ref(null);
+const publicationsOpen = ref(false);
 const selecting = ref(false), selectedPrompts = ref([]), batchBusy = ref(false);
 const selectedRows = computed(() => prompts.value.filter(p => selectedPrompts.value.includes(p.id)));
 function selectPrompt(id) {
@@ -964,8 +969,8 @@ const emptyCopy = computed(() => {
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
 const locationLabel = computed(() => (space.value === "square" ? t("square") : t("local")));
-const hasTaskPage = computed(() => Boolean(reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
-const taskTitle = computed(() => reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
+const hasTaskPage = computed(() => Boolean(publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
+const taskTitle = computed(() => publicationsOpen.value ? '我的发布' : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
 
 function guardSidebarNavigation(event) {
   if (batchBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
@@ -997,7 +1002,7 @@ function finishNavigation() {
   }
   pendingNavigation.value = null;
   pendingDelete.value = null;
-  creating.value = false; editing.value = null; using.value = null; reading.value = null;
+  creating.value = false; editing.value = null; using.value = null; reading.value = null; publicationsOpen.value = false;
   openedCollection.value = null; closeSquareDetail();
   loginReason.value = ''; publishResume.value = false; pendingPublish.value = false;
   closeCategoryDialog();
@@ -1593,6 +1598,11 @@ async function runContextAction(action) {
     }
     localFavoriteIds.value = await toggleLocalFavorite(item.id);
   }
+}
+
+function openPublicationsFromSettings() {
+  pendingNavigation.value = () => { publicationsOpen.value = true; };
+  settingsView.value?.requestClose();
 }
 
 async function closeSettings() {

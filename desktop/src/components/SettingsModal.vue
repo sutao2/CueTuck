@@ -119,17 +119,7 @@
             </div>
             <div class="setting-row publications-row">
               <span class="setting-copy"><strong>我的发布</strong><small>当前账号提交到广场的审核状态。</small></span>
-              <span class="setting-control" data-testid="my-publications">
-                <template v-if="!session.loggedIn">未登录</template>
-                <template v-else-if="!myPublications.length">暂无投稿</template>
-                <ul v-else class="mine-list">
-                  <li v-for="row in myPublications" :key="row.id">
-                    {{ row.title || row.source_id }} · {{ row.status }}
-                    <small v-if="row.visibility">广场：{{ { online: '已上架', offline: '已下架', trashed: '已移入回收站' }[row.visibility] || row.visibility }}</small>
-                    <small v-for="event in row.history || []" :key="event.id">{{ event.status === 'rejected' ? '驳回原因：' : '审核通过' }}{{ event.reason || '' }}<template v-if="event.created_at"> · {{ new Date(event.created_at).toLocaleString() }}</template></small>
-                  </li>
-                </ul>
-              </span>
+              <button type="button" class="button ghost-button" data-testid="settings-publications" @click="$emit('publications')">查看我的发布</button>
             </div>
             <div class="setting-row setting-block">
               <span class="setting-copy"><strong>账单</strong><small>预发可查状态、兑换码；只有测试密钥才跳转 Checkout。不是公开售卖。</small></span>
@@ -297,10 +287,17 @@
               <button type="button" class="button ghost-button" @click="doExport">导出 JSON</button>
             </div>
             <textarea v-if="exportText" v-model="exportText" rows="6" aria-label="导出的 JSON" readonly></textarea>
+            <div class="import-drop" data-testid="import-drop" @dragover.prevent @drop.prevent="dropImport">
+              <strong>导入提示词文件</strong><p>选择或拖入 JSON 文件，预览后再确认导入。</p>
+              <label class="button ghost-button file-choice">选择 JSON 文件<input type="file" accept=".json,application/json" :disabled="importBusy" data-testid="import-file" @change="chooseImport" /></label>
+              <p v-if="importFilename" role="status">{{ importBusy ? '正在读取：' : '已选择：' }}{{ importFilename }}</p>
+            </div>
+            <details class="advanced-import"><summary>高级：粘贴 JSON</summary>
             <label class="field">
               <span>导入 JSON</span>
-              <textarea v-model="importText" :disabled="importBusy" rows="5" placeholder='{"prompts":[{"title":"一","content":"a"}]}' @input="preview = null"></textarea>
+              <textarea v-model="importText" :disabled="importBusy" rows="5" placeholder='{"prompts":[{"title":"一","content":"a"}]}' @input="preview = null; importFilename = ''"></textarea>
             </label>
+            </details>
             <div class="modal-actions">
               <button type="button" class="button ghost-button" :disabled="importBusy" @click="doPreview">预览</button>
               <button type="button" class="button primary-button" :disabled="importBusy || !preview" @click="doApply">确认导入</button>
@@ -309,6 +306,7 @@
               将导入 {{ preview.prompt_count }} 条提示词、{{ preview.collection_count }} 个合集。确认前不会写入。
             </p>
             <p v-if="importNote" role="status">{{ importNote }}</p>
+            <div class="restore-choice"><button type="button" class="button ghost-button" data-testid="choose-restore" :disabled="dataBusy || !usesSystemKeychain()" @click="chooseRestore">选择备份文件</button><small v-if="!usesSystemKeychain()">文件恢复需要桌面应用</small></div>
             <label class="field">
               <span>恢复库文件路径</span>
               <input v-model="restorePath" placeholder="/path/to/promptark.sqlite">
@@ -479,9 +477,10 @@ import {
 } from "../platform/library.js";
 import { DEFAULT_LAUNCHER_SHORTCUT, DEFAULT_NEW_PROMPT_SHORTCUT, DEFAULT_PASTE_RECENT_SHORTCUT, registerLauncherShortcut } from "../platform/shortcut.js";
 import ShortcutInput from "./ShortcutInput.vue";
+import { invokeCommand } from '../platform/tauri.js';
 import pkg from "../../package.json";
 import { DESKTOP_PREF_KEYS, isPrefOn, saveDesktopPref } from "../platform/desktopPrefs.js";
-import { listMyPublications } from "../platform/square.js";
+
 import { getMe, putMe, getSession } from "../platform/session.js";
 import {
   getBillingStatus,
@@ -502,7 +501,7 @@ const props = defineProps({
   logoutBusy: { type: Boolean, default: false },
   logoutError: { type: String, default: '' },
 });
-const emit = defineEmits(["cancel", "stay", "theme", "imported", "login", "logout", "history-cleared", "language", "launcher-shortcut-saved"]);
+const emit = defineEmits(["cancel", "stay", "theme", "imported", "login", "logout", "history-cleared", "language", "launcher-shortcut-saved", "publications"]);
 
 function usesSystemKeychain() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -593,7 +592,7 @@ const showModelTags = ref(true);
 const variableHints = ref(false);
 const customModels = ref("");
 const keepAuthorOnDownload = ref(false);
-const myPublications = ref([]);
+
 const billingPro = ref(false);
 const billingMock = ref(false);
 const billingMockPro = ref(false);
@@ -733,12 +732,10 @@ async function loadSettings() {
   anonymousDownloadStats.value = isPrefOn(await getLocalSetting("anonymous_download_stats"));
   httpProxy.value = (await getLocalSetting("http_proxy")) || "";
   if (props.session.loggedIn) {
-    const [mine, profile, billing] = await Promise.all([
-      listMyPublications().catch(() => []),
+    const [profile, billing] = await Promise.all([
       getMe().catch(() => null),
       getBillingStatus().catch((error) => ({ note: error.message || String(error) })),
     ]);
-    myPublications.value = mine;
     displayName.value = profile?.display_name ?? profile?.displayName ?? "";
     bio.value = profile?.bio ?? "";
     applyBilling(billing);
@@ -918,6 +915,45 @@ async function saveShortcut() {
   } finally { saving.value = false; }
 }
 
+const importFilename = ref('');
+async function chooseImport(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (file) await readImportFile(file);
+}
+async function dropImport(event) {
+  if (importBusy.value) return;
+  const files = [...(event.dataTransfer?.files || [])];
+  if (files.length !== 1) { dataError.value = '请一次选择一个 JSON 文件。'; return; }
+  await readImportFile(files[0]);
+}
+async function readImportFile(file) {
+  if (importBusy.value) return;
+  if (!/\.json$/i.test(file.name)) { dataError.value = '请选择 JSON 文件。'; return; }
+  importBusy.value = true; dataError.value = ''; preview.value = null;
+  try {
+    const text = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || Error('无法读取文件'));
+      reader.readAsText(file);
+    });
+    JSON.parse(text);
+    importText.value = text; importFilename.value = file.name;
+    await doPreview();
+  } catch (error) { dataError.value = `读取文件失败：${error.message || error}`; }
+  finally { importBusy.value = false; }
+}
+async function chooseRestore() {
+  if (dataBusy.value) return;
+  dataBusy.value = true; dataError.value = '';
+  try {
+    const path = await invokeCommand('choose_library_backup');
+    if (path) restorePath.value = path;
+  } catch (error) { dataError.value = `选择文件失败：${error.message || error}`; }
+  finally { dataBusy.value = false; }
+}
+
 async function doExport() {
   dataError.value = "";
   try { exportText.value = await exportLocalLibrary(); }
@@ -944,7 +980,7 @@ async function doApply() {
   try {
     await applyLocalImport(previewedText.value);
     preview.value = null;
-    importText.value = "";
+    importText.value = ""; importFilename.value = '';
     importNote.value = "导入完成；原有条目未被覆盖。";
     emit("imported");
   } catch (error) { dataError.value = `导入失败：${error.message || error}`; }
@@ -1133,3 +1169,15 @@ async function clearHistory() {
   finally { saving.value = false; }
 }
 </script>
+
+<style scoped>
+.import-drop { border: 1px dashed var(--line); padding: 20px; border-radius: 10px; margin: 20px 0; font-size: 13px; }
+.import-drop p { color: var(--muted); font-size: 12px; }
+.file-choice { position: relative; overflow: hidden; display: inline-flex; cursor: pointer; }
+.file-choice input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.file-choice:focus-within { outline: 2px solid var(--text); outline-offset: 3px; }
+.advanced-import { margin: 14px 0; }
+.advanced-import summary { cursor: pointer; color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+.restore-choice { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 24px 0 16px; }
+.restore-choice small { color: var(--muted); }
+</style>
