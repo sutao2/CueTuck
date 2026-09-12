@@ -47,3 +47,13 @@ it('opens a downloaded copy without a second content request or duplicate write'
   expect(content).toHaveBeenCalledTimes(1);
   expect(await library.listLocalPrompts()).toHaveLength(1);
 });
+it('supports arrow navigation in the more menu and returns focus on Escape', async () => {
+  await library.createLocalPrompt({ title: '键盘', content: '正文' });
+  w = mount(WorkbenchShell, { attachTo: document.body }); await flushPromises();
+  const more = w.get('[data-testid=card-more]'); more.element.focus(); await more.trigger('click'); await flushPromises();
+  expect(document.activeElement).toBe(w.get('[data-action=edit]').element);
+  await w.get('[role=menu]').trigger('keydown', { key: 'ArrowDown' });
+  expect(document.activeElement).toBe(w.get('[data-action=copy]').element);
+  await w.get('[role=menu]').trigger('keydown', { key: 'Escape' }); await flushPromises();
+  expect(document.activeElement).toBe(more.element);
+});

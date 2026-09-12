@@ -104,7 +104,53 @@ try {
   assert.match(await run('eval',`(()=>{const cover=document.querySelector('.local-prompt-cover'),card=cover.closest('article');return JSON.stringify({width:cover.getBoundingClientRect().width,row:card.classList.contains('as-row'),overflow:document.documentElement.scrollWidth>innerWidth});})()`),/\\"width\\":80,\\"row\\":true,\\"overflow\\":false/);
   await click(/button "图片下载验收"/);await click(/button "查看 参考图-1.png"/);
   await click(/button "放大图片"/);await run('screenshot');await run('resize','600','700');await click(/button "适应窗口"/);await run('screenshot');await run('press','Escape');await target(/heading "图片下载验收"/);
-  console.log('Browser smoke passed: create/edit/variables/copy/delete-cancel/delete/settings-return/image-download/supplement/zoom/narrow-viewer.');
+  // New reading / writing / organizing flows use only the fresh browser memory library.
+  await run('resize', '1280', '850');
+  await click(/button "(?:← )?返回"/);
+  await click(/button "新建"/);
+  await fill(/textbox "标题"/, '交互验收');
+  await fill(/textbox "提示词内容"/, '{{城市}} {{预算}}');
+  await click(/button "试填预览"/);
+  await fill(/textbox "城市"/, '京都'); await fill(/textbox "预算"/, '1000');
+  await target(/京都 1000/); await run('screenshot');
+  await run('resize', '800', '700'); await run('screenshot');
+  assert.match(await run('eval', 'document.documentElement.scrollWidth <= innerWidth'), /true/);
+  await click(/button "保存"/); await click(/button "交互验收"/);
+  await click(/button "使用提示词"/); await click(/button "2 预算 待填"/);
+  await fill(/textbox "预算"/, '2000'); await click(/button "预览"/);
+  await target(/还有 1 项未填写/);
+  await click(/button "1 城市 待填"/); await fill(/textbox "城市"/, '上海');
+  await click(/button "预览"/); await target(/上海 2000/); await run('screenshot');
+  await click(/button "复制并完成"/); await click(/button "(?:← )?返回"/);
+  await click(/button "批量整理"/); await run('check', await target(/checkbox "选择 交互验收"/));
+  await run('select', await target(/combobox "目标分类"/), 'cat-image');
+  await click(/button "应用到所选"/); await target(/已完成 1 条/); await run('screenshot');
+  await click(/button "取消多选"/);
+  await click(/button "新建"/); await click(/button "提示词合集/); await fill(/textbox "合集名称"/, '验收合集');
+  await click(/button "创建合集"/); await click(/button "验收合集"/);
+  await fill(/searchbox "搜索并加入提示词"/, '交互验收');
+  await run('check', await target(/checkbox "交互验收"/));
+  await click(/button "加入合集"/); await target(/button "交互验收"/); await run('screenshot');
+  await click(/button "(?:← )?返回"/);
+  await click(/button "设置 ›"/); await click(/button "数据与备份"/); await run('screenshot');
+  const importFile = resolve(artifacts, 'import.json');
+  await writeFile(importFile, JSON.stringify({ prompts: [{ title: '文件选择验收', content: '仅写隔离内存库' }] }));
+  await click(/button "选择 JSON 文件"/); await run('upload', importFile);
+  await target(/将导入 1 条提示词/); await run('screenshot');
+  await click(/button "确认导入"/); await target(/导入完成/);
+
+  await click(/button "返回应用"/);
+  await run('run-code', `async page => { await page.evaluate(async () => {
+    const session = await import('/src/platform/session.js');
+    session.setSessionTransport(async () => ({ email: 'qa@example.test', access_token: 'isolated-test' }));
+    await session.loginSession({ email: 'qa@example.test', password: 'test' });
+    (await import('/src/platform/square.js')).setMineTransport(async () => [{ id: 'qa', title: '隔离验收投稿', status: 'pending' }]);
+  }); }`);
+  await click(/button "游 登录"/); await click(/button "查看我的发布"/);
+  await target(/隔离验收投稿/); await run('screenshot');
+  await click(/button "(?:← )?返回"/); await click(/button "切换浅色主题"/);
+  await run('resize', '1280', '850'); await run('screenshot');
+  console.log('Browser smoke passed: create/edit/variables/copy/delete-cancel/delete/settings-return/image-download/supplement/zoom/narrow-viewer/trial-preview/parameter-navigation/batch-category/searchable-collection/file-import/publications/light-and-dark.');
 } finally {
   await writeFile(resolve(artifacts, 'actions.log'), actions);
   await writeFile(resolve(artifacts, 'vite.log'), serverError);

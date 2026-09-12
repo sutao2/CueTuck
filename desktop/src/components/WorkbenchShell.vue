@@ -274,7 +274,7 @@
             <article
               :style="cardHeight ? { height: `${cardHeight}px` } : undefined"
               class="prompt-card"
-              :class="{ collection: item.kind === 'collection', 'as-row': view === 'list' }"
+              :class="{ collection: item.kind === 'collection', 'as-row': view === 'list', 'is-selected': selecting && selectedPrompts.includes(item.id) }"
               @click="selecting && space === 'local' && item.kind === 'prompt' ? selectPrompt(item.id) : openItem(item)"
               :inert="batchBusy ? '' : undefined"
               @contextmenu.prevent="openContextMenu($event, item)"
@@ -567,17 +567,21 @@
       v-if="contextMenu"
       class="context-menu-layer"
       data-testid="context-menu-layer"
-      @keydown.esc.stop="contextMenu = null"
-      @click="contextMenu = null"
-      @contextmenu.prevent="contextMenu = null"
+      @keydown.esc.stop="closeContextMenu"
+      @click="closeContextMenu"
+      @contextmenu.prevent="closeContextMenu"
     >
       <div
         class="context-menu"
         data-testid="context-menu"
+        role="menu"
+        aria-label="提示词操作"
+        @keydown="onMenuKeydown"
         :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
         @click.stop
       >
         <button
+          role="menuitem"
           v-for="action in contextActions(contextMenu.item)"
           :key="action.id"
           type="button"
@@ -1540,8 +1544,23 @@ function tabCount(tab) {
   }).length;
 }
 
+let menuReturnFocus;
+function closeContextMenu() {
+  contextMenu.value = null;
+  menuReturnFocus?.focus();
+}
+function onMenuKeydown(event) {
+  const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')];
+  const current = buttons.indexOf(document.activeElement);
+  if (event.key === 'Tab') { closeContextMenu(); return; }
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || !buttons.length) return;
+  event.preventDefault();
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
+  buttons[next].focus();
+}
 function openContextMenu(event, item) {
   const rect = event.currentTarget?.getBoundingClientRect();
+  menuReturnFocus = event.currentTarget?.matches?.('button') ? event.currentTarget : event.currentTarget?.querySelector?.('.prompt-title');
   contextMenu.value = { x: Math.max(8, Math.min(event.clientX || rect?.left || 8, window.innerWidth - 190)), y: Math.max(8, Math.min(event.clientY || rect?.bottom || 8, window.innerHeight - 300)), item };
   nextTick(() => document.querySelector('[data-testid="context-menu"] button')?.focus());
 }
@@ -1571,7 +1590,7 @@ function contextActions(item) {
 
 async function runContextAction(action) {
   const item = contextMenu.value?.item;
-  contextMenu.value = null;
+  closeContextMenu();
   if (!item) return;
   if (action === "edit" || action === "open") {
     if (action === "edit") editing.value = item; else openItem(item);
@@ -1629,6 +1648,7 @@ function setSort(tab) {
 }
 
 function openSquare() {
+  operationNote.value = '';
   cancelSearch(); ++localRequest;
   space.value = "square";
   if (selectedId.value === "__uncategorized__" || (selectedId.value && !categoryById(selectedId.value)?.is_system)) {
@@ -1639,6 +1659,7 @@ function openSquare() {
 }
 
 function openLocal() {
+  operationNote.value = '';
   cancelSearch(); cancelSquare(); ++squareRequest;
   space.value = "local";
   if (selectedId.value && selectedId.value !== '__uncategorized__' && !categoryById(selectedId.value)) selectedId.value = null;
@@ -1950,6 +1971,9 @@ onMounted(async () => {
 
 <style scoped>
 .empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.prompt-card.is-selected { outline: 1px solid var(--text); outline-offset: -1px; }
+.prompt-card.as-row:has(.card-selection) { position: relative; padding-left: 48px; }
+.prompt-card.as-row .card-selection { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); margin: 0; font-size: 0; }
 .card-selection { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin-bottom: 10px; }
 .card-selection input { width: 16px; height: 16px; }
 .card-more { margin-left: auto; font-size: 18px; }
