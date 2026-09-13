@@ -2137,6 +2137,68 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn oauth_browser_callback_renders_completion_and_preserves_polling() {
+        for provider in ["google", "github"] {
+            for callback in ["/v1/session/oauth/callback", "/api/v1/auth/oauth/callback"] {
+                let mut state = AppState::default();
+                state.oauth.providers.insert(provider.into(), crate::oauth::ProviderConfig::configured(
+                    provider, "fixture-client".into(), "fixture-secret".into(),
+                    format!("http://localhost:8080{callback}"),
+                ));
+                state.oauth.mock_users.insert("fixture-code".into(), crate::oauth::OAuthUser {
+                    provider: provider.into(), provider_uid: "fixture-user".into(),
+                    email: "completion@promptark.local".into(),
+                });
+                let flow = "browser-completion-fixture-flow";
+                let start = app(state.clone()).oneshot(Request::builder()
+                    .uri(format!("/v1/session/oauth/{provider}?response_mode=browser&flow_id={flow}"))
+                    .body(Body::empty()).unwrap()).await.unwrap();
+                let url = url::Url::parse(start.headers()[header::LOCATION].to_str().unwrap()).unwrap();
+                let signed = url.query_pairs().find(|(key, _)| key == "state").unwrap().1.into_owned();
+                let invalid = app(state.clone()).oneshot(Request::builder()
+                    .uri(format!("{callback}?code=fixture-code&state=invalid"))
+                    .body(Body::empty()).unwrap()).await.unwrap();
+                assert_eq!(invalid.status(), StatusCode::BAD_REQUEST);
+                let pending = app(state.clone()).oneshot(Request::builder()
+                    .uri(format!("/v1/session/oauth/session/{flow}"))
+                    .body(Body::empty()).unwrap()).await.unwrap();
+                let pending: serde_json::Value = serde_json::from_slice(&to_bytes(pending.into_body(), usize::MAX).await.unwrap()).unwrap();
+                assert_eq!(pending, serde_json::json!({ "status": "pending" }));
+
+                let response = app(state.clone()).oneshot(Request::builder()
+                    .uri(format!("{callback}?code=fixture-code&state={}", urlencoding::encode(&signed)))
+                    .body(Body::empty()).unwrap()).await.unwrap();
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(response.headers()[header::CONTENT_TYPE], "text/html; charset=utf-8");
+                assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+                assert_eq!(response.headers()["referrer-policy"], "no-referrer");
+                let html = String::from_utf8(to_bytes(response.into_body(), usize::MAX).await.unwrap().to_vec()).unwrap();
+                assert!(html.contains("授权完成"));
+                assert!(html.contains("切回提示方舟"));
+                for sensitive in ["fixture-code", signed.as_str(), flow, "completion@promptark.local", "access_token", "refresh_token"] {
+                    assert!(!html.contains(sensitive));
+                }
+                let mut previous = None;
+                for _ in 0..2 {
+                    let poll = app(state.clone()).oneshot(Request::builder()
+                        .uri(format!("/v1/session/oauth/session/{flow}"))
+                        .body(Body::empty()).unwrap()).await.unwrap();
+                    assert_eq!(poll.status(), StatusCode::OK);
+                    let payload: serde_json::Value = serde_json::from_slice(&to_bytes(poll.into_body(), usize::MAX).await.unwrap()).unwrap();
+                    assert_eq!(payload["status"], "ready");
+                    let session: SessionResponse = serde_json::from_value(payload["session"].clone()).unwrap();
+                    assert_eq!(session.email, "completion@promptark.local");
+                    assert!(session.access_token.starts_with("acc."));
+                    assert!(!html.contains(&session.access_token));
+                    assert!(!html.contains(&session.refresh_token));
+                    if let Some(previous) = previous { assert_eq!(payload, previous); }
+                    previous = Some(payload);
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn oauth_callback_with_mock_code_issues_session() {
         for callback in ["/v1/session/oauth/callback", "/api/v1/auth/oauth/callback"] {
             let mut state = AppState::default();

@@ -143,6 +143,14 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 - WHEN 请求回调
 - THEN 返回 Access 与 Refresh
 
+#### Scenario: 桌面授权完成后浏览器离开提供商页面
+
+- GIVEN 桌面发起 browser 模式 OAuth，并收到有效授权码与 state
+- WHEN 服务端完成身份校验并保存会话到对应 flow
+- THEN 返回 200 HTML 授权完成页，提示切回提示方舟并可关闭浏览器页，不能用 204 使浏览器保留提供商文档
+- AND 文档不含令牌、授权码、state 或个人资料，不加载外部资源，响应使用 no-store/no-referrer
+- AND 客户端连续查询同一 flow 可先检查 ready 再提交会话；没有有效回调时仍为 pending
+
 #### Scenario: 登录界面列出已配置提供商
 
 - GIVEN `GET /v1/session/oauth/providers` 返回 `google`
@@ -224,5 +232,6 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 | 进程重启后会话 | `backend` `session_survives_new_appstate_on_postgres` |
 | 已配置则跳转授权 | `backend` `oauth_google_redirects_when_configured` |
 | 回调签发会话 | `backend` `oauth_callback_with_mock_code_issues_session` |
+| 桌面授权完成后浏览器离开提供商页面 | `backend` `oauth_browser_callback_renders_completion_and_preserves_polling` |
 | 登录界面列出已配置提供商 | `WorkbenchShell.spec.js` shows google on login when providers include google |
 | 未配置则只留邮箱密码 | `WorkbenchShell.spec.js` hides oauth buttons when providers empty |
