@@ -9,6 +9,10 @@ cargo test --locked
 PROMPTARK_ALLOW_DEV_USER=1 PROMPTARK_BILLING_MOCK=1 cargo run
 ```
 
+本机已配置凭据时使用 `./run-local` 启动：脚本读取工作目录中的 `.env` 后运行服务。`.env` 被 Git 忽略，含凭据时应设为 0600；不要把内容输出到日志或提交。直接 `cargo run` 不会自动读取该文件。Google/GitHub 环境变量沿用 `PROMPTARK_<提供商>_CLIENT_ID`、`CLIENT_SECRET`、`REDIRECT_URI`，数据库管理配置仍优先。
+
+两家提供商控制台需登记与当前配置完全一致的回调，本机为 `http://localhost:8787/v1/session/oauth/callback`。旧版 `8080/api/v1/auth/oauth/callback` 不能直接用于新服务；密钥接入与真实授权成功分别验收。
+
 当前测试请保留 `PROMPTARK_BILLING_MOCK=1`；桌面设置的账号页和 Web 账单区将显示模拟操作。mock 的隔离与清空规则见 [账单规格](../docs/specs/billing/spec.md)。不设置该变量则保持原测试支付行为。
 
 默认监听 `127.0.0.1:8787`。`cargo run` 连接本机 Postgres 库 `promptark`（不是 Flyway 库 `pl`）、Redis、MinIO。显式 `PROMPTARK_ALLOW_DEV_USER=1` 时才使用开发用户 `dev@promptark.local` / `devpass`（普通角色）与初始管理员 `admin@promptark.local` / `adminpass`；已有账号密码与角色不会被覆盖。非开发新实例须显式设置 `PROMPTARK_ADMIN_EMAIL` 和 `PROMPTARK_ADMIN_PASSWORD`，初始密码至少 12 字符。已有管理员的旧实例只记录初始化完成，不改账号。初始化完成后，改变这些环境变量不会重置密码或新增管理员；本人改密请使用管理台「账号安全」。Google / GitHub 优先读取管理台保存的配置，未保存时兼容 `PROMPTARK_GOOGLE_*` / `PROMPTARK_GITHUB_*` 与 `PL_*` 环境变量。表不对时可 `PROMPTARK_RESET_SCHEMA=1` 删表重建（会删除数据，常规启动不要设置）。
