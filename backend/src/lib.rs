@@ -2111,6 +2111,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn oauth_google_requires_confirmation_and_start_does_not_complete_login() {
+        for provider in ["google", "github"] {
+            let mut state = AppState::default();
+            state.oauth.providers.insert(provider.into(), crate::oauth::ProviderConfig::configured(
+                provider, "fixture-client".into(), "fixture-secret".into(),
+                "http://localhost:8080/api/v1/auth/oauth/callback".into(),
+            ));
+            let flow = "pending-flow-without-callback";
+            let response = app(state.clone()).oneshot(Request::builder()
+                .uri(format!("/v1/session/oauth/{provider}?response_mode=browser&flow_id={flow}"))
+                .body(Body::empty()).unwrap()).await.unwrap();
+            assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
+            let url = url::Url::parse(response.headers()[header::LOCATION].to_str().unwrap()).unwrap();
+            let prompt = url.query_pairs().find(|(key, _)| key == "prompt").map(|(_, value)| value.into_owned());
+            assert_eq!(prompt.as_deref(), if provider == "google" { Some("select_account consent") } else { None });
+            let poll = app(state).oneshot(Request::builder()
+                .uri(format!("/v1/session/oauth/session/{flow}"))
+                .body(Body::empty()).unwrap()).await.unwrap();
+            assert_eq!(poll.status(), StatusCode::OK);
+            let body = to_bytes(poll.into_body(), usize::MAX).await.unwrap();
+            let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+            assert_eq!(payload, serde_json::json!({ "status": "pending" }));
+        }
+    }
+
+    #[tokio::test]
     async fn oauth_callback_with_mock_code_issues_session() {
         for callback in ["/v1/session/oauth/callback", "/api/v1/auth/oauth/callback"] {
             let mut state = AppState::default();
