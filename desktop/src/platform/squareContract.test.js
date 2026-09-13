@@ -44,6 +44,7 @@ const REQUIRED = [
   { method: "GET", path: "/v1/health", auth: "none" },
   { method: "GET", path: "/v1/session/oauth/providers", auth: "none" },
   { method: "GET", path: "/v1/session/oauth/callback", auth: "none" },
+  { method: "GET", path: "/api/v1/auth/oauth/callback", auth: "none" },
   { method: "GET", path: "/v1/session/oauth/session/{flowId}", auth: "none" },
   { method: "GET", path: "/v1/session/oauth/{provider}", auth: "none" },
   { method: "POST", path: "/v1/media/upload", auth: "user" },

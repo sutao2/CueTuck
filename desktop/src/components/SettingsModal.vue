@@ -73,101 +73,75 @@
               </div>
             </div>
           </section>
-          <section v-else-if="current === 'account'">
+          <section v-else-if="current === 'account'" class="account-page">
             <h3>账号与广场</h3>
+            <p>管理你的身份，分享你的创作。</p>
             <p v-if="logoutError" role="alert">{{ logoutError }}</p>
-            <p>管理登录账号、公开资料与订阅。</p>
-            <div class="settings-group">
-            <div class="setting-row">
-              <span class="setting-copy"><strong>当前账号</strong><small>登录后可发布、收藏和同步提示词。</small></span>
-              <span class="setting-control account-session">
-                <span data-testid="current-account">{{ session.loggedIn ? session.email : "未登录" }}</span>
+            <div class="account-overview" data-testid="account-overview">
+              <div class="account-avatar" aria-hidden="true">{{ accountInitial }}</div>
+              <div class="account-identity">
+                <span class="account-eyebrow">{{ session.loggedIn ? '当前账号' : '本地工作空间' }}</span>
+                <h4 data-testid="account-name">{{ accountName }}</h4>
+                <span class="account-email" data-testid="current-account">{{ session.loggedIn ? session.email : '未登录' }}</span>
+              </div>
+              <div class="account-session-actions">
+                <span v-if="session.loggedIn" class="account-badge">已登录</span>
                 <button v-if="!session.loggedIn" type="button" class="button primary-button" data-testid="settings-login" @click="$emit('login')">登录</button>
                 <button v-else type="button" class="button ghost-button" data-testid="settings-logout" :disabled="logoutBusy" @click="$emit('logout')">{{ logoutBusy ? '正在退出…' : '退出登录' }}</button>
-              </span>
-            </div>
-            <div class="setting-row setting-block">
-              <span class="setting-copy"><strong>作者主页</strong><small>已登录可保存显示名与简介。</small></span>
-              <div class="setting-control author-profile">
-                <label class="profile-field"><span>显示名</span>
-                <input
-                  data-testid="author-display-name"
-                  :disabled="!session.loggedIn"
-                  v-model="displayName"
-                  placeholder="显示名"
-                >
-                </label>
-                <label class="profile-field"><span>简介</span>
-                <textarea
-                  data-testid="author-bio"
-                  :disabled="!session.loggedIn"
-                  v-model="bio"
-                  placeholder="简介"
-                ></textarea>
-                </label>
-                <button
-                  type="button"
-                  class="button primary-button"
-                  data-testid="save-author-profile"
-                  :disabled="!session.loggedIn"
-                  @click="saveAuthorProfile"
-                >
-                  保存
-                </button>
-                <small v-if="profileNote" data-testid="author-profile-note">{{ profileNote }}</small>
               </div>
             </div>
-            <div class="setting-row publications-row">
-              <span class="setting-copy"><strong>我的发布</strong><small>当前账号提交到广场的审核状态。</small></span>
-              <button type="button" class="button ghost-button" data-testid="settings-publications" @click="$emit('publications')">查看我的发布</button>
-            </div>
-            <div class="setting-row setting-block">
-              <span class="setting-copy"><strong>账单</strong><small>预发可查状态、兑换码；只有测试密钥才跳转 Checkout。不是公开售卖。</small></span>
-              <div class="setting-control author-profile">
-                <span data-testid="billing-pro">{{ session.loggedIn ? (billingPro ? "Pro" : "未订阅") : "未登录" }}</span>
-                <small v-if="session.loggedIn && billingMock" data-testid="billing-mock">Mock · {{ billingMockPro ? "模拟 Pro" : "模拟未订阅" }}（不扣款，不改变真实权益）</small>
-            <small v-if="billingNote" data-testid="billing-note">{{ billingNote }}</small>
-            <span v-if="session.loggedIn && billingMock">
-              <button v-for="(label, outcome) in { success: '模拟成功', failure: '模拟失败', cancel: '模拟取消', reset: '重置模拟' }" :key="outcome" type="button" :data-testid="`billing-mock-${outcome}`" :disabled="billingBusy" @click="runCheckout(outcome)">{{ label }}</button>
-            </span>
-                <label class="profile-field"><span>{{ billingMock ? 'Mock 测试码（仅模拟权益）' : '兑换码' }}</span>
-                <input
-                  data-testid="billing-redeem-code"
-                  :disabled="!session.loggedIn || billingBusy"
-                  v-model="redeemCode"
-                  placeholder="兑换码"
-                >
-                </label>
-                <button
-                  type="button"
-                  class="button ghost-button"
-                  data-testid="billing-redeem"
-                  :disabled="!session.loggedIn || billingBusy || (billingMock && !/^TEST-[A-F0-9]{32}$/i.test(redeemCode.trim()))"
-                  @click="runRedeem"
-                >
-                  {{ billingMock ? '兑换测试码' : '兑换' }}
-                </button>
-                <button
-                  type="button"
-                  class="button primary-button"
-                  data-testid="billing-checkout"
-                  v-if="!billingMock"
-                  :disabled="!session.loggedIn || billingBusy"
-                  @click="runCheckout"
-                >
-                  前往支付
-                </button>
+            <div class="account-grid">
+              <div class="account-card setting-block account-profile-card">
+                <header class="account-card-heading"><span class="account-section-icon"><AppIcon name="user" /></span><div><h4>公开资料</h4><p>用于作者主页，让广场里的创作有你的名字。</p></div></header>
+                <form class="author-profile" @submit.prevent="saveAuthorProfile">
+                  <label class="profile-field"><span>显示名</span>
+                    <input data-testid="author-display-name" :disabled="!session.loggedIn" v-model="displayName" placeholder="你希望大家怎么称呼你？" @input="profileNote = ''">
+                  </label>
+                  <label class="profile-field"><span>简介 <small>选填</small></span>
+                    <textarea data-testid="author-bio" :disabled="!session.loggedIn" v-model="bio" rows="5" placeholder="介绍你的创作方向，或你擅长的领域…" @input="profileNote = ''"></textarea>
+                  </label>
+                  <p class="account-form-hint">{{ session.loggedIn ? '显示名与简介会公开展示，登录邮箱不会因编辑资料而改变。' : '登录后即可编辑公开资料。' }}</p>
+                  <div class="account-save-row">
+                    <button type="submit" class="button primary-button" data-testid="save-author-profile" :disabled="!session.loggedIn" @click.prevent="saveAuthorProfile">{{ saving ? '正在保存…' : '保存资料' }}</button>
+                    <small role="status" data-testid="author-profile-note">{{ profileNote || (profileDirty ? '有未保存的修改' : '修改后点击保存') }}</small>
+                  </div>
+                </form>
+              </div>
+              <div class="account-side">
+                <div class="account-card account-publications">
+                  <header class="account-card-heading"><span class="account-section-icon"><AppIcon name="globe" /></span><div><h4>我的发布</h4><p>查看投稿、审核进度与已公开的作品。</p></div></header>
+                  <button type="button" class="button ghost-button" data-testid="settings-publications" @click="$emit('publications')">查看我的发布 <span aria-hidden="true">↗</span></button>
+                </div>
+                <div class="account-card setting-block account-billing-card">
+                  <div class="account-plan-heading"><h4>订阅与权益</h4><span v-if="session.loggedIn && billingMock" class="account-test-badge">Mock · 测试环境</span></div>
+                  <strong class="account-plan" data-testid="billing-pro">{{ session.loggedIn ? (billingPro ? 'Pro' : '未订阅') : '未登录' }}</strong>
+                  <p class="account-form-hint">{{ session.loggedIn ? '本地创作随时可用，订阅状态以当前账号为准。' : '登录后查看订阅与兑换权益。' }}</p>
+                  <small v-if="session.loggedIn && billingMock" class="account-mock-status" data-testid="billing-mock">Mock · {{ billingMockPro ? '模拟 Pro' : '模拟未订阅' }}（不扣款，不改变真实权益）</small>
+                  <small v-if="!billingMock && billingNote" class="account-mock-status" role="status" data-testid="billing-note">{{ billingNote }}</small>
+                  <details class="account-billing-details">
+                    <summary>{{ billingMock ? '模拟测试与测试码' : '兑换码与支付' }}</summary>
+                    <div class="author-profile">
+                      <small v-if="billingMock && billingNote" role="status" data-testid="billing-note">{{ billingNote }}</small>
+                      <div v-if="session.loggedIn && billingMock" class="account-test-actions">
+                        <button v-for="(label, outcome) in { success: '模拟成功', failure: '模拟失败', cancel: '模拟取消', reset: '重置模拟' }" :key="outcome" type="button" class="button ghost-button" :data-testid="`billing-mock-${outcome}`" :disabled="billingBusy" @click="runCheckout(outcome)">{{ label }}</button>
+                      </div>
+                      <label class="profile-field"><span>{{ billingMock ? 'Mock 测试码（仅模拟权益）' : '兑换码' }}</span>
+                        <input data-testid="billing-redeem-code" :disabled="!session.loggedIn || billingBusy" v-model="redeemCode" placeholder="输入兑换码">
+                      </label>
+                      <div class="account-test-actions">
+                        <button type="button" class="button ghost-button" data-testid="billing-redeem" :disabled="!session.loggedIn || billingBusy || (billingMock && !/^TEST-[A-F0-9]{32}$/i.test(redeemCode.trim()))" @click="runRedeem">{{ billingMock ? '兑换测试码' : '兑换' }}</button>
+                        <button v-if="!billingMock" type="button" class="button primary-button" data-testid="billing-checkout" :disabled="!session.loggedIn || billingBusy" @click="runCheckout">前往支付</button>
+                      </div>
+                    </div>
+                  </details>
+                </div>
               </div>
             </div>
-            <label class="setting-row">
-              <span class="setting-copy"><strong>下载时保留作者信息</strong><small>打开后，新下载的本地副本展示作者，不改正文。</small></span>
-              <input
-                type="checkbox"
-                data-testid="keep-author-on-download"
-                :checked="keepAuthorOnDownload"
-                @change="toggleKeepAuthorOnDownload"
-              >
-            </label>
+            <div class="account-card account-preferences">
+              <label class="setting-row">
+                <span class="setting-copy"><strong>下载时保留作者信息</strong><small>新下载的本地副本展示原作者，不改变提示词正文。</small></span>
+                <input type="checkbox" data-testid="keep-author-on-download" :checked="keepAuthorOnDownload" @change="toggleKeepAuthorOnDownload">
+              </label>
             </div>
           </section>
           <section v-else-if="current === 'shortcuts'">
@@ -602,6 +576,9 @@ const redeemCode = ref("");
 const displayName = ref("");
 const bio = ref("");
 const profileNote = ref("");
+const savedProfileName = ref("");
+const accountName = computed(() => props.session.loggedIn ? (savedProfileName.value.trim() || props.session.email?.split("@")[0] || "我的账号") : "本地访客");
+const accountInitial = computed(() => Array.from(accountName.value)[0]?.toUpperCase() || "P");
 const saving = ref(false);
 const loading = ref(true);
 const feedback = ref("");
@@ -613,6 +590,7 @@ let confirmationReturnFocus = null;
 const modelDraft = () => JSON.stringify([defaultModel.value, modelCatalog.value, customModels.value, showModelTags.value, variableHints.value]);
 const shortcutDraft = () => JSON.stringify([shortcut.value, newPromptShortcut.value, pasteRecentShortcut.value]);
 const profileDraft = () => JSON.stringify([displayName.value, bio.value]);
+const profileDirty = computed(() => !loading.value && profileDraft() !== savedDrafts.value.profile);
 const hasUnsaved = computed(() => !loading.value && (
   modelDraft() !== savedDrafts.value.models || shortcutDraft() !== savedDrafts.value.shortcuts ||
   profileDraft() !== savedDrafts.value.profile || Boolean(importText.value.trim())
@@ -739,6 +717,7 @@ async function loadSettings() {
     ]);
     displayName.value = profile?.display_name ?? profile?.displayName ?? "";
     bio.value = profile?.bio ?? "";
+    savedProfileName.value = displayName.value;
     applyBilling(billing);
   }
   savedDrafts.value = { models: modelDraft(), shortcuts: shortcutDraft(), profile: profileDraft() };
@@ -1076,6 +1055,8 @@ async function saveAuthorProfile() {
     displayName.value = saved.display_name ?? saved.displayName ?? displayName.value;
     bio.value = saved.bio ?? bio.value;
     savedDrafts.value.profile = profileDraft();
+    savedProfileName.value = displayName.value;
+    profileNote.value = "资料已保存";
     showFeedback('作者资料已保存');
   } catch (error) {
     profileNote.value = error instanceof Error ? error.message : String(error);
@@ -1172,6 +1153,53 @@ async function clearHistory() {
 </script>
 
 <style scoped>
+.account-overview { display: flex; align-items: center; gap: 20px; padding: 26px; margin: 28px 0 20px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(115deg, var(--sidebar), var(--surface)); }
+.account-avatar { display: grid; place-items: center; flex: 0 0 64px; height: 64px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); font: 550 28px var(--font-display); }
+.account-identity { min-width: 0; flex: 1; }
+.account-eyebrow { font-size: 11px; color: var(--muted); }
+.account-identity h4 { margin: 5px 0 6px; font-size: 23px; font-weight: 550; }
+.account-email { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.account-session-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.account-badge, .account-test-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.account-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #469775; }
+.account-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(240px, 1fr); align-items: start; gap: 20px; }
+.account-card { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.account-card h4 { margin: 0; font-size: 14px; font-weight: 550; }
+.account-card-heading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px; }
+.account-card-heading p { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 6px 0 0; }
+.account-section-icon { display: grid; place-items: center; flex: 0 0 30px; height: 30px; border-radius: 9px; background: var(--sidebar); }
+.account-section-icon :deep(svg) { width: 16px; height: 16px; }
+.account-profile-card .author-profile { gap: 18px; }
+.account-profile-card textarea { min-height: 132px; line-height: 1.7; }
+.account-page .profile-field > span { font-size: 12px; }
+.profile-field small { margin-left: 6px; color: var(--muted); font-weight: 400; }
+.account-form-hint { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.account-save-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-top: 2px; }
+.account-save-row small { font-size: 11px; color: var(--muted); }
+.account-side { display: grid; gap: 20px; min-width: 0; }
+.account-publications .button { display: flex; width: 100%; justify-content: space-between; }
+.account-plan-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.account-test-badge { padding: 3px 7px; border-radius: 5px; background: var(--sidebar); }
+.account-plan { display: block; margin: 18px 0 8px; font-size: 22px; font-weight: 550; }
+.account-mock-status { display: block; margin-top: 12px; font-size: 11px; color: var(--muted); line-height: 1.7; }
+.account-billing-details { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 14px; }
+.account-billing-details summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+.account-billing-details summary:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; border-radius: 3px; }
+.account-billing-details[open] summary { margin-bottom: 16px; }
+.account-billing-details small { font-size: 11px; color: var(--muted); line-height: 1.7; }
+.account-test-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.account-preferences { margin-top: 20px; padding: 4px 24px; }
+.account-preferences .setting-row { border-bottom: 0; }
+@media (max-width: 1050px) {
+  .account-grid { grid-template-columns: minmax(0, 1fr); }
+  .account-overview { flex-wrap: wrap; }
+  .account-session-actions { margin-left: 84px; }
+}
+@media (max-width: 640px) {
+  .account-overview, .account-card { padding: 18px; }
+  .account-avatar { flex-basis: 44px; height: 44px; font-size: 22px; border-radius: 14px; }
+  .account-session-actions { margin-left: 64px; }
+}
 .import-drop { border: 1px dashed var(--line); padding: 20px; border-radius: 10px; margin: 20px 0; font-size: 13px; }
 .import-drop p { color: var(--muted); font-size: 12px; }
 .file-choice { position: relative; overflow: hidden; display: inline-flex; cursor: pointer; }
