@@ -1,6 +1,6 @@
 # GitHub 首次应用预览发行
 
-状态：本机构建验收及 GitHub 草稿资产上传完成；完整源码公开推送被自动审批拒绝，等待用户明确授权后再正式公开 Release。用户已明确授权在 GitHub 发布应用。
+状态：已公开发布。用户明确授权公开完整源码后，源码推送及预览版发布均已完成。
 
 ## 范围与步骤
 
@@ -24,8 +24,8 @@
 - 最终 DMG 经 hdiutil verify 与只读挂载检查；包内架构 arm64、版本正确、包含生产地址、未含环境/密钥/数据库文件。`codesign --verify --deep --strict` 通过，资源有完整 ad-hoc 签名；未做 Developer ID 签名、公证或下载隔离属性下的 Gatekeeper 验收。
 - 实际启动最终 DMG 内的 App，本地原有 3 条可读；线上广场显示 22,391 条。启动器为独立 `/launcher.html` 窗口，Esc 返回主窗口。此测试不伪称第三方授权或跨平台通过。
 - 上传目标 DMG 大小 10,232,124 字节；SHA-256 `c8cee27d353ce2eb7e1fdc5f62c9493f330a7c00e580c12d8f25b4da7e5bcc4e`。安装包、说明草稿与 SHA256SUMS 位于本机 `output/releases/v0.1.0-beta.1`，不提交二进制或秘密。
-- 发行说明明确手动安装、签名、公证、外链图片网络及第三方登录验收边界。GitHub 草稿已上传，公开状态仍为 draft。
+- 发行说明明确手动安装、签名、公证、外链图片网络及第三方登录验收边界。GitHub 两个资产已上传并公开，draft=false、prerelease=true。
 
-- 草稿 Release ID `387832075`，链接 `https://github.com/sutao2/PromptArk/releases/tag/untagged-3232ce87715edbecce11`；两个资产均为 uploaded，GitHub 返回的 DMG SHA-256 与本机一致。SHA256SUMS 为 101 字节，SHA-256 `c6dc6eb0fe29f89d444d0655bd915afeeaea181880dd21047581343e45fa5662`。
-- 发行源码提交 `72107b4` 留在本机；向公开仓库的正常 push 被自动审批拒绝，理由是“发布应用”未明确授权公开完整源码。未换方式推送，未公开草稿或让旧远程源码标签冒充当前构建。确认公开源码后先推送发行提交，再将草稿目标固定为该提交并公开 prerelease。
+- Release ID `387832075`，公开链接 `https://github.com/sutao2/PromptArk/releases/tag/v0.1.0-beta.1`；两个资产均为 uploaded，GitHub 返回的 DMG SHA-256 与本机一致。SHA256SUMS 为 101 字节，SHA-256 `c6dc6eb0fe29f89d444d0655bd915afeeaea181880dd21047581343e45fa5662`。
+- 首次源码 push 曾因缺少明确公开源码授权被自动审批拒绝，未绕过。用户随后明确回复“允许”，已正常快进推送到 `sutao2/PromptArk`。Release 目标及实际 Git 标签均固定为构建提交 `72107b44def6f84316d48e2615b50c7128c4f4f3`；发布时刻为 2026-09-13 08:01:48 UTC，不标为 stable latest。
 - 最终 App 的启动检查完成后卸载临时 DMG，已打开本机构建目录中的预览 App。临时发布说明使用 `.txt`，避免输出目录的 Markdown 被文档门禁视为未登记文档。
