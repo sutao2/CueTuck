@@ -26,6 +26,7 @@ jobs:
       PROMPTARK_API_BASE: https://prompt.likh.cn
       VITE_API_BASE: https://prompt.likh.cn
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
     defaults:
       run:
         working-directory: desktop
