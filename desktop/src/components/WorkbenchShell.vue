@@ -309,21 +309,26 @@
                 <template v-if="space === 'square'">
                   <button
                     type="button"
-                    class="card-action card-primary"
+                    class="card-action card-primary card-icon-action"
+                    :title="downloadActionLabel(item.id)"
+                    :aria-label="downloadActionLabel(item.id)"
                     data-testid="download-square"
                     :disabled="downloadBusy.includes(item.id)"
                     @click.stop="downloadSquare(item)"
                   >
-                    {{ downloadBusy.includes(item.id) ? downloadLabel(item.id) : downloadedIds.includes(item.id) ? '打开本地副本' : '下载' }}
+                    <AppIcon :name="downloadBusy.includes(item.id) ? 'refresh' : downloadedIds.includes(item.id) ? 'folder' : 'download'" /><span class="sr-only">{{ downloadActionLabel(item.id) }}</span>
                   </button>
                   <button
                     type="button"
-                    class="card-action"
+                    class="card-action card-icon-action"
+                    :title="favoriteIds.includes(item.id) ? '取消收藏' : '收藏'"
+                    :aria-label="favoriteIds.includes(item.id) ? '取消收藏' : '收藏'"
+                    :aria-pressed="favoriteIds.includes(item.id)"
                     data-testid="favorite-square"
                     :disabled="favoriteBusy.includes(item.id)"
                     @click.stop="favoriteSquare(item)"
                   >
-                    {{ favoriteIds.includes(item.id) ? "已收藏" : "收藏" }}
+                    <AppIcon name="star" /><span class="sr-only">{{ favoriteIds.includes(item.id) ? "已收藏" : "收藏" }}</span>
                   </button>
                 </template>
                 <template v-else-if="item.kind === 'prompt'">
@@ -331,7 +336,7 @@
                   <button v-if="!extractVariables(item.content).length" type="button" class="card-action" :disabled="useBusy" @click.stop="quickCopy(item)">复制</button>
                 </template>
                 <button v-else type="button" class="card-action card-primary" @click.stop="openItem(item)">打开合集</button>
-                <button type="button" class="card-action card-more" data-testid="card-more" :aria-label="`${item.title}的更多操作`" aria-haspopup="menu" @click.stop="openContextMenu($event, item)">···</button>
+                <button type="button" v-if="contextActions(item).length" class="card-action card-more" data-testid="card-more" :aria-label="`${item.title}的更多操作`" aria-haspopup="menu" @click.stop="openContextMenu($event, item)">···</button>
               </div>
             </article>
             </template>
@@ -1276,7 +1281,7 @@ async function openSquareDetail(item) {
   operationNote.value = "";
   try {
     const content = await fetchSquareContent(item.id);
-    if (request === detailRequest) squareDetail.value = { ...item, ...content };
+    if (request === detailRequest) squareDetail.value = { ...squareDetail.value, ...content, download_count: squareDetail.value.download_count, favorite_count: squareDetail.value.favorite_count };
   } catch (error) {
     if (request === detailRequest) squareDetailError.value = `读取详情失败：${error.message || error}`;
   } finally {
@@ -1286,6 +1291,8 @@ async function openSquareDetail(item) {
 
 let downloadsDisposed = false;
 onUnmounted(() => { downloadsDisposed = true; });
+
+function downloadActionLabel(id) { return downloadBusy.value.includes(id) ? downloadLabel(id) : downloadedIds.value.includes(id) ? '打开本地副本' : '下载'; }
 
 async function downloadSquare(item) {
   if (downloadBusy.value.includes(item.id)) return;
@@ -1337,8 +1344,11 @@ async function favoriteSquare(item) {
     favoriteIds.value = removing
       ? favoriteIds.value.filter((id) => id !== item.id)
       : [...favoriteIds.value, item.id];
-    squareItems.value = squareItems.value.map(row => row.id === item.id ? { ...row, is_favorite: !removing } : row);
+    const patch = row => ({ ...row, is_favorite: !removing, favorite_count: result.queued ? row.favorite_count : Math.max(0, (Number(row.favorite_count) || 0) + (removing ? -1 : 1)) });
+    squareItems.value = squareItems.value.map(row => row.id === item.id ? patch(row) : row);
+    if (squareDetail.value?.id === item.id) squareDetail.value = patch(squareDetail.value);
     operationNote.value = result.queued ? "已保存到本机队列，尚未送达服务器。" : (removing ? "已取消收藏。" : "已收藏。");
+    notifyOperation(operationNote.value, !result.queued);
     if (removing && sortTab.value === "收藏" && squareItems.value.some(row => row.id === item.id)) {
       // A deletion shifts subsequent SQL offsets; invalidate any in-flight continuation.
       cancelSquare(); ++squareRequest; squareController = new AbortController(); squareMoreLoading.value = false;
@@ -1348,6 +1358,7 @@ async function favoriteSquare(item) {
     }
   } catch (error) {
     operationNote.value = `收藏操作失败：${error.message || error}`;
+    notifyOperation(operationNote.value, false);
   } finally { favoriteBusy.value = favoriteBusy.value.filter((id) => id !== item.id); }
 }
 
@@ -1629,6 +1640,7 @@ function onMenuKeydown(event) {
   buttons[next].focus();
 }
 function openContextMenu(event, item) {
+  if (!contextActions(item).length) return;
   const rect = event.currentTarget?.getBoundingClientRect();
   menuReturnFocus = event.currentTarget?.matches?.('button') ? event.currentTarget : event.currentTarget?.querySelector?.('.prompt-title');
   contextMenu.value = { x: Math.max(8, Math.min(event.clientX || rect?.left || 8, window.innerWidth - 190)), y: Math.max(8, Math.min(event.clientY || rect?.bottom || 8, window.innerHeight - 300)), item };
@@ -1638,18 +1650,16 @@ function openContextMenu(event, item) {
 function contextActions(item) {
   if (space.value === "square") {
     return [
-      { id: "download", label: downloadedIds.value.includes(item.id) ? '打开本地副本' : downloadBusy.value.includes(item.id) ? '下载中…' : t("download"), disabled: downloadBusy.value.includes(item.id) },
-      { id: "favorite", label: favoriteIds.value.includes(item.id) ? t("unfavorite") : t("favorite") },
+      { id: "details", label: '查看详情' },
+      ...(downloadedIds.value.includes(item.id) && referenceImages(item).length ? [{ id: 'complete-images', label: '补全参考图', disabled: downloadBusy.value.includes(item.id) }] : []),
     ];
   }
   if (item.kind === "collection") {
-    return [{ id: "open", label: t("open") }];
+    return [];
   }
   return [
     { id: "edit", label: t("edit") },
-    ...(!extractVariables(item.content).length ? [{ id: 'copy', label: '直接复制' }] : []),
     { id: 'duplicate', label: '复制副本' },
-    { id: "use", label: t("use") },
     {
       id: "favorite",
       label: localFavoriteIds.value.includes(item.id) ? t("unfavorite") : t("favorite"),
@@ -1662,6 +1672,8 @@ async function runContextAction(action) {
   const item = contextMenu.value?.item;
   closeContextMenu();
   if (!item) return;
+  if (action === 'details') { await openSquareDetail(item); return; }
+  if (action === 'complete-images') { await completeImages(item); return; }
   if (action === "edit" || action === "open") {
     if (action === "edit") editing.value = item; else openItem(item);
     return;
@@ -1685,7 +1697,10 @@ async function runContextAction(action) {
       await favoriteSquare(item);
       return;
     }
-    localFavoriteIds.value = await toggleLocalFavorite(item.id);
+    try {
+      localFavoriteIds.value = await toggleLocalFavorite(item.id);
+      notifyOperation(localFavoriteIds.value.includes(item.id) ? `「${item.title}」已收藏。` : `「${item.title}」已取消收藏。`, true);
+    } catch (error) { notifyOperation(`收藏失败：${error.message || error}`, false); }
   }
 }
 

@@ -275,3 +275,7 @@ offline/trashed 条目 MUST 从所有公开读取路径排除，已知 ID 详情
 | 浏览排序与模型筛选 | `backend` `sorts_recommended_latest_and_hot_apart`；`backend` `record_anonymous_download_increments_count_without_auth`；`backend` `anonymous_download_count_survives_new_appstate_on_postgres`；`square.test.js` forwards the selected model to the square transport；`WorkbenchShell.spec.js` filters square items by the selected model |
 | 已登录收藏排序 | `backend` `favorites_sort_requires_login` |
 | 进程重启后列表仍在 | `backend` `publication_favorite_and_settings_survive_postgres` |
+
+### Requirement: 原地操作反馈
+
+广场下载/收藏 MUST 使用带可访问名称和悬浮文字的图标；更多与右键是同一补充菜单，仅提供详情、已下载参考图补全，不重复主操作。行视图 MUST 显示可用参考图缩略图。成功下载沿用服务端确认计数；收藏请求成功后按已确认关系变化原地更新卡片和详情，离线排队不增加公开数量，不重载广场列表。完整场景见[交互计划](../../plans/2026-09-13-interactions-launcher-ai.md)。

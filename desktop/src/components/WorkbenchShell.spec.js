@@ -930,7 +930,7 @@ describe("WorkbenchShell", () => {
   });
 
   it("favorites a square item while logged in without writing a local copy", async () => {
-    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
+    setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt", favorite_count: 7 }]);
     setSessionTransport(async () => ({
       access_token: "acc.1",
       refresh_token: "ref.1",
@@ -946,10 +946,19 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell);
     await w.get('[data-space="square"]').trigger("click");
     await flushPromises();
+    const card = w.get('.prompt-card');
+    expect(card.get('[data-testid="download-square"]').attributes('title')).toBe('下载');
+    await card.get('[data-testid="card-more"]').trigger('click');
+    expect(w.get('[data-testid="context-menu"]').text()).not.toMatch(/下载|收藏/);
+    await w.get('[data-action="details"]').trigger('click'); await flushPromises();
     await w.get('[data-testid="favorite-square"]').trigger("click");
     await flushPromises();
     expect(favoriteCalls.some((call) => call.method === "PUT" && call.id === "sq-1")).toBe(true);
     expect(w.find('[data-testid="login-reason"]').exists()).toBe(false);
+    expect(card.get('[data-testid="square-card-metrics"]').text()).toContain('8');
+    expect(w.findComponent({ name: 'SquareDetailModal' }).props('item').favorite_count).toBe(8);
+    await w.get('[data-testid="favorite-square"]').trigger('click'); await flushPromises();
+    expect(card.get('[data-testid="square-card-metrics"]').text()).toContain('7');
     expect(await listLocalPrompts({ query: "" })).toHaveLength(0);
   });
 
@@ -1802,6 +1811,7 @@ describe("WorkbenchShell", () => {
     await card.trigger("contextmenu", { clientX: 20, clientY: 20 });
     await w.get('[data-testid="context-menu"] [data-action="favorite"]').trigger("click");
     await flushPromises();
+    expect(w.get('.download-notice').text()).toContain("已收藏");
     await w.get('[data-sort="收藏"]').trigger("click");
     await flushPromises();
     expect(w.get('[data-testid="library-view"]').text()).toContain("星标条目");
@@ -1815,7 +1825,8 @@ describe("WorkbenchShell", () => {
     await w.get(".prompt-card").trigger("contextmenu", { clientX: 40, clientY: 80 });
     const menu = w.get('[data-testid="context-menu"]');
     expect(menu.text()).toContain("编辑");
-    expect(menu.text()).toContain("使用");
+    expect(menu.text()).not.toContain("使用");
+    expect(menu.find('[data-action="copy"]').exists()).toBe(false);
     expect(menu.text()).toContain("收藏");
     expect(menu.text()).toContain("删除");
     expect(menu.text()).not.toContain("举报");

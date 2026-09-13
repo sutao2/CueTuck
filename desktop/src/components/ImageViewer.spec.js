@@ -25,3 +25,9 @@ it('reports load failure and disables zoom without loading documents',async()=>{
   w=mount(ImageViewer,{props:{src:'https://cms-assets.youmind.com/missing.png'}});document.querySelector('.image-viewer img').dispatchEvent(new Event('error'));await nextTick();
   expect(document.querySelector('[role="alert"]').textContent).toContain('无法加载');expect(document.querySelector('[aria-label="放大图片"]').disabled).toBe(true);
 });
+
+it('closes from the backdrop while image clicks stay in the dialog', async () => {
+  w=mount(ImageViewer,{props:{src:'data:image/png;base64,AA=='}});
+  document.querySelector('.image-viewer img').click(); await nextTick(); expect(w.emitted('close')).toBeUndefined();
+  document.querySelector('.image-backdrop').click(); await nextTick(); expect(w.emitted('close')).toHaveLength(1);
+});

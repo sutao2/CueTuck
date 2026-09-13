@@ -7,6 +7,7 @@
 <script setup>
 defineProps({ name: { type: String, default: "library" } });
 const paths = {
+  star: "m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z",
   logout: "M9 5H4v14h5M9 12h12M17 8l4 4-4 4",
   file: "M5 3h9l5 5v13H5zM14 3v6h5M8 13h8M8 17h6",
   image: "M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM3 17l6-6 4 4 3-3 5 5M8 7h.01",
