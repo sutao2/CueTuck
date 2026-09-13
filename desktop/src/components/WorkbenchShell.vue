@@ -314,7 +314,7 @@
                     :disabled="downloadBusy.includes(item.id)"
                     @click.stop="downloadSquare(item)"
                   >
-                    {{ downloadBusy.includes(item.id) ? '下载中…' : downloadedIds.includes(item.id) ? '打开本地副本' : '下载' }}
+                    {{ downloadBusy.includes(item.id) ? downloadLabel(item.id) : downloadedIds.includes(item.id) ? '打开本地副本' : '下载' }}
                   </button>
                   <button
                     type="button"
@@ -439,6 +439,7 @@
       :error="squareDetailError"
       :note="operationNote"
       :downloading="downloadBusy.includes(squareDetail.id)"
+      :download-progress="downloadProgress[squareDetail.id] || ''"
       :downloaded="downloadedIds.includes(squareDetail.id)"
       :favorite="favoriteIds.includes(squareDetail.id)"
       :favorite-busy="favoriteBusy.includes(squareDetail.id)"
@@ -1207,6 +1208,16 @@ const squareDetail = ref(null);
 const squareDetailLoading = ref(false);
 const squareDetailError = ref("");
 const downloadBusy = ref([]);
+const downloadProgress = ref({});
+function downloadLabel(id) { return downloadProgress.value[id] || '下载中…'; }
+function updateDownloadProgress(id, progress) {
+  if (downloadsDisposed || !downloadBusy.value.includes(id)) return;
+  downloadProgress.value = { ...downloadProgress.value, [id]: progress.stage === 'saving'
+    ? '正在保存…' : `参考图 ${progress.completed} / ${progress.total}` };
+}
+function clearDownloadProgress(id) {
+  const next = { ...downloadProgress.value }; delete next[id]; downloadProgress.value = next;
+}
 const downloadedIds = ref([]);
 const operationNotice = ref(null);
 const operationRefreshBusy = ref(false);
@@ -1288,14 +1299,14 @@ async function downloadSquare(item) {
       if (downloadsDisposed) return;
       squareItems.value = squareItems.value.map(row => row.id === item.id ? { ...row, download_count: count } : row);
       if (squareDetail.value?.id === item.id) squareDetail.value = { ...squareDetail.value, download_count: count };
-    });
+    }, progress => updateDownloadProgress(item.id, progress));
     downloadedIds.value = [...new Set([...downloadedIds.value, item.id])];
     operationNote.value = `「${item.title}」已下载到本地。`;
     notifyOperation(operationNote.value, true);
   } catch (error) {
     operationNote.value = `下载失败：${error.message || error}`;
     notifyOperation(operationNote.value, false);
-  } finally { downloadBusy.value = downloadBusy.value.filter((id) => id !== item.id); }
+  } finally { downloadBusy.value = downloadBusy.value.filter((id) => id !== item.id); clearDownloadProgress(item.id); }
   // Saving succeeded independently of refreshing the visible local list.
   try { await refreshDownloaded(); await reloadPrompts(); } catch { /* Retain confirmed download state. */ }
 }
@@ -1304,10 +1315,10 @@ async function completeImages(item) {
   if(downloadBusy.value.includes(item.id)) return;
   downloadBusy.value=[...downloadBusy.value,item.id];
   try {
-    await completeSquareImages(item.id);
+    await completeSquareImages(item.id, progress => updateDownloadProgress(item.id, progress));
     notifyOperation(`「${item.title}」参考图已补全，正文和已有附件保持不变。`,true);
   } catch(error) { notifyOperation(`补图失败：${error.message || error}`,false); }
-  finally { downloadBusy.value=downloadBusy.value.filter(id=>id!==item.id); }
+  finally { downloadBusy.value=downloadBusy.value.filter(id=>id!==item.id); clearDownloadProgress(item.id); }
   try { await refreshDownloaded(); await reloadPrompts(); } catch { /* Saved images remain available after refresh. */ }
 }
 

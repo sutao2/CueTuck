@@ -8,9 +8,9 @@
           <div class="detail-meta"><span>{{ item.kind === 'collection' ? '提示词合集' : '提示词' }}</span><span v-if="item.model">{{ item.model }}</span><span v-if="item.author">{{ item.author }}</span></div>
         </div>
         <div class="detail-actions">
-          <button v-if="downloaded && sourceImages.length && item.kind !== 'collection'" type="button" class="button ghost-button" :disabled="loading || Boolean(error) || downloading" data-testid="complete-square-images" @click="$emit('complete-images')">{{ downloading ? '正在补图…' : '补全参考图' }}</button>
+          <button v-if="downloaded && sourceImages.length && item.kind !== 'collection'" type="button" class="button ghost-button" :disabled="loading || Boolean(error) || downloading" data-testid="complete-square-images" @click="$emit('complete-images')">{{ downloading ? (downloadProgress || '正在补图…') : '补全参考图' }}</button>
           <button type="button" class="button ghost-button" :disabled="favoriteBusy" @click="$emit('favorite')">{{ favorite ? '已收藏' : '收藏' }}</button>
-          <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (!downloaded && item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? '正在下载…' : downloaded ? '打开本地副本' : '下载到本地' }}</button>
+          <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (!downloaded && item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? (downloadProgress || '正在下载…') : downloaded ? '打开本地副本' : '下载到本地' }}</button>
         </div>
       </header>
       <div class="detail-content">
@@ -71,6 +71,7 @@ const props = defineProps({
   error: { type: String, default: '' },
   note: { type: String, default: '' },
   downloading: Boolean,
+  downloadProgress: { type: String, default: '' },
   downloaded: Boolean,
   favorite: Boolean,
   favoriteBusy: Boolean,
