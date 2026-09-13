@@ -948,3 +948,6 @@ body[data-density="compact"] .app-shell .collection-card-preview { margin: -12px
 
 .nav-group-label { margin: 8px 20px 6px; color: var(--muted); font-size: 10px; font-weight: 550; letter-spacing: .5px; }
 .sidebar .space-switch { margin-bottom: 10px; }
+
+.skills-category-scope { padding: 0 9px 8px; margin: 0; color: var(--faint); font-size: 10px; line-height: 1.5; }
+.skills-category-tree .tree-row:disabled { opacity: .55; cursor: wait; }

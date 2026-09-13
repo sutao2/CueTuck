@@ -9,54 +9,67 @@
   },
   {
     "value": "vercel-labs/agent-skills",
-    "label": "Vercel · React 与网页设计 · vercel-labs/agent-skills"
+    "label": "Vercel · React 与网页设计 · vercel-labs/agent-skills",
+    "category": "development"
   },
   {
     "value": "badlogic/pi-skills",
-    "label": "Pi · 搜索与日常工具 · badlogic/pi-skills"
+    "label": "Pi · 搜索与日常工具 · badlogic/pi-skills",
+    "category": "tools"
   },
   {
     "value": "huggingface/skills",
-    "label": "Hugging Face · AI 模型与数据集 · huggingface/skills"
+    "label": "Hugging Face · AI 模型与数据集 · huggingface/skills",
+    "category": "ai"
   },
   {
     "value": "MicrosoftDocs/Agent-Skills",
-    "label": "Microsoft · Azure 与云服务 · MicrosoftDocs/Agent-Skills"
+    "label": "Microsoft · Azure 与云服务 · MicrosoftDocs/Agent-Skills",
+    "category": "cloud"
   },
   {
     "value": "cloudflare/skills",
-    "label": "Cloudflare · Workers 与云应用 · cloudflare/skills"
+    "label": "Cloudflare · Workers 与云应用 · cloudflare/skills",
+    "category": "cloud"
   },
   {
     "value": "trailofbits/skills",
-    "label": "Trail of Bits · 安全审计与测试 · trailofbits/skills"
+    "label": "Trail of Bits · 安全审计与测试 · trailofbits/skills",
+    "category": "security"
   },
   {
     "value": "supabase/agent-skills",
-    "label": "Supabase · PostgreSQL 数据库 · supabase/agent-skills"
+    "label": "Supabase · PostgreSQL 数据库 · supabase/agent-skills",
+    "category": "development"
   },
   {
     "value": "getsentry/skills",
-    "label": "Sentry · 代码审查与开发流程 · getsentry/skills"
+    "label": "Sentry · 代码审查与开发流程 · getsentry/skills",
+    "category": "development"
   },
   {
     "value": "remotion-dev/skills",
-    "label": "Remotion · 视频制作 · remotion-dev/skills"
+    "label": "Remotion · 视频制作 · remotion-dev/skills",
+    "category": "design"
   },
   {
     "value": "expo/skills",
-    "label": "Expo · 移动应用开发 · expo/skills"
+    "label": "Expo · 移动应用开发 · expo/skills",
+    "category": "development"
   },
   {
     "value": "obra/superpowers",
-    "label": "Superpowers · 规划、调试与测试 · obra/superpowers"
+    "label": "Superpowers · 规划、调试与测试 · obra/superpowers",
+    "category": "development"
   },
   {
     "value": "coreyhaines31/marketingskills",
-    "label": "Marketing Skills · 营销、文案与 SEO · coreyhaines31/marketingskills"
+    "label": "Marketing Skills · 营销、文案与 SEO · coreyhaines31/marketingskills",
+    "category": "marketing"
   },
   {
     "value": "K-Dense-AI/claude-scientific-skills",
-    "label": "K-Dense · 科研与数据分析 · K-Dense-AI/claude-scientific-skills"
+    "label": "K-Dense · 科研与数据分析 · K-Dense-AI/claude-scientific-skills",
+    "category": "science"
   }
 ]

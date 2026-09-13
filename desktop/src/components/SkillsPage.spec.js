@@ -71,3 +71,34 @@ it('searches expanded sources by purpose, preserves custom sources and loads the
   await w.get('[aria-label="选择 Skill 来源"]').trigger('click');
   expect(document.querySelector('.select-results').textContent).toContain('my-team/custom-skills');
 });
+
+it('combines local category and search while counting logical Skills independently of filters',async()=>{
+  const pdf={...skill('pdf','/isolated/alpha/pdf'),name:'pdf',source:{repo:'owner/skills',directory:'pdf'}};
+  snapshot.skills=[pdf,{...pdf,key:'copy',path:'/isolated/beta/pdf',physical_path:'/isolated/beta/pdf',root_id:'beta'},{...skill('code','/isolated/alpha/code'),name:'code-review'}];
+  await mountPage({category:'office'});
+  expect(w.findAll('.skills-list-row')).toHaveLength(1);
+  const summary=w.emitted('categories').at(-1)[0];
+  expect(summary.counts['']).toBe(2);expect(summary.counts.office).toBe(1);expect(summary.ready).toBe(true);
+  await w.get('[aria-label="搜索本机 Skills"]').setValue('code');expect(w.findAll('.skills-list-row')).toHaveLength(0);
+  expect(w.emitted('categories').at(-1)[0].counts['']).toBe(2);
+  await w.setProps({category:'development'});await flushPromises();expect(w.findAll('.skills-list-row')).toHaveLength(1);
+});
+it('counts the whole current repository while filtering category and resets pagination on category changes',async()=>{
+  const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='catalog'?{repo:'custom/repo',reference:'main',commit:'b'.repeat(40),entries:[...Array.from({length:51},(_,i)=>({name:`code-review-${i}`,directory:`skills/code-review-${i}`,loaded:true})),{name:'pdf',directory:'skills/pdf',loaded:true}]}:base(r));
+  await mountPage({mode:'square'});await click('下一页');expect(w.text()).toContain('2 / 2');
+  await w.setProps({category:'office'});await flushPromises();expect(w.findAll('.skills-list-row')).toHaveLength(1);expect(w.get('.skills-list-row').text()).toContain('pdf');
+  const summary=w.emitted('categories').at(-1)[0];expect(summary.scope).toBe('custom/repo');expect(summary.counts['']).toBe(52);expect(summary.counts.office).toBe(1);
+  await w.get('.skills-list-row').trigger('click');await flushPromises();await w.get('.skills-back').trigger('click');await flushPromises();expect(w.findAll('.skills-list-row')).toHaveLength(1);
+});
+it('keeps independent sidebar category choices and blocks them during installation confirmation',async()=>{
+  library.resetMemoryLibrary();resetMemorySession();resetSquare();setCatalogTransport(async()=>({categories:[],models:[]}));setSquareTransport(async()=>[]);
+  w=mount(WorkbenchShell,{attachTo:document.body});await flushPromises();
+  await w.get('[data-space="skills-local"]').trigger('click');await flushPromises();
+  await w.get('[data-skill-category="office"]').trigger('click');await flushPromises();
+  await w.get('[data-space="skills-square"]').trigger('click');await flushPromises();expect(w.get('[data-skill-category="all"]').attributes('aria-pressed')).toBe('true');
+  await w.get('[data-skill-category="ai"]').trigger('click');await flushPromises();
+  await w.get('[data-space="skills-local"]').trigger('click');await flushPromises();expect(w.get('[data-skill-category="office"]').attributes('aria-pressed')).toBe('true');
+  await click('从文件夹安装');await click('安装到…');expect(w.get('[data-skill-category="all"]').attributes('disabled')).toBeDefined();
+  await click('取消',w.get('[role="dialog"]'));await w.get('.skills-back').trigger('click');await flushPromises();
+  await w.get('[data-space="local"]').trigger('click');await flushPromises();expect(w.get('[aria-label="提示词分类"]').isVisible()).toBe(true);expect(w.get('[aria-label="Skill 分类"]').isVisible()).toBe(false);
+});
