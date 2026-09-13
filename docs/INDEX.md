@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-13-visual-hierarchy.md](plans/2026-09-13-visual-hierarchy.md) | 目标 | 优化页面设计 | 浏览面层级已实现，481 项回归通过；紧凑编辑器与最终截图待验 |
 | [plans/2026-09-12-thumbnail-cache.md](plans/2026-09-12-thumbnail-cache.md) | 验收 | 大图列表与长文滚动 | 缩略图缓存/摘要、480 项全量加 1 项补验、85 项原生及浏览器构建通过 |
 | [plans/2026-09-12-scroll-smoothness.md](plans/2026-09-12-scroll-smoothness.md) | 验收 | 滚动掉帧 | 重复渲染/样式读取消除，474 项前端与构建通过；原生重启复验待完成 |
 | [plans/2026-09-12-workbench-continuity.md](plans/2026-09-12-workbench-continuity.md) | 验收 | 优化跨页整理与预览修改 | 471 项前端、跨页浏览器补验与 macOS 构建通过 |

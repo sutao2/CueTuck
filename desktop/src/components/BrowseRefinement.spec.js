@@ -12,7 +12,7 @@ it('does not invent square tab counts and uses the selected sort title', async (
   await shell(); await w.get('[data-space="square"]').trigger('click'); await flushPromises();
   expect(w.findAll('.filter-tabs small')).toHaveLength(0);
   await w.get('[data-sort="最新"]').trigger('click'); await flushPromises();
-  expect(w.get('.section-heading-row h2').text()).toBe('最新发布');
+  expect(w.get('[data-testid=results-heading]').text()).toBe('最新发布');
 });
 it('keeps loading until the latest request settles and shows only one retryable error', async () => {
   const pending = []; setSquareTransport(() => new Promise((resolve, reject) => pending.push({resolve, reject})));
@@ -47,7 +47,7 @@ it('offers a collection open action and a recovery action for empty searches', a
   await createLocalCollection({ title:'资料合集' }); await shell();
   expect(w.get('.card-footer button').text()).toBe('打开合集');
   await w.get('input[type="search"]').setValue('not-found'); await flushPromises();
-  expect(w.get('.section-heading-row h2').text()).toBe('搜索结果');
+  expect(w.get('[data-testid=results-heading]').text()).toBe('搜索结果');
   expect(w.get('.empty-state button').text()).toBe('清除筛选');
   await w.get('.empty-state button').trigger('click'); await flushPromises();
   expect(w.get('.prompt-card').text()).toContain('资料合集');
