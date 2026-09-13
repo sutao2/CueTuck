@@ -22,7 +22,7 @@
 
 TLS 证书含两个域名，ACME 数据在 `/opt/promptark/letsencrypt`，宿主证书目录通过符号链接读取。`promptark-cert-renew.timer` 每天两次运行 `production/renew-cert.sh`，成功后校验并 reload Nginx；用 `systemctl status promptark-cert-renew.timer` 和 `journalctl -u promptark-cert-renew.service` 检查。自动续期的容器必须继续挂载 `/www/wwwroot/promptark-acme`，不能清理此验证目录。
 
-此实例以空业务库上线，不自动迁移本机账号、会话、广场内容或第三方密钥。Google/GitHub、SMTP 和 AI 服务需要在管理端配置并分别验证；OAuth 提供商还需登记正式 API 回调 `https://prompt.likh.cn/v1/session/oauth/callback`。支付保持 mock。备份须同时覆盖数据库、对象、固定加密密钥及秘密部署配置，详见[恢复说明](../docs/how-to/backend-recovery.md)。
+此实例首次以空业务库上线，后按用户指定范围完成广场、图片引用、站点、Google/GitHub 和 SMTP 配置迁移，核验与图片网络边界见[数据同步记录](../docs/plans/2026-09-13-production-data-sync.md)。线上 owner 和加密密钥保留，本机账号、会话、收藏、历史邮件队列不迁移。OAuth 提供商还需登记正式 API 回调 `https://prompt.likh.cn/v1/session/oauth/callback` 并验证真实授权；SMTP 未做实发测试，AI 服务未在本次配置。支付保持 mock。备份须同时覆盖数据库、对象、固定加密密钥及秘密部署配置，详见[恢复说明](../docs/how-to/backend-recovery.md)。
 
 ## 无外部凭据的集中验收
 
