@@ -70,6 +70,25 @@
 - WHEN 调用 `search_prompts`
 - THEN 返回错误且不含假条目
 
+### Requirement: 请求隔离与取消
+
+stdio MUST 独立处理控制请求、本地工具和广场工具；慢广场请求 MUST NOT 阻塞 ping 或本地查询。两个工具工作队列各最多等待 32 条，超出返回繁忙错误；不创建无限线程。响应可按完成顺序返回，宿主按 id 关联。单行消息最多 1 MiB，超过后返回解析错误并继续读取下一行。
+
+系统 MUST 处理 `notifications/cancelled`：按 requestId 标记工具请求，排队任务不执行，执行中的本地 SQL 通过进度回调停止，已取消结果不再发送；通知本身无响应，未知/已完成请求忽略，不取消 initialize。已发出的阻塞 HTTP 仍按 8 秒超时结束，不承诺即刻断开。stdin EOF 后处理已接收的未取消请求并退出。
+
+#### Scenario: 慢请求与取消
+
+- GIVEN 广场请求未完成
+- WHEN 本地搜索、ping 和取消通知到达
+- THEN 本地和 ping 独立返回，取消的响应不再发送，排队取消的远端工具不发 HTTP
+- AND 后续请求仍可执行，广场原有超时保持有效
+
+#### Scenario: 请求有界
+
+- GIVEN 工作队列已满或输入超过单行限制
+- WHEN 新请求到达
+- THEN 返回明确错误，后续正常控制请求仍可响应
+
 ### Requirement: 读取与渲染
 
 `get_prompt` MUST 返回标题与正文。`render_prompt` MUST 使用与桌面相同的 `{{名称}}` 规则；未填 MUST 保留 `{{名称}}`。
@@ -96,6 +115,7 @@
 |---|---|
 | 多词排序与筛选分页、索引刷新 | `mcp/tests/search.rs` 中文/字面/分页/WAL/替换/参数/取消测试 |
 | 有界搜索且不写库 | `connection_is_read_only_and_search_is_bounded_and_literal`、`rejects_bad_arguments_without_searching_all_prompts` |
+| 慢请求与取消、请求有界 | `slow_remote_does_not_block_local_or_ping_and_cancelled_calls_are_suppressed`、`full_queue_rejects_excess_work_without_blocking_control`、`oversized_line_is_discarded_and_next_message_is_read`；`search::interruption_tests` SQL 中断/期限 |
 | 宿主保持连接 | `mcp/tests/stdio.rs` 真实进程初始化/查询/读取/渲染/解析错误/软删除/缺库验证 |
 | 列出工具 | `mcp` `lists_required_tools` |
 | 按标题命中 | `mcp` `search_hits_title` |

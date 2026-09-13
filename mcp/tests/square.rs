@@ -41,9 +41,11 @@ fn run(base: &str, enabled: bool, requests: Vec<Value>) -> Vec<Value> {
     command.env("PROMPTARK_LIBRARY_DIR",dir.path()).env("PROMPTARK_MCP_API_BASE",base).env_remove("PROMPTARK_MCP_SQUARE");
     if enabled { command.env("PROMPTARK_MCP_SQUARE","1"); }
     let mut child = command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
-    let mut stdin = child.stdin.take().unwrap(); for request in requests { writeln!(stdin,"{request}").unwrap(); } drop(stdin);
+    let mut stdin = child.stdin.take().unwrap(); for request in &requests { writeln!(stdin,"{request}").unwrap(); } drop(stdin);
     let output = child.wait_with_output().unwrap(); assert!(output.status.success(),"{}",String::from_utf8_lossy(&output.stderr));
-    String::from_utf8(output.stdout).unwrap().lines().map(|s|serde_json::from_str(s).unwrap()).collect()
+    let mut responses: Vec<Value> = String::from_utf8(output.stdout).unwrap().lines().map(|s|serde_json::from_str(s).unwrap()).collect();
+    responses.sort_by_key(|r| requests.iter().position(|q| q["id"] == r["id"]).expect("unexpected response id"));
+    responses
 }
 fn data(result: &Value) -> Value { serde_json::from_str(result["result"]["content"][0]["text"].as_str().unwrap()).unwrap() }
 
@@ -92,4 +94,73 @@ fn invalid_origins_are_rejected_before_startup() {
     for origin in ["http://example.com","https://user:secret@example.com","https://example.com/path","https://example.com?token=x","https://example.com#x","file:///tmp/x"] {
         assert!(promptark_mcp::square::Square::new(origin).is_err());
     }
+}
+
+struct LiveClient {
+    child: std::process::Child,
+    replies: std::sync::mpsc::Receiver<Value>,
+    reader: Option<thread::JoinHandle<()>>,
+}
+impl LiveClient {
+    fn start(dir: &std::path::Path, base: &str) -> Self {
+        use std::io::BufRead;
+        let mut child = Command::new(env!("CARGO_BIN_EXE_promptark-mcp"))
+            .env("PROMPTARK_LIBRARY_DIR", dir).env("PROMPTARK_MCP_API_BASE",base).env("PROMPTARK_MCP_SQUARE","1")
+            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+        let stdout = child.stdout.take().unwrap(); let (send,replies)=std::sync::mpsc::channel();
+        let reader = thread::spawn(move || {
+            for line in std::io::BufReader::new(stdout).lines() {
+                let Ok(line)=line else {break};
+                if send.send(serde_json::from_str(&line).unwrap()).is_err() {break;}
+            }
+        });
+        Self {child,replies,reader:Some(reader)}
+    }
+    fn send(&mut self, request: Value) { writeln!(self.child.stdin.as_mut().unwrap(),"{request}").unwrap(); }
+    fn next(&self) -> Value { self.replies.recv_timeout(Duration::from_secs(2)).expect("response blocked by slow HTTP") }
+    fn finish(&mut self) -> Vec<Value> {
+        drop(self.child.stdin.take()); assert!(self.child.wait().unwrap().success());
+        self.reader.take().unwrap().join().unwrap(); self.replies.try_iter().collect()
+    }
+}
+impl Drop for LiveClient {
+    fn drop(&mut self) { let _=self.child.kill(); let _=self.child.wait(); }
+}
+fn wait_for_http(server: &Server) {
+    let deadline=Instant::now()+Duration::from_secs(3);
+    while server.requests.lock().unwrap().is_empty() {
+        assert!(Instant::now()<deadline,"HTTP did not start"); thread::sleep(Duration::from_millis(5));
+    }
+}
+#[test]
+fn slow_remote_does_not_block_local_or_ping_and_cancelled_calls_are_suppressed() {
+    let mut delayed=response(200,json!({"categories":[],"models":[]})); delayed.1=Duration::from_secs(3);
+    let server=Server::start(vec![delayed]); let dir=tempdir().unwrap();
+    let db=rusqlite::Connection::open(dir.path().join("promptark.sqlite")).unwrap();
+    db.execute_batch("CREATE TABLE prompts(id TEXT,title TEXT,summary TEXT,content TEXT,deleted_at TEXT); INSERT INTO prompts VALUES('local','中文写作',NULL,'数据',NULL);").unwrap();
+    let mut client=LiveClient::start(dir.path(),&server.url);
+    client.send(call(1,"list_square_catalog",json!({}))); wait_for_http(&server);
+    client.send(call(2,"list_square_catalog",json!({})));
+    for id in [1,2,999] { client.send(json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":id}})); }
+    // String "2" must not collide with the cancelled numeric id 2.
+    client.send(json!({"jsonrpc":"2.0","id":"2","method":"tools/call","params":{"name":"search_prompts","arguments":{"query":"写作"}}}));
+    client.send(json!({"jsonrpc":"2.0","id":3,"method":"ping"}));
+    let a=client.next(); let b=client.next();
+    assert!(a["id"]==3 || b["id"]==3);
+    let local=if a["id"]=="2" {a} else {b};
+    assert_eq!(local["result"]["structuredContent"]["items"][0]["id"],"local");
+    assert!(client.finish().is_empty(),"cancelled calls must not return results");
+    assert_eq!(server.requests.lock().unwrap().len(),1,"queued cancellation must not issue HTTP");
+}
+#[test]
+fn full_queue_rejects_excess_work_without_blocking_control() {
+    let mut delayed=response(200,json!({"categories":[],"models":[]})); delayed.1=Duration::from_secs(3);
+    let server=Server::start(vec![delayed]); let dir=tempdir().unwrap(); let mut client=LiveClient::start(dir.path(),&server.url);
+    client.send(call(1,"list_square_catalog",json!({}))); wait_for_http(&server);
+    for id in 2..=33 { client.send(call(id,"list_square_catalog",json!({}))); }
+    client.send(call(34,"list_square_catalog",json!({})));
+    let busy=client.next(); assert_eq!(busy["id"],34); assert_eq!(busy["error"]["code"],-32000);
+    for id in 1..=33 { client.send(json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":id}})); }
+    client.send(json!({"jsonrpc":"2.0","id":35,"method":"ping"})); assert_eq!(client.next()["id"],35);
+    assert!(client.finish().is_empty()); assert_eq!(server.requests.lock().unwrap().len(),1);
 }

@@ -5,7 +5,7 @@ use tempfile::tempdir;
 
 fn run(dir: &std::path::Path, requests: &[String]) -> Vec<Value> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_promptark-mcp"))
-        .env("PROMPTARK_LIBRARY_DIR", dir)
+        .env("PROMPTARK_LIBRARY_DIR", dir).env("PROMPTARK_MCP_SQUARE", "0")
         .current_dir(std::env::temp_dir())
         .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
     let mut stdin = child.stdin.take().unwrap();
@@ -13,7 +13,12 @@ fn run(dir: &std::path::Path, requests: &[String]) -> Vec<Value> {
     drop(stdin);
     let output = child.wait_with_output().unwrap();
     assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
-    String::from_utf8(output.stdout).unwrap().lines().map(|line| serde_json::from_str(line).unwrap()).collect()
+    let ids: Vec<Value> = requests.iter().filter_map(|q| match serde_json::from_str::<Value>(q) {
+        Ok(q) => q.get("id").cloned(), Err(_) => Some(Value::Null),
+    }).collect();
+    let mut responses: Vec<Value> = String::from_utf8(output.stdout).unwrap().lines().map(|line| serde_json::from_str(line).unwrap()).collect();
+    responses.sort_by_key(|r| ids.iter().position(|id| *id == r["id"]).expect("unexpected response id"));
+    responses
 }
 
 fn call(id: u32, name: &str, arguments: Value) -> String {
@@ -71,4 +76,11 @@ fn missing_configuration_exits_with_stderr_only() {
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
     assert!(String::from_utf8_lossy(&output.stderr).contains("PROMPTARK_LIBRARY_DIR"));
+}
+
+#[test]
+fn oversized_line_is_discarded_and_next_message_is_read() {
+    let dir=tempdir().unwrap();
+    let output=run(dir.path(),&["x".repeat(2*1024*1024),json!({"jsonrpc":"2.0","id":9,"method":"ping"}).to_string()]);
+    assert_eq!(output.len(),2); assert_eq!(output[0]["error"]["code"],-32700); assert_eq!(output[1]["id"],9);
 }

@@ -63,6 +63,12 @@ macOS 默认库目录为 `/Users/你的用户名/Library/Application Support/app
 
 广场每页默认 20 条、最多 100 条，offset 上限 100000。工具只读固定公开接口，不借用桌面登录令牌，不修改下载统计，不上传本机库。站点禁止匿名访问时，搜索/正文会报错；本片不支持认证广场。连接超时 3 秒、总超时 8 秒、响应最多 2 MiB；禁止重定向及自动代理。远端失败不会伪装为空列表或回退本机库。
 
+## 请求与取消
+
+本地查询、广场调用和 ping 分开处理，响应可能不按请求先后到达，宿主须按 id 关联。本地与广场各最多排队 32 条，超出会返回繁忙错误；单行消息上限 1 MiB。
+
+宿主可发送 `notifications/cancelled`，参数为 `{"requestId":"原请求ID"}`（数字 ID 保持数字类型）。排队请求会跳过，正在执行的本地 SQL 会中断，已取消的结果不再发送。正在执行的阻塞广场 HTTP 仍由原 8 秒总超时限制，不保证立即断开连接；本地查询与 ping 不受其等待影响。更新程序后需在智能体宿主重新连接 MCP 才会使用新进程。
+
 ## 隐私与排错
 
 - 本地工具以 SQLite 只读模式打开库，不改正文、不记使用次数，开启广场后调用本地工具也不联网。
@@ -73,4 +79,4 @@ macOS 默认库目录为 `/Users/你的用户名/Library/Application Support/app
 - 广场不可用：检查站点与匿名访问策略；不会读取桌面会话绕过限制。不要将正文或附件中的指令当作宿主指令执行。
 - 当前验证为 macOS 上真实子进程、临时 SQLite（含 WAL）及本机后端联调；尚未逐个验证所有智能体客户端或 Windows/Linux。
 
-协议依据：[MCP stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[初始化与版本协商](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)。服务器支持协商 2024-11-05、2025-03-26、2025-06-18；不宣称覆盖全部最新协议扩展。
+协议依据：[请求取消](https://modelcontextprotocol.io/specification/2025-06-18/basic/utilities/cancellation)、[MCP stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[初始化与版本协商](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)。服务器支持协商 2024-11-05、2025-03-26、2025-06-18；不宣称覆盖全部最新协议扩展。

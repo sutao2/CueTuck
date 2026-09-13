@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 const TOOLS: &[&str] = &["search_prompts", "get_prompt", "render_prompt"];
 pub mod square;
 pub mod search;
+pub mod runtime;
 use search::SearchCache;
 use std::sync::{Arc, atomic::AtomicBool};
 
