@@ -18,10 +18,18 @@ export async function listenSkillsProgress(handler) {
   return listen('skills-progress', event => handler(event.payload));
 }
 export function groupSkills(skills) {
-  const groups = new Map();
-  for (const skill of skills) {
-    if (!groups.has(skill.key)) groups.set(skill.key, {...skill, installations:[]});
-    groups.get(skill.key).installations.push(skill);
-  }
+  const parents=skills.map((_,i)=>i),identities=new Map();
+  function find(i){while(parents[i]!==i){parents[i]=parents[parents[i]];i=parents[i];}return i;}
+  skills.forEach((skill,index)=>{
+    const keys=[`path:${skill.physical_path||skill.path}`];
+    if(skill.source)keys.push(`source:${skill.source.repo.toLowerCase()}:${skill.source.directory}`);
+    for(const key of keys){if(identities.has(key))parents[find(index)]=find(identities.get(key));else identities.set(key,index);}
+  });
+  const groups=new Map();
+  skills.forEach((skill,index)=>{
+    const id=find(index);
+    if(!groups.has(id))groups.set(id,{...skill,installations:[]});
+    const group=groups.get(id);group.installations.push(skill);if(!group.source&&skill.source)group.source=skill.source;
+  });
   return [...groups.values()];
 }

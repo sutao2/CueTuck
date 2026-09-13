@@ -639,3 +639,149 @@ async fn real_public_catalogs_are_accessible() {
         );
     }
 }
+
+#[test]
+fn cannot_write_protected_descendants_through_a_writable_parent() {
+    let (t, data, mut roots, mut registry, mut p) = setup();
+    let mut protected = root(&roots[0].path.join(".system"));
+    protected.id = "system".into();
+    protected.readonly = true;
+    roots.push(protected);
+    p.folder_name = ".system".into();
+    assert!(install::plan(&roots, &registry, &p, &roots[0].id).is_err());
+    let protected_skill = roots[1].path.join("existing");
+    skill(&protected_skill, "protected");
+    let digest = files::package(&protected_skill).unwrap().digest;
+    assert!(install::remove(
+        &data,
+        &roots,
+        &mut registry,
+        &protected_skill,
+        &roots[0].id,
+        &digest
+    )
+    .is_err());
+    assert!(protected_skill.exists());
+    drop(t);
+}
+
+#[test]
+fn handles_encoded_github_paths_and_rejects_encoded_traversal() {
+    assert_eq!(
+        remote::parse("https://github.com/o/r/tree/main/%E4%B8%AD%E6%96%87%20Skill")
+            .unwrap()
+            .tail,
+        vec!["main", "中文 Skill"]
+    );
+    assert!(remote::parse("https://github.com/o/r/tree/main/%2e%2e/outside").is_err());
+    assert!(remote::parse("o/.git").is_err());
+}
+#[test]
+fn copying_a_managed_skill_retains_only_verified_upstream_identity() {
+    let (_t, data, roots, mut registry, mut p) = setup();
+    p.source = Some(Source {
+        repo: "o/r".into(),
+        reference: "main".into(),
+        commit: "a".repeat(40),
+        directory: "sample".into(),
+        license: "MIT".into(),
+    });
+    let target = install::install_one(
+        &data,
+        &roots,
+        &mut registry,
+        &p,
+        &selection(&roots[0], None, false),
+    )
+    .unwrap();
+    assert_eq!(
+        install::prepare_local(&data, &target).unwrap().source,
+        p.source
+    );
+    fs::write(target.join("SKILL.md"), "locally changed").unwrap();
+    assert!(install::prepare_local(&data, &target)
+        .unwrap()
+        .source
+        .is_none());
+}
+#[test]
+fn allows_editing_registered_project_labels_before_first_install() {
+    let t = tempfile::tempdir().unwrap();
+    let mut registry = Registry {
+        roots: local::project_roots(t.path()).unwrap(),
+        ..Registry::default()
+    };
+    let mut root = registry.roots[0].clone();
+    root.name = "Renamed project".into();
+    local::register(&mut registry, &[], root.clone()).unwrap();
+    assert!(!root.path.exists());
+    assert_eq!(registry.roots.last().unwrap().name, "Renamed project");
+}
+#[tokio::test]
+async fn descriptions_are_real_and_partial_errors_stay_visible() {
+    let server = Server::new(remote_route);
+    let github = remote::Github::test(&server.url);
+    let source = Source {
+        repo: "o/r".into(),
+        reference: "main".into(),
+        commit: "a".repeat(40),
+        directory: String::new(),
+        license: "未知".into(),
+    };
+    let entries = vec!["one", "missing"]
+        .into_iter()
+        .map(|directory| remote::Entry {
+            directory: directory.into(),
+            name: directory.into(),
+            description: String::new(),
+            error: String::new(),
+            loaded: false,
+        })
+        .collect();
+    let result = github
+        .descriptions(&source, entries, &std::sync::atomic::AtomicBool::new(false))
+        .await
+        .unwrap();
+    assert_eq!(result[0].description, "actual description");
+    assert!(result[0].loaded);
+    assert!(!result[1].error.is_empty());
+    assert!(!result[1].loaded);
+}
+
+#[test]
+fn yaml_alias_expansion_and_excessive_nesting_are_not_evaluated() {
+    let (_, description, _, warnings) = files::metadata(
+        "---\na: &a [x,x]\nb: &b [*a,*a]\nname: bomb\ndescription: *b\n---\nbody",
+        "fallback",
+    );
+    assert!(description.is_empty());
+    assert!(!warnings.is_empty());
+    let body = format!("---\na: {}1{}\n---", "[".repeat(50), "]".repeat(50));
+    assert!(!files::metadata(&body, "fallback").3.is_empty());
+}
+#[test]
+fn preview_cache_is_bounded_and_durable_backups_are_not_pruned() {
+    let (_t, data, roots, mut registry, p) = setup();
+    let target = install::install_one(
+        &data,
+        &roots,
+        &mut registry,
+        &p,
+        &selection(&roots[0], None, false),
+    )
+    .unwrap();
+    let b = install::remove(
+        &data,
+        &roots,
+        &mut registry,
+        &target,
+        &roots[0].id,
+        &p.package.digest,
+    )
+    .unwrap();
+    for _ in 0..10 {
+        install::prepare_local(&data, p.local_path.as_ref().unwrap()).unwrap();
+    }
+    assert!(fs::read_dir(data.join("staging")).unwrap().count() <= 8);
+    assert!(b.path.join("SKILL.md").is_file());
+}

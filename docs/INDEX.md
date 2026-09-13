@@ -12,7 +12,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/skills-management/proposal.md](changes/skills-management/proposal.md) | 归档 | 追溯 Skills 方案批准 | 已移至现行规格 |
 | [specs/skills/spec.md](specs/skills/spec.md) | 现行 | 实施 Skills 管理 | 本机发现、固定版本安装、备份恢复与更新合同 |
 | [architecture/decisions/0025-skills-management.md](architecture/decisions/0025-skills-management.md) | 现行 | Skills 存储与文件边界 | 独立注册表、串行落地与持久恢复 |
-| [plans/2026-09-13-skills.md](plans/2026-09-13-skills.md) | 进行中 | 查看 Skills 实施与验收安排 | 用户已授权完整实施；四个切片与隔离验证 |
+| [plans/2026-09-13-skills.md](plans/2026-09-13-skills.md) | 已实现 | 查看 Skills 实施与验收记录 | 功能、隔离安装恢复、537 项前端与 112 项原生回归；平台边界见记录 |
 | [architecture/decisions/0023-launcher-explicit-actions.md](architecture/decisions/0023-launcher-explicit-actions.md) | 部分取代 | 启动器快捷创建、AI 与广场搜索 | 独立窗口保持，联网由显式操作触发，AI 配置仅本机凭据库 |
 | [plans/2026-09-13-interactions-launcher-ai.md](plans/2026-09-13-interactions-launcher-ai.md) | 验收 | 卡片重复操作、图片预览与启动器 AI | beta.5 双平台已发布并安装 Mac；本机 AI 配置及线上百炼图文审核已验 |
 | [plans/2026-09-13-reference-download-speed.md](plans/2026-09-13-reference-download-speed.md) | 验收 | 参考图下载慢或没有进度 | beta.4 双平台已发布；三路并发/连接复用已验，Mac 安装待解锁 |

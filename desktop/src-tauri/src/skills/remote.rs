@@ -45,11 +45,27 @@ struct Node {
     size: Option<u64>,
 }
 
+fn decode_path(input: &str) -> Result<String> {
+    let mut bytes = Vec::new();
+    let mut chars = input.as_bytes().iter();
+    while let Some(&c) = chars.next() {
+        if c == b'%' {
+            let a = *chars.next().ok_or("地址编码不完整")? as char;
+            let b = *chars.next().ok_or("地址编码不完整")? as char;
+            let value = a
+                .to_digit(16)
+                .zip(b.to_digit(16))
+                .map(|(a, b)| (a * 16 + b) as u8)
+                .ok_or("地址编码无效")?;
+            bytes.push(value);
+        } else {
+            bytes.push(c);
+        }
+    }
+    String::from_utf8(bytes).map_err(|_| "地址不是有效 UTF-8".into())
+}
 pub fn parse(input: &str) -> Result<Location> {
     let input = input.trim();
-    if input.split('/').any(|s| s == ".." || s == ".") {
-        return Err("来源路径不可包含 .. 或 .".into());
-    }
     if input.len() > 2000 {
         return Err("仓库地址过长".into());
     }
@@ -64,24 +80,38 @@ pub fn parse(input: &str) -> Result<Location> {
         {
             return Err("仅支持公开 github.com 仓库或目录地址".into());
         }
-        url.path().trim_matches('/').to_string()
+        // Use the original path so URL normalization cannot erase traversal segments.
+        decode_path(
+            input
+                .strip_prefix("https://")
+                .unwrap()
+                .split_once('/')
+                .map(|(_, p)| p)
+                .unwrap_or(""),
+        )?
     } else {
         input.trim_matches('/').to_string()
     };
-    let parts: Vec<&str> = raw.split('/').collect();
+    let parts: Vec<_> = raw.trim_matches('/').split('/').collect();
+    if parts
+        .iter()
+        .any(|p| *p == "." || *p == ".." || p.is_empty())
+    {
+        return Err("来源路径不可包含空段、.. 或 .".into());
+    }
     if parts.len() < 2
         || parts[..2].iter().any(|p| {
-            p.is_empty()
-                || p == &"."
-                || p == &".."
-                || !p
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || "._-".contains(c))
+            !p.chars()
+                .all(|c| c.is_ascii_alphanumeric() || "._-".contains(c))
         })
     {
         return Err("请输入 owner/repo 或 GitHub 仓库目录地址".into());
     }
-    let repo = format!("{}/{}", parts[0], parts[1].trim_end_matches(".git"));
+    let name = parts[1].strip_suffix(".git").unwrap_or(parts[1]);
+    if name.is_empty() || [".", ".."].contains(&name) {
+        return Err("仓库名称无效".into());
+    }
+    let repo = format!("{}/{}", parts[0], name);
     let tail = if parts.len() == 2 {
         vec![]
     } else {
@@ -92,9 +122,6 @@ pub fn parse(input: &str) -> Result<Location> {
     };
     for segment in &tail {
         files::relative(segment)?;
-        if segment.contains('%') {
-            return Err("请使用未编码的分支和目录地址".into());
-        }
     }
     Ok(Location { repo, tail })
 }

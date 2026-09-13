@@ -140,7 +140,12 @@ pub fn register(registry: &mut Registry, defaults: &[Root], mut root: Root) -> R
     if registry.roots.len() >= 200 && root.id.is_empty() {
         return Err("最多登记 200 个目录".into());
     }
-    if !root.path.is_absolute() || !root.path.is_dir() {
+    let registered_missing = registry
+        .roots
+        .iter()
+        .any(|r| r.id == root.id && r.path == root.path)
+        && !root.path.exists();
+    if !root.path.is_absolute() || (!root.path.is_dir() && !registered_missing) {
         return Err("请选择现有目录".into());
     }
     if !["global", "project"].contains(&root.scope.as_str()) {
