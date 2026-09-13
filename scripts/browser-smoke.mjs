@@ -1,6 +1,6 @@
 // CLI-driven browser smoke: fresh snapshots supply every interaction target.
 import { execFile, spawn } from 'node:child_process';
-import { promisify } from 'node:util';
+import { promisify, stripVTControlCharacters } from 'node:util';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,11 +41,11 @@ const fill = async (pattern, value) => run('fill', await target(pattern), value)
 
 try {
   // Do not attach to a pre-existing service on this port.
-  for (let attempt = 0; attempt < 100 && !serverError.includes('Local:'); attempt++) {
+  for (let attempt = 0; attempt < 100 && !stripVTControlCharacters(serverError).includes('Local:'); attempt++) {
     if (server.exitCode !== null) throw Error(serverError);
     await new Promise(resolve => setTimeout(resolve, 50));
   }
-  assert.match(serverError, /Local:/);
+  assert.match(stripVTControlCharacters(serverError), /Local:/);
   await run('open', 'about:blank', '--browser', 'chrome');
   // Network and clipboard adapters are test-only, scoped to this fresh browser.
   await run('route', '**/v1/**', '--status', '503', '--body', '{}');
@@ -93,7 +93,7 @@ try {
     });
   }`);
   await click(/tab "提示词广场"/);await click(/button "图片下载验收"/);await click(/button "查看大图"/);
-  await click(/button "100%"/);await run('screenshot');await run('press','Escape');await target(/heading "图片下载验收"/);
+  await click(/button "1:1"/);await run('screenshot');await run('press','Escape');await target(/heading "图片下载验收"/);
   await click(/button "下载到本地"/);await target(/button "补全参考图"/);
   await click(/button "补全参考图"/);await target(/参考图已补全/);
   await run('run-code',`async page=>{await page.evaluate(async()=>{const lib=await import('/src/platform/library.js');const rows=await lib.listLocalPrompts();const row=rows.find(row=>row.remote_id==='image-smoke');const assets=await (await import('/src/platform/assets.js')).listPromptAssets(row.id);if(assets.length!==1||row.content!=='只复制正文')throw Error('Image import or dedup failed');});}`);
@@ -123,7 +123,7 @@ try {
   await click(/button "更新预览"/); await target(/上海 2000/); await run('screenshot');
   await click(/button "复制并完成"/); await click(/button "(?:← )?返回"/);
   await click(/button "批量整理"/); await run('check', await target(/checkbox "选择 交互验收"/));
-  await run('select', await target(/combobox "目标分类"/), 'cat-image');
+  await click(/button "未分类"/); await click(/option "图片生成"/);
   await click(/button "应用到所选"/); await target(/已完成 1 条/); await run('screenshot');
   await click(/button "取消多选"/);
   await click(/button "新建"/); await click(/button "提示词合集/); await fill(/textbox "合集名称"/, '验收合集');

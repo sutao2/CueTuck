@@ -1,7 +1,7 @@
 // Isolated UI contract regression. The fixture is NOT a production backend.
 import {createServer} from 'node:http';
 import {spawn,execFile} from 'node:child_process';
-import {promisify} from 'node:util';
+import {promisify,stripVTControlCharacters} from 'node:util';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -50,7 +50,7 @@ async function capture(name) {
   }`);
 }
 try{
-  for(let i=0;i<100&&!serverLog.includes('Local:');i++){if(vite.exitCode!==null)throw Error(serverLog);await new Promise(r=>setTimeout(r,50));}assert.match(serverLog,/Local:/);
+  for(let i=0;i<100&&!stripVTControlCharacters(serverLog).includes('Local:');i++){if(vite.exitCode!==null)throw Error(serverLog);await new Promise(r=>setTimeout(r,50));}assert.match(stripVTControlCharacters(serverLog),/Local:/);
   await run('open',origin,'--browser','chrome');
   await run('resize','1440','1000');await target(/登录管理台/);await capture('login');
   await fill(/textbox "邮箱"/,'owner@fixture.test');await fill(/textbox "密码"/,'Fixture-only-password');await click(/button "登录"/);
