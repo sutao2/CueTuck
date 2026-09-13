@@ -107,6 +107,14 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 
 提供商的管理端配置、启停及密钥保护见[管理台规格](../admin/spec.md)。账号关联 MUST 使用提供商已验证的邮箱；GitHub 使用已验证的主邮箱，Google 检查 `email_verified`，不得把未验证邮箱关联到已有管理员账号。
 
+#### Scenario: Google 每次登录明确选择账号与确认授权
+
+- GIVEN 用户曾授权过同一 Google Client ID
+- WHEN 主动点击 Google 登录
+- THEN 授权请求携带 `prompt=select_account consent`，请求 Google 展示账号选择及权限确认，不能仅因打开网页就判定登录完成
+- AND 尚未收到有效回调时轮询保持 pending；取消、拒绝、无效 state 或无效授权码不签发会话
+- AND GitHub 请求不携带 Google 特定 prompt 参数
+
 #### Scenario: 兼容旧版 OAuth 回调路径
 
 - GIVEN 本机迁移沿用提供商已登记的旧回调地址

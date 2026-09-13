@@ -235,6 +235,7 @@ paths:
       operationId: startOAuth
       security: []
       summary: 跳转 Google 或 GitHub 授权
+      description: Google 登录固定携带 prompt=select_account consent，请求明确选择账号并确认授权；只发起跳转不签发会话，尚无有效回调时轮询保持 pending。GitHub 不附加该参数。
       parameters:
         - name: provider
           in: path

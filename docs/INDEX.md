@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-13-google-consent.md](plans/2026-09-13-google-consent.md) | 验收 | Google 登录未显示授权确认 | 显式账号选择/consent；15 项 OAuth 测试及 8080 运行参数已验 |
 | [plans/2026-09-13-local-ports.md](plans/2026-09-13-local-ports.md) | 验收 | 修改本机服务端口或兼容旧回调 | 两项目迁移与重启通过；14 项 OAuth、8 项 Flutter 配置测试及桌面构建 |
 | [plans/2026-09-13-local-oauth-config.md](plans/2026-09-13-local-oauth-config.md) | 验收 | 接入本机第三方登录凭据 | 本机凭据已验；后续端口迁移兼容旧回调，真实授权待验证 |
 | [plans/2026-09-13-global-search.md](plans/2026-09-13-global-search.md) | 验收 | 区分全局搜索与页面筛选 | 本地/广场独立面板；492 项回归、浏览器与 macOS 构建通过 |

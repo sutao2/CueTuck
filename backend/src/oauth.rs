@@ -235,13 +235,15 @@ pub async fn start(
             flow_id,
         },
     );
+    let prompt = if provider == "google" { "&prompt=select_account%20consent" } else { "" };
     let location = format!(
-        "{}?response_type=code&client_id={}&redirect_uri={}&scope={}&state={}",
+        "{}?response_type=code&client_id={}&redirect_uri={}&scope={}&state={}{}",
         config.authorization_uri,
         urlencoding::encode(&config.client_id),
         urlencoding::encode(&config.redirect_uri),
         urlencoding::encode(&config.scope),
-        urlencoding::encode(&signed)
+        urlencoding::encode(&signed),
+        prompt
     );
     Ok(Redirect::temporary(&location))
 }
