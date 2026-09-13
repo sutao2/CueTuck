@@ -1,7 +1,7 @@
 {
   "name": "promptark-desktop",
   "private": true,
-  "version": "0.1.0-beta.4",
+  "version": "0.1.0-beta.5",
   "type": "module",
   "scripts": {
     "build:local": "node ../scripts/release-check.mjs && tauri build --debug --bundles app --config src-tauri/tauri.local.conf.json",
