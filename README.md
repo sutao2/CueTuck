@@ -23,6 +23,7 @@ M0–M9 已关闭。本机工作台、独立启动器、库文件备份、设置
 - 阶段：M9 已关闭；不能诚实做完的项见 [deferred.md](docs/plans/deferred.md)
 - 下载：[GitHub Releases](https://github.com/sutao2/CueTuck/releases)（macOS arm64 / Windows x64 预览版）
 - 更新：设置 → 更新；支持检查、下载进度、签名验证及确认安装。旧版需手动安装 beta.6 或更高版本一次以启用新更新签名。
+- Skills：侧栏「Skill 广场 / 本机 Skills」，支持目录发现、公开来源与本地包安装、备份恢复和手动更新；范围与验证边界见 [Skills 验收记录](docs/plans/2026-09-13-skills.md)。
 - 旧仓库（只读参考）：`../PromptLauncher`
 
 ## 本机验证

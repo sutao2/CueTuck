@@ -113,6 +113,38 @@ pub fn metadata(text: &str, fallback: &str) -> (String, String, String, Vec<Stri
         .strip_prefix("---\n")
         .and_then(|s| s.find("\n---").map(|end| &s[..end]));
     if let Some(header) = header.filter(|s| s.len() <= 65536) {
+        use yaml_rust2::scanner::{Scanner, TokenType};
+        let mut depth = 0usize;
+        let mut complexity = 0usize;
+        for token in Scanner::new(header.chars()) {
+            complexity += 1;
+            match token.1 {
+                TokenType::Alias(_) | TokenType::Anchor(_) => {
+                    return (
+                        fallback.into(),
+                        String::new(),
+                        "未知".into(),
+                        vec!["元数据含 YAML 引用，仅显示原始正文".into()],
+                    );
+                }
+                TokenType::BlockSequenceStart
+                | TokenType::BlockMappingStart
+                | TokenType::FlowSequenceStart
+                | TokenType::FlowMappingStart => depth += 1,
+                TokenType::BlockEnd | TokenType::FlowSequenceEnd | TokenType::FlowMappingEnd => {
+                    depth = depth.saturating_sub(1)
+                }
+                _ => {}
+            }
+            if depth > 32 || complexity > 4096 {
+                return (
+                    fallback.into(),
+                    String::new(),
+                    "未知".into(),
+                    vec!["元数据过于复杂，仅显示原始正文".into()],
+                );
+            }
+        }
         match yaml_rust2::YamlLoader::load_from_str(header) {
             Ok(docs) if !docs.is_empty() => {
                 let d = &docs[0];

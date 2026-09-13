@@ -97,6 +97,28 @@ fn defaults(app: &AppHandle) -> skills::Result<Vec<Root>> {
 fn value(data: impl Serialize) -> skills::Result<serde_json::Value> {
     serde_json::to_value(data).map_err(|e| e.to_string())
 }
+fn record<T>(
+    dir: &std::path::Path,
+    registry: &mut skills::Registry,
+    target: PathBuf,
+    result: &skills::Result<T>,
+    message: &str,
+) -> skills::Result<()> {
+    registry.operations.push(skills::OperationResult {
+        target,
+        status: if result.is_ok() { "success" } else { "failed" }.into(),
+        message: result
+            .as_ref()
+            .err()
+            .cloned()
+            .unwrap_or_else(|| message.into()),
+        at: skills::now(),
+    });
+    if registry.operations.len() > 100 {
+        registry.operations.drain(..registry.operations.len() - 100);
+    }
+    files::save_registry(dir, registry)
+}
 fn run_local(
     dir: PathBuf,
     defaults: Vec<Root>,
@@ -131,8 +153,12 @@ fn run_local(
                     |root_id| match install::plan(&defaults, &registry, &p, &root_id) {
                         Ok(plan) => plan,
                         Err(message) => skills::TargetPlan {
+                            target: local::roots(&defaults, &registry)
+                                .iter()
+                                .find(|r| r.id == root_id)
+                                .map(|r| r.path.join(&p.folder_name))
+                                .unwrap_or_default(),
                             root_id,
-                            target: PathBuf::new(),
                             status: "blocked".into(),
                             current_digest: None,
                             changes: vec![],
@@ -158,15 +184,29 @@ fn run_local(
             path,
             root_id,
             expected_digest,
-        } => value(install::remove(
-            &dir,
-            &defaults,
-            &mut registry,
-            &path,
-            &root_id,
-            &expected_digest,
-        )?),
-        Request::Restore { id } => value(install::restore(&dir, &defaults, &mut registry, &id)?),
+        } => {
+            let result = install::remove(
+                &dir,
+                &defaults,
+                &mut registry,
+                &path,
+                &root_id,
+                &expected_digest,
+            );
+            record(&dir, &mut registry, path, &result, "已备份并移除此安装")?;
+            value(result?)
+        }
+        Request::Restore { id } => {
+            let path = registry
+                .backups
+                .iter()
+                .find(|b| b.id == id)
+                .map(|b| b.original.clone())
+                .ok_or("备份不存在")?;
+            let result = install::restore(&dir, &defaults, &mut registry, &id);
+            record(&dir, &mut registry, path, &result, "已恢复备份到原位置")?;
+            value(result?)
+        }
         Request::SaveSource { input, remove } => {
             remote::parse(&input)?;
             registry.sources.retain(|s| s != &input);

@@ -7,6 +7,39 @@ pub fn prepared_dir(data: &Path, key: &str) -> Result<PathBuf> {
     files::no_links(&path)?;
     Ok(path)
 }
+fn clean_previews(data: &Path) -> Result<()> {
+    let staging = data.join("staging");
+    files::no_links(&staging)?;
+    if !staging.exists() {
+        return Ok(());
+    }
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(&staging).map_err(|e| e.to_string())? {
+        let e = entry.map_err(|e| e.to_string())?;
+        if e.file_type().map_err(|e| e.to_string())?.is_dir()
+            && uuid::Uuid::parse_str(&e.file_name().to_string_lossy()).is_ok()
+        {
+            entries.push((
+                e.metadata()
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH),
+                e.path(),
+            ));
+        }
+    }
+    entries.sort_by(|a, b| b.0.cmp(&a.0));
+    for (index, (modified, path)) in entries.into_iter().enumerate() {
+        if index >= 7
+            || modified
+                .elapsed()
+                .is_ok_and(|age| age.as_secs() > 24 * 60 * 60)
+        {
+            files::no_links(&path)?;
+            fs::remove_dir_all(path).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
 pub fn store_prepared(
     data: &Path,
     folder_name: String,
@@ -18,6 +51,7 @@ pub fn store_prepared(
         return Err("Skill 安装目录名无效".into());
     }
     let package = files::package(folder)?;
+    clean_previews(data)?;
     let key = id();
     let dir = prepared_dir(data, &key)?;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -49,13 +83,22 @@ pub fn prepare_local(data: &Path, path: &Path) -> Result<Prepared> {
         .and_then(|s| s.to_str())
         .ok_or("请选择单个 Skill 文件夹")?
         .to_string();
-    store_prepared(data, name, path, None, Some(path.into()))
+    let current = files::package(path)?;
+    let registry = files::load_registry(data)?;
+    let source = registry
+        .installations
+        .get(path)
+        .filter(|i| i.digest == current.digest)
+        .and_then(|i| i.source.clone());
+    store_prepared(data, name, path, source, Some(path.into()))
 }
 pub fn prepared(data: &Path, key: &str) -> Result<Prepared> {
     let dir = prepared_dir(data, key)?;
-    let p: Prepared =
-        serde_json::from_slice(&files::read_bounded(&dir.join("prepared.json"), MAX_FILE)?)
-            .map_err(|e| e.to_string())?;
+    let p: Prepared = serde_json::from_slice(&files::read_bounded(
+        &dir.join("prepared.json"),
+        MAX_FILE * 6 + 4 * 1024 * 1024,
+    )?)
+    .map_err(|e| e.to_string())?;
     if p.id != key
         || files::relative(&p.folder_name)?.components().count() != 1
         || files::package(&dir.join("package"))?.digest != p.package.digest
@@ -111,6 +154,9 @@ pub fn plan(
     let root = writable(defaults, registry, root_id)?;
     let target = root.path.join(files::relative(&p.folder_name)?);
     files::no_links(&target)?;
+    if local::protected(&target, defaults) {
+        return Err("目标位于系统 Skill 或插件缓存中，只允许查看".into());
+    }
     let old = if target.exists() {
         Some(files::package(&target).map_err(|e| format!("目标内容无法安全备份：{e}"))?)
     } else {
@@ -424,6 +470,9 @@ pub fn remove(
 ) -> Result<Backup> {
     let root = writable(defaults, registry, root_id)?;
     files::no_links(path)?;
+    if local::protected(path, defaults) {
+        return Err("该位置由外部管理，只允许查看".into());
+    }
     if path == root.path || !path.starts_with(&root.path) {
         return Err("只能移除登记根目录内的单个 Skill".into());
     }

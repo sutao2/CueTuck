@@ -56,7 +56,7 @@ describe("desktop package isolation", () => {
     expect(readme).toContain("M0–M9 已关闭");
     expect(readme).not.toContain("M0–M8 已关闭");
     expect(readme).not.toContain("云同步、OAuth、自动更新安装不得假装接通");
-    expect(readme).toContain("无商店包");
+    expect(readme).toMatch(/无商店包|尚未上架商店/);
     expect(claude).not.toContain("未接通的同步 / 更新 / 账单 / 商店不得假装接通");
     expect(claude).toContain("商店上架");
   });
