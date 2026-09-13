@@ -167,6 +167,7 @@ impl Pg {
         .execute(&self.pool)
         .await?;
         sqlx::query(&format!("CREATE TABLE IF NOT EXISTS {} (id BIGSERIAL PRIMARY KEY,revision BIGINT NOT NULL,actor TEXT NOT NULL,model_id TEXT,skill_id TEXT NOT NULL,success BOOLEAN NOT NULL,error TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT now())",self.t("ai_tests"))).execute(&self.pool).await?;
+        sqlx::query(&format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS image_sample BOOLEAN NOT NULL DEFAULT false",self.t("ai_tests"))).execute(&self.pool).await?;
         Ok(())
     }
     pub async fn ai_config(&self) -> Result<Config, StatusCode> {
@@ -325,6 +326,8 @@ pub struct Test {
     skill_id: String,
     model_id: Option<String>,
     text: String,
+    #[serde(default)]
+    image_sample: bool,
 }
 #[derive(Serialize, Clone)]
 pub struct Run {
@@ -512,14 +515,8 @@ pub async fn test(
         .iter()
         .find(|s| s.id == input.skill_id)
         .ok_or(StatusCode::NOT_FOUND)?;
-    let result = run(
-        &config,
-        skill,
-        &state.oauth_config.key,
-        &input.text,
-        input.model_id.as_deref(),
-    )
-    .await;
+    let images = if input.image_sample { vec!["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAb0lEQVR4nO3PAQkAAAyEwO9feoshgnABdLep8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3I8QUNyPEFDcjxBQ3IPanc8OLDQitxAAAAAElFTkSuQmCC".to_owned()] } else { vec![] };
+    let result = run_images(&config, skill, &state.oauth_config.key, &input.text, input.model_id.as_deref(), &images).await;
     let mut tx = pg.pool.begin().await.map_err(db_error)?;
     owner_lock(
         pg,
@@ -528,10 +525,12 @@ pub async fn test(
         &bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?,
     )
     .await?;
-    sqlx::query(&format!("INSERT INTO {} (revision,actor,model_id,skill_id,success,error) VALUES ($1,$2,$3,$4,$5,$6)",pg.t("ai_tests"))).bind(config.revision).bind(&actor).bind(&input.model_id).bind(&input.skill_id).bind(result.verdict.is_some()).bind(&result.error).execute(&mut *tx).await.map_err(db_error)?;
-    audit(pg,&mut tx,&actor,"ai_configuration_tested",json!({"revision":config.revision,"skill_id":input.skill_id,"model_id":input.model_id,"success":result.verdict.is_some()})).await?;
+    sqlx::query(&format!("INSERT INTO {} (revision,actor,model_id,skill_id,success,error,image_sample) VALUES ($1,$2,$3,$4,$5,$6,$7)",pg.t("ai_tests"))).bind(config.revision).bind(&actor).bind(&input.model_id).bind(&input.skill_id).bind(result.verdict.is_some()).bind(&result.error).bind(input.image_sample).execute(&mut *tx).await.map_err(db_error)?;
+    audit(pg,&mut tx,&actor,"ai_configuration_tested",json!({"revision":config.revision,"skill_id":input.skill_id,"model_id":input.model_id,"success":result.verdict.is_some(),"image_sample":input.image_sample})).await?;
     tx.commit().await.map_err(db_error)?;
-    Ok(Json(json!(result)))
+    let mut response = json!(result);
+    response["image_sample"] = json!(input.image_sample);
+    Ok(Json(response))
 }
 
 pub async fn screen_publication(

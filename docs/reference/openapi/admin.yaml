@@ -509,7 +509,7 @@ paths:
     post:
       operationId: testAiConfiguration
       summary: owner 明确发送样本测试已保存版本，不保存样本正文
-      description: JSON revision、skill_id、model_id（可选，单模型测试）、text（非空最多 8000 字节）。返回 revision/skill_id/verdict/models/error；连接、目标、响应结构或路由失败为 verdict=null，不假报通过。每模型限时，整链路最多 25 秒；禁止代理和重定向，拒绝非公网目标，响应最多 256 KiB。记录版本、执行人、测试范围和成功/失败，不记录 API Key 或提供商错误正文。
+      description: JSON revision、skill_id、model_id（可选，单模型测试）、text（非空最多 8000 字节）、image_sample（可选，默认 false，仅发送服务端固定纯色测试图）。返回 revision/skill_id/verdict/models/error/image_sample；连接、目标、响应结构或路由失败为 verdict=null，不假报通过。每模型限时，整链路最多 25 秒；禁止代理和重定向，拒绝非公网目标，响应最多 256 KiB。记录版本、执行人、测试范围和成功/失败，不记录 API Key 或提供商错误正文。
   /v1/admin/mail/config:
     get:
       operationId: getMailConfiguration
