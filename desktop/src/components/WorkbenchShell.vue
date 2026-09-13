@@ -49,7 +49,6 @@
             @click="openLocal"
           >
             <span class="nav-icon"><AppIcon name="library" /></span><span>{{ t("local") }}</span>
-            <span class="nav-count">{{ localCount }}</span>
           </button>
         </div>
 
@@ -141,10 +140,11 @@
         <section class="content-header">
           <div class="content-heading">
             <SiteNotice v-if="space === 'square' && remoteCatalog?.site" :site="remoteCatalog.site" heading />
-            <template v-else>
-            <h1>{{ space === "square" ? "发现好用的提示词" : "我的提示词" }}</h1>
-
-            </template>
+            <h1 v-else data-testid="results-heading">{{ resultsHeading }}</h1>
+            <div v-if="!(space === 'square' && (squareOffline || squareBlocked))" class="browse-summary">
+              <span v-if="space === 'square' && remoteCatalog?.site" data-testid="results-heading">{{ resultsHeading }}</span>
+              <span class="result-count" role="status">{{ space === 'square' && squareLoading ? '正在加载…' : `共 ${space === 'square' ? squareTotal : displayedItems.length} 个结果` }}</span>
+            </div>
           </div>
           <div class="content-actions" :inert="batchBusy ? '' : undefined">
             <button v-if="space === 'local' && prompts.length" type="button" class="button ghost-button" data-testid="select-prompts" @click="selecting = !selecting; selectedPrompts = []">{{ selecting ? '取消多选' : '批量整理' }}</button>
@@ -252,12 +252,6 @@
             <button type="button" class="clear-filters" data-testid="clear-filters" @click="clearFilters()">清除筛选</button>
           </div>
           <template v-if="!(space === 'square' && (squareOffline || squareBlocked))">
-          <div class="section-heading-row">
-            <div>
-              <h2>{{ resultsHeading }}</h2>
-            </div>
-            <span class="result-count">{{ space === 'square' && squareLoading ? '正在加载…' : `共 ${space === 'square' ? squareTotal : displayedItems.length} 个结果` }}</span>
-          </div>
           <div v-if="space === 'square' && squareLoading" class="browse-loading" role="status" data-testid="browse-loading">
             <span>正在加载提示词…</span><div v-for="n in 3" :key="n" class="loading-row" aria-hidden="true"><i></i><i></i><i></i></div>
           </div>
@@ -310,7 +304,7 @@
                 <template v-if="space === 'square'">
                   <button
                     type="button"
-                    class="card-action"
+                    class="card-action card-primary"
                     data-testid="download-square"
                     :disabled="downloadBusy.includes(item.id)"
                     @click.stop="downloadSquare(item)"
@@ -328,10 +322,10 @@
                   </button>
                 </template>
                 <template v-else-if="item.kind === 'prompt'">
-                  <button type="button" class="card-action" @click.stop="startUse(item)">使用</button>
+                  <button type="button" class="card-action card-primary" @click.stop="startUse(item)">使用</button>
                   <button v-if="!extractVariables(item.content).length" type="button" class="card-action" :disabled="useBusy" @click.stop="quickCopy(item)">复制</button>
                 </template>
-                <button v-else type="button" class="card-action" @click.stop="openItem(item)">打开合集</button>
+                <button v-else type="button" class="card-action card-primary" @click.stop="openItem(item)">打开合集</button>
                 <button type="button" class="card-action card-more" data-testid="card-more" :aria-label="`${item.title}的更多操作`" aria-haspopup="menu" @click.stop="openContextMenu($event, item)">···</button>
               </div>
             </article>

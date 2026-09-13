@@ -62,5 +62,7 @@ onUnmounted(() => { root?.removeEventListener('scroll', schedule); observer?.dis
 <style>
 .grid-spacer { grid-column: 1 / -1; pointer-events: none; }
 .windowed-grid > .prompt-card { box-sizing: border-box; overflow: hidden; }
+.windowed-grid > .prompt-card:not(.as-row) .prompt-excerpt { -webkit-line-clamp: 2; flex-shrink: 0; }
+.windowed-grid .prompt-author { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .windowed-grid .square-reference-cover { height: 150px; flex-shrink: 0; aspect-ratio: auto; }
 </style>
