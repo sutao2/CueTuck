@@ -945,3 +945,6 @@ body[data-density="compact"] .app-shell .collection-card-preview { margin: -12px
 
 .update-toggle { position:relative; }
 .update-dot { position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:#31845d; }
+
+.nav-group-label { margin: 8px 20px 6px; color: var(--muted); font-size: 10px; font-weight: 550; letter-spacing: .5px; }
+.sidebar .space-switch { margin-bottom: 10px; }

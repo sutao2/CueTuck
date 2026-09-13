@@ -7,6 +7,7 @@
 <script setup>
 defineProps({ name: { type: String, default: "library" } });
 const paths = {
+  skills: "M8 3h8v4h5v14H3V7h5zM8 3v4h8M8 12h8M8 16h5",
   close: "M6 6l12 12M6 18L18 6",
   minus: "M5 12h14",
   fit: "M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5",

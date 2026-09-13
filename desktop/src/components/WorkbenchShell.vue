@@ -27,14 +27,15 @@
         <div class="sidebar-brand-row">
           <span class="brand-name">{{ t("brand") }}</span>
         </div>
+        <p class="nav-group-label">提示词</p>
         <div class="space-switch" role="tablist" aria-label="提示词空间">
           <button
             type="button"
             class="space-tab"
             data-space="square"
             role="tab"
-            :aria-selected="space === 'square'"
-            :class="{ active: space === 'square' }"
+            :aria-selected="contentKind === 'prompts' && space === 'square'"
+            :class="{ active: contentKind === 'prompts' && space === 'square' }"
             @click="openSquare"
           >
             <span class="nav-icon"><AppIcon name="square" /></span><span>{{ t("square") }}</span>
@@ -44,15 +45,20 @@
             class="space-tab"
             data-space="local"
             role="tab"
-            :aria-selected="space === 'local'"
-            :class="{ active: space === 'local' }"
+            :aria-selected="contentKind === 'prompts' && space === 'local'"
+            :class="{ active: contentKind === 'prompts' && space === 'local' }"
             @click="openLocal"
           >
             <span class="nav-icon"><AppIcon name="library" /></span><span>{{ t("local") }}</span>
           </button>
         </div>
 
-        <div class="sidebar-toolbar">
+        <p class="nav-group-label">Skills</p>
+        <div class="space-switch" role="tablist" aria-label="Skills 空间">
+          <button type="button" class="space-tab" data-space="skills-square" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'square'" :class="{active:contentKind === 'skills' && skillsMode === 'square'}" @click="openSkills('square')"><span class="nav-icon"><AppIcon name="square"/></span><span>Skill 广场</span></button>
+          <button type="button" class="space-tab" data-space="skills-local" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'local'" :class="{active:contentKind === 'skills' && skillsMode === 'local'}" @click="openSkills('local')"><span class="nav-icon"><AppIcon name="skills"/></span><span>本机 Skills</span></button>
+        </div>
+        <div v-show="contentKind === 'prompts'" class="sidebar-toolbar">
           <span>{{ space === "local" ? t("myCategories") : t("exploreCategories") }}</span>
           <div>
             <button type="button" class="mini-button category-collapse" title="全部折叠" @click="collapseAll">折叠</button>
@@ -60,7 +66,7 @@
           </div>
         </div>
 
-        <nav ref="categoryTree" class="category-tree" aria-label="提示词分类">
+        <nav v-show="contentKind === 'prompts'" ref="categoryTree" class="category-tree" aria-label="提示词分类">
           <button
             type="button"
             class="tree-row"
@@ -136,7 +142,7 @@
         @pointerup="endSidebarResize" @pointercancel="endSidebarResize"
         @lostpointercapture="endSidebarResize" @keydown="resizeSidebarByKey" />
 
-      <main ref="contentScroller" v-show="!hasTaskPage" data-region="content" class="content-area">
+      <main ref="contentScroller" v-show="!hasTaskPage && contentKind === 'prompts'" data-region="content" class="content-area">
         <section class="content-header">
           <div class="content-heading">
             <SiteNotice v-if="space === 'square' && remoteCatalog?.site" :site="remoteCatalog.site" heading />
@@ -365,6 +371,7 @@
           </template>
         </section>
       </main>
+      <SkillsPage v-if="skillsVisited" v-show="contentKind === 'skills' && !hasTaskPage" ref="skillsPage" :mode="skillsMode" @busy="skillsBusy = $event"/>
       <div v-show="hasTaskPage" class="task-host" data-testid="task-host">
     <section v-if="addingCategory" v-page-focus="closeCategoryDialog" class="workspace-page category-page" role="region" aria-labelledby="category-page-title">
       <header class="modal-header"><h2 id="category-page-title">新建分类</h2><button type="button" class="page-back" aria-label="返回" :disabled="categoryBusy" @click="closeCategoryDialog">← 返回</button></header>
@@ -636,6 +643,7 @@ import { parseModelNames } from "../platform/modelCatalog.js";
 import { uiText } from "../platform/uiStrings.js";
 import { downloadSquareItem, completeSquareImages, fetchSquareContent, fetchSquareCatalog, listSquarePage } from "../platform/square.js";
 import WindowedPromptGrid from './WindowedPromptGrid.vue';
+import SkillsPage from './SkillsPage.vue';
 import SiteNotice from '../../../shared/SiteNotice.vue';
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
 import { parseCoverUrls } from "../lib/cover.js";
@@ -678,7 +686,7 @@ const searchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'm
 const searchInput = ref(null);
 const globalSearchOpen = ref(false);
 const globalSearchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'macos' ? 'Super+K' : 'Control+K', props.host));
-const globalSearchBlocked = computed(() => batchBusy.value || editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length > 0 || favoriteBusy.value.length > 0 || Boolean(pendingDelete.value || deletingCategory.value || pendingNavigation.value));
+const globalSearchBlocked = computed(() => skillsBusy.value || batchBusy.value || editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length > 0 || favoriteBusy.value.length > 0 || Boolean(pendingDelete.value || deletingCategory.value || pendingNavigation.value));
 function openGlobalSearch() {
   if (globalSearchBlocked.value || document.querySelector('[aria-modal="true"]')) return;
   closeContextMenu();
@@ -714,6 +722,8 @@ async function loadLauncherShortcut() {
 const emit = defineEmits(["open-launcher", "library-changed"]);
 
 const space = ref("local");
+const contentKind = ref("prompts"), skillsMode = ref("local"), skillsVisited = ref(false), skillsBusy = ref(false), skillsPage = ref(null);
+function openSkills(mode) { if (skillsBusy.value) return; cancelSquare(); contentKind.value = "skills"; skillsMode.value = mode; skillsVisited.value = true; }
 const sidebarCollapsed = ref(false);
 const viewportWidth = ref(window.innerWidth);
 const preferredSidebarWidth = ref(null);
@@ -762,7 +772,7 @@ onUnmounted(() => {
 });
 
 function handleWorkbenchShortcut(event) {
-  if (batchBusy.value) return;
+  if (batchBusy.value || skillsBusy.value) return;
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
   if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
   if (globalSearchOpen.value) return;
@@ -771,7 +781,7 @@ function handleWorkbenchShortcut(event) {
   if (publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
   if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
   if (event.key.toLowerCase() === 'f' && !settingsOpen.value && !publishResume.value) {
-    event.preventDefault(); focusSearch(); return;
+    event.preventDefault(); if (contentKind.value === 'skills') { skillsPage.value?.focusSearch?.(); } else { focusSearch(); } return;
   }
   const target = event.target;
   if (event.key.toLowerCase() === 'b' && !settingsOpen.value && !target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
@@ -1024,12 +1034,12 @@ const emptyCopy = computed(() => {
   if (sortTab.value === '收藏') return space.value === 'local' ? '右键提示词选择收藏，在这里快速找到常用内容。' : '收藏喜欢的社区提示词后，可在这里再次找到。';
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
-const locationLabel = computed(() => (space.value === "square" ? t("square") : t("local")));
+const locationLabel = computed(() => contentKind.value === "skills" ? (skillsMode.value === "local" ? "本机 Skills" : "Skill 广场") : (space.value === "square" ? t("square") : t("local")));
 const hasTaskPage = computed(() => Boolean(publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
 const taskTitle = computed(() => publicationsOpen.value ? '我的发布' : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
 
 function guardSidebarNavigation(event) {
-  if (batchBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
+  if (batchBusy.value || skillsBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
   if (!hasTaskPage.value) return;
   const button = event.target.closest('button');
   if (!button || button.matches('.preference-toggle, .tree-expand, .category-collapse')) return;
@@ -1039,7 +1049,7 @@ function guardSidebarNavigation(event) {
 }
 
 function navigateTo(action) {
-  if (batchBusy.value) return;
+  if (batchBusy.value || skillsBusy.value) return;
   if (!hasTaskPage.value) { action(); return; }
   if (editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length || favoriteBusy.value.length) return;
   pendingNavigation.value = action;
@@ -1725,6 +1735,7 @@ function setSort(tab) {
 }
 
 function openSquare() {
+  if (contentKind.value === "skills") { contentKind.value = "prompts"; if (space.value === "square") return; }
   operationNote.value = '';
   cancelSearch(); ++localRequest;
   space.value = "square";
@@ -1736,6 +1747,7 @@ function openSquare() {
 }
 
 function openLocal() {
+  if (contentKind.value === "skills") { contentKind.value = "prompts"; if (space.value === "local") return; }
   operationNote.value = '';
   cancelSearch(); cancelSquare(); ++squareRequest;
   space.value = "local";

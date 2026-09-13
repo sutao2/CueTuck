@@ -1,4 +1,5 @@
 mod commands;
+mod skills;
 mod api_config;
 mod http;
 mod local_database;
@@ -15,6 +16,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .manage(LocalDatabase::default())
+        .manage(commands::skills::SkillsState::default())
         .manage(commands::updates::UpdateState::default())
         .manage(LauncherFocusGuard::default());
     #[cfg(target_os = "macos")]
@@ -23,6 +25,9 @@ pub fn run() {
     }
     builder
         .invoke_handler(tauri::generate_handler![
+            commands::skills::skills_command,
+            commands::skills::skills_choose_directory,
+            commands::skills::skills_cancel,
             commands::ai::get_launcher_ai_config,
             commands::ai::save_launcher_ai_config,
             commands::ai::clear_launcher_ai_config,

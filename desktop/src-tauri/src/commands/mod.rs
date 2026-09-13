@@ -9,3 +9,5 @@ pub mod session;
 pub mod square;
 pub mod square_page;
 pub mod updates;
+
+pub mod skills;
