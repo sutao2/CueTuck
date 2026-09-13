@@ -25,7 +25,25 @@
 
 本地工具 MUST 针对 `PROMPTARK_LIBRARY_DIR` 下的 `promptark.sqlite`。MUST 忽略已软删条目。库文件不存在时 MUST 返回明确错误，MUST NOT 编造提示词。本地工具 MUST NOT 请求广场或管理 HTTP。
 
-连接 MUST 使用 SQLite 只读打开模式；未配置目录时进程 MUST 在 stderr 给出配置提示并退出，不猜测当前工作目录。搜索默认最多 50 条，允许 `limit`（1–100）和非负整数 `offset` 分页，按标题/id 稳定排序；`%`、`_` 作为普通查询字符。参数类型错误必须报错，不得降级为全库搜索。
+连接 MUST 使用 SQLite 只读打开模式；未配置目录时进程 MUST 在 stderr 给出配置提示并退出，不猜测当前工作目录。搜索默认最多 50 条，允许 `limit`（1–100）和 `offset`（0–100000）分页，空查询按标题/id 稳定排序；`%`、`_` 作为普通查询字符。参数类型错误必须报错，不得降级为全库搜索。
+
+搜索 MUST 支持空白分隔的多关键词（全部命中标题或正文）、不区分大小写的字面匹配、标题优先相关性排序及 `category_id` / `model` 精确筛选。query 最多 1200 UTF-8 字节、16 个词，筛选值最多 200 字节。返回的文本保持 JSON 数组兼容；`structuredContent` 提供 items、limit、offset、has_more、next_offset。MUST NOT 将关键词作为 SQL 或 FTS 语法。
+
+搜索索引仅存在于进程内存，源库只读；源库提交、软删除或替换后下一次查询 MUST 刷新，库消失 MUST 报错。首次/刷新索引最多 10 秒、查询最多 2 秒（SQLite 进度回调及源库锁等待有界）。双字符及以上使用 FTS5 片段索引，单字符允许扫描；不承诺分词、同义词或向量语义能力。
+
+#### Scenario: 多词排序与筛选分页
+
+- GIVEN 中文/英文多个词分别出现在标题和正文，存在同名与不同分类/模型条目
+- WHEN 多词搜索并指定筛选与分页
+- THEN 所有词字面命中，标题优先且稳定，末页 next_offset 为 null
+- AND 旧文本数组可读取，structuredContent 含完整分页状态
+
+#### Scenario: 索引刷新
+
+- GIVEN MCP 已建立内存索引
+- WHEN 外部提交 WAL 更新、软删除或替换库
+- THEN 下次搜索反映最新已提交内容；库缺失不返回缓存
+- AND 不修改本机 SQLite 内容
 
 #### Scenario: 有界搜索且不写库
 
@@ -76,6 +94,7 @@
 
 | 场景 | 测试 |
 |---|---|
+| 多词排序与筛选分页、索引刷新 | `mcp/tests/search.rs` 中文/字面/分页/WAL/替换/参数/取消测试 |
 | 有界搜索且不写库 | `connection_is_read_only_and_search_is_bounded_and_literal`、`rejects_bad_arguments_without_searching_all_prompts` |
 | 宿主保持连接 | `mcp/tests/stdio.rs` 真实进程初始化/查询/读取/渲染/解析错误/软删除/缺库验证 |
 | 列出工具 | `mcp` `lists_required_tools` |

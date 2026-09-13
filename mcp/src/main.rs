@@ -1,4 +1,4 @@
-use promptark_mcp::{handle_rpc_with_square, square::Square};
+use promptark_mcp::{handle_rpc_with_search, search::SearchCache, square::Square};
 use serde_json::Value;
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
@@ -16,6 +16,7 @@ fn main() {
         Ok("0")|Err(_) => None,
         _ => { eprintln!("PROMPTARK_MCP_SQUARE 只能为 0 或 1"); std::process::exit(2); }
     };
+    let mut search = SearchCache::default();
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     for line in stdin.lock().lines() {
@@ -26,7 +27,7 @@ fn main() {
             continue;
         }
         let response = match serde_json::from_str::<Value>(&line) {
-            Ok(request) => handle_rpc_with_square(&dir, &request, square.as_ref()),
+            Ok(request) => handle_rpc_with_search(&dir, &request, square.as_ref(), &mut search, std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false))),
             Err(_) => Some(serde_json::json!({"jsonrpc": "2.0", "id": null, "error": {"code": -32700, "message": "JSON 解析失败"}})),
         };
         if let Some(response) = response {
