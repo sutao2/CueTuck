@@ -579,19 +579,16 @@ impl Pg {
         Ok(row.as_ref().map(Self::item_from_row))
     }
 
-    pub async fn increment_download_count(&self, id: &str) -> Result<(), StatusCode> {
-        let result = sqlx::query(&format!(
-            "UPDATE {} SET download_count = download_count + 1 WHERE id = $1 AND visibility='online'",
+    pub async fn increment_download_count(&self, id: &str) -> Result<i64, StatusCode> {
+        sqlx::query_scalar(&format!(
+            "UPDATE {} SET download_count = download_count + 1 WHERE id = $1 AND visibility='online' RETURNING download_count",
             self.t("square_items")
         ))
         .bind(id)
-        .execute(&self.pool)
+        .fetch_optional(&self.pool)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        if result.rows_affected() == 0 {
-            return Err(StatusCode::NOT_FOUND);
-        }
-        Ok(())
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)
     }
 
     pub async fn download_counts(&self) -> Result<HashMap<String, i64>, StatusCode> {

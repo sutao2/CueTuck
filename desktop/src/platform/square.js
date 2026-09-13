@@ -156,14 +156,14 @@ export async function completeSquareImages(id) {
   })().finally(() => activeDownloads.delete(id));
   activeDownloads.set(id, task); return task;
 }
-export function downloadSquareItem(id) {
+export function downloadSquareItem(id, onCountUpdated) {
   if (activeDownloads.has(id)) return activeDownloads.get(id);
-  const task = downloadNewSquareItem(id).finally(() => activeDownloads.delete(id));
+  const task = downloadNewSquareItem(id, onCountUpdated).finally(() => activeDownloads.delete(id));
   activeDownloads.set(id, task);
   return task;
 }
 
-async function downloadNewSquareItem(id) {
+async function downloadNewSquareItem(id, onCountUpdated) {
   const existing = (await listLocalPrompts()).find(row => row.remote_id === id);
   if (existing) return existing;
   const payload = await fetchSquareContent(id);
@@ -208,29 +208,33 @@ async function downloadNewSquareItem(id) {
       model: payload.model,
     });
   }
-  void recordAnonymousDownload(id);
+  void recordAnonymousDownload(id, onCountUpdated);
   return row;
 }
 
-async function recordAnonymousDownload(id) {
+async function recordAnonymousDownload(id, onCountUpdated) {
   try {
-    if ((await getLocalSetting("anonymous_download_stats")) !== "1") return;
+    if ((await getLocalSetting("anonymous_download_stats")) === "0") return;
+    let result;
     if (testStatsTransport) {
-      await testStatsTransport({
+      result = await testStatsTransport({
         id,
         method: "POST",
         path: `/v1/square/items/${id}/downloads`,
         headers: {},
       });
-      return;
+    } else if (isTauri()) {
+      result = await tauriInvoke("record_square_download", { id });
+    } else {
+      const response = await fetch(`${apiBase()}/v1/square/items/${encodeURIComponent(id)}/downloads`, {
+        method: "POST", credentials: "omit", signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok || response.status === 204) return;
+      result = await response.json();
     }
-    if (isTauri()) {
-      await tauriInvoke("record_square_download", { id });
-      return;
+    if (Number.isSafeInteger(result?.download_count) && result.download_count >= 0) {
+      onCountUpdated?.(result.download_count);
     }
-    await fetch(`${apiBase()}/v1/square/items/${encodeURIComponent(id)}/downloads`, {
-      method: "POST",
-    });
   } catch {
     /* 统计失败不得阻断下载 */
   }

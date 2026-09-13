@@ -13,7 +13,7 @@
 
 ### Requirement: 下载与收藏数据展示
 
-分页广场 MUST 返回每条的 `download_count` 和 `favorite_count`，分别表示已记录匿名下载次数与当前收藏账号数。客户端网格/列表展示数值，热门明确说明按已记录下载量排序；未返回字段显示「—」。不得把下载次数描述为独立人数或全量下载。统计开关和采集行为保持不变，客户端不因本地下载或离线收藏排队而虚增服务端统计。
+分页广场 MUST 返回每条的 `download_count` 和 `favorite_count`，分别表示已记录匿名下载次数与当前收藏账号数。客户端网格/列表展示数值，热门明确说明按已记录下载量排序；未返回字段显示「—」。不得把下载次数描述为独立人数或全量下载。统计开关默认值以[设置规格](../settings/spec.md)为准，客户端不因本地下载或离线收藏排队而虚增服务端统计。
 
 我的发布 MUST 在本人鉴权下返回各作品计数，页面汇总投稿数、记录下载次数与当前收藏次数；后者是各作品收藏人数相加，不是去重粉丝数。提供最新提交、下载最多、收藏最多排序。下架保留已有数据，从未上架计数为零；错误和缺失字段不伪装零。
 
@@ -162,7 +162,7 @@ offline/trashed 条目 MUST 从所有公开读取路径排除，已知 ID 详情
 
 ### Requirement: 匿名下载统计
 
-开启「匿名下载统计」且本地下载成功后，客户端 MUST `POST /v1/square/items/{id}/downloads`，MUST NOT 带 Authorization，MUST NOT 发送账号、正文或标题。关闭时 MUST NOT 请求。统计失败 MUST NOT 阻断下载。服务端 MUST 接受匿名 POST，未知 id MUST 404，MUST NOT 把 GET 正文当成一次统计，MUST NOT 记录谁下载。
+开启「匿名下载统计」且本地下载成功后，客户端 MUST `POST /v1/square/items/{id}/downloads`，MUST NOT 带 Authorization，MUST NOT 发送账号、正文或标题。关闭时 MUST NOT 请求。统计失败 MUST NOT 阻断下载。成功响应 MUST 返回原子递增后的 `download_count`，客户端仅用有效的服务端数值更新对应卡片，保持滚动位置；旧接口无数值不伪造增量。服务端 MUST 接受匿名 POST，未知 id MUST 404，MUST NOT 把 GET 正文当成一次统计，MUST NOT 记录谁下载。
 
 #### Scenario: 打开后上报条目 id
 

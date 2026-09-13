@@ -270,7 +270,7 @@ impl AppState {
             .and_then(|rows| rows.iter().find(|item| item.id == id).cloned()))
     }
 
-    pub(crate) async fn increment_download(&self, id: &str) -> Result<(), StatusCode> {
+    pub(crate) async fn increment_download(&self, id: &str) -> Result<i64, StatusCode> {
         if let Some(pg) = &self.db {
             return pg.increment_download_count(id).await;
         }
@@ -287,8 +287,9 @@ impl AppState {
             .download_counts
             .lock()
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        *counts.entry(id.to_string()).or_insert(0) += 1;
-        Ok(())
+        let count = counts.entry(id.to_string()).or_insert(0);
+        *count += 1;
+        Ok(*count)
     }
 
     pub(crate) fn memory_favorite_counts(&self) -> Result<HashMap<String, i64>, StatusCode> {

@@ -357,7 +357,7 @@
               <span class="setting-control">始终生效</span>
             </div>
             <label class="setting-row" data-testid="anonymous-download-stats-row">
-              <span class="setting-copy"><strong>匿名下载统计</strong><small>打开后，成功下载只上报条目 id，不含账号、正文或标题。关闭时不请求。统计失败不影响下载。</small></span>
+              <span class="setting-copy"><strong>匿名下载统计</strong><small>默认开启，可随时关闭。成功下载只上报条目 id，不含账号、正文或标题。关闭时不请求。统计失败不影响下载。</small></span>
               <input
                 type="checkbox"
                 data-testid="anonymous-download-stats"
@@ -540,7 +540,7 @@ const syncQueuePending = ref(false);
 let syncLibrarySummary = '';
 watch(() => props.session.email, () => { syncIncludeAssets.value = false; syncNote.value = ''; syncQueuePending.value = false; syncLibrarySummary = ''; });
 const autoSyncQueue = ref(false);
-const anonymousDownloadStats = ref(false);
+const anonymousDownloadStats = ref(true);
 const httpProxy = ref("");
 const proxyError = ref("");
 const appVersion = pkg.version;
@@ -708,7 +708,7 @@ async function loadSettings() {
   syncConflict.value = (await getLocalSetting("sync_conflict")) === "keep_local" ? "keep_local" : "newer";
   syncWifiImages.value = isPrefOn(await getLocalSetting("sync_wifi_images"));
   autoSyncQueue.value = isPrefOn(await getLocalSetting("auto_sync_queue"));
-  anonymousDownloadStats.value = isPrefOn(await getLocalSetting("anonymous_download_stats"));
+  anonymousDownloadStats.value = (await getLocalSetting("anonymous_download_stats")) !== "0";
   httpProxy.value = (await getLocalSetting("http_proxy")) || "";
   if (props.session.loggedIn) {
     const [profile, billing] = await Promise.all([

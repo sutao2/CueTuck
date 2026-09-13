@@ -77,7 +77,9 @@ async fn record_anonymous_download_increments_count_without_auth() {
         )
         .await
         .unwrap();
-    assert_eq!(counted.status(), StatusCode::NO_CONTENT);
+    assert_eq!(counted.status(), StatusCode::OK);
+    let body: serde_json::Value = serde_json::from_slice(&to_bytes(counted.into_body(), usize::MAX).await.unwrap()).unwrap();
+    assert_eq!(body["download_count"], 1);
     let page = app.clone().oneshot(Request::builder()
         .uri("/v1/square/browse?sort=hot")
         .body(Body::empty()).unwrap()).await.unwrap();
@@ -97,7 +99,7 @@ async fn record_anonymous_download_increments_count_without_auth() {
         )
         .await
         .unwrap();
-    assert_eq!(counted.status(), StatusCode::NO_CONTENT);
+    assert_eq!(counted.status(), StatusCode::OK);
     let counted = app
         .clone()
         .oneshot(
@@ -109,7 +111,7 @@ async fn record_anonymous_download_increments_count_without_auth() {
         )
         .await
         .unwrap();
-    assert_eq!(counted.status(), StatusCode::NO_CONTENT);
+    assert_eq!(counted.status(), StatusCode::OK);
     assert_eq!(
         square_titles(&app, "/v1/square/items?sort=hot").await,
         vec!["Gamma", "Beta", "Alpha"]
@@ -151,4 +153,24 @@ async fn missing_item_download_stat_is_404() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn concurrent_downloads_return_distinct_committed_counts() {
+    let app = app(AppState::with_square_items(demo_sort_items()));
+    let mut tasks = tokio::task::JoinSet::new();
+    for _ in 0..12 {
+        let app = app.clone();
+        tasks.spawn(async move {
+            let response = app.oneshot(Request::builder().method("POST")
+                .uri("/v1/square/items/sq-g/downloads").body(Body::empty()).unwrap()).await.unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let body: serde_json::Value = serde_json::from_slice(&to_bytes(response.into_body(), usize::MAX).await.unwrap()).unwrap();
+            body["download_count"].as_i64().unwrap()
+        });
+    }
+    let mut counts = Vec::new();
+    while let Some(result) = tasks.join_next().await { counts.push(result.unwrap()); }
+    counts.sort();
+    assert_eq!(counts, (1..=12).collect::<Vec<_>>());
 }

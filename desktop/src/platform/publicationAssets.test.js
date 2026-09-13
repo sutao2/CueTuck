@@ -8,11 +8,11 @@ import { assetHash } from './privateMedia.js';
 import { memoryAssets } from './assets.js';
 import { createLocalPrompt, createLocalCollection, addPromptToCollection, removePromptFromCollection, listCollectionMembers, listLocalCollections, listLocalPrompts, resetMemoryLibrary, setLocalSetting } from './library.js';
 import { loginSession, resetMemorySession, setSessionTransport } from './session.js';
-import { resetSquare, setSquareContentTransport, downloadSquareItem, setPublishTransport, setSquareTransport, setCatalogTransport, setFavoriteTransport } from './square.js';
+import { resetSquare, setDownloadStatsTransport, setSquareContentTransport, downloadSquareItem, setPublishTransport, setSquareTransport, setCatalogTransport, setFavoriteTransport } from './square.js';
 import { publishWithQueue, listSyncQueue, flushSyncQueue } from './syncQueue.js';
 let file, reference, wrapper;
 beforeEach(async () => {
-  vi.stubGlobal('crypto', webcrypto); resetMemoryLibrary(); resetMemorySession(); resetSquare();
+  vi.stubGlobal('crypto', webcrypto); resetMemoryLibrary(); resetMemorySession(); resetSquare(); setDownloadStatsTransport(async () => ({ download_count: 1 }));
   file = { id: crypto.randomUUID(), name: 'notes.txt', mime: 'text/plain', data: btoa('public notes') };
   reference = { id: file.id, media_id: `media.${crypto.randomUUID()}`, name: file.name, mime: file.mime, size: 12, sha256: await assetHash(file) };
   setSquareTransport(async () => []); setCatalogTransport(async () => ({ categories: [], models: [] })); setFavoriteTransport(async () => ({ items: [] }));
