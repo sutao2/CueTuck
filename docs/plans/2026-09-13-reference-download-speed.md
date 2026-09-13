@@ -1,6 +1,6 @@
 # 参考图下载速度与进度
 
-状态：Mac beta.4 已公开，安装待解锁；Windows 构建验证进行中。用户明确要求优化下载速度。
+状态：beta.4 双平台已公开并通过验证；Mac 本机安装待解锁。用户明确要求优化下载速度。
 
 ## 方案
 
@@ -25,4 +25,4 @@
 - 5 项发行检查、docs-check 与 diff-check 通过；beta.4 Mac app 签名与 DMG 完整性检查通过。
 
 - [v0.1.0-beta.4](https://github.com/sutao2/PromptArk/releases/tag/v0.1.0-beta.4) Mac arm64 已公开，源提交 `7eb0b6dcb5186f8db8dbe7ce0d7f8b28da32cfa7`；DMG SHA-256 `9622a8de6fd4a678fa3d26609960ce21b04d36973a97c254cb4a368b30a864bf`，GitHub 资产摘要一致，匿名下载 HTTP 200。Mac 锁屏阻止本机安装/GUI 验证，已请用户解锁；未替换正在运行的旧客户端。
-- Windows 调度已恢复，同一源提交的工作流 `34749894002` 正在测试/打包，未把旧版本安装包当作本次产物。
+- Windows 调度已恢复，同一源提交工作流 `34749894002` 成功；85 项原生测试（3 项既有环境忽略）、x64/生产 API 校验、静默安装、启动保持 10 秒及卸载通过。NSIS 5,009,796 字节，SHA-256 `2af181b7edb9ca62157f8411d5cccbac36e96817703177253bfbcb5b2e5bb305`，已追加到 beta.4，GitHub 资产摘要一致；签名状态为 NotSigned。两平台 SHA256SUMS 同步更新。
