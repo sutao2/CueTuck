@@ -28,3 +28,9 @@ it('only searches square after an explicit action, ignores stale network results
  await action(w,'返回本地').trigger('click');await flushPromises();finish({items:[{id:'remote',title:'迟到结果'}],total:1,next_offset:null});await flushPromises();expect(w.text()).not.toContain('迟到结果');
  await library.setLocalSetting('square_access','0');await action(w,'搜索提示词广场').trigger('click');await vi.advanceTimersByTimeAsync(260);expect(remote).toHaveBeenCalledTimes(1);expect(w.text()).toContain('广场访问已关闭');
 });
+
+it('only offers create, optimize and square search for current input',async()=>{
+ const w=await open();
+ expect(w.text()).not.toContain('复制当前输入');
+ expect(action(w,'创建提示词')).toBeTruthy();expect(action(w,'AI 优化提示词')).toBeTruthy();expect(action(w,'搜索提示词广场')).toBeTruthy();
+});

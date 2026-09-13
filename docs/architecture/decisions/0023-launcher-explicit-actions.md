@@ -1,6 +1,6 @@
 # 23. 启动器显式联网与本机 AI
 
-- Status: accepted
+- Status: superseded（快捷操作与粘贴入口部分由 [ADR 0024](0024-launcher-copy-only.md) 取代；其余保持）
 - Date: 2026-09-13
 - 关联：[启动器规格](../../specs/launcher/spec.md) · [交互计划](../../plans/2026-09-13-interactions-launcher-ai.md)
 

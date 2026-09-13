@@ -3,7 +3,7 @@
 | 字段 | 值 |
 |---|---|
 | 状态 | 现行 |
-| 产品 | 提示方舟 / PromptArk |
+| 产品 | CueTuck · 唤词 |
 | 阶段 | 完整产品队列（ADR 0014） |
 | 关联 | [宪法](../constitution.md) · [路线图](roadmap.md) · [术语](glossary.md) |
 
