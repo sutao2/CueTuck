@@ -285,7 +285,7 @@ async fn enqueue(
                     mail.revision,
                     "risk_notification",
                     &config.recipient,
-                    "PromptArk 风险通知",
+                    "CueTuck 风险通知",
                     &format!(
                         "公开投稿风险事件（不含正文）。\n{}\n请登录管理台核查。",
                         metadata

@@ -32,7 +32,7 @@ describe("AdminApp", () => {
         };
       }
       if (request.kind === "siteConfig") {
-        return { revision:0, name:'提示方舟', square_public: true };
+        return { revision:0, name:'唤词', square_public: true };
       }
       if (request.kind === "siteSave") {
         return { ...request.config, revision:request.config.revision+1 };
@@ -125,7 +125,7 @@ describe("AdminApp", () => {
         return { items: [] };
       }
       if (request.kind === "siteConfig") {
-        return { revision:0, name:'提示方舟', square_public: true };
+        return { revision:0, name:'唤词', square_public: true };
       }
       if (request.kind === "siteSave") {
         return { ...request.config, revision:request.config.revision+1 };

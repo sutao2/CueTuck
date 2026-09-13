@@ -3,7 +3,7 @@
       <header class="modal-header">
         <div>
           <div class="login-mark" aria-hidden="true"><AppIcon name="library" /></div>
-          <h2 id="login-title">登录提示方舟</h2>
+          <h2 id="login-title">登录唤词</h2>
           <p id="login-description" class="login-description" data-testid="login-reason">{{ reason && reason !== '登录' ? reason : '同步你的灵感，收藏与分享好用的提示词。' }}</p>
         </div>
         <button type="button" class="page-back" aria-label="返回" :disabled="pending === 'email' || pending === 'identity'" @click="close">← 返回</button>

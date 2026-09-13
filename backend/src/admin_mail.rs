@@ -320,7 +320,7 @@ pub async fn test(
     if config.encrypted_secret.is_empty() {
         return Err(StatusCode::SERVICE_UNAVAILABLE);
     }
-    let id=pg.queue_mail(&mut tx,&state.oauth_config.key,config.revision,"test",&input.to,"PromptArk 邮件服务测试","这是一封由站点所有者主动发起的测试邮件。收到本邮件表示当前 SMTP 已完成这次投递。无需回复。",&actor,3600).await?;
+    let id=pg.queue_mail(&mut tx,&state.oauth_config.key,config.revision,"test",&input.to,"CueTuck 邮件服务测试","这是一封由站点所有者主动发起的测试邮件。收到本邮件表示当前 SMTP 已完成这次投递。无需回复。",&actor,3600).await?;
     audit(
         pg,
         &mut tx,

@@ -453,7 +453,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 ### Requirement: 更新
 
-更新页 MUST 展示：当前版本、检查更新、自动下载更新、更新通道、发行说明。当前版本 MUST 为真实应用版本。检查更新 MUST 请求 GitHub Releases；稳定通道只用正式发行，预览通道只用预发行。无对应发行物或已是最新时 MUST 说明没有可用更新。读取失败时 MUST 说明检查失败，不得写成没有可用更新。自动下载是本机开关；打开且当前通道有包时 MUST 通过 Tauri updater 排队安装，MUST NOT 走 Mac App Store 或 Microsoft Store。发行说明 MUST 来自 GitHub Releases 正文。
+更新页 MUST 展示：当前版本、检查更新、自动下载更新、更新通道、发行说明。当前版本 MUST 为真实应用版本。检查更新 MUST 请求 GitHub Releases；稳定通道只用正式发行，预览通道只用预发行。无对应发行物或已是最新时 MUST 说明没有可用更新。读取失败时 MUST 说明检查失败，不得写成没有可用更新。自动下载是本机开关；打开且当前通道有包时 MUST 下载并验证签名，安装仍由用户显式确认，MUST NOT 走 Mac App Store 或 Microsoft Store。发行说明 MUST 来自 GitHub Releases 正文。
 
 #### Scenario: 版本真实、检查不假装
 
@@ -478,11 +478,11 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 - THEN 按语义版本选择指定通道中最高的非草稿有效版本，不依赖返回顺序
 - AND 只有版本优先级高于当前版本才可升级；同版和旧版不得触发下载
 
-#### Scenario: 自动下载按通道排队安装
+#### Scenario: 自动下载后确认安装
 
 - GIVEN 自动下载已打开且当前通道有包
 - WHEN 用户点检查更新
-- THEN 通过 updater 排队安装
+- THEN 下载并验证当前通道的更新，显示进度与安装并重启入口；不得自动安装
 - AND 展示该通道发行说明
 - AND 不声称已经从应用商店安装
 
@@ -539,8 +539,12 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 版本真实、检查不假装 | `WorkbenchShell.spec.js` keeps the updates page without claiming a store check；`packageIsolation.test.js` keeps package version aligned with tauri and cargo；`updates.test.js` reports no update when the latest stable tag matches the tauri build；`updates.test.js` asks GitHub Releases and reports none when the list is empty |
 | 检查失败不写成没有更新 | `WorkbenchShell.spec.js` does not treat a failed update check as no updates；`updates.test.js` does not treat a failed GitHub read as no updates |
 | 仅更高有效版本可升级 | `updates.test.js` 旧版/同版构建、乱序草稿与预发行排序；Rust `commands::updates::tests` |
-| 自动下载按通道排队安装 | `WorkbenchShell.spec.js` queues an updater install when auto-download is on and the channel has a package；`updates.test.js` queues an updater install when auto-download is on and the channel has a package |
+| 自动下载后确认安装 | `WorkbenchShell.spec.js` queues an updater install when auto-download is on and the channel has a package；`updates.test.js` queues an updater install when auto-download is on and the channel has a package |
 
 ### Requirement: 本机启动器 AI 配置
 
 AI 与模型页 MUST 提供 API 基础地址、隐藏密钥输入、模型 ID 手填/供应商列表和显式保存/测试/清除；只在桌面可用。macOS Keychain 与 Windows Credential Store 保存完整配置，禁用平台缺失后的 mock 存储降级；端点改变不能沿用旧密钥。配置读取失败禁止默认覆盖，未保存修改纳入退出确认；测试只发送固定文本。网络边界与场景见 [ADR 0023](../../architecture/decisions/0023-launcher-explicit-actions.md)和[交互计划](../../plans/2026-09-13-interactions-launcher-ai.md)。
+
+### Requirement: CueTuck 更新状态
+
+更新流程遵循[品牌与更新计划](../../plans/2026-09-13-cuetuck-updates.md)。桌面启动后后台检查并定期重试，工作台侧栏与设置共享状态；浏览器不自动检查。下载、签名验证、已就绪、安装及错误分别展示；字节进度来自原生下载事件，失败可重试。已下载的已验证包仅在用户确认后安装重启，版本必须与检查结果一致。预览构建未指定偏好时默认预览通道。下载与安装进行中禁止切换通道和重复操作。界面语言仅保留在外观页，侧栏原语言入口用于更新提示。

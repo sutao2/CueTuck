@@ -316,7 +316,7 @@ async fn provider_json(response:reqwest::Response)->Result<Value,StatusCode>{
     serde_json::from_slice(&bytes).map_err(|_|StatusCode::UNAUTHORIZED)
 }
 pub(crate) async fn fetch_verified_user(config:&ProviderConfig,provider:&str,code:&str)->Result<OAuthUser,StatusCode>{
-    let client = reqwest::Client::builder().user_agent("PromptArk/0.1")
+    let client = reqwest::Client::builder().user_agent("CueTuck/0.1")
         .redirect(reqwest::redirect::Policy::none()).timeout(std::time::Duration::from_secs(20)).build().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let token_response: Value = provider_json(client
         .post(&config.token_uri)
@@ -403,7 +403,7 @@ mod profile_tests {
         let router = Router::new()
             .route("/token", post(|| async { Json(json!({ "access_token": "test-token" })) }))
             .route("/profile", get(move |headers: HeaderMap| { let profile = profile.clone(); async move {
-                assert_eq!(headers["user-agent"], "PromptArk/0.1"); Json(profile)
+                assert_eq!(headers["user-agent"], "CueTuck/0.1"); Json(profile)
             }}))
             .route("/emails", get(move || { let emails = emails.clone(); async move { Json(emails) } }));
         let task = tokio::spawn(async move { axum::serve(listener, router).await.unwrap(); });

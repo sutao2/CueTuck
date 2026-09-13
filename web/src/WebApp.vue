@@ -10,7 +10,7 @@
       >
         {{ sidebarCollapsed ? "打开侧栏" : "收起侧栏" }}
       </button>
-      <span class="brand">提示方舟</span>
+      <span class="brand">唤词</span>
       <span class="kicker">浏览器工作台</span>
       <span v-if="session.loggedIn">{{ session.email }}</span>
       <button v-if="session.loggedIn" type="button" data-testid="logout" :disabled="syncBusy || downloadBusy.length > 0" @click="signOut">退出</button>

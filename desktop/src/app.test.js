@@ -8,7 +8,7 @@ const root = dirname(fileURLToPath(import.meta.url));
 describe("desktop package", () => {
   it("declares a vue app entry", () => {
     const pkg = JSON.parse(readFileSync(join(root, "..", "package.json"), "utf8"));
-    expect(pkg.name).toBe("promptark-desktop");
+    expect(pkg.name).toBe("cuetuck-desktop");
     expect(pkg.scripts.test).toBeTruthy();
   });
 });

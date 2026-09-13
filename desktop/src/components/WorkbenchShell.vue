@@ -122,8 +122,8 @@
             <button type="button" class="preference-toggle" :title="dark ? t('switchLight') : t('switchDark')" @click="toggleTheme">
               <AppIcon :name="dark ? 'sun' : 'moon'" />
             </button>
-            <button type="button" class="preference-toggle language-toggle" :title="t('languageToggle')" @click="toggleLanguage">
-              {{ uiLanguage === "en" ? "中" : "EN" }}
+            <button v-if="['available','downloading','verifying','ready','installing'].includes(updateState.phase)" type="button" class="preference-toggle update-toggle" data-testid="sidebar-update" :title="updateState.phase === 'ready' ? '更新已就绪，点击安装' : '有新版本，查看更新'" aria-label="查看应用更新" @click="settingsPage = 'updates'; settingsOpen = true">
+              <AppIcon name="download" /><span class="update-dot" />
             </button>
           </div>
         </div>
@@ -201,10 +201,7 @@
           <div class="filter-controls">
           <label class="compact-select">
             <span>{{ t("model") }}</span>
-            <select data-testid="model-filter" v-model="modelFilter" @change="onModelFilter">
-              <option value="">{{ t("allModels") }}</option>
-              <option v-for="name in modelOptions" :key="name" :value="name">{{ space === 'square' ? remoteCatalog?.models.find(item => item.id === name)?.name || name : name }}</option>
-            </select>
+            <SearchableSelect data-testid="model-filter" v-model="modelFilter" @change="onModelFilter" :options="[{value:'',label:t('allModels')}, ...modelOptions.map(name => ({value:name,label:space === 'square' ? remoteCatalog?.models.find(item => item.id === name)?.name || name : name}))]" />
           </label>
           <div class="view-switch" aria-label="视图切换">
             <button type="button" :class="{ active: view === 'grid' }" :aria-pressed="view === 'grid'" title="网格视图" @click="view = 'grid'"><AppIcon name="grid" /></button>
@@ -373,10 +370,7 @@
       <header class="modal-header"><h2 id="category-page-title">新建分类</h2><button type="button" class="page-back" aria-label="返回" :disabled="categoryBusy" @click="closeCategoryDialog">← 返回</button></header>
       <div class="create-body">
             <label class="field"><span>所属分类</span>
-              <select v-model="addingCategoryId" data-testid="category-parent" :disabled="categoryBusy">
-                <option value="">无（新建大分类）</option>
-                <option v-for="group in categoryGroups" :key="group.id" :value="group.id">{{ group.name }}</option>
-              </select>
+              <SearchableSelect v-model="addingCategoryId" data-testid="category-parent" :disabled="categoryBusy" :options="[{value:'',label:'无（新建大分类）'}, ...categoryGroups.map(group => ({value:group.id,label:group.name}))]" />
             </label>
             <label class="field"><span>分类名称</span>
               <input v-model="newCategoryName" data-testid="new-category-name" :placeholder="addingCategoryId ? '小分类名称' : '大分类名称'" :disabled="categoryBusy"
@@ -474,16 +468,11 @@
           <p v-else-if="!publishSources.length" role="status">本地库还没有内容，请返回本地提示词新建后再发布。</p>
           <label class="field">
             <span>本地内容</span>
-            <select v-model="publishSourceId" data-testid="publish-source" :disabled="publishBusy || publishSourcesLoading || Boolean(publishSourcesError)">
-              <option value="">选择要发布的本地提示词或合集</option>
-              <option v-for="item in publishSources" :key="item.id" :value="item.id">
-                {{ item.title }}
-              </option>
-            </select>
+            <SearchableSelect v-model="publishSourceId" data-testid="publish-source" :disabled="publishBusy || publishSourcesLoading || Boolean(publishSourcesError)" :options="[{value:'',label:'选择要发布的本地提示词或合集'}, ...publishSources.map(item => ({value:item.id,label:item.title}))]" />
           </label>
           <div class="publish-explainer"><AppIcon name="globe" /><div><strong>分享前确认内容可以公开</strong><p>请移除密钥、个人信息和其他不适合公开的内容。</p></div></div>
-          <label v-if="remoteCatalog" class="field"><span>广场分类</span><select v-model="publishCategoryId" data-testid="publish-category" :disabled="publishBusy"><option :value="null">未分类</option><option v-for="category in remoteCatalog.categories" :key="category.id" :value="category.id">{{ remoteCategoryLabel(category) }}</option></select></label>
-          <label v-if="remoteCatalog" class="field"><span>适用模型</span><select v-model="publishModel" data-testid="publish-model" :disabled="publishBusy"><option :value="null">通用模型</option><option v-if="publishModel && !remoteCatalog.models.some(item => item.id === publishModel)" :value="publishModel">{{ publishModel }}（原有自定义模型）</option><option v-for="model in remoteCatalog.models" :key="model.id" :value="model.id">{{ model.name }}</option></select></label>
+          <label v-if="remoteCatalog" class="field"><span>广场分类</span><SearchableSelect v-model="publishCategoryId" data-testid="publish-category" :disabled="publishBusy" :options="[{value:null,label:'未分类'}, ...remoteCatalog.categories.map(category => ({value:category.id,label:remoteCategoryLabel(category)}))]" /></label>
+          <label v-if="remoteCatalog" class="field"><span>适用模型</span><SearchableSelect v-model="publishModel" data-testid="publish-model" :disabled="publishBusy" :options="[{value:null,label:'通用模型'}, ...(publishModel &amp;&amp; !remoteCatalog.models.some(item => item.id === publishModel) ? [{value:publishModel,label:publishModel+'（原有自定义模型）'}] : []), ...remoteCatalog.models.map(model => ({value:model.id,label:model.name}))]" /></label>
           <p v-if="catalogError" class="use-hint" role="status">{{ catalogError }}；恢复连接后请重新进入发布页更新分类。</p>
           <p v-if="operationNote" role="status" class="use-hint">{{ operationNote }}</p>
           <p>提交后本地正文仍可编辑，审核状态不会覆盖本机内容。</p>
@@ -618,6 +607,7 @@
 </template>
 
 <script setup>
+import SearchableSelect from "./SearchableSelect.vue";
 import { formatMetric } from '../platform/contentMetrics.js';
 import AppIcon from "./AppIcon.vue";
 import GlobalSearch from "./GlobalSearch.vue";
@@ -630,6 +620,10 @@ import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
 import SettingsModal from "./SettingsModal.vue";
+import { updateState, startUpdateChecks } from "../platform/updates.js";
+let stopUpdateChecks;
+onMounted(() => { stopUpdateChecks = startUpdateChecks(); });
+onUnmounted(() => stopUpdateChecks?.());
 import SquareDetailModal from "./SquareDetailModal.vue";
 import MyPublications from './MyPublications.vue';
 import BatchOrganize from './BatchOrganize.vue';
@@ -1606,10 +1600,6 @@ async function applyUiLanguage(next) {
   uiLanguage.value = next === "en" ? "en" : "zh";
   document.documentElement.lang = uiLanguage.value === "en" ? "en" : "zh-CN";
   await setLocalSetting("ui_language", uiLanguage.value);
-}
-
-async function toggleLanguage() {
-  await applyUiLanguage(uiLanguage.value === "en" ? "zh" : "en");
 }
 
 function onModelFilter() {

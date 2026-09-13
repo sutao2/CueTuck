@@ -96,3 +96,8 @@ mod tests {
         assert!(client().is_ok());
     }
 }
+
+pub fn runtime_proxy_url() -> Result<Option<url::Url>, String> {
+    let raw = current_proxy();
+    if raw.is_empty() { Ok(None) } else { url::Url::parse(&raw).map(Some).map_err(|_| "代理地址无效".into()) }
+}

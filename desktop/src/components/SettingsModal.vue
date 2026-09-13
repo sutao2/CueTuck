@@ -27,7 +27,7 @@
             <div class="settings-group">
             <p v-if="prefError" data-testid="pref-error">{{ prefError }}</p>
             <label class="setting-row">
-              <span class="setting-copy"><strong>开机启动</strong><small>登录系统后自动打开提示方舟。</small></span>
+              <span class="setting-copy"><strong>开机启动</strong><small>登录系统后自动打开唤词。</small></span>
               <input
                 type="checkbox"
                 data-testid="launch-at-login"
@@ -385,10 +385,10 @@
             <div class="settings-group">
             <div class="setting-row">
               <span class="setting-copy"><strong>当前版本</strong><small>桌面包 {{ appVersion }}，与本机构建一致。</small></span>
-              <button type="button" class="button ghost-button" data-testid="check-updates" @click="runCheckUpdates">检查更新</button>
+              <button type="button" class="button ghost-button" data-testid="check-updates" :disabled="['checking','downloading','verifying','ready','installing'].includes(updateState.phase)" @click="runCheckUpdates">检查更新</button>
             </div>
             <label class="setting-row">
-              <span class="setting-copy"><strong>自动下载更新</strong><small>打开后，检查到当前通道有包时通过 updater 排队安装，不走应用商店。</small></span>
+              <span class="setting-copy"><strong>自动下载更新</strong><small>发现新版本后自动下载并验证，安装前由你确认。</small></span>
               <input
                 type="checkbox"
                 data-testid="auto-download"
@@ -398,7 +398,7 @@
             </label>
             <label class="setting-row">
               <span class="setting-copy"><strong>更新通道</strong><small>稳定版只用正式发行，预览版只用预发行。</small></span>
-              <select data-testid="update-channel" :value="updateChannel" @change="saveUpdateChannel">
+              <select data-testid="update-channel" :disabled="['checking','downloading','verifying','ready','installing'].includes(updateState.phase)" :value="updateChannel" @change="saveUpdateChannel">
                 <option value="stable">稳定版</option>
                 <option value="preview">预览版</option>
               </select>
@@ -407,8 +407,7 @@
               <span class="setting-copy"><strong>发行说明</strong><small>随检查更新展示，不来自应用商店。</small></span>
               <span class="setting-control">GitHub Releases</span>
             </div>
-            <p v-if="releaseNotes" data-testid="release-notes">{{ releaseNotes }}</p>
-            <p v-if="updateNote" data-testid="update-note">{{ updateNote }}</p>
+            <UpdateStatus :channel="updateChannel" :dirty="hasUnsaved" />
             </div>
           </section>
           <LauncherAiSettings v-if="aiVisited" v-show="current === 'models'" @dirty="aiDirty = $event" @busy="aiBusy = $event" />
@@ -466,7 +465,8 @@ import {
 import { syncLocalLibraryNow } from "../platform/librarySync.js";
 import { parseHttpProxy } from "../platform/httpProxy.js";
 import { flushSyncQueue } from "../platform/syncQueue.js";
-import { checkForUpdates, queueUpdateInstall } from "../platform/updates.js";
+import { updateState, refreshUpdate, defaultUpdateChannel } from "../platform/updates.js";
+import UpdateStatus from "./UpdateStatus.vue";
 
 const props = defineProps({
   theme: { type: String, default: "light" },
@@ -530,10 +530,8 @@ const dataBusy = ref(false);
 const autoBackupNote = ref("");
 const dataError = ref("");
 const syncNote = ref("");
-const updateNote = ref("");
-const releaseNotes = ref("");
 const autoDownload = ref(false);
-const updateChannel = ref("stable");
+const updateChannel = ref(defaultUpdateChannel);
 const syncConflict = ref("newer");
 const syncWifiImages = ref(false);
 const syncIncludeAssets = ref(false);
@@ -709,7 +707,7 @@ async function loadSettings() {
   customModels.value = (await getLocalSetting("custom_models")) || "";
   keepAuthorOnDownload.value = isPrefOn(await getLocalSetting("keep_author_on_download"));
   autoDownload.value = isPrefOn(await getLocalSetting("auto_download"));
-  updateChannel.value = (await getLocalSetting("update_channel")) === "preview" ? "preview" : "stable";
+  updateChannel.value = (await getLocalSetting("update_channel")) || defaultUpdateChannel;
   syncConflict.value = (await getLocalSetting("sync_conflict")) === "keep_local" ? "keep_local" : "newer";
   syncWifiImages.value = isPrefOn(await getLocalSetting("sync_wifi_images"));
   autoSyncQueue.value = isPrefOn(await getLocalSetting("auto_sync_queue"));
@@ -828,32 +826,7 @@ async function saveHttpProxy() {
 }
 
 async function runCheckUpdates() {
-  updateNote.value = "";
-  releaseNotes.value = "";
-  try {
-    const result = await checkForUpdates({ channel: updateChannel.value });
-    releaseNotes.value = result?.notes ?? "";
-    if (result?.available) {
-      const version = result.version ? ` ${result.version}` : "";
-      if (autoDownload.value) {
-        try {
-          const queued = await queueUpdateInstall({
-            autoDownload: true,
-            channel: updateChannel.value,
-          });
-          updateNote.value = queued?.queued ? "已排队安装" : `发现更新${version}`.trim();
-        } catch {
-          updateNote.value = "安装失败";
-        }
-      } else {
-        updateNote.value = `发现更新${version}`.trim();
-      }
-    } else {
-      updateNote.value = "没有可用更新";
-    }
-  } catch {
-    updateNote.value = "检查失败";
-  }
+  await refreshUpdate({ channel: updateChannel.value, autoDownload: autoDownload.value });
 }
 
 async function saveShortcut() {

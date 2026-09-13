@@ -132,7 +132,7 @@ impl Pg {
             "invitation" => "管理员邀请",
             _ => "密码重置",
         };
-        let body=format!("你请求了 PromptArk {label}。请在软件的邮箱验证页面选择对应用途，填写邮箱、下方验证码和新密码。\n\n验证码：\n{token}\n\n30 分钟内有效，仅可使用一次。不要将验证码转发给任何人。如果不是你本人或你确认的管理员发起，请忽略本邮件。");
+        let body=format!("你请求了 CueTuck {label}。请在软件的邮箱验证页面选择对应用途，填写邮箱、下方验证码和新密码。\n\n验证码：\n{token}\n\n30 分钟内有效，仅可使用一次。不要将验证码转发给任何人。如果不是你本人或你确认的管理员发起，请忽略本邮件。");
         let mail_id = self
             .queue_mail(
                 tx,
@@ -140,7 +140,7 @@ impl Pg {
                 mail.revision,
                 purpose,
                 email,
-                &format!("PromptArk {label}"),
+                &format!("CueTuck {label}"),
                 &body,
                 actor.unwrap_or("self-service"),
                 1800,

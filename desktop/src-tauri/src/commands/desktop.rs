@@ -88,7 +88,7 @@ pub fn apply_linux_autostart(dir: &Path, enabled: bool, program: &str) -> Result
             program.to_string()
         };
         let body = format!(
-            "[Desktop Entry]\nType=Application\nName=PromptArk\nExec={exec}\nX-GNOME-Autostart-enabled=true\n"
+            "[Desktop Entry]\nType=Application\nName=CueTuck\nExec={exec}\nX-GNOME-Autostart-enabled=true\n"
         );
         fs::write(&path, body).map_err(|error| error.to_string())?;
     } else if path.exists() {

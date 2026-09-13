@@ -19,7 +19,7 @@ it('uses a page, focuses email without trapping Tab, and returns focus on leavin
   const trigger = document.createElement('button');
   document.body.append(trigger); trigger.focus();
   const w = await open();
-  expect(w.get('h2').text()).toBe('登录提示方舟');
+  expect(w.get('h2').text()).toBe('登录唤词');
   expect(w.get('[data-testid="login-reason"]').text()).not.toBe('登录');
   expect(document.activeElement).toBe(w.get('[type="email"]').element);
   w.get('.login-later').element.focus();

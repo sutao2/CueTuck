@@ -1,3 +1,4 @@
+import { selectOption, selectComponent } from '../test/selectOption.js';
 import { mount, flushPromises } from '@vue/test-utils';
 import { beforeEach, afterEach, it, expect } from 'vitest';
 import WorkbenchShell from './WorkbenchShell.vue';
@@ -34,7 +35,7 @@ it('keeps loading until the latest request settles and shows only one retryable 
 it('counts the selected model and clears filters without changing the current tab or data', async () => {
   await createLocalPrompt({ title:'One',content:'body',model:'Flux' });
   await createLocalPrompt({ title:'Two',content:'body',model:'GPT' });
-  await shell(); await w.get('[data-testid="model-filter"]').setValue('Flux');
+  await shell(); await selectOption(w, 'model-filter', 'Flux');
   expect(w.get('[data-sort="全部"] small').text()).toBe('1');
   expect(w.findAll('.prompt-card')).toHaveLength(1);
   await w.get('[data-sort="收藏"]').trigger('click');

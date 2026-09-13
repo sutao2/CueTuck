@@ -8,15 +8,15 @@ test('production rejects inconsistent origins, loopback and unsafe URLs', () => 
   for (const [a, b] of [['https://localhost', 'https://localhost'], ['https://a.test', 'https://b.test'], ['http://a.test', 'http://a.test'], ['https://user:pass@a.test', 'https://a.test']]) assert.ok(validateRelease({ ...input(), production: true, env: { PROMPTARK_API_BASE: a, VITE_API_BASE: b, TAURI_SIGNING_PRIVATE_KEY: 'synthetic' } }).length);
 });
 test('version and updater source mismatch are rejected', () => assert.equal(validateRelease({ ...input(), cargoVersion: '0.2.0', nativeUpdates: '' }).length, 2));
-test('manual preview requires production origins, prerelease version and no updater artifacts', () => {
-  const data=input();data.version=data.cargoVersion=data.config.version='0.1.0-beta.1';data.config.bundle={createUpdaterArtifacts:false};
-  const env={PROMPTARK_API_BASE:'https://api.example.com',VITE_API_BASE:'https://api.example.com'};
+test('preview requires production origins, prerelease version and signed updater artifacts', () => {
+  const data=input();data.version=data.cargoVersion=data.config.version='0.1.0-beta.1';data.config.bundle={createUpdaterArtifacts:true};
+  const env={TAURI_SIGNING_PRIVATE_KEY:'synthetic',PROMPTARK_API_BASE:'https://api.example.com',VITE_API_BASE:'https://api.example.com'};
   assert.deepEqual(validateRelease({...data,preview:true,env}),[]);
   assert.ok(validateRelease({...data,preview:true}).length);
-  assert.ok(validateRelease({...data,preview:true,production:true,env}).some(e=>e.includes('signing key')));
+  assert.ok(validateRelease({...data,preview:true,production:true,env:{...env,TAURI_SIGNING_PRIVATE_KEY:undefined}}).some(e=>e.includes('signing key')));
   assert.ok(validateRelease({...data,preview:true,env:{...env,VITE_API_BASE:'http://localhost:8787'}}).length);
-  data.config.bundle.createUpdaterArtifacts=true;
+  data.config.bundle.createUpdaterArtifacts=false;
   assert.ok(validateRelease({...data,preview:true,env}).length);
-  data.config.bundle.createUpdaterArtifacts=false;data.version=data.cargoVersion=data.config.version='0.1.0';
+  data.config.bundle.createUpdaterArtifacts=true;data.version=data.cargoVersion=data.config.version='0.1.0';
   assert.ok(validateRelease({...data,preview:true,env}).length);
 });

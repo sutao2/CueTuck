@@ -1,4 +1,4 @@
-# PromptArk 浏览器工作台
+# CueTuck 浏览器工作台
 
 独立浏览器应用，不进桌面安装包。合同见 [web 规格](../docs/specs/web/spec.md)。浏览器使用内存库，**尚未与桌面 SQLite 同步**。
 

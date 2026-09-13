@@ -1,6 +1,6 @@
 <template>
   <main v-if="!loggedIn" class="login-layout">
-    <header class="login-brand"><div class="brand"><img :src="appIcon" alt="" class="brand-mark">提示方舟 <small>管理控制台</small></div></header>
+    <header class="login-brand"><div class="brand"><img :src="appIcon" alt="" class="brand-mark">唤词 <small>管理控制台</small></div></header>
     <div class="login-content"><IdentityForm v-if="identityMode" :mode="identityMode" :request="adminIdentityRequest" :initial-email="email" @back="identityMode=''" @done="identityDone" /><form v-else class="login" @submit.prevent="submitLogin"><h2>登录管理台</h2><p class="muted">使用管理员账号继续。</p>
       <label>邮箱<input v-model="email" type="email" data-testid="admin-email" autocomplete="username" placeholder="name@example.com" :disabled="busy" required></label>
       <label>密码<input v-model="password" type="password" data-testid="admin-password" autocomplete="current-password" placeholder="输入密码" :disabled="busy" required></label>
@@ -11,12 +11,12 @@
       <div class="oauth-login"><button v-for="name in oauthProviders" :key="name" type="button" :data-testid="`oauth-${name}`" :disabled="busy" @click="submitOAuth(name)">{{ name === 'google' ? 'Google 登录' : 'GitHub 登录' }}</button></div>
       <button v-if="oauthWaiting" type="button" @click="cancelOAuth">取消授权等待</button>
       <div class="oauth-login"><button type="button" :disabled="busy" @click="identityMode='reset'">忘记密码</button><button type="button" :disabled="busy" @click="identityMode='invitation'">接受管理员邀请</button></div>
-      <small class="muted login-footnote">普通用户请使用提示方舟客户端。关闭页面后需重新登录。</small>
+      <small class="muted login-footnote">普通用户请使用唤词客户端。关闭页面后需重新登录。</small>
     </form></div>
   </main>
   <main v-else class="admin-layout">
     <aside class="admin-sidebar">
-      <div class="brand"><img :src="appIcon" alt="" class="brand-mark"><div>提示方舟<small>管理控制台</small></div></div>
+      <div class="brand"><img :src="appIcon" alt="" class="brand-mark"><div>唤词<small>管理控制台</small></div></div>
       <nav aria-label="管理导航"><fieldset class="admin-nav" :disabled="writeBusy">
         <section v-for="group in visibleGroups" :key="group.label" class="nav-group" :aria-label="group.label">
           <p class="nav-label">{{ group.label }}</p>
@@ -28,7 +28,7 @@
       <div class="sidebar-account"><span class="account-avatar">{{ account[0]?.toUpperCase() }}</span><div><strong>{{ roleNames[accountRole] || '管理员' }}</strong><small data-testid="admin-account" :title="account">{{ account }}</small></div><button class="logout-button" :disabled="writeBusy" data-testid="admin-logout" @click="logout" title="退出登录" aria-label="退出登录"><AppIcon name="logout" /></button></div>
     </aside>
     <div ref="workspace" class="admin-workspace">
-      <header class="workspace-bar"><span class="workspace-title"><AppIcon :name="pageIcon" />{{ titles[page] }}</span><span class="environment-label">提示方舟 / 管理控制台</span></header>
+      <header class="workspace-bar"><span class="workspace-title"><AppIcon :name="pageIcon" />{{ titles[page] }}</span><span class="environment-label">唤词 / 管理控制台</span></header>
       <div class="workspace-content" :class="{ 'configuration-page': configurationPages.includes(page) }">
         <header class="page-heading"><div><h1>{{ titles[page] }}</h1><p>{{ descriptions[page] }}</p></div></header>
         <p v-if="error" role="alert" data-testid="admin-error" class="error-banner">{{ error }}</p>
@@ -82,7 +82,7 @@ import { clearAdminSession, getAdminSession, listOAuthProviders, loginAdmin, log
 import { permittedPage, requestedPage } from './navigation.js';
 import './admin.css';
 const titles = { review: '内容审核', content: '广场内容', users: '用户', categories: '分类管理', models: '模型管理', oauth: '第三方登录', settings: '站点设置', security: '账号安全' };
-const descriptions = { review: '检查社区投稿，维护广场内容质量。', content: '管理公开展示、推荐排序与上下架，保留作者原始内容。', users: '检索账号、查看公开资料，安全地管理状态与权限。', oauth: '连接登录提供商，让用户使用已有账号登录提示方舟。', settings: '管理社区的访问方式与公开范围。', security: '管理本人的登录密码与所有设备的会话。' };
+const descriptions = { review: '检查社区投稿，维护广场内容质量。', content: '管理公开展示、推荐排序与上下架，保留作者原始内容。', users: '检索账号、查看公开资料，安全地管理状态与权限。', oauth: '连接登录提供商，让用户使用已有账号登录唤词。', settings: '管理社区的访问方式与公开范围。', security: '管理本人的登录密码与所有设备的会话。' };
 const permissions = ref({}), accountRole = ref(''), workspace = ref(null);
 const visibleGroups = computed(() => adminNavGroups.map(group => ({ ...group, items: group.items.filter(item => permittedPage(item.page, permissions.value)) })).filter(group => group.items.length));
 const pageIcon = computed(() => adminNavGroups.flatMap(group => group.items).find(item => item.page === page.value)?.icon || 'settings');

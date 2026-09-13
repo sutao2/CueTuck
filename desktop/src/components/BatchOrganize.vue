@@ -5,10 +5,8 @@
       <button type="button" class="button" data-testid="select-page" :disabled="busy || !canSelectPage" @click="$emit('select-page')">选择本页</button>
       <button type="button" class="button ghost-button" data-testid="clear-selection" :disabled="busy || !prompts.length" @click="$emit('clear-selection')">清空选择</button>
       <label>操作<select v-model="mode" :disabled="busy"><option value="category">移动分类</option><option value="collection">加入合集</option></select></label>
-      <label v-if="mode === 'category'">目标分类<select v-model="categoryId" :disabled="busy" data-testid="batch-category">
-        <option value="">未分类</option><optgroup v-for="group in groups" :key="group.id" :label="group.name"><option :value="group.id">{{ group.name }}</option><option v-for="child in group.children" :key="child.id" :value="child.id">{{ child.name }}</option></optgroup>
-      </select></label>
-      <label v-else>目标合集<select v-model="collectionId" :disabled="busy" data-testid="batch-collection"><option value="">选择合集</option><option v-for="collection in collections" :key="collection.id" :value="collection.id">{{ collection.title }}</option></select></label>
+      <label v-if="mode === 'category'">目标分类<SearchableSelect v-model="categoryId" :disabled="busy" data-testid="batch-category" :options="[{value:'',label:'未分类'}, ...groups.flatMap(group => [{value:group.id,label:group.name}, ...group.children.map(child => ({value:child.id,label:group.name+' / '+child.name}))])]" /></label>
+      <label v-else>目标合集<SearchableSelect v-model="collectionId" :disabled="busy" data-testid="batch-collection" :options="[{value:'',label:'选择合集'}, ...collections.map(item => ({value:item.id,label:item.title}))]" /></label>
       <button type="button" class="button primary-button" data-testid="apply-batch" :disabled="busy || !prompts.length || (mode === 'collection' && !collectionId)" @click="apply">{{ busy ? '正在整理…' : '应用到所选' }}</button>
     </div>
     <p class="use-hint">翻页保留选择，切换筛选会清空。{{ mode === 'collection' ? '一条提示词只能属于一个合集，已归属其他合集的条目会移入目标合集。' : '只移动所选提示词的分类，正文与附件保持不变。' }}</p>
@@ -17,6 +15,7 @@
   </section>
 </template>
 <script setup>
+import SearchableSelect from "./SearchableSelect.vue";
 import { ref } from 'vue';
 import { addPromptToCollection, moveLocalPromptCategory } from '../platform/library.js';
 const props = defineProps({ prompts: { type: Array, required: true }, groups: Array, collections: Array, canSelectPage: Boolean, complete: { type: Function, required: true } });

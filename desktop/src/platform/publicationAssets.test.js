@@ -1,3 +1,4 @@
+import { selectOption, selectComponent } from '../test/selectOption.js';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { webcrypto } from 'node:crypto';
 import { mount, flushPromises } from '@vue/test-utils';
@@ -59,7 +60,7 @@ async function collectionSource() {
   wrapper = mount(WorkbenchShell); await flushPromises();
   await wrapper.get('[data-space="square"]').trigger('click'); await flushPromises();
   await wrapper.get('[data-testid="publish-prompt"]').trigger('click'); await flushPromises();
-  await wrapper.get('[data-testid="publish-source"]').setValue(collection.id); await flushPromises();
+  await selectOption(wrapper, 'publish-source', collection.id); await flushPromises();
   return { collection,first,second };
 }
 it('publishes only selected collection files with member links, preserving selection after upload failure', async () => {
@@ -136,11 +137,11 @@ it('defaults to no public files, clears choices on source changes and retains ch
   wrapper = mount(WorkbenchShell); await flushPromises();
   await wrapper.get('[data-space="square"]').trigger('click'); await flushPromises();
   await wrapper.get('[data-testid="publish-prompt"]').trigger('click'); await flushPromises();
-  await wrapper.get('[data-testid="publish-source"]').setValue(first.id); await flushPromises();
+  await selectOption(wrapper, 'publish-source', first.id); await flushPromises();
   expect(wrapper.get('[data-testid="publish-asset"]').element.checked).toBe(false); expect(fetcher).not.toHaveBeenCalled();
   await wrapper.get('[data-testid="publish-asset"]').setValue(true);
-  await wrapper.get('[data-testid="publish-source"]').setValue(second.id); await flushPromises();
-  await wrapper.get('[data-testid="publish-source"]').setValue(first.id); await flushPromises();
+  await selectOption(wrapper, 'publish-source', second.id); await flushPromises();
+  await selectOption(wrapper, 'publish-source', first.id); await flushPromises();
   expect(wrapper.get('[data-testid="publish-asset"]').element.checked).toBe(false);
   await wrapper.get('[data-testid="publish-asset"]').setValue(true);
   await wrapper.get('[data-testid="publish-submit"]').trigger('click'); await flushPromises();

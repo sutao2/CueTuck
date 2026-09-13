@@ -2,11 +2,16 @@ use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT};
 use serde_json::{json, Value};
 use semver::Version;
 use std::time::Duration;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter, State};
+use std::sync::Mutex;
+use tauri_plugin_updater::Update;
+
+#[derive(Default)]
+pub struct UpdateState(pub Mutex<Option<(Update, Vec<u8>)>>, pub tokio::sync::Mutex<()>);
 use tauri_plugin_updater::UpdaterExt;
 use url::Url;
 
-const RELEASES_URL: &str = "https://api.github.com/repos/sutao2/PromptArk/releases";
+const RELEASES_URL: &str = "https://api.github.com/repos/sutao2/CueTuck/releases";
 
 fn http_client() -> Result<reqwest::Client, String> {
     let mut headers = HeaderMap::new();
@@ -85,41 +90,42 @@ pub async fn check_for_updates(channel: Option<String>) -> Result<Value, String>
 }
 
 #[tauri::command]
-pub async fn queue_update_install(
-    app: AppHandle,
-    channel: Option<String>,
-) -> Result<Value, String> {
-    let releases = list_releases().await.map_err(|_| "安装失败".to_string())?;
-    let Some(latest) = pick_release(&releases, want_preview(channel.as_deref())) else {
-        return Ok(json!({ "queued": false, "via": "updater" }));
-    };
-    let tag = latest
-        .get("tag_name")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .trim();
-    if !newer_than_current(latest) {
-        return Ok(json!({ "queued": false, "via": "updater" }));
+pub async fn queue_update_install(app: AppHandle, channel: Option<String>, version: String, state: State<'_, UpdateState>) -> Result<Value, String> {
+    let _guard = state.1.try_lock().map_err(|_| "更新正在进行".to_string())?;
+    let releases = list_releases().await?;
+    let latest = pick_release(&releases, want_preview(channel.as_deref())).ok_or("没有可用更新")?;
+    if !newer_than_current(latest) || release_payload(latest)["version"] != version { return Err("版本已变化，请重新检查更新".into()); }
+    let tag = latest["tag_name"].as_str().ok_or("版本无效")?;
+    let endpoint = Url::parse(&format!("https://github.com/sutao2/CueTuck/releases/download/{tag}/latest.json")).map_err(|_| "更新地址无效")?;
+    let mut builder = app.updater_builder().timeout(Duration::from_secs(180)).endpoints(vec![endpoint]).map_err(|_| "更新地址无效")?;
+    if let Some(proxy) = crate::http::runtime_proxy_url()? { builder = builder.proxy(proxy); }
+    let updater = builder.build().map_err(|_| "更新配置无效")?;
+    let update = updater.check().await.map_err(|_| "读取更新包失败，请重试")?.ok_or("当前平台没有更新包")?;
+    if update.version != version || update.download_url.scheme() != "https" || update.download_url.host_str() != Some("github.com") || !update.download_url.path().starts_with(&format!("/sutao2/CueTuck/releases/download/{tag}/")) {
+        return Err("更新包与所选版本不一致".into());
     }
-    let endpoint = Url::parse(&format!(
-        "https://github.com/sutao2/PromptArk/releases/download/{tag}/latest.json"
-    ))
-    .map_err(|_| "安装失败".to_string())?;
-    let updater = app
-        .updater_builder()
-        .timeout(Duration::from_secs(30))
-        .endpoints(vec![endpoint])
-        .map_err(|_| "安装失败".to_string())?
-        .build()
-        .map_err(|_| "安装失败".to_string())?;
-    let Some(update) = updater.check().await.map_err(|_| "安装失败".to_string())? else {
-        return Ok(json!({ "queued": false, "via": "updater" }));
-    };
-    update
-        .download_and_install(|_, _| {}, || {})
-        .await
-        .map_err(|_| "安装失败".to_string())?;
-    Ok(json!({ "queued": true, "via": "updater" }))
+    *state.0.lock().map_err(|_| "更新状态不可用")? = None;
+    let mut downloaded = 0u64;
+    let mut last = std::time::Instant::now();
+    let bytes = update.download(|chunk, total| {
+        downloaded += chunk as u64;
+        if last.elapsed() >= Duration::from_millis(100) || total == Some(downloaded) {
+            let _ = app.emit("update-progress", json!({"phase":"downloading", "downloaded":downloaded,"total":total}));
+            last = std::time::Instant::now();
+        }
+    }, || { let _ = app.emit("update-progress", json!({"phase":"verifying"})); }).await.map_err(|_| "下载或签名验证失败，请重试")?;
+    let size = bytes.len();
+    *state.0.lock().map_err(|_| "更新状态不可用")? = Some((update, bytes));
+    Ok(json!({"ready":true,"version":version,"size":size}))
+}
+
+#[tauri::command]
+pub async fn install_downloaded_update(app: AppHandle, version: String, state: State<'_, UpdateState>) -> Result<(), String> {
+    let _guard = state.1.try_lock().map_err(|_| "更新正在进行".to_string())?;
+    let staged = state.0.lock().map_err(|_| "更新状态不可用")?.clone().ok_or("请先下载更新")?;
+    if staged.0.version != version { return Err("已下载版本不匹配，请重新下载".into()); }
+    tauri::async_runtime::spawn_blocking(move || staged.0.install(staged.1)).await.map_err(|_| "安装任务失败")?.map_err(|_| "安装失败，请关闭其他实例后重试")?;
+    app.restart();
 }
 
 #[cfg(test)]

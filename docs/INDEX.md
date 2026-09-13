@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-13-cuetuck-updates.md](plans/2026-09-13-cuetuck-updates.md) | 进行中 | CueTuck 改名、更新提醒与下拉搜索 | 品牌兼容、签名更新及可搜索选择器 |
 | [changes/skills-management/proposal.md](changes/skills-management/proposal.md) | 目标 | 评审 Skills 功能与交互方案 | 提示词/Skills 分组、安装流程、兼容与维护边界；未实现 |
 | [plans/2026-09-13-skills.md](plans/2026-09-13-skills.md) | 目标 | 查看 Skills 后续实施与验收安排 | 当前仅方案；暂停应用代码，按四个切片规划 |
 | [architecture/decisions/0023-launcher-explicit-actions.md](architecture/decisions/0023-launcher-explicit-actions.md) | 现行 | 启动器快捷创建、AI 与广场搜索 | 独立窗口保持，联网由显式操作触发，AI 配置仅本机凭据库 |

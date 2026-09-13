@@ -1,3 +1,4 @@
+import { selectOption, selectComponent } from '../test/selectOption.js';
 import { mount, flushPromises } from '@vue/test-utils';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import WorkbenchShell from './WorkbenchShell.vue';
@@ -37,15 +38,15 @@ it('opens the publish page immediately, ignores late source reads after return, 
   expect(w.get('[data-testid=publish-resume]').text()).toContain('本地内容读取失败');
   expect(w.text()).not.toContain('stale source');
   await w.get('[data-testid=retry-publish-sources]').trigger('click'); await flushPromises();
-  expect(w.get('[data-testid=publish-source]').text()).toContain('source');
+  expect(selectComponent(w, 'publish-source').props('options').map(item => item.label).join(' ')).toContain('source');
 });
 
 it('preserves selection on rejected publication and keeps success visible after leaving the page', async () => {
   const source = await library.createLocalPrompt({ title: 'source', content: 'body' }); await shell(); await publish();
-  await w.get('[data-testid=publish-source]').setValue(source.id); await flushPromises();
+  await selectOption(w, 'publish-source', source.id); await flushPromises();
   setPublishTransport(async () => { throw Error('offline'); });
   await w.get('[data-testid=publish-submit]').trigger('click'); await flushPromises();
-  expect(w.get('[data-testid=publish-source]').element.value).toBe(source.id);
+  expect(selectComponent(w, 'publish-source').props('modelValue')).toBe(source.id);
   expect(w.get('[data-testid=publish-resume]').text()).toContain('发布失败');
   setPublishTransport(async () => ({ status: 'pending' }));
   await w.get('[data-testid=publish-submit]').trigger('click'); await flushPromises();

@@ -33,22 +33,11 @@
         <div class="editor-metadata" :class="{ 'single-field': kind === 'collection' }">
         <label v-if="kind === 'prompt'" class="field">
           <span>模型</span>
-          <select data-testid="prompt-model" v-model="model">
-            <option value="">未指定</option>
-            <option v-for="name in modelOptions" :key="name" :value="name">{{ name }}</option>
-          </select>
+          <SearchableSelect data-testid="prompt-model" v-model="model" :options="[{value:'',label:'未指定'}, ...modelOptions.map(name => ({value:name,label:name}))]" />
         </label>
         <label class="field">
           <span>分类</span>
-          <select data-testid="prompt-category" v-model="categoryId">
-            <option value="">未分类</option>
-            <optgroup v-for="group in groups" :key="group.id" :label="group.name">
-              <option :value="group.id">{{ group.name }}（大分类）</option>
-              <option v-for="child in group.children" :key="child.id" :value="child.id">
-                {{ child.name }}
-              </option>
-            </optgroup>
-          </select>
+          <SearchableSelect data-testid="prompt-category" v-model="categoryId" :options="[{value:'',label:'未分类'}, ...groups.flatMap(group => [{value:group.id,label:group.name}, ...group.children.map(child => ({value:child.id,label:group.name+' / '+child.name}))])]" />
         </label>
         </div>
         <div v-if="kind === 'prompt'" class="editor-writing">
@@ -103,6 +92,7 @@
 </template>
 
 <script setup>
+import SearchableSelect from "./SearchableSelect.vue";
 import { computed, nextTick, onMounted, ref } from "vue";
 import PromptTrial from './PromptTrial.vue';
 import AttachmentPanel from './AttachmentPanel.vue';

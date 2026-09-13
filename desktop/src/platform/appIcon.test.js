@@ -16,7 +16,7 @@ describe("application icon assets", () => {
   it("uses the same generated icon for launcher and desktop", () => {
     expect(read("../assets/app-icon.png")).toEqual(read("../../src-tauri/icons/128x128.png"));
     const launcher = read("../LauncherApp.vue").toString();
-    expect(launcher.match(/class="brand-mark" :src="appIcon"/g)).toHaveLength(2);
+    expect(launcher.match(/class="brand-mark" :src="appIcon"/g)).toHaveLength(3);
   });
 
   it("includes macOS ICNS and multi-resolution Windows ICO in the bundle", () => {

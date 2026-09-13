@@ -1,3 +1,4 @@
+import { selectOption, selectComponent } from '../test/selectOption.js';
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -173,8 +174,8 @@ describe("WorkbenchShell", () => {
     setCatalogTransport(async()=>({categories:[{id:'remote-root',name:'远端分类',parent_id:null}],models:[{id:'remote-model',name:'远端模型'}]}));
     const publish=vi.fn(async()=>({id:'publication',status:'pending'}));setPublishTransport(publish);
     const w=mount(WorkbenchShell);await flushPromises();await w.get('[data-space="square"]').trigger('click');await flushPromises();
-    await w.get('[data-testid="publish-prompt"]').trigger('click');await flushPromises();await w.get('[data-testid="publish-source"]').setValue(created.id);
-    await w.get('[data-testid="publish-category"]').setValue('remote-root');await w.get('[data-testid="publish-model"]').setValue('remote-model');
+    await w.get('[data-testid="publish-prompt"]').trigger('click');await flushPromises();await selectOption(w, 'publish-source', created.id);
+    await selectOption(w, 'publish-category', 'remote-root');await selectOption(w, 'publish-model', 'remote-model');
     await w.get('[data-testid="publish-submit"]').trigger('click');await flushPromises();
     expect(publish.mock.calls[0][0]).toMatchObject({categoryId:'remote-root',model:'remote-model'});
     expect((await listLocalPrompts())[0]).toMatchObject({content:'本地正文',category_id:'cat-image-0',model:'Flux'});w.unmount();
@@ -264,7 +265,7 @@ describe("WorkbenchShell", () => {
     await flushPromises();
     await w.get('[data-testid="publish-prompt"]').trigger("click");
     await flushPromises();
-    await w.get('[data-testid="publish-source"]').setValue(collection.id);
+    await selectOption(w, 'publish-source', collection.id);
     await w.get('[data-testid="publish-submit"]').trigger("click");
     await flushPromises();
     expect(w.get('[data-testid="publish-resume"]').text()).toContain("至少需要一条");
@@ -426,7 +427,7 @@ describe("WorkbenchShell", () => {
     await portrait.trigger("click");
     await flushPromises();
     await w.get(".content-actions .primary-button").trigger("click");
-    expect(w.get('[data-testid="prompt-category"]').element.value).toBe("cat-image-0");
+    expect(selectComponent(w, 'prompt-category').props('modelValue')).toBe("cat-image-0");
     await w.get(".create-body input").setValue("新的人像");
     await w.get(".modal-footer .primary-button").trigger("click");
     await flushPromises();
@@ -444,7 +445,7 @@ describe("WorkbenchShell", () => {
     await flushPromises();
     await w.get(".prompt-card").trigger("click");
     await w.get('[data-testid="detail-edit"]').trigger("click");
-    expect(w.get('[data-testid="prompt-category"]').element.value).toBe("cat-image");
+    expect(selectComponent(w, 'prompt-category').props('modelValue')).toBe("cat-image");
     await w.get(".modal-footer .primary-button").trigger("click");
     await flushPromises();
     expect((await listLocalPrompts())[0].category_id).toBe("cat-image");
@@ -457,7 +458,7 @@ describe("WorkbenchShell", () => {
     const types = w.findAll(".create-type");
     await types[1].trigger("click");
     await w.get(".create-body input").setValue("人像灵感");
-    const coverSelect = w.findAll(".create-body select").at(1);
+    const coverSelect = w.findAll(".create-body select").at(0);
     await coverSelect.setValue("grid");
     expect(w.get('[data-testid="cover-files"]').exists()).toBe(true);
     await w.get(".modal-footer .primary-button").trigger("click");
@@ -578,7 +579,7 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell, { props: { host: "macos" }, attachTo: document.body });
     await flushPromises();
     expect(w.find('.titlebar .brand-name').exists()).toBe(false);
-    expect(w.get('.sidebar .brand-name').text()).toBe('提示方舟');
+    expect(w.get('.sidebar .brand-name').text()).toBe('唤词');
     expect(w.get('.titlebar-center').text()).toContain('本地提示词');
     expect(w.get('[data-testid="titlebar-search"]').text()).toBe('全局搜索⌘K');
     expect(w.find('[data-testid="titlebar-settings"]').exists()).toBe(false);
@@ -682,7 +683,7 @@ describe("WorkbenchShell", () => {
     const frontend = w.findAll(".tree-row.child").find((row) => row.text().includes("前端工程"));
     await frontend.trigger("click");
     await w.get('[data-testid="add-category"]').trigger("click");
-    expect(w.get('[data-testid="category-parent"]').element.value).toBe('cat-software');
+    expect(selectComponent(w, 'category-parent').props('modelValue')).toBe('cat-software');
     expect(w.find('[data-testid="new-category-name"]').exists()).toBe(true);
     w.unmount();
   });
@@ -1027,7 +1028,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="login-modal"] form').trigger("submit");
     await flushPromises();
     expect(w.get('[data-testid="publish-submit"]').element.disabled).toBe(true);
-    await w.get('[data-testid="publish-source"]').setValue(created.id);
+    await selectOption(w, 'publish-source', created.id);
     expect(w.get('[data-testid="publish-submit"]').element.disabled).toBe(false);
   });
 
@@ -1047,7 +1048,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="login-password"]').setValue("devpass");
     await w.get('[data-testid="login-modal"] form').trigger("submit");
     await flushPromises();
-    await w.get('[data-testid="publish-source"]').setValue(created.id);
+    await selectOption(w, 'publish-source', created.id);
     await w.get('[data-testid="publish-submit"]').trigger("click");
     await flushPromises();
     await w.get('[data-space="local"]').trigger("click");
@@ -1103,7 +1104,7 @@ describe("WorkbenchShell", () => {
     expect(panel.text()).toContain("发行说明");
     await w.get('[data-testid="check-updates"]').trigger("click");
     await flushPromises();
-    expect(w.get('[data-testid="update-note"]').text()).toContain("没有可用更新");
+    expect(w.get('[data-testid="update-note"]').text()).toContain("最新版本");
     expect(panel.text()).not.toMatch(/已从商店|已经连上更新服务器/);
   });
 
@@ -1117,11 +1118,11 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="check-updates"]').trigger("click");
     await flushPromises();
     expect(w.get('[data-testid="update-note"]').text()).toContain("检查失败");
-    expect(w.get('[data-testid="update-note"]').text()).not.toContain("没有可用更新");
+    expect(w.get('[data-testid="update-note"]').text()).not.toContain("最新版本");
     expect(w.get('[data-testid="settings-updates"]').text()).not.toMatch(/已从商店|已经连上更新服务器/);
   });
 
-  it("queues an updater install when auto-download is on and the channel has a package", async () => {
+  it("downloads a verified update without installing when auto-download is on", async () => {
     setUpdateTransport(async ({ channel } = {}) => ({
       available: true,
       notes: "preview notes",
@@ -1129,7 +1130,8 @@ describe("WorkbenchShell", () => {
       channel: channel ?? "stable",
     }));
     setInstallTransport(async ({ channel }) => ({
-      queued: true,
+      ready: true,
+      size: 2048,
       via: "updater",
       channel,
     }));
@@ -1143,7 +1145,7 @@ describe("WorkbenchShell", () => {
     expect(await getLocalSetting("update_channel")).toBe("preview");
     await w.get('[data-testid="check-updates"]').trigger("click");
     await flushPromises();
-    expect(w.get('[data-testid="update-note"]').text()).toContain("已排队安装");
+    expect(w.get('[data-testid="update-note"]').text()).toContain("已就绪");
     expect(w.get('[data-testid="release-notes"]').text()).toContain("preview notes");
     expect(w.get('[data-testid="settings-updates"]').text()).not.toMatch(/已从商店|Microsoft Store|Mac App Store/);
   });
@@ -1835,20 +1837,16 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="prompt-editor"]').exists()).toBe(true);
   });
 
-  it("switches chrome copy to English and back", async () => {
-    const w = mount(WorkbenchShell);
-    await flushPromises();
-    await w.get(".language-toggle").trigger("click");
-    await flushPromises();
-    expect(w.get('[data-space="square"]').text()).toContain("Square");
-    expect(await getLocalSetting("ui_language")).toBe("en");
-    await w.get('[data-testid="open-settings"]').trigger("click");
-    expect(w.findAll("[data-settings-page]").map((button) => button.text())[0]).toBe("General");
-    await w.get(".settings-return").trigger("click");
-    await w.get(".language-toggle").trigger("click");
-    await flushPromises();
-    expect(w.get('[data-space="square"]').text()).toContain("广场");
-    expect(await getLocalSetting("ui_language")).toBe("zh");
+  it("switches language from settings and keeps the sidebar for updates", async () => {
+    const w = mount(WorkbenchShell); await flushPromises();
+    expect(w.find('.language-toggle').exists()).toBe(false);
+    await w.get('[data-testid="open-settings"]').trigger('click');
+    await w.get('[data-settings-page="appearance"]').trigger('click'); await flushPromises();
+    await w.get('[data-testid="ui-language"]').setValue('en'); await flushPromises();
+    expect(await getLocalSetting('ui_language')).toBe('en');
+    expect(w.findAll('[data-settings-page]')[0].text()).toBe('General');
+    await w.get('[data-testid="ui-language"]').setValue('zh'); await flushPromises();
+    expect(await getLocalSetting('ui_language')).toBe('zh');
   });
 
   it("shows a local variable hint from the workbench setting", async () => {
@@ -1884,7 +1882,7 @@ describe("WorkbenchShell", () => {
     await flushPromises();
     await w.get(".prompt-card").trigger("click");
     await w.get('[data-testid="detail-edit"]').trigger("click");
-    expect(w.get('[data-testid="prompt-model"]').element.value).toBe("");
+    expect(selectComponent(w, 'prompt-model').props('modelValue')).toBe("");
   });
 
   it("preselects the default model in the editor", async () => {
@@ -1893,9 +1891,9 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell);
     await flushPromises();
     await w.get(".content-actions .primary-button").trigger("click");
-    const select = w.get('[data-testid="prompt-model"]');
-    expect(select.findAll("option").map((option) => option.element.value)).toEqual(["", "Flux", "GPT-5"]);
-    expect(select.element.value).toBe("Flux");
+    const select = selectComponent(w, 'prompt-model');
+    expect(select.props('options').map(option => option.value)).toEqual(["", "Flux", "GPT-5"]);
+    expect(select.props('modelValue')).toBe("Flux");
   });
 
   it("filters square items by the selected model", async () => {
@@ -1911,9 +1909,9 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell);
     await w.get('[data-space="square"]').trigger("click");
     await flushPromises();
-    const select = w.get('[data-testid="model-filter"]');
-    expect(select.findAll("option").map((option) => option.element.value)).toEqual(["", "Flux", "GPT-5"]);
-    await select.setValue("Flux");
+    const select = selectComponent(w, 'model-filter');
+    expect(select.props('options').map(option => option.value)).toEqual(["", "Flux", "GPT-5"]);
+    await selectOption(w, 'model-filter', 'Flux');
     await flushPromises();
     expect(seen.at(-1).model).toBe("Flux");
   });

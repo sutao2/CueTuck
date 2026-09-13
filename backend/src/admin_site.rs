@@ -32,7 +32,7 @@ impl Default for Site {
     fn default() -> Self {
         Self {
             revision: 0,
-            name: "提示方舟".into(),
+            name: "唤词".into(),
             description: "分享好用的提示词，从社区创作者的实践中寻找灵感。".into(),
             logo_url: String::new(),
             support_email: String::new(),

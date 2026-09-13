@@ -1,4 +1,6 @@
-# 提示方舟 / PromptArk
+# CueTuck · 唤词
+
+Your prompts, a shortcut away.
 
 本地优先的桌面提示词工作台。主窗口按「提示词软件 2」原型重建；全局启动器沿用旧 Prompt Launcher 的独立窗口、快捷键与粘贴链路。
 
@@ -17,7 +19,7 @@ M0–M9 已关闭。本机工作台、独立启动器、库文件备份、设置
 
 ## 状态
 
-- 产品名：提示方舟 / PromptArk
+- 产品名：CueTuck · 唤词
 - 阶段：M9 已关闭；不能诚实做完的项见 [deferred.md](docs/plans/deferred.md)
 - 版本：未发行；无商店包、无公开下载声明
 - 旧仓库（只读参考）：`../PromptLauncher`
