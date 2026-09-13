@@ -26,7 +26,7 @@
         <section v-if="!filtered.length && !busy" class="skills-empty"><AppIcon name="skills"/><h2>{{ query || agentFilter || scopeFilter || statusFilter || sourceFilter ? '没有匹配的 Skill' : '尚未发现本机 Skill' }}</h2><p>可以登记项目目录，或从公开来源安装。</p><button class="button" @click="directories=true">管理目录</button></section>
       </template>
       <template v-else>
-        <section class="skills-panel skills-source-panel"><div class="skills-section-heading"><h2>公开来源</h2><span class="skills-badge">GitHub · 无需登录</span></div><div class="skills-source-controls"><SearchableSelect v-model="sourceInput" :options="sourceOptions"/><button class="button" :disabled="busy" @click="loadCatalog">加载来源</button><button class="button" :disabled="busy" @click="sourceForm=!sourceForm">添加来源 / 链接</button></div><div v-if="sourceForm" class="skills-source-controls"><input v-model="sourceDraft" aria-label="GitHub 仓库或目录地址" placeholder="owner/repo 或 GitHub tree / SKILL.md 地址" @keydown.enter="addSource"/><button class="button" :disabled="busy || !sourceDraft.trim()" @click="addSource">保存并浏览</button></div><p class="muted">{{ catalog ? `${catalog.repo} · ${catalog.reference} · ${catalog.commit.slice(0,12)} · ${catalog.entries.length} 个 Skill` : '选择来源后加载真实目录列表。' }}</p><p class="muted">搜索当前来源的名称、路径及已加载简介；打开后查看完整说明、依赖和许可。没有下载量或推荐排名。</p><button v-if="snapshot.sources?.includes(sourceInput)" class="skills-inline-button" :disabled="busy" @click="forgetSource">移除此来源</button></section>
+        <section class="skills-panel skills-source-panel"><div class="skills-section-heading"><h2>公开来源 <small>{{ sourceOptions.length }} 个</small></h2><span class="skills-badge">GitHub · 无需登录</span></div><div class="skills-source-controls"><SearchableSelect v-model="sourceInput" :options="sourceOptions" :disabled="busy" aria-label="选择 Skill 来源"/><button class="button" :disabled="busy" @click="loadCatalog">加载来源</button><button class="button" :disabled="busy" @click="sourceForm=!sourceForm">添加来源 / 链接</button></div><div v-if="sourceForm" class="skills-source-controls"><input v-model="sourceDraft" aria-label="GitHub 仓库或目录地址" placeholder="owner/repo 或 GitHub tree / SKILL.md 地址" @keydown.enter="addSource"/><button class="button" :disabled="busy || !sourceDraft.trim()" @click="addSource">保存并浏览</button></div><p class="muted">{{ catalog ? `${catalog.repo} · ${catalog.reference} · ${catalog.commit.slice(0,12)} · ${catalog.entries.length} 个 Skill` : '选择来源后加载真实目录列表。' }}</p><p class="muted">切换上方来源可发现更多 Skill，支持按用途或仓库名搜索来源。下方列表只搜索当前来源的名称、路径及已加载简介；打开后查看说明、依赖和许可。</p><button v-if="snapshot.sources?.includes(sourceInput)" class="skills-inline-button" :disabled="busy" @click="forgetSource">移除此来源</button></section>
         <label class="skills-search skills-remote-search"><AppIcon name="search"/><input v-model="remoteQuery" placeholder="搜索当前来源的 Skill 名称或路径…" aria-label="搜索当前来源"/></label>
         <section class="skills-list"><button v-for="entry in visibleRemote" :key="entry.directory" class="skills-list-row" :disabled="busy" @click="openRemote(entry)"><span class="skills-list-icon"><AppIcon name="skills"/></span><span class="skills-row-main"><strong>{{ entry.name }}</strong><span>{{ entry.description || (entry.error ? `简介读取失败：${entry.error}` : '打开查看完整说明') }}</span><small class="skills-path">{{ entry.directory || '仓库根目录' }}</small></span><span class="skills-badge">{{ snapshot.skills.some(s=>s.source?.repo.toLowerCase()===catalog.repo.toLowerCase()&&s.source?.directory===entry.directory)?'已安装':'查看并安装' }}</span><span aria-hidden="true">›</span></button></section>
         <div v-if="remoteFiltered.length>pageSize" class="skills-pagination"><button :disabled="remotePage===0" @click="remotePage--">上一页</button><span>{{ remotePage+1 }} / {{ Math.ceil(remoteFiltered.length/pageSize) }}</span><button :disabled="(remotePage+1)*pageSize>=remoteFiltered.length" @click="remotePage++">下一页</button></div><section v-if="catalog && !remoteFiltered.length && !busy" class="skills-empty"><h2>没有匹配的 Skill</h2><p>当前目录可能没有 SKILL.md，或搜索条件不匹配。</p></section>
@@ -55,6 +55,7 @@
 import {computed,nextTick,onMounted,onUnmounted,ref,watch} from 'vue';
 import AppIcon from './AppIcon.vue';
 import SearchableSelect from './SearchableSelect.vue';
+import builtInSources from '../data/skill-sources.json';
 import {skillsSupported,skillsRequest,chooseSkillsDirectory,cancelSkillsRequest,listenSkillsProgress,groupSkills} from '../platform/skills.js';
 const props=defineProps({mode:{type:String,default:'local'}}),emit=defineEmits(['busy']);
 const supported=skillsSupported(),snapshot=ref({roots:[],skills:[],warnings:[],backups:[],operations:[],sources:[]});
@@ -64,8 +65,11 @@ const rootDraft=ref(emptyRoot()),prepared=ref(null),installOpen=ref(false),insta
 const targetIds=ref([]),targetScope=ref('global'),plans=ref([]),replaceIds=ref([]),results=ref([]),comparison=ref({}),dependenciesAccepted=ref(false);
 const sourceInput=ref('anthropics/skills'),sourceDraft=ref(''),sourceForm=ref(false),catalog=ref(null),remoteQuery=ref(''),remotePage=ref(0),localPage=ref(0),pageSize=50;
 const agents=[{value:'shared',label:'Codex / 标准共享'},{value:'codex',label:'Codex'},{value:'claude',label:'Claude Code'},{value:'cursor',label:'Cursor'},{value:'pi',label:'Pi'},{value:'opencode',label:'OpenCode'},{value:'custom',label:'自定义'}];
-const builtInSources=['anthropics/skills','openai/plugins','vercel-labs/agent-skills','badlogic/pi-skills'];
-const sourceOptions=computed(()=>[...new Set([...builtInSources,...(snapshot.value.sources||[])])].map(s=>({value:s,label:s})));
+const sourceOptions=computed(()=>{
+  const options=new Map(builtInSources.map(s=>[s.value.toLowerCase(),s]));
+  for(const value of snapshot.value.sources||[])if(!options.has(value.toLowerCase()))options.set(value.toLowerCase(),{value,label:value});
+  return [...options.values()];
+});
 const grouped=computed(()=>groupSkills(snapshot.value.skills));
 const filtered=computed(()=>grouped.value.map(s=>({...s,installations:s.installations.filter(i=>{
   const root=snapshot.value.roots.find(r=>r.id===i.root_id);

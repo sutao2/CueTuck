@@ -1,0 +1,62 @@
+[
+  {
+    "value": "anthropics/skills",
+    "label": "Anthropic · 文档、设计与办公 · anthropics/skills"
+  },
+  {
+    "value": "openai/plugins",
+    "label": "OpenAI · 开发与工作流 · openai/plugins"
+  },
+  {
+    "value": "vercel-labs/agent-skills",
+    "label": "Vercel · React 与网页设计 · vercel-labs/agent-skills"
+  },
+  {
+    "value": "badlogic/pi-skills",
+    "label": "Pi · 搜索与日常工具 · badlogic/pi-skills"
+  },
+  {
+    "value": "huggingface/skills",
+    "label": "Hugging Face · AI 模型与数据集 · huggingface/skills"
+  },
+  {
+    "value": "MicrosoftDocs/Agent-Skills",
+    "label": "Microsoft · Azure 与云服务 · MicrosoftDocs/Agent-Skills"
+  },
+  {
+    "value": "cloudflare/skills",
+    "label": "Cloudflare · Workers 与云应用 · cloudflare/skills"
+  },
+  {
+    "value": "trailofbits/skills",
+    "label": "Trail of Bits · 安全审计与测试 · trailofbits/skills"
+  },
+  {
+    "value": "supabase/agent-skills",
+    "label": "Supabase · PostgreSQL 数据库 · supabase/agent-skills"
+  },
+  {
+    "value": "getsentry/skills",
+    "label": "Sentry · 代码审查与开发流程 · getsentry/skills"
+  },
+  {
+    "value": "remotion-dev/skills",
+    "label": "Remotion · 视频制作 · remotion-dev/skills"
+  },
+  {
+    "value": "expo/skills",
+    "label": "Expo · 移动应用开发 · expo/skills"
+  },
+  {
+    "value": "obra/superpowers",
+    "label": "Superpowers · 规划、调试与测试 · obra/superpowers"
+  },
+  {
+    "value": "coreyhaines31/marketingskills",
+    "label": "Marketing Skills · 营销、文案与 SEO · coreyhaines31/marketingskills"
+  },
+  {
+    "value": "K-Dense-AI/claude-scientific-skills",
+    "label": "K-Dense · 科研与数据分析 · K-Dense-AI/claude-scientific-skills"
+  }
+]

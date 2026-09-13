@@ -55,3 +55,19 @@ it('merges physical aliases and verified repository installs while preserving ea
 it('blocks sidebar and settings shortcuts while the install confirmation is open',async()=>{
   library.resetMemoryLibrary();resetMemorySession();resetSquare();setCatalogTransport(async()=>({categories:[],models:[]}));setSquareTransport(async()=>[]);w=mount(WorkbenchShell,{attachTo:document.body,props:{host:'macos'}});await flushPromises();await w.get('[data-space="skills-local"]').trigger('click');await flushPromises();await click('从文件夹安装');await click('安装到…');await w.get('[data-space="local"]').trigger('click');window.dispatchEvent(new KeyboardEvent('keydown',{key:',',metaKey:true,bubbles:true}));await flushPromises();expect(w.get('[data-space="skills-local"]').attributes('aria-selected')).toBe('true');expect(w.get('[aria-labelledby="skills-install-title"]').exists()).toBe(true);expect(w.find('[data-testid="settings-view"]').exists()).toBe(false);
 });
+
+it('searches expanded sources by purpose, preserves custom sources and loads the chosen repository',async()=>{
+  snapshot.sources=['HUGGINGFACE/SKILLS','my-team/custom-skills'];
+  await mountPage({mode:'square'});
+  expect(w.text()).toContain('16 个');
+  await w.get('[aria-label="选择 Skill 来源"]').trigger('click');
+  const search=document.querySelector('.select-popup input');
+  search.value='科研';search.dispatchEvent(new Event('input',{bubbles:true}));await flushPromises();
+  const options=[...document.querySelectorAll('[role="option"]')];
+  expect(options).toHaveLength(1);expect(options[0].textContent).toContain('K-Dense-AI/claude-scientific-skills');
+  options[0].click();await flushPromises();await click('加载来源');
+  expect(transport.mock.calls.filter(([r])=>r.action==='catalog').at(-1)[0].input).toBe('K-Dense-AI/claude-scientific-skills');
+  expect(transport.mock.calls.some(([r])=>r.action==='prepare_remote'||r.action==='install')).toBe(false);
+  await w.get('[aria-label="选择 Skill 来源"]').trigger('click');
+  expect(document.querySelector('.select-results').textContent).toContain('my-team/custom-skills');
+});
