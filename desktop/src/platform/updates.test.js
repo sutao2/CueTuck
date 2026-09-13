@@ -71,14 +71,15 @@ describe("updates", () => {
     expect(stable.notes).toBe("stable notes");
   });
 
-  it("reports no update when the latest stable tag matches the tauri build", async () => {
+  it("reports no update when the channel's latest tag matches the tauri build", async () => {
+    const prerelease = tauriVersion.includes("-");
     vi.stubGlobal("fetch", async () => ({
       ok: true,
       json: async () => [
-        { tag_name: `v${tauriVersion}`, prerelease: false, body: "same build" },
+        { tag_name: `v${tauriVersion}`, prerelease, body: "same build" },
       ],
     }));
-    const result = await checkForUpdates({ channel: "stable" });
+    const result = await checkForUpdates({ channel: prerelease ? "preview" : "stable" });
     expect(result.version).toBe(tauriVersion);
     expect(result.available).toBe(false);
   });
