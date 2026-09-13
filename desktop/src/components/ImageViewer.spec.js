@@ -10,7 +10,8 @@ it('opens a local image, zooms it, closes only the viewer and restores keyboard 
   w=mount(AttachmentPanel,{attachTo:document.body,props:{modelValue:[{id:crypto.randomUUID(),name:'picture.png',mime:'image/png',data:'iVBORw0KGgo='}]}});
   const button=w.get('.attachment-open');button.element.focus();await button.trigger('click');await flushPromises();
   const viewer=w.getComponent(ImageViewer), img=document.querySelector('.image-viewer img');
-  Object.defineProperty(img,'naturalWidth',{value:1000});img.dispatchEvent(new Event('load'));await nextTick();
+  Object.defineProperty(img,'naturalWidth',{value:1000});Object.defineProperty(img,'naturalHeight',{value:800});img.dispatchEvent(new Event('load'));await nextTick();
+  document.querySelector('[title="原始尺寸 (1)"]').click();await nextTick();
   document.querySelector('[aria-label="放大图片"]').click();await nextTick();expect(img.style.width).toBe('1250px');
   document.querySelector('.image-viewer').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await flushPromises();
   expect(viewer.emitted('close')).toHaveLength(1);expect(document.querySelector('.image-viewer')).toBeNull();expect(document.activeElement).toBe(button.element);
@@ -30,4 +31,14 @@ it('closes from the backdrop while image clicks stay in the dialog', async () =>
   w=mount(ImageViewer,{props:{src:'data:image/png;base64,AA=='}});
   document.querySelector('.image-viewer img').click(); await nextTick(); expect(w.emitted('close')).toBeUndefined();
   document.querySelector('.image-backdrop').click(); await nextTick(); expect(w.emitted('close')).toHaveLength(1);
+});
+
+it('resets dimensions and zoom on source changes and bounds repeated zoom commands', async () => {
+  w=mount(ImageViewer,{props:{src:'first.png'}});
+  let img=document.querySelector('.image-viewer img');
+  Object.defineProperty(img,'naturalWidth',{value:1200});Object.defineProperty(img,'naturalHeight',{value:800});img.dispatchEvent(new Event('load'));await nextTick();
+  document.querySelector('[title="原始尺寸 (1)"]').click();await nextTick();
+  for(let i=0;i<20;i++)document.querySelector('[aria-label="放大图片"]').click();await nextTick();expect(img.style.width).toBe('4800px');
+  await w.setProps({src:'second.png'});expect(document.querySelector('[role="status"]').textContent).toContain('加载');expect(document.querySelector('[aria-label="放大图片"]').disabled).toBe(true);
+  img=document.querySelector('.image-viewer img');expect(img.style.transform).toBe('translate(0px, 0px)');expect(document.querySelector('.image-caption').textContent).not.toContain('1200');
 });

@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-13-viewer-launcher-polish.md](plans/2026-09-13-viewer-launcher-polish.md) | 进行中 | 精简启动器、图片查看器、紧凑卡片与新图标 | 移除粘贴和复制输入；图片优先预览、内容高度布局与 CueTuck 标识 |
+| [plans/2026-09-13-viewer-launcher-polish.md](plans/2026-09-13-viewer-launcher-polish.md) | 进行中 | 精简启动器、图片查看器、紧凑卡片与新图标 | 启动器精简、图片查看与紧凑卡片已验；新图标与 beta.7 打包中 |
 | [architecture/decisions/0024-launcher-copy-only.md](architecture/decisions/0024-launcher-copy-only.md) | 现行 | 启动器操作范围 | 取代 0023 的复制输入与窗口粘贴入口，其余联网与本机 AI 决策保持 |
 | [plans/2026-09-13-cuetuck-updates.md](plans/2026-09-13-cuetuck-updates.md) | 验收 | CueTuck 改名、更新提醒与下拉搜索 | beta.6 双平台已发布，签名与隔离安装实测、线上品牌与 Mac 安装通过 |
 | [changes/skills-management/proposal.md](changes/skills-management/proposal.md) | 目标 | 评审 Skills 功能与交互方案 | 提示词/Skills 分组、安装流程、兼容与维护边界；未实现 |

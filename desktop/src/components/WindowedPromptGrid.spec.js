@@ -8,7 +8,7 @@ beforeEach(() => {
   frames = new Map(); let id = 0; columnStyle = '300px 300px 300px'; headerTop = 0;
   vi.stubGlobal('requestAnimationFrame', callback => { frames.set(++id, callback); return id; });
   vi.stubGlobal('cancelAnimationFrame', id => frames.delete(id));
-  vi.stubGlobal('ResizeObserver', class { constructor(callback) { resize = callback; } observe() {} disconnect() {} });
+  vi.stubGlobal('ResizeObserver', class { constructor(callback) { resize = callback; } observe() {} unobserve() {} disconnect() {} });
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(960);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(720);
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function() { return { top: this === root ? 0 : headerTop - root.scrollTop }; });
@@ -51,4 +51,15 @@ it('does not schedule scroll work when disabled and cancels pending work on unmo
   await w.setProps({ enabled: true }); await frame();
   root.dispatchEvent(new Event('scroll')); expect(frames.size).toBe(1);
   w.unmount(); w = null; expect(frames.size).toBe(0);
+});
+
+it('sizes mixed local cards independently and clears packing when switching to rows', async () => {
+  await setup(false);
+  const cards = w.findAll('.prompt-card');
+  resize([{target:cards[0].element,borderBoxSize:[{blockSize:160}]},{target:cards[1].element,borderBoxSize:[{blockSize:390}]}]);
+  expect(cards[0].element.style.gridRowEnd).toBe('span 174');
+  expect(cards[1].element.style.gridRowEnd).toBe('span 404');
+  await w.setProps({list:true}); await flushPromises();
+  expect(cards[0].element.style.gridRowEnd).toBe('');
+  expect(w.classes()).not.toContain('content-grid');
 });

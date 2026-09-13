@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#267D79"/><stop offset="1" stop-color="#103F46"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.8" y2="1">
+      <stop stop-color="#FFFEF9"/><stop offset="1" stop-color="#DEEDE4"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#D8ECA7"/><stop offset="1" stop-color="#A7CC78"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="104" fill="url(#tile)"/>
+  <rect x="25" y="25" width="462" height="462" rx="103" fill="none" stroke="#FFFFFF" stroke-opacity=".12" stroke-width="2"/>
+  <path d="M358 140H235c-70 0-119 49-119 120s49 120 119 120h64l63-64H235c-34 0-55-22-55-56s21-56 55-56h123z" fill="#082E34" opacity=".3" transform="translate(0 8)"/>
+  <path d="M358 132H235c-70 0-119 49-119 120s49 120 119 120h64l63-64H235c-34 0-55-22-55-56s21-56 55-56h123z" fill="url(#paper)"/>
+  <path d="M299 372v-42c0-14 8-22 22-22h41z" fill="url(#fold)"/>
+  <path d="M288 238h66" fill="none" stroke="#BFD6CD" stroke-width="18" stroke-linecap="round"/>
+</svg>
