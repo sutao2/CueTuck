@@ -11,7 +11,7 @@
           <div class="ai-fields"><label>显示名称<input v-model="model.name" maxlength="80" required :data-testid="`ai-model-name-${index}`"></label><label>模型标识<input v-model="model.model" maxlength="200" required placeholder="填写提供商的模型 ID"></label>
             <label class="wide">完整 Chat Completions 地址<input v-model="model.endpoint" type="url" required placeholder="https://…/v1/chat/completions"></label><label>API 密钥<input v-model="secrets[model.id]" type="password" autocomplete="new-password" :placeholder="configuredKeys[model.id] ? '已加密保存，留空保留' : '首次启用必须填写'" maxlength="4096"></label><label>单模型超时（秒）<input v-model.number="model.timeout_seconds" type="number" min="1" max="15" required></label>
           </div><div class="ai-checks"><label><input v-model="model.enabled" type="checkbox">启用</label><label><input v-model="model.vision" type="checkbox">允许发送稿件图片给此视觉模型</label><label><input v-model="model.json_mode" type="checkbox">请求 JSON object 模式</label><label><input v-model="model.redact" type="checkbox">发送前遮盖文本邮箱和常见令牌（不遮盖图片）</label></div><p class="muted">图片限 PNG/JPEG/WebP、最多 4 张和 10 MiB，只读取稿件选中的附件；需在 Skill 路由中选择视觉模型。图片内敏感信息不会自动遮盖。附件最终公开仍须人工确认。</p>
-          <small class="muted">仅接受公网 HTTPS，不跟随重定向。使用 max_completion_tokens；不兼容的接口会显示测试失败。文本检查不代表完成图片审核。</small>
+          <small class="muted">仅接受公网 HTTPS，不跟随重定向。百炼使用非思考 JSON 模式；不兼容的接口会显示测试失败。文本检查不代表完成图片审核。</small>
         </article><button type="button" data-testid="ai-add-model" @click="addModel">添加审核模型</button>
       </div>
       <div v-else class="ai-cards">
@@ -28,8 +28,9 @@
     </fieldset></form>
     <section v-if="draft" class="ai-test"><h3>测试已保存的配置</h3><p class="muted">测试会发送下方样本到所选接口，最多等待 25 秒。不要填写真实密码或私密内容。草稿不会参与测试。</p>
       <div class="ai-fields"><label>已保存 Skill<select v-model="testSkill" :disabled="busy"><option v-for="s in savedSkills" :key="s.id" :value="s.id">{{ s.name }}</option></select></label><label>测试范围<select v-model="testModel" :disabled="busy"><option value="">完整 Skill 路由</option><option v-for="m in savedModels" :key="m.id" :value="m.id">仅 {{ m.name }}</option></select></label><label class="wide">样本<textarea v-model="sample" rows="3" maxlength="8000" :disabled="busy" data-testid="ai-sample" /></label></div>
+      <label class="ai-checks"><input v-model="imageSample" type="checkbox" :disabled="busy" data-testid="ai-image-sample">附带固定测试图（纯色方块，不读取个人图片）</label>
       <button :disabled="busy || hasUnsavedChanges || !sample.trim() || !testSkill" data-testid="ai-test" @click="test">发送样本并测试</button><small v-if="hasUnsavedChanges" class="muted">先保存或重新加载，避免测试旧配置。</small>
-      <div v-if="testResult" class="notice" role="status"><strong>{{ testResult.verdict ? '收到有效审核结果' : '测试未通过' }}</strong><p>{{ testResult.error }}</p><p v-if="testResult.verdict">{{ decisionNames[testResult.verdict.decision] }} · 风险分 {{ testResult.verdict.risk_score }}（配置版本 {{ testResult.revision }}）</p><ul><li v-for="(result,index) in testResult.models" :key="index">{{ result.id }}：{{ result.error || decisionNames[result.result?.decision] }}</li><li v-for="reason in testResult.verdict?.reasons || []" :key="reason">{{ reason }}</li></ul></div>
+      <div v-if="testResult" class="notice" role="status"><strong>{{ testResult.verdict ? (testResult.image_sample ? '收到有效图文审核结果' : '收到有效文本审核结果') : '测试未通过' }}</strong><p>{{ testResult.error }}</p><p v-if="testResult.verdict">{{ decisionNames[testResult.verdict.decision] }} · 风险分 {{ testResult.verdict.risk_score }}（配置版本 {{ testResult.revision }}）</p><ul><li v-for="(result,index) in testResult.models" :key="index">{{ result.id }}：{{ result.error || decisionNames[result.result?.decision] }}</li><li v-for="reason in testResult.verdict?.reasons || []" :key="reason">{{ reason }}</li></ul></div>
     </section>
     <section v-if="draft" class="ai-history"><button :disabled="busy || historyLoading" @click="loadHistory">查看最近 50 个版本</button><details v-for="entry in history" :key="entry.revision"><summary>版本 {{ entry.revision }} · {{ entry.actor }} · {{ new Date(entry.created_at).toLocaleString() }}</summary><div v-for="skill in entry.data.skills" :key="skill.id"><strong>{{ skill.name }} · {{ skill.route }}</strong><p class="ai-instruction">{{ skill.instruction }}</p><p class="muted">模型：{{ skill.models.join(' → ') || '未指定' }}；{{ skill.enabled ? '启用' : '停用' }}</p></div></details></section>
   </section>
@@ -39,6 +40,7 @@ import {computed,onMounted,ref} from 'vue';
 import {getAiConfig,saveAiConfig,testAiConfig,getAiHistory,listCatalog} from './adminApi.js';
 defineProps({mode:{type:String,default:'models'}});const emit=defineEmits(['busy-change']);
 const draft=ref(null),saved=ref(''),secrets=ref({}),configuredKeys=ref({}),password=ref(''),tests=ref([]),categories=ref([]),loading=ref(false),busy=ref(false),error=ref(''),message=ref('');
+const imageSample=ref(false);
 const testSkill=ref(''),testModel=ref(''),sample=ref(''),testResult=ref(null),history=ref([]),historyLoading=ref(false);
 const decisionNames={approve:'建议通过',reject:'建议驳回',manual:'需人工复核'};
 const savedSkills=computed(()=>saved.value?JSON.parse(saved.value).skills:[]),savedModels=computed(()=>saved.value?JSON.parse(saved.value).models:[]);
@@ -50,10 +52,10 @@ function addModel(){draft.value.models.push({id:crypto.randomUUID(),name:'',endp
 function removeModel(index){if(!window.confirm('移除模型也会清除当前 Skill 对它的引用。历史版本仍保留，确认移除？'))return;const id=draft.value.models[index].id;draft.value.models.splice(index,1);delete secrets.value[id];for(const skill of draft.value.skills)skill.models=skill.models.filter(m=>m!==id);}
 function addSkill(){draft.value.skills.push({id:crypto.randomUUID(),name:'',instruction:'',enabled:false,kinds:['prompt','collection'],categories:[],route:'fallback',models:[]});}
 function setModel(skill,index,id){const models=[...skill.models];models[index]=id;skill.models=models.filter(Boolean);}
-function modelState(id){const test=tests.value.find(t=>t.revision===draft.value.revision&&t.model_id===id);return test?(test.success?'当前版本测试通过':'当前版本测试失败'):'当前版本未单独测试';}
+function modelState(id){const test=tests.value.find(t=>t.revision===draft.value.revision&&t.model_id===id);return test?(test.success?(test.image_sample?'当前版本图文测试通过':'当前版本文本测试通过'):'当前版本测试失败'):'当前版本未单独测试';}
 function setBusy(value){busy.value=value;emit('busy-change',value);}
 async function save(){if(busy.value||!hasUnsavedChanges.value||!password.value)return;setBusy(true);error.value='';message.value='';try{const result=await saveAiConfig({...JSON.parse(JSON.stringify(draft.value)),secrets:{...secrets.value},current_password:password.value});if(result.revision!==draft.value.revision+1)throw Error('服务端未确认新版本');accept(result);testResult.value=null;message.value='新版本已保存；旧版本测试不代表新配置可用。';}catch(e){error.value=e.message;}finally{password.value='';setBusy(false);}}
-async function test(){if(busy.value||hasUnsavedChanges.value)return;if(!window.confirm('将当前样本发送到已保存的审核模型接口，确认测试？'))return;setBusy(true);error.value='';testResult.value=null;try{testResult.value=await testAiConfig({revision:draft.value.revision,skill_id:testSkill.value,model_id:testModel.value||null,text:sample.value});const config=await getAiConfig();if(config.revision===draft.value.revision)tests.value=config.tests||[];else error.value='配置在测试期间已变化，请重新加载。';}catch(e){error.value=e.message;}finally{setBusy(false);}}
+async function test(){if(busy.value||hasUnsavedChanges.value)return;if(!window.confirm('将当前样本发送到已保存的审核模型接口，确认测试？'))return;setBusy(true);error.value='';testResult.value=null;try{testResult.value=await testAiConfig({revision:draft.value.revision,skill_id:testSkill.value,model_id:testModel.value||null,text:sample.value,image_sample:imageSample.value});const config=await getAiConfig();if(config.revision===draft.value.revision)tests.value=config.tests||[];else error.value='配置在测试期间已变化，请重新加载。';}catch(e){error.value=e.message;}finally{setBusy(false);}}
 async function loadHistory(){historyLoading.value=true;try{history.value=(await getAiHistory()).items||[];}catch(e){error.value=e.message;}finally{historyLoading.value=false;}}
 onMounted(load);
 </script>

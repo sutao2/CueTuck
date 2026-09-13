@@ -143,6 +143,12 @@ pub async fn send_images(client:&reqwest::Client,endpoint:&str,secret:&str,model
     if json_mode {
         body["response_format"] = json!({"type":"json_object"});
     }
+    // Bailian's non-streaming multimodal JSON API uses max_tokens and explicit non-thinking mode.
+    if url::Url::parse(endpoint).ok().and_then(|u|u.host_str().map(str::to_owned)).is_some_and(|h|h == "dashscope.aliyuncs.com" || h == "dashscope-intl.aliyuncs.com" || h == "dashscope-us.aliyuncs.com") {
+        body.as_object_mut().unwrap().remove("max_completion_tokens");
+        body["max_tokens"] = json!(1000);
+        body["enable_thinking"] = json!(false);
+    }
     let response = client
         .post(endpoint)
         .bearer_auth(secret)

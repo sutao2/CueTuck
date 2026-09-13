@@ -90,7 +90,7 @@
       </template>
 
       <template v-else-if="step === 'draft'">
-        <header class="launcher-search-wrap"><strong>{{ optimizedDraft ? '检查 AI 优化结果' : '快捷创建提示词' }}</strong></header>
+        <header class="launcher-search-wrap"><img class="brand-mark" :src="appIcon" alt=""><div class="result-copy"><span class="row-title">{{ optimizedDraft ? '检查 AI 优化结果' : '快捷创建提示词' }}</span><span class="row-desc">检查内容后使用或保存</span></div></header>
         <div class="launcher-list quick-draft">
           <label class="field"><span>标题</span><input ref="draftTitleEl" v-model="draftTitle" maxlength="160" :disabled="busy" data-testid="quick-title"></label>
           <label class="field quick-content"><span>正文 · 可继续修改</span><textarea v-model="draftContent" :disabled="busy" data-testid="quick-content" /></label>
@@ -822,5 +822,5 @@ button:disabled { opacity: .5; cursor: wait; }
 </style>
 
 <style scoped>
-.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:38px;padding-top:8px;padding-bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:12px;padding:18px}.quick-content{flex:1;min-height:150px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:vertical;min-height:130px}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background:var(--surface,#fff);color:inherit;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px;font:inherit}.quick-draft .field{display:grid;gap:6px}.quick-draft p{font-size:12px}.quick-draft .preview{max-height:130px;overflow:auto}
+.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:38px;padding-top:8px;padding-bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:12px;padding:18px}.quick-content{flex:1;min-height:150px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:vertical;min-height:130px}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background:var(--surface,#fff);color:inherit;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px;font:inherit}.quick-draft .field{display:flex;flex-direction:column;gap:6px}.quick-draft p{font-size:12px}.quick-draft .preview{max-height:130px;overflow:auto}
 </style>

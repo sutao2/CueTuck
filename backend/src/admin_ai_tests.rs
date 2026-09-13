@@ -272,3 +272,18 @@ async fn ai_finalization_is_atomic_and_never_overwrites_humans_or_changed_policy
         }
     }
 }
+
+#[tokio::test]
+async fn explicit_image_test_rejects_nonvision_route_and_records_scope() {
+    let state = state().await;
+    let pg=state.db.as_ref().unwrap();
+    pg.upsert_account("vision-owner@test.example",Some("test-password"),"owner").await.unwrap();
+    let token=state.issue_session("vision-owner@test.example".into()).await.unwrap().access_token;
+    let (status,result)=request(&state,"POST","/v1/admin/ai/test",&token,json!({"revision":0,"skill_id":"general","text":"fixed sample","image_sample":true})).await;
+    assert_eq!(status,StatusCode::OK);
+    assert_eq!(result["image_sample"],true);
+    assert!(result["verdict"].is_null());
+    let (_,view)=request(&state,"GET","/v1/admin/ai/config",&token,json!({})).await;
+    assert_eq!(view["tests"][0]["image_sample"],true);
+    assert_eq!(view["tests"][0]["success"],false);
+}
