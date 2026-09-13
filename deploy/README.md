@@ -67,6 +67,24 @@ PROMPTARK_API_BASE=https://prompt.likh.cn VITE_API_BASE=https://prompt.likh.cn n
 
 此入口要求预发行版本、相同的正式 HTTPS API，并通过独立配置关闭 updater artifact。输出 release 优化并以 ad-hoc 签名封装资源的 macOS app/dmg，供手动安装；不生成更新签名或 `latest.json`，不代表 Apple 签名/公证通过。GitHub 必须标为 prerelease，说明已验平台及限制。正式签名发行仍使用原 `build:release` 门禁。
 
+### macOS 首次打开提示「已损坏」或无法验证
+
+预览版的 ad-hoc 签名能校验包完整性，但不能替代 Developer ID 与 Apple 公证；浏览器下载后仍可能被 Gatekeeper 拦截（[Tauri 说明](https://v2.tauri.app/distribute/sign/macos/#ad-hoc-signing)）。
+
+先确认下载来自本仓库 Releases，并核对 DMG 的 SHA-256 与发行附件 `SHA256SUMS` 一致。拖入 Applications 后，在终端检查：
+
+```sh
+codesign --verify --deep --strict --verbose=2 /Applications/PromptArk.app
+```
+
+校验失败应重新下载，不要重新签名掩盖损坏。校验成功且确认来源可信时，可按 [Apple 指引](https://support.apple.com/102445) 在「系统设置 → 隐私与安全」选择「仍要打开」。若显示「已损坏」且没有该入口，可在终端仅移除此应用的下载隔离标记，再自行打开：
+
+```sh
+xattr -dr com.apple.quarantine /Applications/PromptArk.app
+```
+
+此操作只放行指定应用，不关闭全局 Gatekeeper，不删除应用数据；只在确认来源和完整性后使用。后续替换新版本可能需要再次放行。无证书发行不保证首次无提示启动。
+
 Windows x64 预览包使用现有 `desktop-windows` 工作流，在手动运行的 `source_ref` 中填写已发布标签或确切提交；留空则使用工作流提交。流程固定生产 API，执行原生测试、NSIS 构建、临时安装/启动/卸载，输出安装包、校验和与源提交记录。只上传与发行标签匹配的成功产物；Windows 未配置 Authenticode 签名。当前结果见[Windows 预览验收](../docs/plans/2026-09-13-windows-preview.md)。
 
 ## 独立开发依赖（可选）

@@ -472,7 +472,7 @@ async fn anonymous_download_count_survives_new_appstate_on_postgres() {
         )
         .await
         .unwrap();
-    assert_eq!(counted.status(), StatusCode::NO_CONTENT);
+    assert_eq!(counted.status(), StatusCode::OK);
     let fresh = AppState {
         db: state.db.clone(),
         ..AppState::default()

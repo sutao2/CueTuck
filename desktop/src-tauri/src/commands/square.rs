@@ -97,7 +97,7 @@ pub async fn get_square_content(id: String, access_token: Option<String>) -> Res
 }
 
 #[tauri::command]
-pub async fn record_square_download(id: String) -> Result<(), String> {
+pub async fn record_square_download(id: String) -> Result<serde_json::Value, String> {
     let client = crate::http::client()?;
     let response = client
         .post(format!("{}/v1/square/items/{}/downloads", api_base()?, id))
@@ -107,7 +107,11 @@ pub async fn record_square_download(id: String) -> Result<(), String> {
     if !response.status().is_success() {
         return Err("download stats failed".into());
     }
-    Ok(())
+    // Older servers acknowledged the write without a body.
+    if response.status() == reqwest::StatusCode::NO_CONTENT {
+        return Ok(serde_json::Value::Null);
+    }
+    response.json().await.map_err(|error| error.to_string())
 }
 
 #[tauri::command]

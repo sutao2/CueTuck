@@ -1,12 +1,12 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { resetMemoryLibrary, listLocalPrompts, updateLocalPrompt, deleteLocalPrompt } from './library.js';
-import { resetSquare, setSquareContentTransport, downloadSquareItem, completeSquareImages } from './square.js';
+import { resetSquare, setDownloadStatsTransport, setSquareContentTransport, downloadSquareItem, completeSquareImages } from './square.js';
 import { listPromptAssets } from './assets.js';
 import { downloadReferenceImages } from './referenceAssets.js';
 const url='https://cms-assets.youmind.com/test.png';
 const png=Uint8Array.from([137,80,78,71,13,10,26,10]);
 const item={id:'image-prompt',title:'配图',content:'原始正文',reference:{images:[url]}};
-beforeEach(()=>{resetMemoryLibrary();resetSquare();setSquareContentTransport(async()=>item);});
+beforeEach(()=>{resetMemoryLibrary();resetSquare(); setDownloadStatsTransport(async () => ({ download_count: 1 }));setSquareContentTransport(async()=>item);});
 afterEach(()=>vi.unstubAllGlobals());
 it('downloads reference bytes atomically and without credentials or attribution in text',async()=>{
   const fetcher=vi.fn(async()=>new Response(png));vi.stubGlobal('fetch',fetcher);

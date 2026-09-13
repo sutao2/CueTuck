@@ -86,7 +86,20 @@ paths:
       operationId: recordSquareDownload
       security: []
       summary: 匿名下载计数（不要求登录；不记录账号）
-      description: 仅在线条目可增加计数；下架/回收站与不存在均 404。
+      description: 仅在线条目可增加计数；下架/回收站与不存在均 404。新客户端未设置偏好时默认上报，显式关闭仍不请求。
+      responses:
+        '200':
+          description: 已原子递增的实际次数；旧客户端仍可按成功状态处理。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [download_count]
+                properties:
+                  download_count:
+                    type: integer
+                    format: int64
+                    minimum: 1
       parameters:
         - name: id
           in: path

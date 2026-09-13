@@ -1273,6 +1273,9 @@ async function openSquareDetail(item) {
   }
 }
 
+let downloadsDisposed = false;
+onUnmounted(() => { downloadsDisposed = true; });
+
 async function downloadSquare(item) {
   if (downloadBusy.value.includes(item.id)) return;
   if (downloadedIds.value.includes(item.id)) {
@@ -1281,7 +1284,11 @@ async function downloadSquare(item) {
   }
   downloadBusy.value = [...downloadBusy.value, item.id];
   try {
-    await downloadSquareItem(item.id);
+    await downloadSquareItem(item.id, count => {
+      if (downloadsDisposed) return;
+      squareItems.value = squareItems.value.map(row => row.id === item.id ? { ...row, download_count: count } : row);
+      if (squareDetail.value?.id === item.id) squareDetail.value = { ...squareDetail.value, download_count: count };
+    });
     downloadedIds.value = [...new Set([...downloadedIds.value, item.id])];
     operationNote.value = `「${item.title}」已下载到本地。`;
     notifyOperation(operationNote.value, true);

@@ -709,6 +709,7 @@ describe("WorkbenchShell", () => {
   });
 
   it("does not record anonymous download stats when the setting is off", async () => {
+    await setLocalSetting("anonymous_download_stats", "0");
     const calls = [];
     setSquareTransport(async () => [{ id: "sq-1", title: "自然光群像", kind: "prompt" }]);
     setSquareContentTransport(async (id) => ({
@@ -727,6 +728,21 @@ describe("WorkbenchShell", () => {
     expect(calls).toEqual([]);
     const rows = await listLocalPrompts({ query: "自然光群像" });
     expect(rows).toHaveLength(1);
+  });
+
+  it("updates the visible download count from the delayed server response by default", async () => {
+    setSquareTransport(async () => [{ id: 'count', title: '下载统计', kind: 'prompt', download_count: 4 }]);
+    setSquareContentTransport(async id => ({ id, title: '下载统计', content: '正文' }));
+    let confirm;
+    setDownloadStatsTransport(() => new Promise(resolve => { confirm = resolve; }));
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+    await w.get('[data-testid="download-square"]').trigger('click'); await flushPromises();
+    expect(w.get('[data-testid="download-square"]').text()).toContain('打开本地副本');
+    expect(w.get('[title^="已记录匿名下载次数"]').text()).toContain('4');
+    confirm({ download_count: 12 }); await flushPromises();
+    expect(w.get('[title^="已记录匿名下载次数"]').text()).toContain('12');
+    w.unmount();
   });
 
   it("records anonymous download stats after a successful download when the setting is on", async () => {
@@ -1239,7 +1255,7 @@ describe("WorkbenchShell", () => {
     expect(row.text()).toContain("匿名下载统计");
     expect(row.text()).toContain("条目 id");
     expect(row.text()).not.toContain("尚未提供");
-    expect(w.get('[data-testid="anonymous-download-stats"]').element.checked).toBe(false);
+    expect(w.get('[data-testid="anonymous-download-stats"]').element.checked).toBe(true);
   });
 
   it("persists anonymous download stats from the settings row", async () => {
@@ -1247,15 +1263,15 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="open-settings"]').trigger("click");
     await flushPromises();
     await w.get('[data-settings-page="privacy"]').trigger("click");
-    await w.get('[data-testid="anonymous-download-stats"]').setValue(true);
+    await w.get('[data-testid="anonymous-download-stats"]').setValue(false);
     await flushPromises();
-    expect(await getLocalSetting("anonymous_download_stats")).toBe("1");
+    expect(await getLocalSetting("anonymous_download_stats")).toBe("0");
     w.unmount();
     const again = mount(WorkbenchShell);
     await again.get('[data-testid="open-settings"]').trigger("click");
     await flushPromises();
     await again.get('[data-settings-page="privacy"]').trigger("click");
-    expect(again.get('[data-testid="anonymous-download-stats"]').element.checked).toBe(true);
+    expect(again.get('[data-testid="anonymous-download-stats"]').element.checked).toBe(false);
   });
 
   it("labels the proxy row as follow-system instead of available", async () => {

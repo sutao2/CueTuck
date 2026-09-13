@@ -408,13 +408,13 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 ### Requirement: 隐私与安全
 
-隐私与安全页 MUST 展示：本地提示词默认不上传、匿名下载统计、清除使用历史、系统钥匙串。默认不上传 MUST 与宪法一致：未点发布不得把本地正文送出。匿名下载统计接通后 MUST 为本机开关，默认 MUST 关闭。打开且本地下载成功后 MUST `POST /v1/square/items/{id}/downloads`，MUST NOT 带 Authorization，MUST NOT 发送账号、正文或标题。关闭时 MUST NOT 请求该接口。统计失败 MUST NOT 阻断下载。GET 正文 MUST NOT 当成统计。该行 MUST NOT 标明尚未提供，MUST NOT 静默上报。清除使用历史接通后 MUST 只删最近使用记录，不得删提示词正文。钥匙串行 MUST 反映 Refresh 是否在系统密钥库：Tauri 下标明本机钥匙串；浏览器预览 MUST NOT 写成本机钥匙串，MUST 说明 Refresh 不进 Web Storage。不得把 Refresh 改存 Web Storage。
+隐私与安全页 MUST 展示：本地提示词默认不上传、匿名下载统计、清除使用历史、系统钥匙串。默认不上传 MUST 与宪法一致：未点发布不得把本地正文送出。匿名下载统计接通后 MUST 为本机开关，未保存偏好时默认 MUST 开启，已有显式关闭 MUST 保留。界面 MUST 说明默认开启且可关闭。打开且本地下载成功后 MUST `POST /v1/square/items/{id}/downloads`，MUST NOT 带 Authorization，MUST NOT 发送账号、正文或标题。关闭时 MUST NOT 请求该接口。统计失败 MUST NOT 阻断下载。GET 正文 MUST NOT 当成统计。该行 MUST NOT 标明尚未提供，MUST NOT 静默上报。清除使用历史接通后 MUST 只删最近使用记录，不得删提示词正文。钥匙串行 MUST 反映 Refresh 是否在系统密钥库：Tauri 下标明本机钥匙串；浏览器预览 MUST NOT 写成本机钥匙串，MUST 说明 Refresh 不进 Web Storage。不得把 Refresh 改存 Web Storage。
 
-#### Scenario: 匿名下载统计默关且可打开
+#### Scenario: 匿名下载统计默认开启且可关闭
 
-- GIVEN 用户打开隐私与安全
+- GIVEN 用户尚未保存统计偏好并打开隐私与安全
 - WHEN 查看匿名下载统计
-- THEN 该行是关闭的开关
+- THEN 该行是开启的开关，明确关闭后重启仍关闭
 - AND 不标明尚未提供
 
 #### Scenario: 打开后成功下载只上报条目 id
@@ -531,7 +531,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 关闭广场访问 | `WorkbenchShell.spec.js` does not request square when access is off |
 | 同步状态不写没有云同步 | `WorkbenchShell.spec.js` does not claim the network page has no cloud sync；`WorkbenchShell.spec.js` does not claim Wi-Fi image sync is missing because there is no cloud engine |
 | 清除使用历史不删正文 | `WorkbenchShell.spec.js` clears use history without deleting prompt content；`library.test.js` clears use counts without deleting prompt content；`desktop/src-tauri` `clear_use_history_keeps_prompt_content` |
-| 匿名下载统计默关且可打开 | `WorkbenchShell.spec.js` does not claim anonymous download stats is unavailable；`WorkbenchShell.spec.js` persists anonymous download stats from the settings row |
+| 匿名下载统计默认开启且可关闭 | `WorkbenchShell.spec.js` does not claim anonymous download stats is unavailable；`WorkbenchShell.spec.js` persists anonymous download stats from the settings row |
 | 打开后成功下载只上报条目 id | `square.test.js` posts anonymous download stats without auth after a successful download when the setting is on；`WorkbenchShell.spec.js` records anonymous download stats after a successful download when the setting is on |
 | 关闭时不请求统计 | `square.test.js` does not post download stats when the setting is off；`WorkbenchShell.spec.js` does not record anonymous download stats when the setting is off；`square.test.js` keeps the local download when stats post fails |
 | 浏览器预览不写本机钥匙串 | `WorkbenchShell.spec.js` does not claim the keychain row uses the local keychain in browser preview；`WorkbenchShell.spec.js` does not claim login writes refresh to the system keychain in browser preview |

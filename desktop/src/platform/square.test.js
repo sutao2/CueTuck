@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createLocalPrompt, deleteLocalPrompt, listLocalCollections, listCollectionMembers, listLocalPrompts, resetMemoryLibrary, setLocalSetting } from "./library.js";
 import {
   createPublication,
@@ -63,6 +63,39 @@ describe("square client", () => {
     await setLocalSetting('anonymous_download_stats','1');
     setDownloadStatsTransport(() => new Promise(() => {}));
     expect((await downloadSquareItem('done')).remote_id).toBe('done');
+  });
+
+  it("counts by default only after server confirmation without delaying the download", async () => {
+    setSquareContentTransport(async id => ({ id, title: '计数', content: '正文' }));
+    let confirm;
+    setDownloadStatsTransport(() => new Promise(resolve => { confirm = resolve; }));
+    const updated = vi.fn();
+    const row = await downloadSquareItem('counted', updated);
+    expect(row.remote_id).toBe('counted');
+    expect(updated).not.toHaveBeenCalled();
+    confirm({ download_count: 27 });
+    await vi.waitFor(() => expect(updated).toHaveBeenCalledWith(27));
+    await downloadSquareItem('counted', updated);
+    expect(updated).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([null, {}, { download_count: -1 }, { download_count: '2' }])("does not invent a count for invalid or old server responses %j", async result => {
+    setSquareContentTransport(async id => ({ id, title: '计数', content: '正文' }));
+    setDownloadStatsTransport(async () => result);
+    const updated = vi.fn();
+    await downloadSquareItem('invalid-count', updated);
+    expect(updated).not.toHaveBeenCalled();
+  });
+
+  it("does not publish a count when the browser statistics request fails", async () => {
+    setSquareContentTransport(async id => ({ id, title: '计数', content: '正文' }));
+    const fetcher = vi.fn(async () => new Response('{"download_count":99}', { status: 500 }));
+    vi.stubGlobal('fetch', fetcher);
+    const updated = vi.fn();
+    await downloadSquareItem('failed-stat', updated);
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining('/failed-stat/downloads'), expect.objectContaining({ method: 'POST', credentials: 'omit' }));
+    expect(updated).not.toHaveBeenCalled();
+    expect(await listLocalPrompts()).toHaveLength(1);
   });
 
   it("downloads collection members atomically without duplicate copies", async () => {
@@ -183,6 +216,7 @@ describe("square client", () => {
   });
 
   it("does not post download stats when the setting is off", async () => {
+    await setLocalSetting("anonymous_download_stats", "0");
     setSquareContentTransport(async (id) => ({
       id,
       title: "自然光群像",
