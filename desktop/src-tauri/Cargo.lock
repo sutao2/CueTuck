@@ -2825,7 +2825,7 @@ dependencies = [
 
 [[package]]
 name = "promptark"
-version = "0.1.0-beta.3"
+version = "0.1.0-beta.4"
 dependencies = [
  "base64 0.22.1",
  "enigo",

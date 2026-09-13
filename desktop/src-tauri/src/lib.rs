@@ -38,6 +38,7 @@ pub fn run() {
             commands::media::download_private_asset,
             commands::media::download_published_asset,
             commands::media::download_reference_image,
+            commands::media::download_reference_images,
             commands::media::hash_private_asset,
             commands::mcp::mcp_connection_info,
             commands::database::import_downloaded_prompt,

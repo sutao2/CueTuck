@@ -43,3 +43,41 @@ it('deduplicates and bounds allowed URLs, rejects oversized bytes and never load
   fetcher.mockImplementation(async()=>new Response(new Uint8Array(5*1024*1024+1)));
   await expect(downloadReferenceImages(item)).rejects.toThrow('5 MiB');
 });
+
+it('downloads at most three images concurrently, reports completed counts and preserves source order', async () => {
+  const urls = Array.from({length:6}, (_, i) => `${url}?image=${i}`), pending = new Map(), progress = [];
+  let active = 0, peak = 0;
+  const fetcher = vi.fn((address) => new Promise(resolve => {
+    active++; peak = Math.max(peak, active);
+    pending.set(address, () => { active--; resolve(new Response(Uint8Array.from([...png, urls.indexOf(address)]))); });
+  }));
+  vi.stubGlobal('fetch', fetcher);
+  const task = downloadReferenceImages({reference:{images:urls}}, value => progress.push(value.completed));
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  for (const index of [2,0,1]) {
+    pending.get(urls[index])();
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(4 + [2,0,1].indexOf(index)));
+  }
+  for (const index of [5,4,3]) pending.get(urls[index])();
+  const assets = await task;
+  expect(peak).toBe(3);
+  expect(assets.map(asset => asset.name)).toEqual(urls.map((_, i) => `参考图-${i+1}.png`));
+  expect(assets.map(asset => atob(asset.data).charCodeAt(8))).toEqual([0,1,2,3,4,5]);
+  expect(progress).toEqual([0,1,2,3,4,5,6]);
+});
+
+it('aborts in-flight images and stops queued downloads after a failure without importing or recording stats', async () => {
+  const urls = Array.from({length:6}, (_, i) => `${url}?image=${i}`);
+  setSquareContentTransport(async () => ({...item,reference:{images:urls}}));
+  const stats = vi.fn(); setDownloadStatsTransport(stats);
+  let aborted = 0;
+  const fetcher = vi.fn((address, {signal}) => address === urls[0] ? Promise.resolve(new Response('broken')) : new Promise((_, reject) => {
+    signal.addEventListener('abort', () => { aborted++; reject(Error('aborted')); }, {once:true});
+  }));
+  vi.stubGlobal('fetch', fetcher);
+  await expect(downloadSquareItem(item.id)).rejects.toThrow('参考图 1 下载失败');
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  expect(aborted).toBe(2);
+  expect(await listLocalPrompts()).toHaveLength(0);
+  expect(stats).not.toHaveBeenCalled();
+});

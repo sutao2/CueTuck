@@ -730,6 +730,28 @@ describe("WorkbenchShell", () => {
     expect(rows).toHaveLength(1);
   });
 
+  it("shows image progress in the card and detail without importing until all images finish", async () => {
+    const urls = ['https://cms-assets.youmind.com/a.png', 'https://cms-assets.youmind.com/b.png'];
+    setSquareTransport(async () => [{ id: 'images', title: '并发图片', kind: 'prompt' }]);
+    setSquareContentTransport(async id => ({ id, title: '并发图片', content: '正文', reference: { images: urls } }));
+    setDownloadStatsTransport(async () => ({ download_count: 1 }));
+    const pending = [];
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => pending.push(resolve))));
+    const w = mount(WorkbenchShell);
+    await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+    await w.get('[data-testid="download-square"]').trigger('click'); await flushPromises();
+    expect(w.get('[data-testid="download-square"]').text()).toBe('参考图 0 / 2');
+    pending[1](new Response(Uint8Array.from([137,80,78,71,13,10,26,10]))); await flushPromises();
+    expect(w.get('[data-testid="download-square"]').text()).toBe('参考图 1 / 2');
+    expect(await listLocalPrompts()).toHaveLength(0);
+    await w.get('.prompt-card h3 button').trigger('click'); await flushPromises();
+    expect(w.get('[data-testid="square-detail-download"]').text()).toBe('参考图 1 / 2');
+    pending[0](new Response(Uint8Array.from([137,80,78,71,13,10,26,10]))); await flushPromises();
+    expect(w.get('[data-testid="square-detail-download"]').text()).toBe('打开本地副本');
+    expect(await listLocalPrompts()).toHaveLength(1);
+    w.unmount();
+  });
+
   it("updates the visible download count from the delayed server response by default", async () => {
     setSquareTransport(async () => [{ id: 'count', title: '下载统计', kind: 'prompt', download_count: 4 }]);
     setSquareContentTransport(async id => ({ id, title: '下载统计', content: '正文' }));

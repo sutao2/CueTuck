@@ -77,8 +77,12 @@ fn reference_asset(bytes: &[u8], index: usize) -> Result<Asset, String> {
 #[tauri::command]
 pub async fn download_reference_image(url: String, index: usize) -> Result<Asset, String> {
     if index >= 6 { return Err("参考图数量无效".into()); }
+    fetch_reference_image(client()?, reference_url(&url)?, index).await
+}
+
+async fn fetch_reference_image(client: reqwest::Client, url: reqwest::Url, index: usize) -> Result<Asset, String> {
     // No session headers or redirects to other origins.
-    let mut response = client()?.get(reference_url(&url)?).send().await.map_err(|_| "参考图连接失败")?;
+    let mut response = client.get(url).send().await.map_err(|_| "参考图连接失败")?;
     status(response.status())?;
     if response.content_length().is_some_and(|n| n > 5 * 1024 * 1024) { return Err("图片超过 5 MiB".into()); }
     let mut bytes = Vec::new();
@@ -87,6 +91,55 @@ pub async fn download_reference_image(url: String, index: usize) -> Result<Asset
         bytes.extend_from_slice(&chunk);
     }
     reference_asset(&bytes,index)
+}
+
+#[derive(Clone, Serialize)]
+pub struct ReferenceDownloadProgress {
+    completed: usize,
+    total: usize,
+}
+
+#[tauri::command]
+pub async fn download_reference_images(
+    urls: Vec<String>,
+    on_progress: tauri::ipc::Channel<ReferenceDownloadProgress>,
+) -> Result<Vec<Asset>, String> {
+    if urls.len() > 6 { return Err("参考图数量无效".into()); }
+    let urls = urls.iter().map(|url| reference_url(url)).collect::<Result<Vec<_>, _>>()?;
+    fetch_reference_batch(client()?, urls, |completed, total| {
+        let _ = on_progress.send(ReferenceDownloadProgress { completed, total });
+    }).await
+}
+
+async fn fetch_reference_batch(
+    client: reqwest::Client,
+    urls: Vec<reqwest::Url>,
+    progress: impl Fn(usize, usize),
+) -> Result<Vec<Asset>, String> {
+    let total = urls.len();
+    let mut pending = urls.into_iter().enumerate();
+    let mut tasks = tokio::task::JoinSet::new();
+    let mut assets = Vec::with_capacity(total);
+    progress(0, total);
+    for (index, url) in pending.by_ref().take(3) {
+        let client = client.clone();
+        tasks.spawn(async move { (index, fetch_reference_image(client, url, index).await) });
+    }
+    while let Some(result) = tasks.join_next().await {
+        let (index, asset) = result.map_err(|_| "参考图下载任务中断")?;
+        let asset = asset.map_err(|error| format!("参考图 {} 下载失败：{}，请重试", index + 1, error))?;
+        assets.push((index, asset));
+        progress(assets.len(), total);
+        if let Some((index, url)) = pending.next() {
+            let client = client.clone();
+            tasks.spawn(async move { (index, fetch_reference_image(client, url, index).await) });
+        }
+    }
+    // Dropping JoinSet on an error aborts in-flight requests before returning.
+    assets.sort_by_key(|(index, _)| *index);
+    let assets: Vec<_> = assets.into_iter().map(|(_, asset)| asset).collect();
+    validate(&assets)?;
+    Ok(assets)
 }
 
 #[cfg(test)]
@@ -103,6 +156,83 @@ mod reference_tests {
         let local=crate::local_database::assets::list(dir.path(),&row.id).unwrap();
         assert_eq!(local[0].data,asset.data);assert!(!validate(&local).unwrap()[0].is_empty());
     }
+    async fn batch_fixture(broken: bool) -> (Result<Vec<Asset>, String>, usize, usize, Vec<usize>) {
+        use std::{io::{BufRead, BufReader, Write}, net::TcpListener, sync::{Arc, Barrier, Mutex, atomic::{AtomicBool, AtomicUsize, Ordering}}};
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap(); listener.set_nonblocking(true).unwrap();
+        let done = Arc::new(AtomicBool::new(false));
+        let connections = Arc::new(AtomicUsize::new(0));
+        let requests = Arc::new(AtomicUsize::new(0));
+        let barrier = Arc::new(Barrier::new(3));
+        let (stop, accepted, reads) = (done.clone(), connections.clone(), requests.clone());
+        let server = std::thread::spawn(move || {
+            let mut workers = Vec::new();
+            while !stop.load(Ordering::SeqCst) {
+                let Ok((stream, _)) = listener.accept() else { std::thread::sleep(Duration::from_millis(1)); continue; };
+                accepted.fetch_add(1, Ordering::SeqCst);
+                let (reads, barrier) = (reads.clone(), barrier.clone());
+                workers.push(std::thread::spawn(move || {
+                    stream.set_nonblocking(false).unwrap();
+                    stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+                    let mut reader = BufReader::new(stream);
+                    loop {
+                        let mut line = String::new();
+                        if reader.read_line(&mut line).unwrap_or(0) == 0 { break; }
+                        let index: usize = line.split_whitespace().nth(1).unwrap().trim_start_matches('/').parse().unwrap();
+                        loop { let mut header = String::new(); if reader.read_line(&mut header).unwrap_or(0) == 0 || header == "\r\n" { break; } }
+                        let number = reads.fetch_add(1, Ordering::SeqCst);
+                        if number < 3 { barrier.wait(); }
+                        std::thread::sleep(Duration::from_millis(if broken && index == 0 { 1 } else { 30 + (6 - index) as u64 * 10 }));
+                        let body = if broken && index == 0 { b"invalid".to_vec() } else { [b"\x89PNG\r\n\x1a\n".as_slice(), &[index as u8]].concat() };
+                        let header = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: image/png\r\n\r\n", body.len());
+                        if reader.get_mut().write_all(header.as_bytes()).and_then(|_| reader.get_mut().write_all(&body)).is_err() { break; }
+                    }
+                }));
+            }
+            for worker in workers { worker.join().unwrap(); }
+        });
+        let progress = Mutex::new(Vec::new());
+        let urls = (0..6).map(|i| reqwest::Url::parse(&format!("http://{address}/{i}")).unwrap()).collect();
+        let result = fetch_reference_batch(reqwest::Client::builder().no_proxy().timeout(Duration::from_secs(3)).build().unwrap(), urls,
+            |completed, _| progress.lock().unwrap().push(completed)).await;
+        done.store(true, Ordering::SeqCst); server.join().unwrap();
+        (result, connections.load(Ordering::SeqCst), requests.load(Ordering::SeqCst), progress.into_inner().unwrap())
+    }
+
+    #[tokio::test]
+    async fn batch_reuses_three_connections_and_preserves_image_order() {
+        let (result, connections, requests, progress) = batch_fixture(false).await;
+        let assets = result.unwrap();
+        assert_eq!(connections, 3); assert_eq!(requests, 6);
+        assert_eq!(progress, (0..=6).collect::<Vec<_>>());
+        for (i, asset) in assets.iter().enumerate() {
+            assert_eq!(asset.name, format!("参考图-{}.png", i + 1));
+            assert_eq!(STANDARD.decode(&asset.data).unwrap()[8], i as u8);
+        }
+    }
+
+    #[tokio::test]
+    async fn failed_batch_cancels_requests_without_starting_queued_images() {
+        let (result, connections, requests, progress) = batch_fixture(true).await;
+        assert!(result.unwrap_err().contains("参考图 1 下载失败"));
+        assert_eq!(connections, 3); assert_eq!(requests, 3); assert_eq!(progress, vec![0]);
+    }
+
+    #[tokio::test]
+    #[ignore = "requires explicitly selected public reference URLs"]
+    async fn downloads_real_reference_batch_to_isolated_library() {
+        let urls: Vec<String> = serde_json::from_str(&std::env::var("PROMPTARK_REFERENCE_SMOKE_URLS").expect("explicit URLs required")).unwrap();
+        let started = std::time::Instant::now();
+        let parsed = urls.iter().map(|url| reference_url(url).unwrap()).collect();
+        let assets = fetch_reference_batch(client().unwrap(), parsed, |_, _| {}).await.unwrap();
+        let dir = tempfile::tempdir().unwrap(); crate::local_database::initialize_in_dir(dir.path()).unwrap();
+        let row = crate::local_database::assets::save_prompt(dir.path(), None, "batch smoke", "body", None, None, &assets).unwrap();
+        let local = crate::local_database::assets::list(dir.path(), &row.id).unwrap();
+        assert_eq!(local.len(), urls.len());
+        for (saved, downloaded) in local.iter().zip(&assets) { assert_eq!(saved.data, downloaded.data); }
+        println!("{} images downloaded and verified in {:?}", local.len(), started.elapsed());
+    }
+
     #[test]
     fn restricts_reference_origin_and_image_content() {
         assert!(reference_url("https://cms-assets.youmind.com/a.png").is_ok());
