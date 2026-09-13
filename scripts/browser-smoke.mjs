@@ -103,7 +103,7 @@ try {
   await click(/button "列表视图"/);await target(/button "查看 图片下载验收 的图片"/);await run('screenshot');
   assert.match(await run('eval',`(()=>{const cover=document.querySelector('.local-prompt-cover'),card=cover.closest('article');return JSON.stringify({width:cover.getBoundingClientRect().width,row:card.classList.contains('as-row'),overflow:document.documentElement.scrollWidth>innerWidth});})()`),/\\"width\\":80,\\"row\\":true,\\"overflow\\":false/);
   await click(/button "图片下载验收"/);await click(/button "查看 参考图-1.png"/);
-  await click(/button "放大图片"/);await run('screenshot');await run('resize','600','700');await click(/button "适应窗口"/);await run('screenshot');await run('press','Escape');await target(/heading "图片下载验收"/);
+  await click(/button "放大图片"/);await run('screenshot');await run('resize','600','700');await click(/button "适应"/);await run('screenshot');await run('press','Escape');await target(/heading "图片下载验收"/);
   // New reading / writing / organizing flows use only the fresh browser memory library.
   await run('resize', '1280', '850');
   await click(/button "(?:← )?返回"/);
