@@ -6,10 +6,12 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-13-cuetuck-updates.md](plans/2026-09-13-cuetuck-updates.md) | 进行中 | CueTuck 改名、更新提醒与下拉搜索 | 品牌兼容、签名更新及可搜索选择器；双平台发行验收中 |
+| [plans/2026-09-13-viewer-launcher-polish.md](plans/2026-09-13-viewer-launcher-polish.md) | 进行中 | 精简启动器、图片查看器、紧凑卡片与新图标 | 移除粘贴和复制输入；图片优先预览、内容高度布局与 CueTuck 标识 |
+| [architecture/decisions/0024-launcher-copy-only.md](architecture/decisions/0024-launcher-copy-only.md) | 现行 | 启动器操作范围 | 取代 0023 的复制输入与窗口粘贴入口，其余联网与本机 AI 决策保持 |
+| [plans/2026-09-13-cuetuck-updates.md](plans/2026-09-13-cuetuck-updates.md) | 验收 | CueTuck 改名、更新提醒与下拉搜索 | beta.6 双平台已发布，签名与隔离安装实测、线上品牌与 Mac 安装通过 |
 | [changes/skills-management/proposal.md](changes/skills-management/proposal.md) | 目标 | 评审 Skills 功能与交互方案 | 提示词/Skills 分组、安装流程、兼容与维护边界；未实现 |
 | [plans/2026-09-13-skills.md](plans/2026-09-13-skills.md) | 目标 | 查看 Skills 后续实施与验收安排 | 当前仅方案；暂停应用代码，按四个切片规划 |
-| [architecture/decisions/0023-launcher-explicit-actions.md](architecture/decisions/0023-launcher-explicit-actions.md) | 现行 | 启动器快捷创建、AI 与广场搜索 | 独立窗口保持，联网由显式操作触发，AI 配置仅本机凭据库 |
+| [architecture/decisions/0023-launcher-explicit-actions.md](architecture/decisions/0023-launcher-explicit-actions.md) | 部分取代 | 启动器快捷创建、AI 与广场搜索 | 独立窗口保持，联网由显式操作触发，AI 配置仅本机凭据库 |
 | [plans/2026-09-13-interactions-launcher-ai.md](plans/2026-09-13-interactions-launcher-ai.md) | 验收 | 卡片重复操作、图片预览与启动器 AI | beta.5 双平台已发布并安装 Mac；本机 AI 配置及线上百炼图文审核已验 |
 | [plans/2026-09-13-reference-download-speed.md](plans/2026-09-13-reference-download-speed.md) | 验收 | 参考图下载慢或没有进度 | beta.4 双平台已发布；三路并发/连接复用已验，Mac 安装待解锁 |
 | [plans/2026-09-13-preview-install-and-counts.md](plans/2026-09-13-preview-install-and-counts.md) | 验收 | macOS 已损坏提示与下载次数不更新 | beta.3 Mac/API 已发布且安装启动已验；Windows 调度受阻 |

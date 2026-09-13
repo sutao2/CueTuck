@@ -579,7 +579,7 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell, { props: { host: "macos" }, attachTo: document.body });
     await flushPromises();
     expect(w.find('.titlebar .brand-name').exists()).toBe(false);
-    expect(w.get('.sidebar .brand-name').text()).toBe('唤词');
+    expect(w.get('.sidebar .brand-name').text()).toBe('CueTuck · 唤词');
     expect(w.get('.titlebar-center').text()).toContain('本地提示词');
     expect(w.get('[data-testid="titlebar-search"]').text()).toBe('全局搜索⌘K');
     expect(w.find('[data-testid="titlebar-settings"]').exists()).toBe(false);

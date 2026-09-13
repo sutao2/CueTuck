@@ -104,7 +104,7 @@
           <img class="brand-mark" :src="appIcon" alt="" aria-hidden="true" draggable="false" />
           <div class="result-copy">
             <span class="row-title">{{ active?.title }}</span>
-            <span class="row-desc">{{ variableNames.length ? '填写内容，预览后复制' : '确认正文后复制或粘贴' }}</span>
+            <span class="row-desc">{{ variableNames.length ? '填写内容，预览后复制' : '确认正文后复制' }}</span>
           </div>
           <span class="pill">{{ variableNames.length ? `${variableNames.length} 个变量` : '预览' }}</span>
         </div>
@@ -140,8 +140,7 @@
           <div class="launcher-actions">
             <button type="button" class="ghost" :disabled="busy" @click="backToSearch">返回</button>
             <button ref="copyButton" type="button" class="primary" :disabled="busy" @click="copyRendered">复制</button>
-            <button type="button" class="ghost" :disabled="busy" @click="pasteRendered">粘贴到原窗口</button>
-          </div>
+            </div>
         </footer>
       </template>
     </section>
@@ -163,7 +162,7 @@ import {
   listenLauncherLifecycle,
 } from "./platform/launcherWindow.js";
 import { createLocalPrompt, getLocalSetting, listLocalPrompts, recordLocalPromptUse, setLocalSetting } from "./platform/library.js";
-import { copyLauncherText, copyThenPaste } from "./platform/paste.js";
+import { copyLauncherText } from "./platform/paste.js";
 import { supportsSelectedText } from "./platform/selectedText.js";
 import { applyHostChrome, detectHost, formatShortcutLabel } from "./platform/windowChrome.js";
 import { DEFAULT_LAUNCHER_PREFERENCES, readLauncherPreferences } from './platform/launcherPreferences.js';
@@ -194,7 +193,6 @@ const quickActions = computed(() => query.value.trim() ? [
   {action:'create',title:'创建提示词',icon:'＋'},
   {action:'optimize',title:'AI 优化提示词',icon:'AI'},
   {action:'square',title:'搜索提示词广场',icon:'⌕'},
-  {action:'copy-input',title:'复制当前输入',icon:'TXT'},
 ] : []);
 const searchRows = computed(() => [...results.value, ...quickActions.value]);
 let searchTimer, squareController;
@@ -248,7 +246,6 @@ async function runQuickAction(action) {
   if (action === 'square') { if(scope.value==='square') {clearTimeout(searchTimer);squareController?.abort();searching.value=true;searchCurrent(++searchRequest);} else scope.value='square';return; }
   actionBusy.value=true;
   try {
-    if (action === 'copy-input') { await copyLauncherText(query.value);feedback.value='当前输入已复制';return; }
     const config=await getLauncherAiConfig();
     if (!config.endpoint || !config.model) { await openDestination('ai-settings'); feedback.value='请先在「AI 与模型」设置自己的接口和模型。';return; }
     feedback.value='正在优化，仅发送当前输入…';
@@ -370,50 +367,41 @@ function startDragFromChrome(event) {
   if (!interactive) startDraggingLauncher();
 }
 
-async function finishUse(text, id, result, pasteRequested) {
-  feedback.value = result.message;
+async function finishUse(text, id) {
+  feedback.value = "已复制";
   let closeAfter = false;
   try {
     if (id) await recordLocalPromptUse(id);
     await setLocalSetting("last_rendered_prompt", text);
     closeAfter = await getLocalSetting("close_launcher_after_use") !== "0";
   } catch (error) { feedback.value += `；保存使用记录失败：${error.message || error}`; }
-  if (result.ok && closeAfter) {
+  if (closeAfter) {
     await launcherCommand("hide_launcher");
     hidden = true;
     resetState();
-  } else if (pasteRequested) {
-    await launcherCommand("resume_launcher");
-    hidden = false;
   }
   return text;
 }
 
-async function useRendered(pasteRequested = false) {
+async function copyRendered() {
   if (busy.value || !active.value) return;
   const text = preview.value;
   const id = active.value.id;
   if (!text.trim()) { feedback.value = "提示词内容为空，未修改剪贴板。"; return; }
   useBusy.value = true;
-  feedback.value = pasteRequested ? "正在复制并粘贴…" : "正在复制…";
+  feedback.value = "正在复制…";
   let copied = false;
   try {
-    const result = pasteRequested
-      ? await copyThenPaste(text)
-      : (await copyLauncherText(text), { ok: true, message: "已复制" });
+    await copyLauncherText(text);
     copied = true;
-    if (pasteRequested && result.ok) result.message = "已复制并发送粘贴指令";
-    await finishUse(text, id, result, pasteRequested);
+    await finishUse(text, id);
   } catch (error) {
-    feedback.value = copied ? `已复制；窗口恢复失败：${error?.message || error}` : `复制失败，请检查剪贴板权限后重试；内容已保留。${error?.message || error}`;
+    feedback.value = copied ? `已复制；窗口关闭失败：${error?.message || error}` : `复制失败，请检查剪贴板权限后重试；内容已保留。${error?.message || error}`;
   } finally {
     useBusy.value = false;
     await focusCurrent();
   }
 }
-
-const copyRendered = () => useRendered(false);
-const pasteRendered = () => useRendered(true);
 
 async function readSelected() {
   if (!canReadSelected || busy.value) return;

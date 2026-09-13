@@ -43,12 +43,12 @@ it('uses saved result limit and text size, refreshing them on explicit show', as
   for (let i = 0; i < 25; i++) await library.createLocalPrompt({ title: `测试 ${i}`, content: '{{内容}}' });
   const w = mount(LauncherApp); await flushPromises();
   await w.get('input').setValue('测试'); await flushPromises();
-  expect(w.findAll('[role="option"]')).toHaveLength(14);
+  expect(w.findAll('[role="option"]')).toHaveLength(13);
   expect(w.get('main').element.style.getPropertyValue('--launcher-content-size')).toBe('16px');
   await library.setLocalSetting('launcher_preferences', JSON.stringify({ fontSize: 14, resultLimit: 50 }));
   await shown(); await flushPromises();
   await w.get('input').setValue('测试'); await flushPromises();
-  expect(w.findAll('[role="option"]')).toHaveLength(29);
+  expect(w.findAll('[role="option"]')).toHaveLength(28);
   expect(w.get('main').element.style.getPropertyValue('--launcher-content-size')).toBe('14px');
 });
 
@@ -178,13 +178,10 @@ it("keeps a copied draft when recording usage fails", async () => {
   expect(w.find(".preview").exists()).toBe(true);
 });
 
-it("retains paste failure details and the completed draft", async () => {
-  vi.spyOn(paste, "copyThenPaste").mockResolvedValue({ ok: false, message: "已复制，未能粘贴：缺少辅助功能权限" });
+it("offers only copying the rendered prompt without a paste action", async () => {
   const w = await open();
-  await button(w, "粘贴到原窗口").trigger("click");
-  await flushPromises();
-  expect(w.text()).toContain("缺少辅助功能权限");
-  expect(w.find(".preview").exists()).toBe(true);
+  expect(w.text()).not.toContain("粘贴到原窗口");
+  expect(button(w, "复制")).toBeTruthy();
 });
 
 it("distinguishes loading and search errors from no matches", async () => {
@@ -218,7 +215,7 @@ it("handles PageUp on a short list without a negative selection and mouse click 
   await w.get("input").setValue("测试");
   await flushPromises();
   await w.get("input").trigger("keydown", { key: "PageUp" });
-  expect(w.get("input").attributes("aria-activedescendant")).toBe("launcher-result-1");
+  expect(w.get("input").attributes("aria-activedescendant")).toBe("launcher-result-0");
   const row = w.get('[role="option"][aria-selected="true"]');
   const content = row.text().includes("测试 A") ? "A" : "B";
   await row.trigger("click");
@@ -255,7 +252,7 @@ it("copies a single variable with Enter and preserves its draft if hiding fails"
   await flushPromises();
   expect(writeText).toHaveBeenCalledExactlyOnceWith("单项文本");
   expect(w.get("textarea").element.value).toBe("单项文本");
-  expect(w.text()).toContain("已复制；窗口恢复失败");
+  expect(w.text()).toContain("已复制；窗口关闭失败");
 });
 
 it("resets on native hide/show, restores focus/theme, and releases event listeners", async () => {
@@ -368,13 +365,13 @@ it("restores the current field when native focus arrives after the shown event",
   expect(document.activeElement).toBe(w.get("input").element);
 });
 
-it("ignores native hide/blur while copying, then returns after paste when keep-open is enabled", async () => {
+it("ignores native hide/blur while copying, and keeps the copied preview when keep-open is enabled", async () => {
   let hidden, complete;
   vi.spyOn(windows, "listenLauncherLifecycle").mockImplementation(async (_, handler) => { hidden = handler; return () => {}; });
   const command = vi.spyOn(windows, "launcherCommand").mockResolvedValue(true);
-  vi.spyOn(paste, "copyThenPaste").mockImplementation(() => new Promise((resolve) => { complete = resolve; }));
+  vi.spyOn(paste, "copyLauncherText").mockImplementation(() => new Promise((resolve) => { complete = resolve; }));
   const w = await open();
-  await button(w, "粘贴到原窗口").trigger("click");
+  await button(w, "复制").trigger("click");
   window.__TAURI_INTERNALS__ = {};
   window.dispatchEvent(new Event("blur"));
   hidden();
@@ -383,8 +380,8 @@ it("ignores native hide/blur while copying, then returns after paste when keep-o
   expect(command).not.toHaveBeenCalled();
   complete({ ok: true });
   await flushPromises();
-  expect(command).toHaveBeenCalledWith("resume_launcher");
-  expect(w.text()).toContain("已复制并发送粘贴指令");
+  expect(command).not.toHaveBeenCalledWith("resume_launcher");
+  expect(w.text()).toContain("已复制");
 });
 
 it("fills the focused variable from the original selection and preserves values on empty/error", async () => {

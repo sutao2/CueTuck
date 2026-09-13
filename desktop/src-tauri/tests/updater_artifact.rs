@@ -14,9 +14,13 @@ async fn published_macos_update_installs_in_isolated_app() {
     let executable = destination.join("Contents/MacOS/cuetuck");
     std::fs::create_dir_all(executable.parent().unwrap()).unwrap();
     std::fs::write(&executable, b"old isolated fixture").unwrap();
+    let mut context = tauri::test::mock_context(tauri::test::noop_assets());
+    context.config_mut().plugins.0.insert("updater".into(), config["plugins"]["updater"].clone());
+    eprintln!("Building isolated mock application");
     let app = tauri::test::mock_builder()
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .build(tauri::test::mock_context(tauri::test::noop_assets())).unwrap();
+        .build(context).unwrap();
+    eprintln!("Mock application ready");
     let expected = version.clone();
     let updater = app.updater_builder()
         .pubkey(config["plugins"]["updater"]["pubkey"].as_str().unwrap())
@@ -25,12 +29,15 @@ async fn published_macos_update_installs_in_isolated_app() {
         .version_comparator(move |_, release| release.version.to_string() == expected)
         .timeout(std::time::Duration::from_secs(180))
         .build().unwrap();
+    eprintln!("Checking published manifest");
     let update = updater.check().await.unwrap().expect("matching platform update");
     assert_eq!(update.version, version);
+    eprintln!("Manifest selected; downloading signed artifact");
     let mut downloaded = 0;
     let bytes = update.download(|size, _| downloaded += size, || {}).await.expect("download and verify signature");
     assert_eq!(downloaded, bytes.len());
     assert!(downloaded > 1_000_000);
+    eprintln!("Installing verified bytes into temporary application");
     update.install(bytes).expect("isolated app replacement");
     assert!(std::fs::metadata(&executable).unwrap().len() > 1_000_000);
     let plist = std::fs::read_to_string(destination.join("Contents/Info.plist")).unwrap();
