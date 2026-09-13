@@ -310,3 +310,31 @@ async fn batch_reports_each_failure_and_validates_before_any_write() {
         Err(StatusCode::UNAUTHORIZED)
     ));
 }
+
+#[tokio::test]
+async fn author_metrics_keep_history_and_exclude_other_accounts() {
+    let (state, reviewer, author) = fixture().await;
+    publication(&state, "metrics-online").await;
+    publication(&state, "metrics-pending").await;
+    let pg = state.db.as_ref().unwrap();
+    pg.review_publication("metrics-online", "approved", None, Some(("reviewer@example.com", &reviewer))).await.unwrap();
+    for _ in 0..3 { state.increment_download("metrics-online").await.unwrap(); }
+    request(&state, "PUT", "/v1/favorites/metrics-online", &reviewer, json!(null)).await;
+    let (_, mine) = request(&state, "GET", "/v1/publications/mine", &author, json!(null)).await;
+    let rows = mine["items"].as_array().unwrap();
+    let online = rows.iter().find(|r| r["id"] == "metrics-online").unwrap();
+    assert_eq!(online["download_count"], 3);
+    assert_eq!(online["favorite_count"], 1);
+    let pending = rows.iter().find(|r| r["id"] == "metrics-pending").unwrap();
+    assert_eq!(pending["download_count"], 0);
+    assert_eq!(pending["favorite_count"], 0);
+    assert!(!mine.to_string().contains("reviewer@example.com"));
+    sqlx::query(&format!("UPDATE {} SET visibility='offline' WHERE id='metrics-online'", pg.t("square_items"))).execute(&pg.pool).await.unwrap();
+    let (_, hidden) = request(&state, "GET", "/v1/publications/mine", &author, json!(null)).await;
+    let row = hidden["items"].as_array().unwrap().iter().find(|r|r["id"]=="metrics-online").unwrap();
+    assert_eq!(row["visibility"], "offline");
+    assert_eq!(row["download_count"], 3);
+    assert_eq!(row["favorite_count"], 1);
+    assert_eq!(request(&state,"GET","/v1/publications/mine",&reviewer,json!(null)).await.1["items"], json!([]));
+    assert_eq!(request(&state,"GET","/v1/publications/mine","",json!(null)).await.0, StatusCode::UNAUTHORIZED);
+}

@@ -10,7 +10,7 @@ paths:
       security: []
       summary: 桌面广场有界滚动分页
       x-category-counts: offset=0 时附带 category_counts（直接分类 ID 到 online 数量，空字符串表示无分类）及 category_total（包含无分类），忽略搜索/模型/分类/收藏筛选；数据库单次 GROUP BY 聚合，不读取全量列表。续页两字段均为 null；父级按 catalog.category_parents 汇总直接计数与子级，不重复计数。
-      description: sort 为 recommended/latest/hot/favorites（或中文对应标签），q 为标题/摘要/作者字面搜索（最多 1200 字节），model/category_id 最多 200 字节，大分类含一级子分类。limit 默认及最大 48，offset 默认 0、0–100000。只返回 online；数据库筛选、稳定 id 次排序及计数，返回 items,total,limit,offset,next_offset（末页 null）。条目只含 id/title/kind/excerpt/model/category_id/member_count/is_favorite/reference；标题最多 160 字、摘要 240 字，reference 仅含一张最多 2048 字符封面 URL，不含正文、成员或完整来源。收藏查询及关闭匿名时须有效 Access，否则 401；非法参数 400，依赖失败或查询超时 503。旧 items 和 MCP search 保持兼容。
+      description: sort 为 recommended/latest/hot/favorites（或中文对应标签），q 为标题/摘要/作者字面搜索（最多 1200 字节），model/category_id 最多 200 字节，大分类含一级子分类。limit 默认及最大 48，offset 默认 0、0–100000。只返回 online；数据库筛选、稳定 id 次排序及计数，返回 items,total,limit,offset,next_offset（末页 null）。条目只含 id/title/kind/excerpt/model/category_id/member_count/is_favorite/download_count/favorite_count/reference；download_count 是已记录匿名下载次数，favorite_count 是当前收藏账号数（按条目索引聚合）；标题最多 160 字、摘要 240 字，reference 仅含一张最多 2048 字符封面 URL，不含正文、成员或完整来源。收藏查询及关闭匿名时须有效 Access，否则 401；非法参数 400，依赖失败或查询超时 503。旧 items 和 MCP search 保持兼容。
   /v1/square/search:
     get:
       operationId: searchPublicSquare
@@ -196,7 +196,7 @@ paths:
     get:
       operationId: listMyPublications
       summary: 当前账号投稿与审核状态
-      description: 返回 items，仅含当前账号投稿；Postgres 模式包含 created_at（旧投稿可能 null）、visibility（online/offline/trashed/null 未上架）和 history（id、publication_id、status、reason、created_at），不含审核人邮箱。作者可读取驳回理由和当前广场状态，内容仍是提交快照，不修改本地库。
+      description: 返回 items，仅含当前账号投稿，每条含 download_count（已记录下载次数）和 favorite_count（当前收藏账号数）；未上架为 0，下架保留历史统计；Postgres 模式包含 created_at（旧投稿可能 null）、visibility（online/offline/trashed/null 未上架）和 history（id、publication_id、status、reason、created_at），不含审核人邮箱。作者可读取驳回理由和当前广场状态，内容仍是提交快照，不修改本地库。
   /v1/health:
     get:
       operationId: health

@@ -78,6 +78,14 @@ async fn record_anonymous_download_increments_count_without_auth() {
         .await
         .unwrap();
     assert_eq!(counted.status(), StatusCode::NO_CONTENT);
+    let page = app.clone().oneshot(Request::builder()
+        .uri("/v1/square/browse?sort=hot")
+        .body(Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(page.status(), StatusCode::OK);
+    let page: serde_json::Value = serde_json::from_slice(&to_bytes(page.into_body(), usize::MAX).await.unwrap()).unwrap();
+    assert_eq!(page["items"][0]["id"], "sq-g");
+    assert_eq!(page["items"][0]["download_count"], 1);
+    assert_eq!(page["items"][0]["favorite_count"], 0);
     let counted = app
         .clone()
         .oneshot(

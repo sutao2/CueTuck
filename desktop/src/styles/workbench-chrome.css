@@ -925,3 +925,11 @@ body[data-density="compact"] .app-shell .prompt-grid { gap: 10px; }
 body[data-density="compact"] .app-shell .prompt-card { min-height: 160px; padding: 12px; }
 body[data-density="compact"] .app-shell .prompt-card.as-row { min-height: 52px; padding: 7px 12px; }
 body[data-density="compact"] .app-shell .collection-card-preview { margin: -12px -12px 10px; }
+
+/* Server-recorded metrics share the card geometry in both views. */
+.square-card-metrics { display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.square-card-metrics > span { display: inline-flex; align-items: center; gap: 4px; }
+.square-card-metrics .app-icon { width: 12px; height: 12px; }
+.prompt-card:not(.as-row) .square-card-metrics { order: 5; margin-top: 10px; }
+.prompt-card.as-row .square-card-metrics { grid-column: 1; grid-row: 4; }
+.square-sort-note { color: var(--muted); font-size: 11px; margin: 0; padding: 8px 28px; border-bottom: 1px solid var(--line); }

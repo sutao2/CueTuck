@@ -212,6 +212,7 @@
           </div>
           </div>
         </section>
+        <p v-if="space === 'square' && sortTab === '热门'" class="square-sort-note" data-testid="square-sort-note">按已记录下载量从高到低排序 · 仅包含开启匿名统计后的下载</p>
 
         <div
           v-if="space === 'square' && squareOffline"
@@ -299,6 +300,10 @@
               <div v-if="item.asset_count" class="card-assets" data-testid="card-assets">
                 <span v-if="item.image_count"><AppIcon name="image" />{{ item.image_count }} 张图片</span>
                 <span v-if="item.asset_count > (item.image_count || 0)"><AppIcon name="file" />{{ item.asset_count - (item.image_count || 0) }} 个文件</span>
+              </div>
+              <div v-if="space === 'square'" class="square-card-metrics" data-testid="square-card-metrics">
+                <span title="已记录匿名下载次数；仅统计开启上报后的成功下载"><AppIcon name="download" />{{ formatMetric(item.download_count) }} <span>下载</span></span>
+                <span title="当前收藏此作品的账号数">☆ {{ formatMetric(item.favorite_count) }} <span>收藏</span></span>
               </div>
               <div class="card-footer">
                 <template v-if="space === 'square'">
@@ -607,6 +612,7 @@
 </template>
 
 <script setup>
+import { formatMetric } from '../platform/contentMetrics.js';
 import AppIcon from "./AppIcon.vue";
 import GlobalSearch from "./GlobalSearch.vue";
 import { listPromptAssets, assetSize, formatBytes } from '../platform/assets.js';
