@@ -482,7 +482,7 @@ describe("WorkbenchShell", () => {
   it("uses mac chrome on macos", () => {
     const w = mount(WorkbenchShell, { props: { host: "macos" } });
     expect(w.get('[data-region="titlebar"]').classes()).toContain("host-mac");
-    expect(w.get('[data-testid="sidebar-search"]').attributes('title')).toContain("⌘F");
+    expect(w.get('[data-testid="titlebar-search"]').attributes('title')).toContain("⌘K");
     expect(w.get('.status-button').text()).toContain("⌃Space");
     expect(w.find(".window-controls").exists()).toBe(false);
   });
@@ -580,20 +580,22 @@ describe("WorkbenchShell", () => {
     expect(w.find('.titlebar .brand-name').exists()).toBe(false);
     expect(w.get('.sidebar .brand-name').text()).toBe('提示方舟');
     expect(w.get('.titlebar-center').text()).toContain('本地提示词');
-    expect(w.get('[data-testid="titlebar-search"]').text()).toBe('搜索⌘F');
+    expect(w.get('[data-testid="titlebar-search"]').text()).toBe('全局搜索⌘K');
     expect(w.find('[data-testid="titlebar-settings"]').exists()).toBe(false);
+    expect(w.find('[data-testid="sidebar-search"]').exists()).toBe(false);
     await w.get('[data-testid="titlebar-search"]').trigger('click');
-    expect(document.activeElement).toBe(w.get('.inline-search input').element);
-    w.get('.inline-search input').element.blur();
-    await w.get('[data-testid="sidebar-search"]').trigger('click');
-    expect(document.activeElement).toBe(w.get('.inline-search input').element);
+    await flushPromises();
+    expect(document.activeElement).toBe(w.get('[data-testid="global-search-input"]').element);
+    expect(w.get('.workspace').attributes('inert')).toBeDefined();
+    await w.get('[aria-label="关闭全局搜索"]').trigger('click');
     await w.get('[data-space="square"]').trigger('click');
     await flushPromises();
-    w.get('.inline-search input').element.blur();
     await w.get('[data-testid="toggle-sidebar"]').trigger('click');
     expect(w.get('.sidebar').isVisible()).toBe(false);
     await w.get('[data-testid="titlebar-search"]').trigger('click');
-    expect(document.activeElement).toBe(w.get('.inline-search input').element);
+    await flushPromises();
+    expect(document.activeElement).toBe(w.get('[data-testid="global-search-input"]').element);
+    await w.get('[aria-label="关闭全局搜索"]').trigger('click');
     expect(w.emitted('open-launcher')).toBeUndefined();
     await w.get('.status-button').trigger('click');
     expect(w.emitted('open-launcher')).toHaveLength(1);
@@ -631,7 +633,7 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell, { props: { host: 'macos' } });
     await flushPromises();
     expect(w.get('.status-button').text()).toBe('启动器 ⌃⌥K');
-    expect(w.get('[data-testid="titlebar-search"]').text()).toBe('搜索⌘F');
+    expect(w.get('[data-testid="titlebar-search"]').text()).toBe('全局搜索⌘K');
     w.unmount();
   });
 

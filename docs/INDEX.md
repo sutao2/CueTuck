@@ -6,6 +6,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-13-global-search.md](plans/2026-09-13-global-search.md) | 验收 | 区分全局搜索与页面筛选 | 本地/广场独立面板；492 项回归、浏览器与 macOS 构建通过 |
+| [architecture/decisions/0022-global-search.md](architecture/decisions/0022-global-search.md) | 现行 | 修改搜索位置或交互 | 右上角全局搜索、页面内筛选，临时查找面板边界 |
 | [plans/2026-09-13-visual-hierarchy.md](plans/2026-09-13-visual-hierarchy.md) | 验收 | 优化页面设计 | 页头、卡片、侧栏与紧凑编辑器；481 项回归、浅深色浏览器及构建通过 |
 | [plans/2026-09-12-thumbnail-cache.md](plans/2026-09-12-thumbnail-cache.md) | 验收 | 大图列表与长文滚动 | 缩略图缓存/摘要、480 项全量加 1 项补验、85 项原生及浏览器构建通过 |
 | [plans/2026-09-12-scroll-smoothness.md](plans/2026-09-12-scroll-smoothness.md) | 验收 | 滚动掉帧 | 重复渲染/样式读取消除，474 项前端与构建通过；原生重启复验待完成 |
@@ -90,7 +92,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [architecture/decisions/0005-ui-source-prompt-ark-prototype.md](architecture/decisions/0005-ui-source-prompt-ark-prototype.md) | 归档 | 追溯主窗口设计源 | 已被 ADR 0015 取代 |
 | [architecture/decisions/0015-workbench-visual-system.md](architecture/decisions/0015-workbench-visual-system.md) | 归档 | 追溯首次视觉优化 | 已被 ADR 0016 取代 |
 | [architecture/decisions/0016-workbench-frame-and-settings.md](architecture/decisions/0016-workbench-frame-and-settings.md) | 归档 | 追溯固定设置弹窗 | 主工作台由 0017、设置由 0019 取代 |
-| [architecture/decisions/0017-screenshot-workbench-frame.md](architecture/decisions/0017-screenshot-workbench-frame.md) | 现行 | 对齐用户 Codex 主窗口截图 | 窗口操作与品牌分行、直线分栏、侧栏搜索与主题层级 |
+| [architecture/decisions/0017-screenshot-workbench-frame.md](architecture/decisions/0017-screenshot-workbench-frame.md) | 现行 | 对齐用户 Codex 主窗口截图 | 窗口操作与品牌分行、直线分栏及主题层级；搜索部分由 0022 替代 |
 | [architecture/decisions/0006-plan-altitude.md](architecture/decisions/0006-plan-altitude.md) | 现行 | 想一次写完所有逐步任务时 | 计划只写一层深 |
 | [architecture/decisions/0007-sqlite-access.md](architecture/decisions/0007-sqlite-access.md) | 现行 | 改本地库访问方式时 | rusqlite 而不是 plugin-sql |
 | [architecture/decisions/0008-m5-backend-contract.md](architecture/decisions/0008-m5-backend-contract.md) | 现行 | 接广场或后端前 | 改写 API；邮箱密码；覆盖率 |

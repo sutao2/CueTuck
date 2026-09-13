@@ -91,17 +91,36 @@
 
 - GIVEN 主窗口侧栏展开
 - WHEN 工作台显示
-- THEN 品牌与搜索位于侧栏首行，不占用窗口操作行；内容标题位于顶栏内容侧
+- THEN 品牌位于侧栏首行，不占用窗口操作行；内容标题位于顶栏内容侧
 - AND 顶栏左区与侧栏同宽，分隔线纵向对齐；内容面没有外边距、圆角外框或阴影
 - AND 深色侧栏比内容面稍亮，浅色也保持清晰分区，不改变已保存的主题选择
 
-#### Scenario: 右上角固定搜索入口
+#### Scenario: 全局搜索与页面筛选分离
 
-- GIVEN 侧栏展开或收起
-- WHEN 点击顶栏搜索按钮
-- THEN 聚焦当前本地库或广场已有的搜索框，保留当前查询与筛选，不另开搜索窗或唤起启动器
-- AND 顶部、侧栏与内容框的提示对应软件内搜索 Cmd+F（macOS）/ Ctrl+F（其他系统），组合键同样聚焦搜索框；弹窗打开或输入法组字时不抢焦点
-- AND 右上角不展示设置图标；设置仍可通过侧栏入口或设置快捷键打开，侧栏品牌行搜索保留
+- GIVEN 侧栏展开或收起，当前在浏览、详情、编辑或设置页面
+- WHEN 点击右上角「全局搜索」或按 Cmd+K（macOS）/ Ctrl+K（其他系统）
+- THEN 打开独立临时搜索面板并聚焦输入，默认搜索本地提示词和合集；左上角不再保留重复搜索入口
+- AND 全局搜索不继承当前页面查询、分类、模型、最近或收藏筛选；用户可显式切换到提示词广场
+- AND 页面内搜索仍筛选当前列表，Cmd+F / Ctrl+F 在浏览页面聚焦该框；独立启动器不变
+- AND 搜索位置与临时面板边界遵循 [ADR 0022](../../architecture/decisions/0022-global-search.md)
+
+#### Scenario: 全局搜索状态与有界读取
+
+- GIVEN 全局搜索面板打开
+- WHEN 输入文字或切换范围
+- THEN 空输入不发查询，非空输入 250ms 防抖；输入法组字中不查询、不通过 Enter 打开结果
+- AND 展示加载、失败重试、无匹配状态；最多呈现 48 条，超出时提示细化关键词
+- AND 切换查询、范围或关闭时取消旧广场请求并忽略迟到结果；广场使用既有有界接口，关闭广场访问时不发网络查询
+- AND 支持上下键选择、Enter 打开、Escape 关闭和 Tab 焦点约束，关闭后恢复原焦点
+
+#### Scenario: 全局搜索保留工作上下文
+
+- GIVEN 页面存在筛选、滚动位置或未保存的编辑/设置
+- WHEN 打开再取消全局搜索
+- THEN 原页面及输入保持不变
+- WHEN 选择搜索结果
+- THEN 直接进入对应本地提示词、合集或广场详情页面，先执行已有未保存离开保护；选择继续编辑时保留草稿
+- AND 写入忙碌或已有确认对话框时不打开第二个面板；搜索结果不改写底层列表的筛选条件；返回文案对应原空间，广场结果保留已下载及收藏（含本地队列）状态
 
 #### Scenario: 启动器快捷键标签同步
 
@@ -254,7 +273,7 @@
 - GIVEN 用户在 macOS 打开桌面主窗口
 - WHEN 窗口显示
 - THEN 左上为系统红绿灯，可拖区域不与按钮重叠
-- AND 软件内搜索记号为 `⌘F`，启动器默认记号为 `⌃Space`，自定义组合也用 Mac 符号
+- AND 全局搜索记号为 `⌘K`、页面筛选为 `⌘F`，启动器默认记号为 `⌃Space`，自定义组合也用 Mac 符号
 - AND 不得出现 Windows 风格的右侧最小化 / 最大化 / 关闭
 
 #### Scenario: 标题栏折叠入口不跳位
@@ -309,6 +328,6 @@
 | 右键只提供已有动作 | `WorkbenchShell.spec.js` opens a context menu with existing local actions |
 | macOS 主窗口 | `WorkbenchShell.spec.js` uses mac chrome on macos；`windowChrome.test.js` gives traffic-light inset and glyph shortcut on macos |
 | 标题栏折叠入口不跳位 | `WorkbenchShell.spec.js` keeps the sidebar toggle outside the drag region；Playwright 两态坐标与窄窗口测量 |
-| 截图参考框架 / 右上角固定搜索 | `WorkbenchShell.spec.js` 软件内搜索聚焦、两空间与宿主键盘回归；Playwright 点击与真实按键 |
+| 截图参考框架 / 全局搜索 / 页面筛选 | `WorkbenchShell.spec.js` 入口分工；`GlobalSearch.spec.js` 范围、组字、取消与状态；`WorkbenchGlobalSearch.spec.js` 跨页面、键盘与草稿保护；Playwright 实际交互 |
 | 启动器快捷键标签同步 | `WorkbenchShell.spec.js` 保存值回读；`SettingsInteraction.spec.js` 保存成功/失败与底栏即时同步 |
 | 桌面滚动区域与组合控件 | [滚动条验收计划](../../plans/2026-09-07-scrollbars-focus.md) 浏览器与原生隔离包检查 |

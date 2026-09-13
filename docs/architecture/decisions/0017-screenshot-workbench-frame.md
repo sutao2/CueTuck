@@ -1,6 +1,6 @@
 # 17. 按用户 Codex 截图细化主窗口框架
 
-- Status: accepted
+- Status: superseded（仅搜索位置与用途，由 [ADR 0022](0022-global-search.md) 替代；其余框架决策继续适用）
 - Date: 2026-09-06
 - 关联：[ADR 0016](0016-workbench-frame-and-settings.md) · [工作台规格](../../specs/workbench/spec.md)
 
