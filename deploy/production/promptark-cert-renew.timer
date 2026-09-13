@@ -1,5 +1,5 @@
 [Unit]
-Description=Check PromptArk certificate twice daily
+Description=Check CueTuck certificate twice daily
 [Timer]
 OnCalendar=*-*-* 03,15:20:00
 RandomizedDelaySec=1800

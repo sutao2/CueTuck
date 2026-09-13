@@ -1,3 +1,4 @@
+import { selectOption, selectComponent } from '../test/selectOption.js';
 import { mount, flushPromises } from '@vue/test-utils';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import WorkbenchShell from './WorkbenchShell.vue';
@@ -13,7 +14,7 @@ it('moves only selected categories and retries only failed rows', async () => {
   w = mount(WorkbenchShell); await flushPromises();
   await w.get('[data-testid=select-prompts]').trigger('click');
   await w.get(`[data-select-prompt="${a.id}"]`).setValue(true); await w.get(`[data-select-prompt="${b.id}"]`).setValue(true);
-  await w.get('[data-testid=batch-category]').setValue('cat-image');
+  await selectOption(w, 'batch-category', 'cat-image');
   const original = library.moveLocalPromptCategory;
   let first = true;
   const move = vi.spyOn(library, 'moveLocalPromptCategory').mockImplementation(async (id, category) => {

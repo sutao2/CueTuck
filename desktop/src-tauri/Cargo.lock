@@ -2828,8 +2828,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "promptark"
-version = "0.1.0-beta.5"
+name = "cuetuck"
+version = "0.1.0-beta.6"
 dependencies = [
  "base64 0.22.1",
  "enigo",

@@ -15,6 +15,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .manage(LocalDatabase::default())
+        .manage(commands::updates::UpdateState::default())
         .manage(LauncherFocusGuard::default());
     #[cfg(target_os = "macos")]
     {
@@ -107,6 +108,7 @@ pub fn run() {
             commands::session::redeem_billing_code,
             commands::updates::check_for_updates,
             commands::updates::queue_update_install,
+            commands::updates::install_downloaded_update,
             commands::square::list_square_items,
             commands::square_page::list_square_page,
             commands::square_page::cancel_square_page,
@@ -148,5 +150,5 @@ pub fn run() {
             }
         })
         .run(tauri::generate_context!())
-        .expect("error while running PromptArk");
+        .expect("error while running CueTuck");
 }

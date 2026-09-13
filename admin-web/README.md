@@ -1,4 +1,4 @@
-# PromptArk 管理台
+# CueTuck 管理台
 
 独立浏览器应用，不进桌面安装包。合同见 [admin.yaml](../docs/reference/openapi/admin.yaml)。本仓库 `backend/` 是预发。
 

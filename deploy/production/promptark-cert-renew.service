@@ -1,5 +1,5 @@
 [Unit]
-Description=Renew PromptArk TLS certificate
+Description=Renew CueTuck TLS certificate
 After=network-online.target docker.service
 Wants=network-online.target
 [Service]

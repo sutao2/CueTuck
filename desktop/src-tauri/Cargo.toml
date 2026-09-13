@@ -1,11 +1,11 @@
 [package]
-name = "promptark"
-version = "0.1.0-beta.5"
-description = "PromptArk desktop"
+name = "cuetuck"
+version = "0.1.0-beta.6"
+description = "CueTuck desktop"
 edition = "2021"
 
 [lib]
-name = "promptark_lib"
+name = "cuetuck_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

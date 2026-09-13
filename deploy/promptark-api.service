@@ -1,5 +1,5 @@
 [Unit]
-Description=PromptArk API
+Description=CueTuck API
 After=network-online.target
 Wants=network-online.target
 

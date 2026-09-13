@@ -276,7 +276,7 @@ async fn create_stripe_session(secret: &str, email: &str) -> Result<String, Stat
             ("line_items[0][price_data][unit_amount]", "1"),
             (
                 "line_items[0][price_data][product_data][name]",
-                "PromptArk Pro",
+                "CueTuck Pro",
             ),
         ])
         .send()

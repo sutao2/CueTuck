@@ -13,14 +13,14 @@ export function validateRelease({ config, version, cargoVersion, frontendUpdates
   if (!repo || !frontendUpdates.includes(`https://api.github.com/repos/${repo}/releases`) || !nativeUpdates.includes(`https://api.github.com/repos/${repo}/releases`) || !nativeUpdates.includes(`https://github.com/${repo}/releases/download/`)) errors.push('Updater repository/endpoints do not agree');
   const key = Buffer.from(config.plugins?.updater?.pubkey || '', 'base64').toString();
   if (!key.startsWith('untrusted comment:') || !/^RW[A-Za-z0-9+/=]+$/m.test(key)) errors.push('Updater public key is missing or invalid');
-  if (preview && (!/^\d+\.\d+\.\d+-[\w.-]+$/.test(version) || config.bundle?.createUpdaterArtifacts !== false)) errors.push('Preview requires a prerelease version and disabled updater artifacts');
+  if (preview && (!/^\d+\.\d+\.\d+-[\w.-]+$/.test(version) || config.bundle?.createUpdaterArtifacts !== true)) errors.push('Preview requires a prerelease version and signed updater artifacts');
   if (production || preview) {
     if (!env.PROMPTARK_API_BASE || !env.VITE_API_BASE) errors.push('Release requires PROMPTARK_API_BASE and VITE_API_BASE');
     else try {
       const native = normalizeApiBase(env.PROMPTARK_API_BASE), web = normalizeApiBase(env.VITE_API_BASE);
       if (native !== web || !native.startsWith('https://') || ['localhost', '127.0.0.1', '[::1]'].includes(new URL(native).hostname)) errors.push('Release API origins must match and use non-loopback HTTPS');
     } catch { errors.push('Invalid release API origin'); }
-    if (production && !env.TAURI_SIGNING_PRIVATE_KEY) errors.push('Release requires the matching updater signing key (not generated automatically)');
+    if ((production || preview) && !env.TAURI_SIGNING_PRIVATE_KEY) errors.push('Release requires the matching updater signing key (not generated automatically)');
   }
   return errors;
 }
@@ -32,5 +32,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const errors = validateRelease({ config, version: JSON.parse(read('desktop/package.json')).version, cargoVersion: read('desktop/src-tauri/Cargo.toml').match(/^version = "([^"]+)"/m)?.[1], frontendUpdates: read('desktop/src/platform/updates.js'), nativeUpdates: read('desktop/src-tauri/src/commands/updates.rs'), env: process.env, production, preview });
   errors.forEach(error => console.error(error));
   process.exitCode = errors.length ? 1 : 0;
-  if (!errors.length) console.log(preview ? 'Preview checks passed. Manual installation only; Apple signing/notarization is not verified.' : `${production ? 'Release configuration' : 'Local build configuration'} checks passed. Signing-key match, notarization and hosted update artifacts still require release verification.`);
+  if (!errors.length) console.log(preview ? 'Preview checks passed. Signed updater artifacts required; Apple signing/notarization is not verified.' : `${production ? 'Release configuration' : 'Local build configuration'} checks passed. Signing-key match, notarization and hosted update artifacts still require release verification.`);
 }

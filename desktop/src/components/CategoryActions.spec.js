@@ -1,3 +1,4 @@
+import { selectOption, selectComponent } from '../test/selectOption.js';
 import { mount, flushPromises } from '@vue/test-utils';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import WorkbenchShell from './WorkbenchShell.vue';
@@ -16,14 +17,14 @@ async function open() {
 it('creates a root from all prompts, creates a child, and guards root deletion until children are removed', async () => {
   await open();
   await wrapper.get('[data-testid="add-category"]').trigger('click');
-  expect(wrapper.get('[data-testid="category-parent"]').element.value).toBe('');
+  expect(selectComponent(wrapper, 'category-parent').props('modelValue')).toBe('');
   await wrapper.get('[data-testid="new-category-name"]').setValue('项目');
   await wrapper.get('[data-testid="confirm-category"]').trigger('click');
   await flushPromises();
   expect(wrapper.get('.tree-parent.active').text()).toContain('项目');
   const root = (await lib.listLocalCategories()).find(c => c.name === '项目');
   await wrapper.get('[data-testid="add-category"]').trigger('click');
-  expect(wrapper.get('[data-testid="category-parent"]').element.value).toBe(root.id);
+  expect(selectComponent(wrapper, 'category-parent').props('modelValue')).toBe(root.id);
   await wrapper.get('[data-testid="new-category-name"]').setValue('发布');
   await wrapper.get('[data-testid="confirm-category"]').trigger('click');
   await flushPromises();
@@ -58,7 +59,7 @@ it('hides custom root trees in the square and never publishes private category I
   expect(wrapper.get('.category-tree').text()).not.toContain('私有');
   await wrapper.get('[data-testid="publish-prompt"]').trigger('click');
   await flushPromises();
-  await wrapper.get('[data-testid="publish-source"]').setValue(collection.id);
+  await selectOption(wrapper, 'publish-source', collection.id);
   await flushPromises();
   await wrapper.get('[data-testid="publish-submit"]').trigger('click');
   await flushPromises();
@@ -73,7 +74,7 @@ it('creates from all prompts with parent choice, focuses the name, and rejects d
   const name = wrapper.get('[data-testid="new-category-name"]');
   expect(document.activeElement).toBe(name.element);
   expect(wrapper.get('[data-testid="confirm-category"]').element.disabled).toBe(true);
-  await wrapper.get('[data-testid="category-parent"]').setValue('cat-office');
+  await selectOption(wrapper, 'category-parent', 'cat-office');
   await name.setValue(' 周报 ');
   await name.trigger('keydown', { key: 'Enter', isComposing: true });
   expect((await lib.listLocalCategories()).some(c => c.name === '周报')).toBe(false);
@@ -82,7 +83,7 @@ it('creates from all prompts with parent choice, focuses the name, and rejects d
   expect(wrapper.find('.category-modal').exists()).toBe(false);
   expect(wrapper.get('.tree-row.child.active').text()).toContain('周报');
   await wrapper.get('[data-testid="add-category"]').trigger('click');
-  expect(wrapper.get('[data-testid="category-parent"]').element.value).toBe('cat-office');
+  expect(selectComponent(wrapper, 'category-parent').props('modelValue')).toBe('cat-office');
   await wrapper.get('[data-testid="new-category-name"]').setValue('周报');
   await wrapper.get('[data-testid="confirm-category"]').trigger('click');
   await flushPromises();

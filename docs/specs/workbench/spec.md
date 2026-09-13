@@ -331,3 +331,7 @@
 | 截图参考框架 / 全局搜索 / 页面筛选 | `WorkbenchShell.spec.js` 入口分工；`GlobalSearch.spec.js` 范围、组字、取消与状态；`WorkbenchGlobalSearch.spec.js` 跨页面、键盘与草稿保护；Playwright 实际交互 |
 | 启动器快捷键标签同步 | `WorkbenchShell.spec.js` 保存值回读；`SettingsInteraction.spec.js` 保存成功/失败与底栏即时同步 |
 | 桌面滚动区域与组合控件 | [滚动条验收计划](../../plans/2026-09-07-scrollbars-focus.md) 浏览器与原生隔离包检查 |
+
+### Requirement: CueTuck 品牌与可搜索选项
+
+当前产品名为 CueTuck · 唤词，英文标语 Your prompts, a shortcut away.；升级保留旧版存储与凭据协议，见[品牌与更新计划](../../plans/2026-09-13-cuetuck-updates.md)。发布来源/分类/模型、编辑分类/模型、模型筛选、父分类和批量整理目标提供可搜索选择器，匹配标签和分类路径；支持方向键、Enter、Esc、输入法与空结果提示。搜索不修改原值，确认选项才提交；弹层避免被父级滚动区裁剪。长列表最多渲染前 100 项并提示继续搜索，过滤覆盖全部选项。

@@ -1,5 +1,5 @@
 const ZH = {
-  brand: "提示方舟",
+  brand: "CueTuck · 唤词",
   search: "搜索",
   launcher: "启动器",
   login: "登录",
@@ -55,7 +55,7 @@ const ZH = {
 };
 
 const EN = {
-  brand: "PromptArk",
+  brand: "CueTuck",
   search: "Search",
   launcher: "Launcher",
   login: "Sign in",

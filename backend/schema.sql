@@ -1,4 +1,4 @@
--- PromptArk preview schema. Not the Spring Flyway `pl` database.
+-- CueTuck preview schema. Not the Spring Flyway `pl` database.
 CREATE TABLE IF NOT EXISTS accounts (
   email TEXT PRIMARY KEY,
   password_hash TEXT,

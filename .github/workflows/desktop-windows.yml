@@ -25,6 +25,7 @@ jobs:
     env:
       PROMPTARK_API_BASE: https://prompt.likh.cn
       VITE_API_BASE: https://prompt.likh.cn
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
     defaults:
       run:
         working-directory: desktop
@@ -53,7 +54,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $binary = Resolve-Path 'src-tauri/target/release/promptark.exe'
+          $binary = Resolve-Path 'src-tauri/target/release/cuetuck.exe'
           $bytes = [IO.File]::ReadAllBytes($binary)
           $pe = [BitConverter]::ToInt32($bytes, 0x3c)
           if ([BitConverter]::ToUInt16($bytes, $pe + 4) -ne 0x8664) { throw 'Expected x64 PE' }
@@ -66,7 +67,7 @@ jobs:
           if ($install.ExitCode -ne 0) { throw "Installer failed: $($install.ExitCode)" }
           $app = $null
           try {
-            $app = Start-Process (Join-Path $installDir 'promptark.exe') -PassThru
+            $app = Start-Process (Join-Path $installDir 'cuetuck.exe') -PassThru
             Start-Sleep -Seconds 10
             $app.Refresh()
             if ($app.HasExited) { throw "Installed application exited early: $($app.ExitCode)" }
@@ -81,11 +82,12 @@ jobs:
           }
           New-Item -ItemType Directory -Force 'windows-artifact' | Out-Null
           Copy-Item $installer.FullName 'windows-artifact/'
+          Copy-Item ($installer.FullName + '.sig') 'windows-artifact/'
           $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $($installer.Name)" | Set-Content -Encoding utf8NoBOM 'windows-artifact/SHA256SUMS-windows'
           @{ source_commit=(git rev-parse HEAD); api=$env:PROMPTARK_API_BASE; architecture='x64'; installer=$installer.Name; sha256=$hash; smoke='install, launch 10s, uninstall'; authenticode=(Get-AuthenticodeSignature $installer.FullName).Status.ToString() } | ConvertTo-Json | Set-Content -Encoding utf8NoBOM 'windows-artifact/build-info.json'
       - uses: actions/upload-artifact@v4
         with:
-          name: promptark-windows-nsis
+          name: cuetuck-windows-nsis
           path: desktop/windows-artifact/*
           if-no-files-found: error

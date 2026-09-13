@@ -25,7 +25,7 @@ async function login(role='owner', token='acc.owner') {
 beforeEach(async () => {
   wrappers=[]; window.history.replaceState(null,'','/'); resetAdminSession(); resetAdminApi(); setOAuthProviderList([]);
   await login();
-  setAdminApiTransport(async r => r.kind==='security' ? { has_password:true,active_access_count:1 } : r.kind==='siteConfig' ? {revision:0,name:'提示方舟',square_public:true} : r.kind==='getOAuth' ? {items:[{provider:'google',enabled:false,client_id:'',redirect_uri:'',secret_configured:false}]} : {items:[],total:0});
+  setAdminApiTransport(async r => r.kind==='security' ? { has_password:true,active_access_count:1 } : r.kind==='siteConfig' ? {revision:0,name:'唤词',square_public:true} : r.kind==='getOAuth' ? {items:[{provider:'google',enabled:false,client_id:'',redirect_uri:'',secret_configured:false}]} : {items:[],total:0});
 });
 afterEach(() => { wrappers.forEach(w=>w.unmount()); vi.restoreAllMocks(); vi.unstubAllGlobals(); window.history.replaceState(null,'','/'); });
 
@@ -71,7 +71,7 @@ it('does not show settings save after a load failure and permits retry', async (
   window.history.replaceState(null,'','#/settings');
   const w=mountApp(); await flushPromises();
   expect(w.text()).toContain('配置不可用'); expect(w.find('[data-testid="settings-save"]').exists()).toBe(false);
-  setAdminApiTransport(async () => ({revision:0,name:'提示方舟',square_public:false}));
+  setAdminApiTransport(async () => ({revision:0,name:'唤词',square_public:false}));
   await w.get('.site-settings .panel-heading button').trigger('click'); await flushPromises();
   expect(w.get('[data-testid="setting-square-public"]').element.checked).toBe(false);
 });

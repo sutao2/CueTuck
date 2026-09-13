@@ -62,10 +62,10 @@ npm run build:local
 用户授权的首次 GitHub 预览发行见[发行记录](../docs/plans/2026-09-13-github-release.md)。在 `desktop` 执行：
 
 ```sh
-PROMPTARK_API_BASE=https://prompt.likh.cn VITE_API_BASE=https://prompt.likh.cn npm run build:preview
+TAURI_SIGNING_PRIVATE_KEY=/安全位置/cuetuck-updater.key PROMPTARK_API_BASE=https://prompt.likh.cn VITE_API_BASE=https://prompt.likh.cn npm run build:preview
 ```
 
-此入口要求预发行版本、相同的正式 HTTPS API，并通过独立配置关闭 updater artifact。输出 release 优化并以 ad-hoc 签名封装资源的 macOS app/dmg，供手动安装；不生成更新签名或 `latest.json`，不代表 Apple 签名/公证通过。GitHub 必须标为 prerelease，说明已验平台及限制。正式签名发行仍使用原 `build:release` 门禁。
+此入口要求预发行版本、相同的正式 HTTPS API 与更新签名密钥。输出 release 优化并以 ad-hoc 签名封装资源的 macOS app/dmg，同时生成更新归档和签名；发行时还需生成 `latest.json`，不代表 Apple 签名/公证通过。GitHub 必须标为 prerelease，说明已验平台及限制。正式签名发行仍使用原 `build:release` 门禁。
 
 ### macOS 首次打开提示「已损坏」或无法验证
 
@@ -74,13 +74,13 @@ PROMPTARK_API_BASE=https://prompt.likh.cn VITE_API_BASE=https://prompt.likh.cn n
 先确认下载来自本仓库 Releases，并核对 DMG 的 SHA-256 与发行附件 `SHA256SUMS` 一致。拖入 Applications 后，在终端检查：
 
 ```sh
-codesign --verify --deep --strict --verbose=2 /Applications/PromptArk.app
+codesign --verify --deep --strict --verbose=2 /Applications/CueTuck.app
 ```
 
 校验失败应重新下载，不要重新签名掩盖损坏。校验成功且确认来源可信时，可按 [Apple 指引](https://support.apple.com/102445) 在「系统设置 → 隐私与安全」选择「仍要打开」。若显示「已损坏」且没有该入口，可在终端仅移除此应用的下载隔离标记，再自行打开：
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/PromptArk.app
+xattr -dr com.apple.quarantine /Applications/CueTuck.app
 ```
 
 此操作只放行指定应用，不关闭全局 Gatekeeper，不删除应用数据；只在确认来源和完整性后使用。后续替换新版本可能需要再次放行。无证书发行不保证首次无提示启动。
@@ -104,3 +104,7 @@ docker compose -f deploy/local-services.yml up -d
 ## 备份与切换
 
 数据库、固定加密密钥、对象存储和部署配置是同一备份单元；完整操作及随机临时库恢复演练以 [恢复说明](../docs/how-to/backend-recovery.md) 为准，不复制第二套步骤。生产恢复必须明确授权目标并有回退点。当前 Compose 为新建实例部署，未替换已有业务数据库；恢复或迁移已有数据需明确核对目标。
+
+## CueTuck 签名更新
+
+公开仓库为 [sutao2/CueTuck](https://github.com/sutao2/CueTuck)。首次 CueTuck 安装包为更新信任引导版本，旧预览包仍需手动安装一次；后续由同一私钥签名，通过每个发行的 `latest.json` 提供平台资产。私钥保存在发布主机受限文件和仓库 Actions Secret，不提交；预览及正式工作流必须携带 `TAURI_SIGNING_PRIVATE_KEY`，均生成更新签名资产。签名更新不等于 Apple 公证或 Windows 发布者签名。数据库文件、应用 identifier、凭据服务与线上持久卷继续使用旧内部标识以保持兼容，产品界面与新安装包使用 CueTuck。
