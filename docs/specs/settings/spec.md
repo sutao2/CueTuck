@@ -382,6 +382,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 - WHEN 用户打开网络与代理
 - THEN 该行标明跟随系统
 - AND 不标明尚未提供
+- AND GUI 无终端代理环境变量时，原生 HTTP 请求仍读取系统 HTTP(S) 代理；真实参考图验证见[系统代理修复](../../plans/2026-09-13-reference-system-proxy.md)
 
 #### Scenario: 填写后本机走代理
 
