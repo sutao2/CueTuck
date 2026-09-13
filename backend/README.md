@@ -11,7 +11,7 @@ PROMPTARK_ALLOW_DEV_USER=1 PROMPTARK_BILLING_MOCK=1 cargo run
 
 本机已配置凭据时使用 `./run-local` 启动：脚本读取工作目录中的 `.env` 后运行服务。`.env` 被 Git 忽略，含凭据时应设为 0600；不要把内容输出到日志或提交。直接 `cargo run` 不会自动读取该文件。Google/GitHub 环境变量沿用 `PROMPTARK_<提供商>_CLIENT_ID`、`CLIENT_SECRET`、`REDIRECT_URI`，数据库管理配置仍优先。
 
-两家提供商控制台需登记与当前配置完全一致的回调，本机为 `http://localhost:8787/v1/session/oauth/callback`。旧版 `8080/api/v1/auth/oauth/callback` 不能直接用于新服务；密钥接入与真实授权成功分别验收。
+两家提供商控制台需登记与当前配置完全一致的回调。本机迁移现使用 `http://localhost:8080/api/v1/auth/oauth/callback`，旧路径与 `/v1/session/oauth/callback` 共用处理器；密钥接入与真实授权成功分别验收。本机 `./run-local` 从 `.env` 读取 `PROMPTARK_API_BIND=127.0.0.1:8080`，未提供配置时的默认端口保持 8787。
 
 当前测试请保留 `PROMPTARK_BILLING_MOCK=1`；桌面设置的账号页和 Web 账单区将显示模拟操作。mock 的隔离与清空规则见 [账单规格](../docs/specs/billing/spec.md)。不设置该变量则保持原测试支付行为。
 

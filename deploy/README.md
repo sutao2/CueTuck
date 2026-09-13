@@ -22,6 +22,8 @@ node scripts/verify.mjs
 
 三前端共同读取构建变量 `VITE_API_BASE`；原生 Rust 读取 `PROMPTARK_API_BASE`（启动环境优先，其次构建期值）。开发默认 loopback 8787。地址是 origin，不支持路径前缀、用户名、密码、query 或 fragment；非 loopback 必须 HTTPS。MCP 的显式广场地址仍为独立隐私边界，不自动继承已登录桌面配置。
 
+当前本机使用 8080：后端从 `backend/.env` 读取绑定地址与 OAuth 回调；三前端的 `.env.development.local` / `.env.production.local` 仅放公开的 `VITE_API_BASE`，原生构建从 `desktop/src-tauri/.cargo/config.toml` 的 `PROMPTARK_API_BASE` 读取同一 origin。这些本机文件被 Git 忽略，不能把后端含密钥的 `.env` 复制给前端。修改后重启 Vite，并重新构建/打开客户端。仓库未配置时仍采用 8787 默认值。
+
 正式构建前由部署方安全设置两个一致的 HTTPS origin。客户端不能携带服务端密码、签名私钥或 OAuth secret。原生 CSP 保持不允许任意 WebView 直连：令牌请求仍经 Rust 命令。
 
 ## 调试与发行分离

@@ -107,6 +107,13 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 
 提供商的管理端配置、启停及密钥保护见[管理台规格](../admin/spec.md)。账号关联 MUST 使用提供商已验证的邮箱；GitHub 使用已验证的主邮箱，Google 检查 `email_verified`，不得把未验证邮箱关联到已有管理员账号。
 
+#### Scenario: 兼容旧版 OAuth 回调路径
+
+- GIVEN 本机迁移沿用提供商已登记的旧回调地址
+- WHEN 请求 `/api/v1/auth/oauth/callback`
+- THEN 与 `/v1/session/oauth/callback` 使用同一处理器和 state、提供商、错误及会话校验，不重定向到其他进程或减弱认证
+- AND 实际端口仍由部署配置决定，提供商授权请求的 redirect_uri 必须与登记地址一致
+
 #### Scenario: 提供商邮箱校验
 
 - GIVEN Google 未确认邮箱，或 GitHub 没有已验证的主邮箱
