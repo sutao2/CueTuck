@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-13-reference-download-speed.md](plans/2026-09-13-reference-download-speed.md) | 进行中 | 参考图下载慢或没有进度 | 每批三路并发、连接复用与真实完成张数 |
+| [plans/2026-09-13-reference-download-speed.md](plans/2026-09-13-reference-download-speed.md) | 验收 | 参考图下载慢或没有进度 | beta.4 Mac 已发布；三路并发/连接复用已验，安装待解锁 |
 | [plans/2026-09-13-preview-install-and-counts.md](plans/2026-09-13-preview-install-and-counts.md) | 验收 | macOS 已损坏提示与下载次数不更新 | beta.3 Mac/API 已发布且安装启动已验；Windows 调度受阻 |
 | [plans/2026-09-13-reference-system-proxy.md](plans/2026-09-13-reference-system-proxy.md) | 验收 | 参考图能显示但下载失败 | 系统代理修复、实际正文与 4 图下载通过，beta.2 双平台已发布 |
 | [plans/2026-09-13-windows-preview.md](plans/2026-09-13-windows-preview.md) | 验收 | Windows 预览安装包 | beta.2 x64 已发布；83 项测试、安装/启动/卸载及资产哈希通过 |
