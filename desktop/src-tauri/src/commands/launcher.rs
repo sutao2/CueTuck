@@ -498,3 +498,13 @@ mod previous_target_tests {
         );
     }
 }
+
+#[tauri::command]
+pub fn open_launcher_destination(app: AppHandle, destination: String, id: Option<String>) -> Result<(), String> {
+    if !["ai-settings", "square-detail"].contains(&destination.as_str()) || id.as_ref().is_some_and(|v|v.len()>200) { return Err("无效启动器目标".into()); }
+    let window=app.get_webview_window("main").ok_or("主窗口不存在")?;
+    window.emit("launcher-navigate",serde_json::json!({"destination":destination,"id":id})).map_err(|_|"页面导航失败")?;
+    window.show().map_err(|e|e.to_string())?;
+    window.set_focus().map_err(|e|e.to_string())?;
+    Ok(())
+}

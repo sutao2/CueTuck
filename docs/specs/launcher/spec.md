@@ -68,7 +68,7 @@
 
 ### Requirement: 附加全局快捷键
 
-M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新建提示词（打开本机新建）、快速粘贴最近使用（粘贴上一条已完成变量替换的提示词）。冲突时 MUST 提示失败，不得静默无效。启动器仍 MUST NOT 请求广场或管理接口。
+M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新建提示词（打开本机新建）、快速粘贴最近使用（粘贴上一条已完成变量替换的提示词）。冲突时 MUST 提示失败，不得静默无效。启动器默认搜索 MUST NOT 请求广场；显式联网边界遵循 [ADR 0023](../../architecture/decisions/0023-launcher-explicit-actions.md)，始终禁止管理接口。
 
 #### Scenario: 新建提示词快捷键
 
@@ -243,3 +243,7 @@ macOS MUST 连续确认原窗口焦点稳定后再发送按键；超时、目标
 | macOS 启动器窗口 | `LauncherApp.spec.js` uses mac chrome on macos；空查询 `is-collapsed`；`launcherWindow.test.js` keeps search and fill equally compact、配置/浏览器入口一致；`palette_heights_keep_search_and_fill_compact`；本轮验收见 `plans/2026-09-08-launcher-refinement.md` |
 | 跟随系统主题 | `LauncherInteraction.spec.js` system 实时切换、显式偏好优先与监听释放 |
 | 1 万条查询预算 | `./scripts/launcher-search-bench`（`search_ten_thousand_prompts_bench`，release，不作为 CI 红灯） |
+
+### Requirement: 输入快捷操作
+
+非空输入 MUST 提供创建提示词、AI 优化、广场搜索、复制输入，支持鼠标和键盘。创建仅在显式保存时写库；优化保留原文、展示可编辑结果，由用户采用或保存。无配置提供本机 AI 设置入口；失败不能覆盖原文或伪造结果。广场查询仅显式切换后启用，250ms 合并并取消旧请求，遵循广场访问开关；选择结果打开工作台详情，不自动下载/投稿。场景与验收见[交互计划](../../plans/2026-09-13-interactions-launcher-ai.md)。

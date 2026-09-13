@@ -43,12 +43,12 @@ it('uses saved result limit and text size, refreshing them on explicit show', as
   for (let i = 0; i < 25; i++) await library.createLocalPrompt({ title: `测试 ${i}`, content: '{{内容}}' });
   const w = mount(LauncherApp); await flushPromises();
   await w.get('input').setValue('测试'); await flushPromises();
-  expect(w.findAll('[role="option"]')).toHaveLength(10);
+  expect(w.findAll('[role="option"]')).toHaveLength(14);
   expect(w.get('main').element.style.getPropertyValue('--launcher-content-size')).toBe('16px');
   await library.setLocalSetting('launcher_preferences', JSON.stringify({ fontSize: 14, resultLimit: 50 }));
   await shown(); await flushPromises();
   await w.get('input').setValue('测试'); await flushPromises();
-  expect(w.findAll('[role="option"]')).toHaveLength(25);
+  expect(w.findAll('[role="option"]')).toHaveLength(29);
   expect(w.get('main').element.style.getPropertyValue('--launcher-content-size')).toBe('14px');
 });
 

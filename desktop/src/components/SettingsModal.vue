@@ -210,7 +210,7 @@
           </section>
           <section v-else-if="current === 'models'">
             <h3>AI 与模型</h3>
-            <p>这些是本机目录、标签与建议，不会把提示词正文发到模型供应商。</p>
+            <p>管理本机模型标签，以及独立的启动器 AI 优化配置。</p>
             <div class="settings-group">
             <p class="save-mode-hint">本页修改后请点击「保存本机模型偏好」。</p>
             <label class="field">
@@ -411,6 +411,7 @@
             <p v-if="updateNote" data-testid="update-note">{{ updateNote }}</p>
             </div>
           </section>
+          <LauncherAiSettings v-if="aiVisited" v-show="current === 'models'" @dirty="aiDirty = $event" @busy="aiBusy = $event" />
           </fieldset>
         </main>
       </div>
@@ -433,6 +434,7 @@
 <script setup>
 import McpSettings from './McpSettings.vue';
 import AppIcon from "./AppIcon.vue";
+import LauncherAiSettings from './LauncherAiSettings.vue';
 import { DEFAULT_LAUNCHER_PREFERENCES, LAUNCHER_PREFERENCES_KEY, readLauncherPreferences } from '../platform/launcherPreferences.js';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { uiText } from "../platform/uiStrings.js";
@@ -585,6 +587,9 @@ const feedback = ref("");
 const feedbackError = ref(false);
 const pendingAction = ref(null);
 const confirmCancel = ref(null);
+const aiVisited = ref(current.value === 'models');
+watch(current, value => { if(value === 'models') aiVisited.value = true; });
+const aiDirty = ref(false), aiBusy = ref(false);
 const savedDrafts = ref({});
 let confirmationReturnFocus = null;
 const modelDraft = () => JSON.stringify([defaultModel.value, modelCatalog.value, customModels.value, showModelTags.value, variableHints.value]);
@@ -592,7 +597,7 @@ const shortcutDraft = () => JSON.stringify([shortcut.value, newPromptShortcut.va
 const profileDraft = () => JSON.stringify([displayName.value, bio.value]);
 const profileDirty = computed(() => !loading.value && profileDraft() !== savedDrafts.value.profile);
 const hasUnsaved = computed(() => !loading.value && (
-  modelDraft() !== savedDrafts.value.models || shortcutDraft() !== savedDrafts.value.shortcuts ||
+  aiDirty.value || modelDraft() !== savedDrafts.value.models || shortcutDraft() !== savedDrafts.value.shortcuts ||
   profileDraft() !== savedDrafts.value.profile || Boolean(importText.value.trim())
 ));
 
@@ -609,7 +614,7 @@ function clearSearchOrReturn(event) {
   if (settingsQuery.value) settingsQuery.value = '';
   else requestClose();
 }
-const navigationBusy = computed(() => saving.value || loading.value || dataBusy.value || importBusy.value || billingBusy.value || syncBusy.value);
+const navigationBusy = computed(() => aiBusy.value || saving.value || loading.value || dataBusy.value || importBusy.value || billingBusy.value || syncBusy.value);
 function requestClose() {
   if (navigationBusy.value) return;
   if (hasUnsaved.value) pendingAction.value = 'discard';

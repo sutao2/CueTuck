@@ -55,7 +55,7 @@ it('ignores composition, repeats, invalid title and discard confirmation for sav
   expect(w.emitted('save')).toBeUndefined();await w.get('.page-back').trigger('click');await w.trigger('keydown',{key:'s',metaKey:true});expect(w.emitted('save')).toBeUndefined();
 });
 
-async function usePrompt(){await library.createLocalPrompt({title:'copy test',content:'hello {{name}}'});await shell();await w.get('.prompt-card').trigger('contextmenu');await w.get('[data-action=use]').trigger('click');await w.get('[data-testid=use-value]').setValue('Ada');await w.get('[data-testid=use-next]').trigger('click')}
+async function usePrompt(){await library.createLocalPrompt({title:'copy test',content:'hello {{name}}'});await shell();await w.get('.prompt-card .card-primary').trigger('click');await w.get('[data-testid=use-value]').setValue('Ada');await w.get('[data-testid=use-next]').trigger('click')}
 it.each(['record','refresh'])('keeps copied feedback visible after %s fails and never recopies on refresh',async failure=>{
   const copy=vi.fn().mockResolvedValue();vi.stubGlobal('navigator',{platform:'MacIntel',clipboard:{writeText:copy}});await usePrompt();
   const record=vi.spyOn(library,'recordLocalPromptUse');if(failure==='record')record.mockRejectedValueOnce(Error('记录失败'));else vi.spyOn(library,'listLocalPrompts').mockRejectedValueOnce(Error('刷新失败'));

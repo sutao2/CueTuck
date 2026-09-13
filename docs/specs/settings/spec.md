@@ -540,3 +540,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 | 检查失败不写成没有更新 | `WorkbenchShell.spec.js` does not treat a failed update check as no updates；`updates.test.js` does not treat a failed GitHub read as no updates |
 | 仅更高有效版本可升级 | `updates.test.js` 旧版/同版构建、乱序草稿与预发行排序；Rust `commands::updates::tests` |
 | 自动下载按通道排队安装 | `WorkbenchShell.spec.js` queues an updater install when auto-download is on and the channel has a package；`updates.test.js` queues an updater install when auto-download is on and the channel has a package |
+
+### Requirement: 本机启动器 AI 配置
+
+AI 与模型页 MUST 提供 API 基础地址、隐藏密钥输入、模型 ID 手填/供应商列表和显式保存/测试/清除；只在桌面可用。macOS Keychain 与 Windows Credential Store 保存完整配置，禁用平台缺失后的 mock 存储降级；端点改变不能沿用旧密钥。配置读取失败禁止默认覆盖，未保存修改纳入退出确认；测试只发送固定文本。网络边界与场景见 [ADR 0023](../../architecture/decisions/0023-launcher-explicit-actions.md)和[交互计划](../../plans/2026-09-13-interactions-launcher-ai.md)。

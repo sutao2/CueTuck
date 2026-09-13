@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [architecture/decisions/0023-launcher-explicit-actions.md](architecture/decisions/0023-launcher-explicit-actions.md) | 现行 | 启动器快捷创建、AI 与广场搜索 | 独立窗口保持，联网由显式操作触发，AI 配置仅本机凭据库 |
 | [plans/2026-09-13-interactions-launcher-ai.md](plans/2026-09-13-interactions-launcher-ai.md) | 进行中 | 卡片重复操作、图片预览与启动器 AI | 交互修复、显式快捷操作、本机 AI 配置及百炼审核验证 |
 | [plans/2026-09-13-reference-download-speed.md](plans/2026-09-13-reference-download-speed.md) | 验收 | 参考图下载慢或没有进度 | beta.4 双平台已发布；三路并发/连接复用已验，Mac 安装待解锁 |
 | [plans/2026-09-13-preview-install-and-counts.md](plans/2026-09-13-preview-install-and-counts.md) | 验收 | macOS 已损坏提示与下载次数不更新 | beta.3 Mac/API 已发布且安装启动已验；Windows 调度受阻 |
