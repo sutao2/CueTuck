@@ -373,7 +373,9 @@ body.theme-dark .primary-button { color: #202020; }
   color: var(--muted);
   font-size: 11px;
 }
-.compact-select span { color: var(--muted); font-size: 11px; }
+.compact-select > span { color: var(--muted); font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+.compact-select .searchable-select { width: 126px; min-height: 28px; height: 28px; padding: 0; border: 0; background: transparent; font-size: 12px; }
+.compact-select:has(.searchable-select)::after { display: none; }
 .compact-select select { appearance: none; -webkit-appearance: none; min-width: 86px; max-width: 140px; height: 28px; padding: 0 18px 0 0; border: 0; border-radius: 0; background: transparent; color: var(--text); font-size: 12px; cursor: pointer; }
 .compact-select::after { content: ""; position: absolute; right: 11px; width: 6px; height: 6px; margin-top: -3px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); pointer-events: none; }
 .view-switch { display: flex; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
