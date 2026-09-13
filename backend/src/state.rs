@@ -291,6 +291,15 @@ impl AppState {
         Ok(())
     }
 
+    pub(crate) fn memory_favorite_counts(&self) -> Result<HashMap<String, i64>, StatusCode> {
+        let favorites = self.favorites.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let mut counts = HashMap::new();
+        for ids in favorites.values() {
+            for id in ids { *counts.entry(id.clone()).or_insert(0) += 1; }
+        }
+        Ok(counts)
+    }
+
     pub(crate) async fn download_counts(&self) -> Result<HashMap<String, i64>, StatusCode> {
         if let Some(pg) = &self.db {
             return pg.download_counts().await;

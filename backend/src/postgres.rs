@@ -182,6 +182,7 @@ impl Pg {
                 self.t("accounts"),
                 self.t("square_items")
             ),
+            format!("CREATE INDEX IF NOT EXISTS favorites_item_count ON {} (item_id)", self.t("favorites")),
             format!(
                 "CREATE TABLE IF NOT EXISTS {} (
                   key TEXT PRIMARY KEY,

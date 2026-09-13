@@ -45,9 +45,10 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         // Never select content/members, or return the complete reference document.
         let page_sql = format!("SELECT jsonb_build_object('id',s.id,'title',left(s.title,160),'kind',s.kind,
             'excerpt',left(s.excerpt,240),'model',s.model,'category_id',s.category_id,'member_count',s.member_count,
-            'is_favorite',{favorite},'reference',CASE WHEN jsonb_typeof(s.reference->'images'->0)='string'
+            'is_favorite',{favorite},'download_count',s.download_count,
+            'favorite_count',(SELECT count(*) FROM {} f WHERE f.item_id=s.id),'reference',CASE WHEN jsonb_typeof(s.reference->'images'->0)='string'
             THEN jsonb_build_object('images',jsonb_build_array(left(s.reference->'images'->>0,2048))) ELSE NULL END)
-            FROM {} s WHERE {filter} ORDER BY {order} LIMIT $6 OFFSET $7", pg.t("square_items"));
+            FROM {} s WHERE {filter} ORDER BY {order} LIMIT $6 OFFSET $7", pg.t("favorites"), pg.t("square_items"));
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
             let mut tx = pg.pool.begin().await?;
             sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY").execute(&mut *tx).await?;
@@ -78,6 +79,7 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
             && (ids.is_empty() || p.category_id.as_ref().is_some_and(|id|ids.contains(id)))
             && (sort != "favorites" || favorites.contains(&p.id)));
         let counts = state.download_counts().await?;
+        let favorite_counts = state.memory_favorite_counts()?;
         rows.sort_by(|a,b| match sort {
             "hot" => counts.get(&b.id).unwrap_or(&0).cmp(counts.get(&a.id).unwrap_or(&0)).then(a.title.cmp(&b.title)).then(a.id.cmp(&b.id)),
             "latest" => b.id.cmp(&a.id), _ => a.id.cmp(&b.id),
@@ -85,7 +87,7 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         let total = rows.len() as i64;
         (total, rows.into_iter().skip(offset as usize).take(limit as usize+1).map(|p| {
             let image = p.reference.as_ref().and_then(|r|r["images"][0].as_str()).map(|s|s.chars().take(2048).collect::<String>());
-            json!({"id":p.id,"title":p.title.chars().take(160).collect::<String>(),"kind":p.kind,"excerpt":p.excerpt.map(|s|s.chars().take(240).collect::<String>()),"model":p.model,"category_id":p.category_id,"member_count":p.member_count,"is_favorite":favorites.contains(&p.id),"reference":image.map(|url|json!({"images":[url]}))})
+            json!({"id":p.id,"title":p.title.chars().take(160).collect::<String>(),"kind":p.kind,"excerpt":p.excerpt.map(|s|s.chars().take(240).collect::<String>()),"model":p.model,"category_id":p.category_id,"member_count":p.member_count,"is_favorite":favorites.contains(&p.id),"download_count":counts.get(&p.id).copied().unwrap_or(0),"favorite_count":favorite_counts.get(&p.id).copied().unwrap_or(0),"reference":image.map(|url|json!({"images":[url]}))})
         }).collect(), category_counts)
     };
     let more = items.len() > limit as usize;
@@ -126,6 +128,8 @@ mod tests {
         assert_eq!(empty["total"],109); assert_eq!(empty["items"],json!([]));
         let (_, hot) = request(&state,"GET",&format!("{path}&sort=hot"),"",json!(null)).await;
         assert_eq!(hot["items"][0]["id"],"qa-108");
+        assert_eq!(hot["items"][0]["download_count"],108);
+        assert_eq!(hot["items"][0]["favorite_count"],0);
         for query in ["limit=0","limit=49","offset=-1","offset=100001","sort=bad","extra=x"] {
             assert_eq!(request(&state,"GET",&format!("/v1/square/browse?{query}"),"",json!(null)).await.0,StatusCode::BAD_REQUEST);
         }
@@ -137,6 +141,14 @@ mod tests {
         assert_eq!(request(&state,"PUT","/v1/favorites/qa-003",&session.access_token,json!(null)).await.0,StatusCode::OK);
         let (_, saved) = request(&state,"GET","/v1/square/browse?sort=favorites",&session.access_token,json!(null)).await;
         assert_eq!(saved["total"],1); assert_eq!(saved["items"][0]["id"],"qa-003"); assert_eq!(saved["items"][0]["is_favorite"],true);
+        assert_eq!(saved["items"][0]["favorite_count"],1);
+        request(&state,"PUT","/v1/favorites/qa-003",&session.access_token,json!(null)).await;
+        request(&state,"PUT","/v1/favorites/qa-003",&other.access_token,json!(null)).await;
+        let (_, counted) = request(&state,"GET","/v1/square/browse?sort=favorites",&session.access_token,json!(null)).await;
+        assert_eq!(counted["items"][0]["favorite_count"],2);
+        request(&state,"DELETE","/v1/favorites/qa-003",&other.access_token,json!(null)).await;
+        let (_, uncounted) = request(&state,"GET","/v1/square/browse?sort=favorites",&session.access_token,json!(null)).await;
+        assert_eq!(uncounted["items"][0]["favorite_count"],1);
         let (_, isolated) = request(&state,"GET","/v1/square/browse?sort=favorites",&other.access_token,json!(null)).await;
         assert_eq!(isolated["total"],0);
         assert_eq!(isolated["category_counts"],first["category_counts"]);

@@ -59,3 +59,48 @@ it('protects settings drafts before opening the standalone publications page', a
   await w.get('[data-settings-page=models]').trigger('click');
   expect(w.get('[data-testid=default-model]').element.value).toBe('草稿');
 });
+
+it('summarizes own metrics and sorts by recorded downloads or current favorites', async () => {
+  square.setMineTransport(async () => [
+    { id: 'new', title: '最新作品', download_count: 3, favorite_count: 9 },
+    { id: 'hot', title: '下载最多作品', download_count: 1200, favorite_count: 2 },
+  ]);
+  w = mount(MyPublications, { props: { session: { email: 'a', loggedIn: true } } });
+  await flushPromises();
+  expect(w.get('[data-testid=publication-metrics]').text()).toContain('1,203');
+  expect(w.get('[data-testid=publication-metrics]').text()).toContain('11');
+  const titles = () => w.findAll('.publication-heading strong').map(n => n.text());
+  expect(titles()).toEqual(['最新作品', '下载最多作品']);
+  await w.get('[aria-label="作品排序"]').setValue('download_count');
+  expect(titles()[0]).toBe('下载最多作品');
+  await w.get('[aria-label="作品排序"]').setValue('favorite_count');
+  expect(titles()[0]).toBe('最新作品');
+});
+
+it('does not invent zero totals for missing counters or failed requests', async () => {
+  square.setMineTransport(async () => [{ id: 'legacy', title: '旧服务作品' }]);
+  w = mount(MyPublications, { props: { session: { email: 'a', loggedIn: true } } });
+  await flushPromises();
+  expect(w.findAll('.publication-metrics strong').map(n => n.text())).toEqual(['1', '—', '—']);
+  expect(w.get('.publication-counters').text()).toContain('记录下载 —');
+  square.setMineTransport(async () => { throw new Error('offline'); });
+  await w.findAll('button').find(b => b.text() === '刷新').trigger('click'); await flushPromises();
+  expect(w.find('[data-testid=publication-metrics]').exists()).toBe(false);
+  expect(w.text()).toContain('读取失败');
+});
+
+it('shows server metrics on square cards and explains the hot ordering without recording a view', async () => {
+  const stats = vi.fn();
+  square.setDownloadStatsTransport(stats);
+  square.setCatalogTransport(async () => ({ categories: [], models: [] }));
+  square.setSquarePageTransport(async () => ({ items: [{ id: 'counted', kind: 'prompt', title: '统计作品', download_count: 1234, favorite_count: 7 }, { id: 'legacy', kind: 'prompt', title: '旧条目' }], total: 2, next_offset: null }));
+  w = mount(WorkbenchShell); await flushPromises();
+  await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+  const counters = w.findAll('[data-testid=square-card-metrics]');
+  expect(counters[0].text()).toContain('1,234');
+  expect(counters[0].text()).toContain('7');
+  expect(counters[1].text()).toContain('—');
+  await w.get('[data-sort="热门"]').trigger('click'); await flushPromises();
+  expect(w.get('[data-testid=square-sort-note]').text()).toContain('按已记录下载量从高到低');
+  expect(stats).not.toHaveBeenCalled();
+});

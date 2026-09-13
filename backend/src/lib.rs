@@ -737,7 +737,15 @@ async fn list_my_publications(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let email = require_user(&state, &headers).await?;
     if let Some(pg) = &state.db { return Ok(Json(pg.author_reviews(&email).await?)); }
-    Ok(Json(serde_json::json!({"items":state.publications_for(&email).await?})))
+    let downloads = state.download_counts().await?;
+    let favorites = state.memory_favorite_counts()?;
+    let items: Vec<_> = state.publications_for(&email).await?.into_iter().map(|row| {
+        let mut value = serde_json::to_value(&row).unwrap();
+        value["download_count"] = serde_json::json!(downloads.get(&row.id).copied().unwrap_or(0));
+        value["favorite_count"] = serde_json::json!(favorites.get(&row.id).copied().unwrap_or(0));
+        value
+    }).collect();
+    Ok(Json(serde_json::json!({"items":items})))
 }
 
 pub(crate) async fn require_user(state: &AppState, headers: &HeaderMap) -> Result<String, StatusCode> {

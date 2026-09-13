@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-13-content-metrics.md](plans/2026-09-13-content-metrics.md) | 验收 | 下载/收藏展示与个人作品排序 | 497 项前端、10 项后端及浏览器已验，服务和客户端已更新 |
 | [plans/2026-09-13-account-design.md](plans/2026-09-13-account-design.md) | 验收 | 优化账号页展示和资料编辑 | 账号概览与卡片分组、494 项回归及浅深色验收，客户端已更新 |
 | [plans/2026-09-13-oauth-completion.md](plans/2026-09-13-oauth-completion.md) | 验收 | OAuth 授权后浏览器停在加载页 | 完成页、16 项 OAuth 与浏览器导航验证通过，8080 已重启 |
 | [plans/2026-09-13-google-consent.md](plans/2026-09-13-google-consent.md) | 验收 | Google 登录未显示授权确认 | 显式账号选择/consent；15 项 OAuth 测试及 8080 运行参数已验 |

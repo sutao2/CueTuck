@@ -111,7 +111,7 @@ impl Pg {
 
     pub async fn author_reviews(&self, email: &str) -> Result<Value, StatusCode> {
         // The author sees the decision, never the moderator's private email.
-        sqlx::query_scalar(&format!("SELECT json_build_object('items',COALESCE(json_agg(to_jsonb(p) || jsonb_build_object('visibility',(SELECT visibility FROM {} WHERE id=p.id),'history',COALESCE((SELECT jsonb_agg(to_jsonb(e) - 'actor_email' ORDER BY e.id) FROM {} e WHERE e.publication_id=p.id),'[]'::jsonb)) ORDER BY p.created_at DESC NULLS LAST,p.id),'[]'::json)) FROM {} p WHERE author_email=$1", self.t("square_items"), self.t("review_events"), self.t("publications")))
+        sqlx::query_scalar(&format!("SELECT json_build_object('items',COALESCE(json_agg(to_jsonb(p) || jsonb_build_object('visibility',s.visibility,'download_count',COALESCE(s.download_count,0),'favorite_count',(SELECT count(*) FROM {} f WHERE f.item_id=p.id),'history',COALESCE((SELECT jsonb_agg(to_jsonb(e) - 'actor_email' ORDER BY e.id) FROM {} e WHERE e.publication_id=p.id),'[]'::jsonb)) ORDER BY p.created_at DESC NULLS LAST,p.id),'[]'::json)) FROM {} p LEFT JOIN {} s ON s.id=p.id WHERE p.author_email=$1", self.t("favorites"), self.t("review_events"), self.t("publications"), self.t("square_items")))
             .bind(email).fetch_one(&self.pool).await.map_err(db_error)
     }
 }
