@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-13-local-oauth-config.md](plans/2026-09-13-local-oauth-config.md) | 验收 | 接入本机第三方登录凭据 | 本机凭据及登录跳转已验；提供商控制台与真实授权待完成 |
 | [plans/2026-09-13-global-search.md](plans/2026-09-13-global-search.md) | 验收 | 区分全局搜索与页面筛选 | 本地/广场独立面板；492 项回归、浏览器与 macOS 构建通过 |
 | [architecture/decisions/0022-global-search.md](architecture/decisions/0022-global-search.md) | 现行 | 修改搜索位置或交互 | 右上角全局搜索、页面内筛选，临时查找面板边界 |
 | [plans/2026-09-13-visual-hierarchy.md](plans/2026-09-13-visual-hierarchy.md) | 验收 | 优化页面设计 | 页头、卡片、侧栏与紧凑编辑器；481 项回归、浅深色浏览器及构建通过 |
