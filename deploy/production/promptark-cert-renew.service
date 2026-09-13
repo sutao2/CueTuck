@@ -1,0 +1,7 @@
+[Unit]
+Description=Renew PromptArk TLS certificate
+After=network-online.target docker.service
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/opt/promptark/source/deploy/production/renew-cert.sh

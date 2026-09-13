@@ -1,0 +1,13 @@
+**/.env
+**/.env.*
+**/node_modules
+**/target
+**/dist
+**/.git
+**/*.pem
+**/*.key
+**/*.sqlite*
+**/.promptark
+output
+.playwright-cli
+.worklogs

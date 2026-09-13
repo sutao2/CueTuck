@@ -1,6 +1,28 @@
 # 部署与本地验收模板
 
-此目录提供模板，不会自动安装服务、创建账号或替换现有数据库。
+`production/` 已在 119.28.232.185 部署独立 Compose 实例；其他开发与 systemd 文件仍为模板。当前验收见[部署记录](../docs/plans/2026-09-13-compose-deployment.md)。
+
+## 当前 Compose 部署
+
+- API：`https://prompt.likh.cn`；健康检查 `/v1/health`。
+- 管理端：`https://prompt-admin.likh.cn`，静态页面由 Nginx 容器提供，`/v1` 同源转发 API。
+- 服务器目录：`/opt/promptark/source/deploy/production`。宿主宝塔 Nginx 的独立配置为 `/www/server/panel/vhost/nginx/promptark.conf`，不覆盖其他站点。
+- Postgres、Redis、MinIO 只在独立 Docker 网络；API/admin 分别只映射 `127.0.0.1:18787` / `127.0.0.1:15174`。持久卷为 `promptark_postgres`、`promptark_media`、`promptark_keys`。依赖与构建基础镜像固定摘要，应用镜像使用不可复用的发布标签。
+- `.env` 由运维安全生成并设为 0600，变量见 `production/.env.example`；不能用模板占位值直接启动，也不能提交实际密码。首次创建 owner，关闭开发账号和 schema reset；后续修改环境中的初始化密码不会重置账号。
+
+在服务器目录执行：
+
+```sh
+./compose ps
+./compose logs --tail 100 api
+./compose up -d --no-build --wait
+```
+
+重新部署时只上传明确筛选的源码，排除本机 `.env`、密钥、数据库、node_modules 和 target；根 `.dockerignore` 提供额外保护。为新版本指定新的 `PROMPTARK_IMAGE_TAG`，再 `./compose build`、`./compose up -d --no-build --wait`。首次模板启动前须将数据库、对象与密钥配置好。不要执行 `down -v`；保留上一版本镜像，数据库变更回退按恢复手册处理。
+
+TLS 证书含两个域名，ACME 数据在 `/opt/promptark/letsencrypt`，宿主证书目录通过符号链接读取。`promptark-cert-renew.timer` 每天两次运行 `production/renew-cert.sh`，成功后校验并 reload Nginx；用 `systemctl status promptark-cert-renew.timer` 和 `journalctl -u promptark-cert-renew.service` 检查。自动续期的容器必须继续挂载 `/www/wwwroot/promptark-acme`，不能清理此验证目录。
+
+此实例以空业务库上线，不自动迁移本机账号、会话、广场内容或第三方密钥。Google/GitHub、SMTP 和 AI 服务需要在管理端配置并分别验证；OAuth 提供商还需登记正式 API 回调 `https://prompt.likh.cn/v1/session/oauth/callback`。支付保持 mock。备份须同时覆盖数据库、对象、固定加密密钥及秘密部署配置，详见[恢复说明](../docs/how-to/backend-recovery.md)。
 
 ## 无外部凭据的集中验收
 
@@ -22,7 +44,7 @@ node scripts/verify.mjs
 
 三前端共同读取构建变量 `VITE_API_BASE`；原生 Rust 读取 `PROMPTARK_API_BASE`（启动环境优先，其次构建期值）。开发默认 loopback 8787。地址是 origin，不支持路径前缀、用户名、密码、query 或 fragment；非 loopback 必须 HTTPS。MCP 的显式广场地址仍为独立隐私边界，不自动继承已登录桌面配置。
 
-当前本机使用 8080：后端从 `backend/.env` 读取绑定地址与 OAuth 回调；三前端的 `.env.development.local` / `.env.production.local` 仅放公开的 `VITE_API_BASE`，原生构建从 `desktop/src-tauri/.cargo/config.toml` 的 `PROMPTARK_API_BASE` 读取同一 origin。这些本机文件被 Git 忽略，不能把后端含密钥的 `.env` 复制给前端。修改后重启 Vite，并重新构建/打开客户端。仓库未配置时仍采用 8787 默认值。
+本机开发后端仍使用 8080：后端从 `backend/.env` 读取绑定地址与 OAuth 回调；客户端 desktop/web 的 `.env.development.local` / `.env.production.local` 已切换至 `https://prompt.likh.cn`；原生构建的 `desktop/src-tauri/.cargo/config.toml` 使用相同 `PROMPTARK_API_BASE`。本机管理台仍可连接开发服务，正式管理端通过 Docker 构建变量使用自己的同源代理。这些本机文件被 Git 忽略，不能把后端含密钥的 `.env` 复制给前端。修改后重启 Vite，并重新构建/打开客户端。仓库未配置时仍采用 8787 默认值。
 
 正式构建前由部署方安全设置两个一致的 HTTPS origin。客户端不能携带服务端密码、签名私钥或 OAuth secret。原生 CSP 保持不允许任意 WebView 直连：令牌请求仍经 Rust 命令。
 
@@ -51,4 +73,4 @@ docker compose -f deploy/local-services.yml up -d
 
 ## 备份与切换
 
-数据库、固定加密密钥、对象存储和部署配置是同一备份单元；完整操作及随机临时库恢复演练以 [恢复说明](../docs/how-to/backend-recovery.md) 为准，不复制第二套步骤。生产恢复必须明确授权目标并有回退点。本轮没有安装服务、切换生产或操作真实用户资料。
+数据库、固定加密密钥、对象存储和部署配置是同一备份单元；完整操作及随机临时库恢复演练以 [恢复说明](../docs/how-to/backend-recovery.md) 为准，不复制第二套步骤。生产恢复必须明确授权目标并有回退点。当前 Compose 为新建实例部署，未替换已有业务数据库；恢复或迁移已有数据需明确核对目标。
