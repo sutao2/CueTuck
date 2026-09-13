@@ -9,7 +9,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [changes/skills-management/proposal.md](changes/skills-management/proposal.md) | 目标 | 评审 Skills 功能与交互方案 | 提示词/Skills 分组、安装流程、兼容与维护边界；未实现 |
 | [plans/2026-09-13-skills.md](plans/2026-09-13-skills.md) | 目标 | 查看 Skills 后续实施与验收安排 | 当前仅方案；暂停应用代码，按四个切片规划 |
 | [architecture/decisions/0023-launcher-explicit-actions.md](architecture/decisions/0023-launcher-explicit-actions.md) | 现行 | 启动器快捷创建、AI 与广场搜索 | 独立窗口保持，联网由显式操作触发，AI 配置仅本机凭据库 |
-| [plans/2026-09-13-interactions-launcher-ai.md](plans/2026-09-13-interactions-launcher-ai.md) | 进行中 | 卡片重复操作、图片预览与启动器 AI | 交互修复、显式快捷操作、本机 AI 配置及百炼审核验证 |
+| [plans/2026-09-13-interactions-launcher-ai.md](plans/2026-09-13-interactions-launcher-ai.md) | 验收 | 卡片重复操作、图片预览与启动器 AI | beta.5 双平台已发布并安装 Mac；本机 AI 配置及线上百炼图文审核已验 |
 | [plans/2026-09-13-reference-download-speed.md](plans/2026-09-13-reference-download-speed.md) | 验收 | 参考图下载慢或没有进度 | beta.4 双平台已发布；三路并发/连接复用已验，Mac 安装待解锁 |
 | [plans/2026-09-13-preview-install-and-counts.md](plans/2026-09-13-preview-install-and-counts.md) | 验收 | macOS 已损坏提示与下载次数不更新 | beta.3 Mac/API 已发布且安装启动已验；Windows 调度受阻 |
 | [plans/2026-09-13-reference-system-proxy.md](plans/2026-09-13-reference-system-proxy.md) | 验收 | 参考图能显示但下载失败 | 系统代理修复、实际正文与 4 图下载通过，beta.2 双平台已发布 |
