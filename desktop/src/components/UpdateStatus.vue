@@ -32,9 +32,9 @@ const bytes = value => `${((value || 0) / 1048576).toFixed(1)} MB`;
 </script>
 <style scoped>
 .update-status { display:flex; flex-direction:column; align-items:flex-start; gap:12px; padding:20px 0; }
-progress { width:100%; height:8px; accent-color:var(--text-primary); }
+progress { width:100%; height:8px; accent-color:var(--text, #333); }
 .release-body { white-space:pre-wrap; overflow-wrap:anywhere; max-height:360px; overflow:auto; }
 .update-confirm { position:fixed; inset:0; z-index:2200; background:#0006; display:grid; place-items:center; padding:24px; }
-.update-confirm section { background:var(--bg-primary,white); border:1px solid var(--border-color,#ddd); padding:24px; border-radius:16px; max-width:480px; }
+.update-confirm section { background:var(--surface,white); border:1px solid var(--line,#ddd); padding:24px; border-radius:16px; max-width:480px; }
 .update-confirm button { margin:16px 8px 0 0; }
 </style>
