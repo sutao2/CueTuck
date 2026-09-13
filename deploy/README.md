@@ -67,6 +67,8 @@ PROMPTARK_API_BASE=https://prompt.likh.cn VITE_API_BASE=https://prompt.likh.cn n
 
 此入口要求预发行版本、相同的正式 HTTPS API，并通过独立配置关闭 updater artifact。输出 release 优化并以 ad-hoc 签名封装资源的 macOS app/dmg，供手动安装；不生成更新签名或 `latest.json`，不代表 Apple 签名/公证通过。GitHub 必须标为 prerelease，说明已验平台及限制。正式签名发行仍使用原 `build:release` 门禁。
 
+Windows x64 预览包使用现有 `desktop-windows` 工作流，在手动运行的 `source_ref` 中填写已发布标签或确切提交；留空则使用工作流提交。流程固定生产 API，执行原生测试、NSIS 构建、临时安装/启动/卸载，输出安装包、校验和与源提交记录。只上传与发行标签匹配的成功产物；Windows 未配置 Authenticode 签名。当前结果见[Windows 预览验收](../docs/plans/2026-09-13-windows-preview.md)。
+
 ## 独立开发依赖（可选）
 
 已有本机服务无需另起。需要全新隔离依赖时，先安全设置 `PROMPTARK_DEV_DB_PASSWORD`、`PROMPTARK_DEV_MEDIA_USER`、`PROMPTARK_DEV_MEDIA_PASSWORD`，再运行：
