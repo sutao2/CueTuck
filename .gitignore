@@ -11,3 +11,6 @@ coverage/
 !.env.example
 *.key
 !*.key.pub
+
+# Machine-local desktop build service origin
+/desktop/src-tauri/.cargo/config.toml

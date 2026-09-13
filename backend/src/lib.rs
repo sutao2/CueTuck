@@ -403,6 +403,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/session/refresh", post(refresh_session))
         .route("/v1/session/oauth/providers", get(oauth::list_providers))
         .route("/v1/session/oauth/callback", get(oauth::callback))
+        .route("/api/v1/auth/oauth/callback", get(oauth::callback))
         .route(
             "/v1/session/oauth/session/:flow_id",
             get(oauth::poll_session),
@@ -2111,69 +2112,77 @@ mod tests {
 
     #[tokio::test]
     async fn oauth_callback_with_mock_code_issues_session() {
-        let mut state = AppState::default();
-        state.oauth.providers.insert(
-            "google".into(),
-            crate::oauth::ProviderConfig {
-                client_id: "google-client".into(),
-                client_secret: "google-secret".into(),
-                authorization_uri: "https://accounts.example/oauth/authorize".into(),
-                token_uri: "https://accounts.example/oauth/token".into(),
-                user_info_uri: "https://accounts.example/oauth/userinfo".into(),
-                emails_uri: None,
-                redirect_uri: "http://localhost:8787/v1/session/oauth/callback".into(),
-                scope: "openid email".into(),
-            },
-        );
-        state.oauth.mock_users.insert(
-            "code-123".into(),
-            crate::oauth::OAuthUser {
-                provider: "google".into(),
-                provider_uid: "g-1".into(),
-                email: "oauth@promptark.local".into(),
-            },
-        );
-        let start = app(state.clone())
-            .oneshot(
-                Request::builder()
-                    .method("GET")
-                    .uri("/v1/session/oauth/google")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        let location = start
-            .headers()
-            .get(header::LOCATION)
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-        let state_param = location
-            .split("state=")
-            .nth(1)
-            .unwrap()
-            .split('&')
-            .next()
-            .unwrap();
-        let response = app(state)
-            .oneshot(
-                Request::builder()
-                    .method("GET")
-                    .uri(format!(
-                        "/v1/session/oauth/callback?code=code-123&state={state_param}"
-                    ))
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let session: SessionResponse = serde_json::from_slice(&body).unwrap();
-        assert_eq!(session.email, "oauth@promptark.local");
-        assert!(session.access_token.starts_with("acc."));
+        for callback in ["/v1/session/oauth/callback", "/api/v1/auth/oauth/callback"] {
+            let mut state = AppState::default();
+            state.oauth.providers.insert(
+                "google".into(),
+                crate::oauth::ProviderConfig {
+                    client_id: "google-client".into(),
+                    client_secret: "google-secret".into(),
+                    authorization_uri: "https://accounts.example/oauth/authorize".into(),
+                    token_uri: "https://accounts.example/oauth/token".into(),
+                    user_info_uri: "https://accounts.example/oauth/userinfo".into(),
+                    emails_uri: None,
+                    redirect_uri: "http://localhost:8787/v1/session/oauth/callback".into(),
+                    scope: "openid email".into(),
+                },
+            );
+            state.oauth.mock_users.insert(
+                "code-123".into(),
+                crate::oauth::OAuthUser {
+                    provider: "google".into(),
+                    provider_uid: "g-1".into(),
+                    email: "oauth@promptark.local".into(),
+                },
+            );
+            let start = app(state.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/v1/session/oauth/google")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let location = start
+                .headers()
+                .get(header::LOCATION)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string();
+            let state_param = location
+                .split("state=")
+                .nth(1)
+                .unwrap()
+                .split('&')
+                .next()
+                .unwrap();
+            let response = app(state.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri(format!(
+                            "{callback}?code=code-123&state={state_param}"
+                        ))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+            let session: SessionResponse = serde_json::from_slice(&body).unwrap();
+            assert_eq!(session.email, "oauth@promptark.local");
+            assert!(session.access_token.starts_with("acc."));
+            let invalid = app(state)
+                .oneshot(Request::builder()
+                    .uri(format!("{callback}?code=code-123&state=invalid"))
+                    .body(Body::empty()).unwrap())
+                .await.unwrap();
+            assert_eq!(invalid.status(), StatusCode::BAD_REQUEST);
+        }
     }
 }
 

@@ -213,6 +213,12 @@ paths:
       security: []
       summary: OAuth 授权码回调
       description: 普通登录沿用会话流程；admin-test. 前缀 state 单独执行管理员发起的配置验证，随机一次性索引、10 分钟期限、配置/权限复核。验证返回固定 HTML，no-store/no-referrer，不返回令牌、不创建账号或会话；无效/重放 400，被新验证或配置替代 409。普通客户端无需发送或解析验证 state。
+  /api/v1/auth/oauth/callback:
+    get:
+      operationId: oauthLegacyCallback
+      security: []
+      summary: 旧版 OAuth 回调路径兼容
+      description: 与 /v1/session/oauth/callback 复用同一处理器；state 校验、普通登录、管理员验证和错误行为完全相同，不跳转到旧服务。
   /v1/session/oauth/session/{flowId}:
     get:
       operationId: oauthBrowserSession
