@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-13-skills-release.md](plans/2026-09-13-skills-release.md) | 发布中 | Skills 双平台发版 | beta.8 双平台包已验，浏览器控件匹配复验及公开更新验收 |
+| [plans/2026-09-13-skills-release.md](plans/2026-09-13-skills-release.md) | 发布中 | Skills 双平台发版 | beta.8 双平台包已验，浏览器图片/分类控件匹配复验及公开更新验收 |
 | [plans/2026-09-13-viewer-launcher-polish.md](plans/2026-09-13-viewer-launcher-polish.md) | 验收 | 精简启动器、图片查看器、紧凑卡片与新图标 | beta.7 双平台已发布，524 项前端、Mac 实机与 Windows 安装测试、发布资产已验 |
 | [architecture/decisions/0024-launcher-copy-only.md](architecture/decisions/0024-launcher-copy-only.md) | 现行 | 启动器操作范围 | 取代 0023 的复制输入与窗口粘贴入口，其余联网与本机 AI 决策保持 |
 | [plans/2026-09-13-cuetuck-updates.md](plans/2026-09-13-cuetuck-updates.md) | 验收 | CueTuck 改名、更新提醒与下拉搜索 | beta.6 双平台已发布，签名与隔离安装实测、线上品牌与 Mac 安装通过 |

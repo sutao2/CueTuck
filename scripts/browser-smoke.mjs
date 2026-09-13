@@ -123,7 +123,7 @@ try {
   await click(/button "更新预览"/); await target(/上海 2000/); await run('screenshot');
   await click(/button "复制并完成"/); await click(/button "(?:← )?返回"/);
   await click(/button "批量整理"/); await run('check', await target(/checkbox "选择 交互验收"/));
-  await click(/button "未分类"/); await click(/option "图片生成"/);
+  await click(/button "目标分类"/); await click(/option "图片生成"/);
   await click(/button "应用到所选"/); await target(/已完成 1 条/); await run('screenshot');
   await click(/button "取消多选"/);
   await click(/button "新建"/); await click(/button "提示词合集/); await fill(/textbox "合集名称"/, '验收合集');
