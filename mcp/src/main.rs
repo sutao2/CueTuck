@@ -1,6 +1,5 @@
-use promptark_mcp::{handle_rpc_with_search, search::SearchCache, square::Square};
-use serde_json::Value;
-use std::io::{self, BufRead, Write};
+use promptark_mcp::{runtime, square::Square};
+use std::io;
 use std::path::PathBuf;
 
 fn main() {
@@ -16,22 +15,8 @@ fn main() {
         Ok("0")|Err(_) => None,
         _ => { eprintln!("PROMPTARK_MCP_SQUARE 只能为 0 或 1"); std::process::exit(2); }
     };
-    let mut search = SearchCache::default();
-    let stdin = io::stdin();
-    let mut stdout = io::stdout();
-    for line in stdin.lock().lines() {
-        let Ok(line) = line else {
-            break;
-        };
-        if line.trim().is_empty() {
-            continue;
-        }
-        let response = match serde_json::from_str::<Value>(&line) {
-            Ok(request) => handle_rpc_with_search(&dir, &request, square.as_ref(), &mut search, std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false))),
-            Err(_) => Some(serde_json::json!({"jsonrpc": "2.0", "id": null, "error": {"code": -32700, "message": "JSON 解析失败"}})),
-        };
-        if let Some(response) = response {
-            if writeln!(stdout, "{response}").and_then(|_| stdout.flush()).is_err() { break; }
-        }
+    if let Err(error) = runtime::serve(dir, square, io::stdin().lock(), io::stdout()) {
+        eprintln!("MCP 服务已停止：{error}");
+        std::process::exit(1);
     }
 }

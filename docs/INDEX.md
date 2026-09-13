@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-13-mcp-search.md](plans/2026-09-13-mcp-search.md) | 现行 | MCP 搜索性能与慢请求隔离 | 搜索 22 项及 5 万条基准已验；请求隔离待实施 |
+| [plans/2026-09-13-mcp-search.md](plans/2026-09-13-mcp-search.md) | 验收 | MCP 搜索性能与慢请求隔离 | 27 项、5 万条基准和真实库只读已验，release 已更新 |
 | [plans/2026-09-13-content-metrics.md](plans/2026-09-13-content-metrics.md) | 验收 | 下载/收藏展示与个人作品排序 | 497 项前端、10 项后端及浏览器已验，服务和客户端已更新 |
 | [plans/2026-09-13-account-design.md](plans/2026-09-13-account-design.md) | 验收 | 优化账号页展示和资料编辑 | 账号概览与卡片分组、494 项回归及浅深色验收，客户端已更新 |
 | [plans/2026-09-13-oauth-completion.md](plans/2026-09-13-oauth-completion.md) | 验收 | OAuth 授权后浏览器停在加载页 | 完成页、16 项 OAuth 与浏览器导航验证通过，8080 已重启 |
@@ -122,7 +122,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 身份/内容/审核/站点运营、权限与真实消费者 |
 | [specs/web/spec.md](specs/web/spec.md) | 目标 | 做浏览器工作台 | 账号隔离、保存重试与复制失败反馈；不进桌面包 |
-| [specs/mcp/spec.md](specs/mcp/spec.md) | 现行 | 做 MCP | 本地只读内存索引、多词筛选分页；显式独立广场工具 |
+| [specs/mcp/spec.md](specs/mcp/spec.md) | 现行 | 做 MCP | 本地内存索引、多词筛选分页、取消隔离；显式独立广场工具 |
 | [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 完整分类/合集/成员/软删除往返与时间归一化 |
 | [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 独立持久化模拟订单/权益、测试码与真实权益隔离 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |

@@ -270,3 +270,48 @@ impl Index {
         )
     }
 }
+
+#[cfg(test)]
+mod interruption_tests {
+    use super::*;
+
+    #[test]
+    fn sqlite_query_stops_when_cancellation_arrives() {
+        let db = Connection::open_in_memory().unwrap();
+        let cancel = Arc::new(AtomicBool::new(false));
+        guard(&db, cancel.clone(), Instant::now() + Duration::from_secs(5));
+        let signal = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(10));
+            cancel.store(true, Ordering::Relaxed);
+        });
+        let start = Instant::now();
+        let result = db.query_row("WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<100000000) SELECT sum(x) FROM n", [], |r| r.get::<_,i64>(0));
+        signal.join().unwrap();
+        assert_eq!(
+            result.unwrap_err().sqlite_error_code(),
+            Some(rusqlite::ErrorCode::OperationInterrupted)
+        );
+        assert!(start.elapsed() < Duration::from_secs(2));
+        guard(
+            &db,
+            Arc::new(AtomicBool::new(false)),
+            Instant::now() + Duration::from_secs(2),
+        );
+        assert_eq!(
+            db.query_row("SELECT 1", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+    }
+
+    #[test]
+    fn sqlite_query_stops_at_deadline() {
+        let db = Connection::open_in_memory().unwrap();
+        guard(&db, Arc::new(AtomicBool::new(false)), Instant::now());
+        let result = db.query_row("WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<1000000) SELECT sum(x) FROM n", [], |r| r.get::<_,i64>(0));
+        assert_eq!(
+            result.unwrap_err().sqlite_error_code(),
+            Some(rusqlite::ErrorCode::OperationInterrupted)
+        );
+    }
+}
