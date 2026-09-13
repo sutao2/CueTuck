@@ -57,6 +57,16 @@ npm run build:local
 
 本机命令输出无自动更新签名产物的 macOS debug App，不修改正式更新配置。正式入口为 `npm run build:release`，会检查版本、服务地址、更新源一致及签名材料存在；没有配套私钥拒绝构建。预检不等于签名验证：仍需核对公私钥匹配、托管 `latest.json`/签名/下载文件一致、升级安装与回退、macOS 签名公证，以及目标 OS 实机 smoke。既有更新仓库仅作配置一致性检查，不声称远端已经托管可用产物。
 
+## 手动安装预览版
+
+用户授权的首次 GitHub 预览发行见[发行记录](../docs/plans/2026-09-13-github-release.md)。在 `desktop` 执行：
+
+```sh
+PROMPTARK_API_BASE=https://prompt.likh.cn VITE_API_BASE=https://prompt.likh.cn npm run build:preview
+```
+
+此入口要求预发行版本、相同的正式 HTTPS API，并通过独立配置关闭 updater artifact。输出 release 优化并以 ad-hoc 签名封装资源的 macOS app/dmg，供手动安装；不生成更新签名或 `latest.json`，不代表 Apple 签名/公证通过。GitHub 必须标为 prerelease，说明已验平台及限制。正式签名发行仍使用原 `build:release` 门禁。
+
 ## 独立开发依赖（可选）
 
 已有本机服务无需另起。需要全新隔离依赖时，先安全设置 `PROMPTARK_DEV_DB_PASSWORD`、`PROMPTARK_DEV_MEDIA_USER`、`PROMPTARK_DEV_MEDIA_PASSWORD`，再运行：
