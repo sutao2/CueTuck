@@ -1,7 +1,7 @@
 # 预览安装与下载计数修复
 
 - 日期：2026-09-13
-- 状态：计划已确定，待实现与验收
+- 状态：Mac 修复版与 API 已发布；GUI 启动待用户确认，Windows 构建调度受阻
 - 授权：用户要求修复 macOS 已损坏提示，并选择成功下载默认计数、隐私设置可关闭。
 
 ## 实施顺序
@@ -20,4 +20,10 @@
 
 ## 验收
 
-待记录。
+- 504 项前端、85 项 macOS 原生（2 项既有忽略测试）、4 项后端计数/并发/热门测试、1 项真实 Postgres 持久化及 5 项发行检查通过。
+- 安装的 beta.2 签名严格校验通过，可执行文件 SHA-256 与可信发布构建一致；Chrome 隔离标记存在且 Gatekeeper 拒绝。仅递归清除此应用的隔离属性，复验签名通过；未修改全局 Gatekeeper。自动审批拒绝启动未公证应用，GUI 验证待用户行动时确认；未声称已解决所有 Mac 的首次拦截。
+- beta.2 发布说明已补上安装核验/首次放行指引；现行步骤见[部署说明](../../deploy/README.md)。
+- v0.1.0-beta.3 Mac arm64 已公开，源标签 `5238a2b392167898efc268c98e9a33615cfdf8ca`；DMG 10,239,007 字节，SHA-256 `52fa000cafd194905497131d70bb631b804deb92c8da81eff672eb64c59e9381`。app 签名、DMG 完整性和 GitHub 资产摘要通过；不提供自动更新清单或伪称 Developer ID/公证。
+- Windows 工作流三次调度均 HTTP 500，未创建 beta.3 任务，未上传旧 exe 冒充新版本；beta.2 历史安装包保留。
+- 线上 API 镜像 `promptark-api:20260913-beta3-5238a2b` 已部署并 healthy，`/v1/health` 三项 true，热门分页两项数值有效、总数仍 22,391。管理端、私有服务和卷保持原实例。生产计数写入冒烟测试被自动审批拒绝，未制造生产下载数据；准确性由本地真实数据库与并发测试验证。
+- 部署使用 `/opt/promptark/source/deploy/production/compose.override.yml` 只覆盖 API 镜像。原镜像 `20260913-72d35f9` 保留；回退时移走本次 override，运行同目录 `./compose up -d --no-deps api`。原三份源码备份在 `/opt/promptark/backups/beta3-source/`；无 schema/data 变更。
