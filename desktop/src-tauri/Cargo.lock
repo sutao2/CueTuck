@@ -576,6 +576,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52560adf09603e58c9a7ee1fe1dcb95a16927b17c127f0ac02d6e768a0e25bc1"
 
 [[package]]
+name = "cuetuck"
+version = "0.1.0-beta.6"
+dependencies = [
+ "base64 0.22.1",
+ "enigo",
+ "image",
+ "keyring",
+ "objc2-app-kit",
+ "open",
+ "reqwest 0.12.28",
+ "rusqlite",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-updater",
+ "tempfile",
+ "tokio",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "darling"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2825,33 +2852,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "cuetuck"
-version = "0.1.0-beta.6"
-dependencies = [
- "base64 0.22.1",
- "enigo",
- "image",
- "keyring",
- "objc2-app-kit",
- "open",
- "reqwest 0.12.28",
- "rusqlite",
- "semver",
- "serde",
- "serde_json",
- "sha2",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-updater",
- "tempfile",
- "tokio",
- "url",
- "uuid",
 ]
 
 [[package]]
