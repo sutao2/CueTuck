@@ -631,12 +631,13 @@ function clearSearchOrReturn(event) {
   if (settingsQuery.value) settingsQuery.value = '';
   else requestClose();
 }
+const navigationBusy = computed(() => saving.value || loading.value || dataBusy.value || importBusy.value || billingBusy.value || syncBusy.value);
 function requestClose() {
-  if (saving.value || loading.value || dataBusy.value || importBusy.value || billingBusy.value || syncBusy.value) return;
+  if (navigationBusy.value) return;
   if (hasUnsaved.value) pendingAction.value = 'discard';
   else emit('cancel');
 }
-defineExpose({ requestClose });
+defineExpose({ requestClose, busy: navigationBusy });
 watch(pendingAction, async (action) => {
   if (action) {
     confirmationReturnFocus = document.activeElement;

@@ -81,7 +81,7 @@ it.each(['none', 'registration', 'extra-setting'])("updates the workbench shortc
   expect(w.get('.status-button').text()).toContain(failure === 'registration' ? '⌃⌥K' : '⌃⌥J');
   expect(w.findComponent(SettingsModal).text()).toContain(failure === 'none' ? '快捷键已保存' : '保存失败');
   expect(w.findComponent(SettingsModal).exists()).toBe(true);
-  expect(w.get('[data-testid="titlebar-search"]').text()).toBe('搜索⌘F');
+  expect(w.get('[data-testid="titlebar-search"]').text()).toBe('全局搜索⌘K');
 });
 
 it('keeps Escape and Tab in the innermost confirmation without discarding drafts', async () => {

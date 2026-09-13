@@ -1,7 +1,7 @@
 <template>
     <section v-page-focus="() => $emit('cancel')" class="workspace-page square-reading-page" data-testid="square-detail" role="region" aria-labelledby="square-detail-title">
       <div class="detail-scroll">
-      <nav class="detail-navigation" aria-label="详情导航"><button type="button" class="page-back" aria-label="返回" @click="$emit('cancel')">← 返回广场</button></nav>
+      <nav class="detail-navigation" aria-label="详情导航"><button type="button" class="page-back" aria-label="返回" @click="$emit('cancel')">← {{ backLabel }}</button></nav>
       <header class="detail-heading">
         <div>
           <h2 id="square-detail-title">{{ item.title }}</h2>
@@ -66,6 +66,7 @@ import { computed, ref, watch } from 'vue';
 import { referenceImages, referenceLink } from '../lib/squareReference.js';
 const props = defineProps({
   item: { type: Object, required: true },
+  backLabel: { type: String, default: '返回广场' },
   loading: Boolean,
   error: { type: String, default: '' },
   note: { type: String, default: '' },

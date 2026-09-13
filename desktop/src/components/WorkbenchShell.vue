@@ -2,6 +2,7 @@
   <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed, 'sidebar-resizing': sidebarDrag !== null }" :style="{ '--sidebar-width': `${sidebarWidth}px` }">
     <header
       v-show="!settingsOpen || Boolean(loginReason)"
+      :inert="globalSearchOpen ? '' : undefined"
       data-region="titlebar"
       class="titlebar"
       :class="{ 'host-mac': host === 'macos' }"
@@ -15,17 +16,16 @@
         <AppIcon :name="space === 'local' ? 'folder' : 'square'" /><span data-tauri-drag-region>{{ taskTitle || locationLabel }}</span>
       </div>
       <div class="titlebar-right">
-        <button type="button" class="title-tool" data-testid="titlebar-search" :title="`${t('search')} ${searchShortcutLabel}`" @click="navigateTo(focusSearch)">
-          <AppIcon name="search" /><span>{{ t("search") }}</span><kbd>{{ searchShortcutLabel }}</kbd>
+        <button type="button" class="title-tool" data-testid="titlebar-search" :title="`全局搜索 ${globalSearchShortcutLabel}`" :disabled="globalSearchBlocked" @click="openGlobalSearch">
+          <AppIcon name="search" /><span>全局搜索</span><kbd>{{ globalSearchShortcutLabel }}</kbd>
         </button>
       </div>
     </header>
 
-    <div v-show="!settingsOpen || Boolean(loginReason)" class="workspace">
+    <div v-show="!settingsOpen || Boolean(loginReason)" class="workspace" :inert="globalSearchOpen ? '' : undefined">
       <aside v-show="!sidebarCollapsed" id="workbench-sidebar" data-region="sidebar" class="sidebar" @click.capture="guardSidebarNavigation">
         <div class="sidebar-brand-row">
           <span class="brand-name">{{ t("brand") }}</span>
-          <button type="button" class="frame-icon-button" data-testid="sidebar-search" :aria-label="t('search')" :title="`${t('search')} ${searchShortcutLabel}`" @click="focusSearch"><AppIcon name="search" /></button>
         </div>
         <div class="space-switch" role="tablist" aria-label="提示词空间">
           <button
@@ -429,6 +429,7 @@
       v-if="squareDetail"
       v-show="!loginReason"
       :item="squareDetail"
+      :back-label="space === 'local' ? '返回本地列表' : '返回广场'"
       :loading="squareDetailLoading"
       :error="squareDetailError"
       :note="operationNote"
@@ -531,7 +532,10 @@
       <button type="button" aria-label="关闭提示" @click="operationNotice = null">×</button>
     </div>
 
+    <GlobalSearch v-if="globalSearchOpen" @close="globalSearchOpen = false" @select="openGlobalResult" />
+
     <SettingsModal
+      :inert="globalSearchOpen ? '' : undefined"
       ref="settingsView"
       v-if="settingsOpen"
       v-show="!loginReason"
@@ -584,7 +588,7 @@
         </button>
       </div>
     </div>
-    <footer v-show="!settingsOpen || Boolean(loginReason)" data-region="statusbar" class="statusbar">
+    <footer v-show="!settingsOpen || Boolean(loginReason)" data-region="statusbar" class="statusbar" :inert="globalSearchOpen ? '' : undefined">
       <span class="status-item">
         <span class="connection-dot" :class="databaseStatus === 'ready' ? 'online' : 'offline'"></span>
         <span>{{ t("localFirst") }}</span>
@@ -604,6 +608,7 @@
 
 <script setup>
 import AppIcon from "./AppIcon.vue";
+import GlobalSearch from "./GlobalSearch.vue";
 import { listPromptAssets, assetSize, formatBytes } from '../platform/assets.js';
 import { uploadPrivateAsset } from '../platform/privateMedia.js';
 import { vDialogFocus } from "../lib/dialogFocus.js";
@@ -665,6 +670,31 @@ const launcherShortcut = ref(DEFAULT_LAUNCHER_SHORTCUT);
 const shortcutLabel = computed(() => formatShortcutLabel(launcherShortcut.value, props.host));
 const searchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'macos' ? 'Super+F' : 'Control+F', props.host));
 const searchInput = ref(null);
+const globalSearchOpen = ref(false);
+const globalSearchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'macos' ? 'Super+K' : 'Control+K', props.host));
+const globalSearchBlocked = computed(() => batchBusy.value || editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length > 0 || favoriteBusy.value.length > 0 || Boolean(pendingDelete.value || deletingCategory.value || pendingNavigation.value));
+function openGlobalSearch() {
+  if (globalSearchBlocked.value || document.querySelector('[aria-modal="true"]')) return;
+  closeContextMenu();
+  globalSearchOpen.value = true;
+}
+async function openGlobalResult({ item, scope }) {
+  globalSearchOpen.value = false;
+  await nextTick();
+  const action = () => {
+    if (scope === 'square') {
+      favoriteIds.value = favoriteIds.value.filter(id => id !== item.id);
+      if (item.is_favorite) favoriteIds.value.push(item.id);
+      openSquareDetail(item);
+    }
+    else if (item.kind === 'collection') openCollection(item);
+    else reading.value = item;
+  };
+  if (settingsOpen.value && !loginReason.value) {
+    pendingNavigation.value = action;
+    settingsView.value?.requestClose();
+  } else navigateTo(action);
+}
 
 function focusSearch() {
   searchInput.value?.focus();
@@ -729,6 +759,8 @@ function handleWorkbenchShortcut(event) {
   if (batchBusy.value) return;
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
   if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
+  if (globalSearchOpen.value) return;
+  if (event.key.toLowerCase() === 'k') { event.preventDefault(); openGlobalSearch(); return; }
   if (addingCategory.value || deletingCategory.value) return;
   if (publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
   if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
@@ -1003,7 +1035,7 @@ function guardSidebarNavigation(event) {
 function navigateTo(action) {
   if (batchBusy.value) return;
   if (!hasTaskPage.value) { action(); return; }
-  if (editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || downloadBusy.value.length || favoriteBusy.value.length) return;
+  if (editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length || favoriteBusy.value.length) return;
   pendingNavigation.value = action;
   if (loginReason.value) loginPage.value?.close();
   else if (creating.value || editing.value) editorPage.value?.requestClose();
@@ -1721,6 +1753,7 @@ async function reloadPrompts() {
   prompts.value = filteredPrompts;
   collections.value = filteredCollections;
   allLocalItems.value = [...allPrompts, ...allCollections];
+  downloadedIds.value = [...new Set(allPrompts.map(row => row.remote_id).filter(Boolean))];
   emit("library-changed", allPrompts.length);
 }
 
@@ -1991,8 +2024,7 @@ onMounted(async () => {
 .card-selection { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin-bottom: 10px; }
 .card-selection input { width: 16px; height: 16px; }
 .card-more { margin-left: auto; font-size: 18px; }
-.title-tool > span, .title-tool > kbd { display: none; }
-.sidebar-brand-row .frame-icon-button { opacity: .55; }
+.title-tool { white-space: nowrap; }
 .browse-pagination { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 24px 0; color: var(--muted); font-size: 12px; }
 .publication-files { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 20px 0; }
 .publication-files legend { font-size: 13px; font-weight: 600; padding: 0 6px; }
