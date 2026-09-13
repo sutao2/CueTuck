@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-13-github-release.md](plans/2026-09-13-github-release.md) | 验收 | GitHub 应用预览发行 | macOS arm64 及 587 项测试通过，安装包已上传草稿；公开源码待用户授权 |
+| [plans/2026-09-13-github-release.md](plans/2026-09-13-github-release.md) | 验收 | GitHub 应用预览发行 | v0.1.0-beta.1 已公开；macOS arm64、587 项测试、标签及资产哈希已验 |
 | [plans/2026-09-13-production-data-sync.md](plans/2026-09-13-production-data-sync.md) | 验收 | 本机广场和配置迁移线上 | 22,391 条及配置已迁移；摘要、重放和客户端已验，图片直连与外部授权边界见记录 |
 | [plans/2026-09-13-compose-deployment.md](plans/2026-09-13-compose-deployment.md) | 验收 | 部署服务器、管理端与客户端地址切换 | 双域名 Compose 已上线；TLS 续期、101 项测试、owner 登录及客户端实测 |
 | [plans/2026-09-13-mcp-search.md](plans/2026-09-13-mcp-search.md) | 验收 | MCP 搜索性能与慢请求隔离 | 27 项、5 万条基准和真实库只读已验，release 已更新 |
