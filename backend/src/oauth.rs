@@ -278,7 +278,10 @@ pub async fn callback(
         state
             .put_oauth_flow(&parsed.flow_id, serde_json::to_string(&session).unwrap())
             .await;
-        return Ok(StatusCode::NO_CONTENT.into_response());
+        return Ok((
+            [("cache-control", "no-store"), ("referrer-policy", "no-referrer")],
+            Html(include_str!("oauth_complete.html")),
+        ).into_response());
     }
     Ok(Json(session).into_response())
 }
