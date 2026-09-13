@@ -2,7 +2,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | 发布中 |
+| 状态 | 已公开发布（2026-09-14 北京时间） |
 | 授权 | 用户要求「上线一下，并推送打包发版」 |
 | 范围 | 已完成的 Skills 管理、来源扩充与分类；客户端双平台更新 |
 
@@ -24,7 +24,7 @@
 - [x] 源码 `cbf9237`、版本与生产健康核对；无 backend/admin-web/deploy 变更。
 - [x] macOS arm64 release 优化构建、codesign 严格验证、DMG 校验和、更新签名及篡改拒绝通过；发布包实际启动并显示 beta.8、15 个来源及分类。
 - [x] Windows CI 34766819907 全部通过；NSIS 安装、启动 10 秒、卸载完成。源码与 API、SHA256、更新签名与篡改拒绝已核对。
-- [ ] 公开发行、更新资产核验与记录。
+- [x] beta.8 双平台预览发行已公开；7 个资产大小/SHA256、标签源码、匿名发现接口及公开更新清单均核验通过。
 
 ## 发行中验收修复
 
@@ -35,3 +35,14 @@
 浏览器复验已通过管理端全部流程；桌面执行到附件图片缩放时发现另一处旧「适应窗口」匹配，已改为当前「适应」按钮后继续复验。
 
 后续复验完成图片和变量流程；批量整理的可搜索控件在浏览器中的名称为「目标分类」，已依据失败快照修正定位后重跑。
+
+## 最终结果
+
+- [公开发行](https://github.com/sutao2/CueTuck/releases/tag/v0.1.0-beta.8)，预览通道；发布时间 2026-09-13 16:13:57 UTC（北京时间 2026-09-14）。
+- 两平台安装包和 Git 标签均对应源码 `cbf9237129df6a2f92c74bae21d7630b6381c443`。后续 `ab6fc03`、`f366c35`、`ee30535` 仅修正验收脚本/文档，`git diff cbf9237 -- desktop backend admin-web deploy` 为空。
+- [Windows 构建与安装验证](https://github.com/sutao2/CueTuck/actions/runs/34766819907) 全部通过。
+- [最终全量回归](https://github.com/sutao2/CueTuck/actions/runs/34767679865) 全部通过：前端单元/构建、桌面与管理端浏览器全流程、后端、原生及 MCP。桌面单元测试为 544 项。
+- 7 个公开附件（macOS DMG、更新归档及签名，Windows EXE 及签名，latest.json、SHA256SUMS）均与本地大小和 SHA256 一致；两平台签名都用产品公钥验证，并测试篡改字节被拒绝。
+- 未登录 GET GitHub releases 接口返回 200 并包含非草稿 beta.8；公开下载 latest.json 与本地逐字节一致，包含 darwin-aarch64 / windows-x86_64，版本顺序 beta.8 > beta.7。
+- 线上 health 的 postgres、redis、minio 均为 true，管理端 HTTP 200。本轮无服务端/管理端运行代码与数据变更，无需重新部署 Compose。
+- 正式已安装目录未覆盖；本机实际运行验证使用打包输出中的 beta.8。未替用户执行更新安装，也不声称 macOS 公证、Windows Authenticode 或各智能体实际加载已认证。
