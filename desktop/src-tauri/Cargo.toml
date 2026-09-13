@@ -21,7 +21,7 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 semver = "1"
 tauri = { version = "2", features = ["macos-private-api"] }
 uuid = { version = "1", features = ["v4"] }
-keyring = "3"
+keyring = { version = "3", features = ["apple-native", "windows-native"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "multipart", "system-proxy"] }
 sha2 = "0.10"
 open = "5"

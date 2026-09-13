@@ -1289,6 +1289,8 @@ async function openSquareDetail(item) {
   }
 }
 
+const extraLauncherUnlisteners = [];
+onUnmounted(() => extraLauncherUnlisteners.forEach(stop => stop()));
 let downloadsDisposed = false;
 onUnmounted(() => { downloadsDisposed = true; });
 
@@ -2048,6 +2050,14 @@ onMounted(async () => {
   await refreshFavorites();
   if (window.__TAURI_INTERNALS__) {
     const { listen } = await import("@tauri-apps/api/event");
+    extraLauncherUnlisteners.push(await listen('local-library-changed', () => { reloadPrompts().catch(() => {}); }));
+    extraLauncherUnlisteners.push(await listen('launcher-navigate', ({payload}) => {
+      const action = () => {
+        if (payload?.destination === 'ai-settings') {settingsPage.value='models';settingsOpen.value=true;}
+        else if (payload?.destination === 'square-detail' && payload.id) {openSquareDetail({id:payload.id,title:'广场提示词'});}
+      };
+      if(settingsOpen.value) {pendingNavigation.value=action;settingsView.value?.requestClose();} else navigateTo(action);
+    }));
     await listen("open-new-prompt", () => {
       if (!settingsOpen.value) navigateTo(() => { creating.value = true; });
     });

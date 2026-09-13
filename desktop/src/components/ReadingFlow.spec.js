@@ -29,10 +29,11 @@ it('exposes the same actions from the visible more button and does not count fai
   w = mount(WorkbenchShell); await flushPromises();
   await w.get('[data-testid=card-more]').trigger('click');
   expect(w.get('[data-action=edit]').text()).toBe('编辑');
-  await w.get('[data-action=copy]').trigger('click'); await flushPromises();
+  await w.get('[role=menu]').trigger('keydown', {key:'Escape'});
+  await w.findAll('.card-footer button').find(b=>b.text()==='复制').trigger('click'); await flushPromises();
   expect(w.get('[data-testid=copy-notice]').text()).toContain('复制失败');
   expect((await library.listLocalPrompts())[0].use_count).toBe(0);
-  await w.get('[data-testid=card-more]').trigger('click'); await w.get('[data-action=copy]').trigger('click'); await flushPromises();
+  await w.findAll('.card-footer button').find(b=>b.text()==='复制').trigger('click'); await flushPromises();
   expect((await library.listLocalPrompts())[0].use_count).toBe(1);
 });
 it('opens a downloaded copy without a second content request or duplicate write', async () => {
@@ -53,7 +54,7 @@ it('supports arrow navigation in the more menu and returns focus on Escape', asy
   const more = w.get('[data-testid=card-more]'); more.element.focus(); await more.trigger('click'); await flushPromises();
   expect(document.activeElement).toBe(w.get('[data-action=edit]').element);
   await w.get('[role=menu]').trigger('keydown', { key: 'ArrowDown' });
-  expect(document.activeElement).toBe(w.get('[data-action=copy]').element);
+  expect(document.activeElement).toBe(w.get('[data-action=duplicate]').element);
   await w.get('[role=menu]').trigger('keydown', { key: 'Escape' }); await flushPromises();
   expect(document.activeElement).toBe(more.element);
 });

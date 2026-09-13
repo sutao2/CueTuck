@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod database;
 pub mod desktop;
 pub mod launcher;

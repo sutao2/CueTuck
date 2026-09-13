@@ -22,6 +22,11 @@ pub fn run() {
     }
     builder
         .invoke_handler(tauri::generate_handler![
+            commands::ai::get_launcher_ai_config,
+            commands::ai::save_launcher_ai_config,
+            commands::ai::clear_launcher_ai_config,
+            commands::ai::list_launcher_ai_models,
+            commands::ai::optimize_launcher_prompt,
             commands::database::initialize_local_database,
             commands::database::export_local_sync_changes,
             commands::database::apply_local_sync_changes,
@@ -80,6 +85,7 @@ pub fn run() {
             commands::launcher::resize_launcher,
             commands::launcher::toggle_launcher,
             commands::launcher::open_new_prompt,
+            commands::launcher::open_launcher_destination,
             commands::launcher::paste_recent_prompt,
             commands::paste::paste_to_active_app,
             commands::paste::capture_selected_text,

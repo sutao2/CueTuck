@@ -31,22 +31,22 @@
             aria-controls="launcher-results"
             autocomplete="off"
             :disabled="busy"
-            :aria-activedescendant="results.length ? `launcher-result-${selectedIndex}` : undefined"
+            :aria-activedescendant="searchRows.length ? `launcher-result-${selectedIndex}` : undefined"
             @keydown="onSearchKey"
           />
           <span class="launcher-window-tools">
-            <span class="pill">本地</span>
+            <button v-if="scope === 'square'" class="pill" type="button" @click="scope = 'local'">返回本地</button><span v-else class="pill">本地</span>
             <button class="launcher-close-btn" type="button" title="关闭 (Esc)" :disabled="busy" @click="resetAndHide">
               Esc
             </button>
           </span>
         </div>
 
-        <div v-if="!isCollapsed" class="launcher-list">
+        <div v-if="!isCollapsed" id="launcher-results" class="launcher-list" role="listbox" aria-label="搜索与快捷操作">
           <p v-if="feedback" role="status" data-testid="launcher-feedback" class="launcher-empty">{{ feedback }}</p>
           <p v-if="searching" role="status" class="launcher-empty">正在搜索…</p>
-          <div v-if="results.length" id="launcher-results" role="listbox" aria-label="搜索结果">
-            <p class="group-title">本地提示词</p>
+          <div v-if="results.length">
+            <p class="group-title">{{ scope === 'square' ? '广场搜索 · 显示前 20 条' : '本地提示词' }}</p>
             <button
               v-for="(row, index) in results"
               :key="row.id"
@@ -67,10 +67,16 @@
                 <span class="row-title">{{ row.title }}</span>
                 <span class="row-desc">{{ rowDesc(row) }}</span>
               </span>
-              <span class="pill">{{ rowIcon(row) === "VAR" ? "变量" : "提示词" }}</span>
+              <span class="pill">{{ scope === 'square' ? '查看详情' : rowIcon(row) === 'VAR' ? '变量' : '提示词' }}</span>
             </button>
           </div>
           <p v-else-if="!searching && !feedback" class="launcher-empty">没有找到相关提示词</p>
+          <div v-if="query.trim()" class="quick-actions" aria-label="输入快捷操作">
+            <p class="group-title">使用当前输入</p>
+            <button v-for="(action, index) in quickActions" :key="action.action" role="option" :aria-selected="selectedIndex === results.length + index" :id="`launcher-result-${results.length + index}`" type="button" class="result-row" :class="{active: selectedIndex === results.length + index}" :disabled="busy" @click="runQuickAction(action.action)" @mouseenter="selectedIndex = results.length + index">
+              <span class="result-icon">{{ action.icon }}</span><span class="row-title">{{ action.title }}</span>
+            </button>
+          </div>
         </div>
 
         <footer v-if="!isCollapsed" class="launcher-foot">
@@ -83,6 +89,16 @@
         </footer>
       </template>
 
+      <template v-else-if="step === 'draft'">
+        <header class="launcher-search-wrap"><strong>{{ optimizedDraft ? '检查 AI 优化结果' : '快捷创建提示词' }}</strong></header>
+        <div class="launcher-list quick-draft">
+          <label class="field"><span>标题</span><input ref="draftTitleEl" v-model="draftTitle" maxlength="160" :disabled="busy" data-testid="quick-title"></label>
+          <label class="field quick-content"><span>正文 · 可继续修改</span><textarea v-model="draftContent" :disabled="busy" data-testid="quick-content" /></label>
+          <details v-if="optimizedDraft"><summary>查看原始输入</summary><pre class="preview code">{{ query }}</pre></details>
+          <p v-if="feedback" role="status">{{ feedback }}</p>
+        </div>
+        <footer class="launcher-foot launcher-actions"><button type="button" class="ghost" :disabled="busy" @click="backToSearch">返回输入</button><button type="button" class="ghost" :disabled="busy || !draftContent.trim()" @click="activate({title:draftTitle,content:draftContent}, 'default')">{{ optimizedDraft ? '采用并使用' : '直接使用' }}</button><button type="button" class="primary" :disabled="busy || !draftTitle.trim() || !draftContent.trim()" @click="saveDraft">保存到本地</button></footer>
+      </template>
       <template v-else>
         <div class="launcher-search-wrap launcher-fill-head">
           <img class="brand-mark" :src="appIcon" alt="" aria-hidden="true" draggable="false" />
@@ -134,6 +150,9 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { listSquarePage } from './platform/square.js';
+import { getLauncherAiConfig, optimizeLauncherPrompt } from './platform/launcherAi.js';
+import { invokeCommand } from './platform/tauri.js';
 import appIcon from "./assets/app-icon.png";
 import { extractVariables, renderPrompt, variableDefaults } from "./lib/renderPrompt.js";
 import { handleLauncherSearchKey } from "./platform/launcherKeyboard.js";
@@ -143,7 +162,7 @@ import {
   launcherCommand,
   listenLauncherLifecycle,
 } from "./platform/launcherWindow.js";
-import { getLocalSetting, listLocalPrompts, recordLocalPromptUse, setLocalSetting } from "./platform/library.js";
+import { createLocalPrompt, getLocalSetting, listLocalPrompts, recordLocalPromptUse, setLocalSetting } from "./platform/library.js";
 import { copyLauncherText, copyThenPaste } from "./platform/paste.js";
 import { supportsSelectedText } from "./platform/selectedText.js";
 import { applyHostChrome, detectHost, formatShortcutLabel } from "./platform/windowChrome.js";
@@ -168,7 +187,17 @@ const values = reactive(new Map());
 const feedback = ref("");
 const useBusy = ref(false);
 const selectionBusy = ref(false);
-const busy = computed(() => useBusy.value || selectionBusy.value);
+const actionBusy = ref(false);
+const busy = computed(() => useBusy.value || selectionBusy.value || actionBusy.value);
+const scope = ref('local'), draftTitle = ref(''), draftContent = ref(''), optimizedDraft = ref(false), draftTitleEl = ref(null);
+const quickActions = computed(() => query.value.trim() ? [
+  {action:'create',title:'创建提示词',icon:'＋'},
+  {action:'optimize',title:'AI 优化提示词',icon:'AI'},
+  {action:'square',title:'搜索提示词广场',icon:'⌕'},
+  {action:'copy-input',title:'复制当前输入',icon:'TXT'},
+] : []);
+const searchRows = computed(() => [...results.value, ...quickActions.value]);
+let searchTimer, squareController;
 let searchRequest = 0;
 let disposed = false;
 let unlisten = () => {};
@@ -185,24 +214,61 @@ const launcherLayout = computed(() =>
 );
 const copyChord = computed(() => formatShortcutLabel("Control+Enter", props.host));
 
-watch(query, async (value) => {
-  const request = ++searchRequest;
-  const needle = value.trim();
-  feedback.value = "";
-  selectedIndex.value = 0;
-  results.value = [];
-  searching.value = !!needle;
-  if (!needle) {
-    results.value = [];
-    return;
-  }
+async function searchCurrent(request) {
+  const needle = query.value.trim();
+  if (!needle) { searching.value = false; return; }
   try {
-    const rows = await listLocalPrompts({ query: needle });
+    let rows;
+    if (scope.value === 'square') {
+      if (await getLocalSetting('square_access') === '0') throw new Error('广场访问已关闭，请在设置中开启');
+      if (request !== searchRequest) return;
+      squareController = new AbortController();
+      const page = await listSquarePage({query:needle,signal:squareController.signal});
+      rows = page.items.slice(0,20).map(row=>({...row,remote:true}));
+    } else rows = await listLocalPrompts({ query: needle });
     if (request === searchRequest) results.value = rows.slice(0, launcherPreferences.value.resultLimit);
   } catch (error) {
     if (request === searchRequest) { results.value = []; feedback.value = `搜索失败：${error.message || error}`; }
   } finally { if (request === searchRequest) searching.value = false; }
+}
+watch([query,scope], () => {
+  const request = ++searchRequest;
+  clearTimeout(searchTimer);squareController?.abort();
+  feedback.value = '';selectedIndex.value = 0;results.value = [];searching.value = !!query.value.trim();
+  if (scope.value === 'square') searchTimer = setTimeout(()=>searchCurrent(request),250);
+  else searchCurrent(request);
 });
+async function openDestination(destination, id) {
+  if (!window.__TAURI_INTERNALS__) throw new Error('请在桌面客户端打开此页面');
+  await invokeCommand('open_launcher_destination',{destination,id:id||null});
+}
+async function runQuickAction(action) {
+  if (busy.value || !query.value.trim()) return;
+  if (action === 'create') { draftTitle.value=query.value.trim().split('\n')[0].slice(0,80);draftContent.value=query.value;optimizedDraft.value=false;step.value='draft';await nextTick();draftTitleEl.value?.focus();return; }
+  if (action === 'square') { if(scope.value==='square') {clearTimeout(searchTimer);squareController?.abort();searching.value=true;searchCurrent(++searchRequest);} else scope.value='square';return; }
+  actionBusy.value=true;
+  try {
+    if (action === 'copy-input') { await copyLauncherText(query.value);feedback.value='当前输入已复制';return; }
+    const config=await getLauncherAiConfig();
+    if (!config.endpoint || !config.model) { await openDestination('ai-settings'); feedback.value='请先在「AI 与模型」设置自己的接口和模型。';return; }
+    feedback.value='正在优化，仅发送当前输入…';
+    const version=lifecycleVersion, source=query.value;
+    const result=await optimizeLauncherPrompt(source);
+    if(disposed || version!==lifecycleVersion || source!==query.value)return;
+    draftTitle.value=source.trim().split('\n')[0].slice(0,80);draftContent.value=result;optimizedDraft.value=true;step.value='draft';feedback.value='原文已保留；检查结果后再采用或保存。';
+  } catch(error) { feedback.value=String(error.message||error); }
+  finally { actionBusy.value=false; }
+}
+async function saveDraft() {
+  if(busy.value || !draftTitle.value.trim() || !draftContent.value.trim())return;
+  actionBusy.value=true;
+  try {
+    const row=await createLocalPrompt({title:draftTitle.value.trim(),content:draftContent.value,model:(await getLocalSetting('default_model'))||null});
+    actionBusy.value=false;await activate(row,'default');feedback.value='已创建并保存到本地';
+    if(window.__TAURI_INTERNALS__) { try {const {emit}=await import('@tauri-apps/api/event'); await emit('local-library-changed');}catch {feedback.value='已保存到本地；主窗口请刷新查看。';} }
+  } catch(error){feedback.value=`保存失败：${error.message||error}`;}
+  finally{actionBusy.value=false;}
+}
 
 watch(launcherLayout, (layout) => resizeLauncherWindow(layout).catch((error) => { feedback.value = `窗口调整失败：${error}`; }), { immediate: true });
 watch(selectedIndex, async () => {
@@ -225,15 +291,15 @@ function onSearchKey(event) {
   if (busy.value) return;
   handleLauncherSearchKey(event, {
     move: (delta) => {
-      const count = results.value.length;
+      const count = searchRows.value.length;
       if (!count) return;
       selectedIndex.value = ((selectedIndex.value + delta) % count + count) % count;
     },
     moveTo: (index) => {
-      selectedIndex.value = Math.max(0, Math.min(index, results.value.length - 1));
+      selectedIndex.value = Math.max(0, Math.min(index, searchRows.value.length - 1));
     },
-    rowCount: results.value.length,
-    current: () => results.value[selectedIndex.value] ?? null,
+    rowCount: searchRows.value.length,
+    current: () => searchRows.value[selectedIndex.value] ?? null,
     activate,
     close: resetAndHide,
   });
@@ -241,6 +307,8 @@ function onSearchKey(event) {
 
 async function activate(row, mode) {
   if (!row || busy.value) return;
+  if (row.action) { await runQuickAction(row.action); return; }
+  if (row.remote) { try { await openDestination('square-detail',row.id); } catch(e){feedback.value=String(e.message||e);} return; }
   feedback.value = "";
   active.value = row;
   values.clear();
@@ -266,6 +334,7 @@ async function focusCurrent() {
   await nextTick();
   if (disposed || hidden) return;
   if (step.value === "search") inputEl.value?.focus();
+  else if (step.value === 'draft') draftTitleEl.value?.focus();
   else if (variableNames.value.length) {
     const index = Math.max(0, variableNames.value.indexOf(focusedVariable.value));
     formEl.value?.querySelectorAll("textarea")[index]?.focus();
@@ -369,7 +438,7 @@ async function onBlur() {
   try {
     const didHide = await launcherCommand("hide_launcher_if_idle");
     if (disposed || version !== lifecycleVersion) return;
-    if (didHide) { hidden = true; if (step.value !== 'fill') resetState(); }
+    if (didHide) { hidden = true; if (step.value === 'search') resetState(); }
     else {
       clearTimeout(blurTimer);
       blurTimer = setTimeout(() => { if (!document.hasFocus()) onBlur(); }, 650);
@@ -384,7 +453,7 @@ function onFocus() {
 
 function resetState() {
   clearTimeout(blurTimer);
-  searchRequest += 1;
+  searchRequest += 1; clearTimeout(searchTimer); squareController?.abort(); scope.value='local'; draftContent.value='';draftTitle.value='';
   searching.value = false;
   feedback.value = "";
   query.value = "";
@@ -420,7 +489,7 @@ async function onShown() {
   lifecycleVersion++;
   clearTimeout(blurTimer);
   hidden = false;
-  if (step.value !== 'fill') resetState();
+  if (step.value === 'search') resetState();
   try { launcherPreferences.value = await readLauncherPreferences(); }
   catch (error) { feedback.value = `读取启动器设置失败：${error}`; }
   try { await resizeLauncherWindow(launcherLayout.value); }
@@ -440,7 +509,7 @@ onMounted(async () => {
   try {
     unlisten = await listenLauncherLifecycle(onShown, (event) => {
       hidden = true;
-      if (!busy.value && (event?.payload !== 'blur' || step.value !== 'fill')) resetState();
+      if (!busy.value && (event?.payload !== 'blur' || step.value === 'search')) resetState();
     }, (event) => {
       hidden = false;
       feedback.value = event.payload;
@@ -453,7 +522,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  disposed = true;
+  disposed = true; clearTimeout(searchTimer); squareController?.abort();
   searchRequest += 1;
   clearTimeout(blurTimer);
   unlisten();
@@ -750,4 +819,8 @@ button:disabled { opacity: .5; cursor: wait; }
 @media (prefers-reduced-motion: reduce) {
   .primary, .ghost { transition: none; }
 }
+</style>
+
+<style scoped>
+.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:38px;padding-top:8px;padding-bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:12px;padding:18px}.quick-content{flex:1;min-height:150px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:vertical;min-height:130px}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background:var(--surface,#fff);color:inherit;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px;font:inherit}.quick-draft .field{display:grid;gap:6px}.quick-draft p{font-size:12px}.quick-draft .preview{max-height:130px;overflow:auto}
 </style>
