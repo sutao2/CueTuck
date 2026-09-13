@@ -118,3 +118,7 @@
 | 删除后搜索 | `desktop/src-tauri` `soft_deleted_prompt_is_hidden` |
 | 按正文命中 | `desktop/src-tauri` `search_hits_content` |
 | 复制后计数 | `desktop/src-tauri` `recording_use_increments_count`；`library.test.js` records last_used_at when a prompt is used |
+
+### Requirement: 本地补充操作反馈
+
+主操作已经提供使用/复制时，补充菜单 MUST 只提供编辑、复制副本、收藏和删除；收藏成功或失败 MUST 提供可见轻提示。图片预览采用可通过 Esc、关闭按钮或遮罩关闭的居中对话框，关闭恢复原焦点。使用长正文展开参考资料时 MUST 保留至少 240px 正文阅读区，页面可滚动，正文独立有界滚动。场景见[交互计划](../../plans/2026-09-13-interactions-launcher-ai.md)。

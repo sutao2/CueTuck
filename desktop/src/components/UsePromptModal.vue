@@ -7,7 +7,7 @@
         </div>
         <button type="button" class="page-back" aria-label="返回" :disabled="busy" @click="$emit('cancel')">← 返回</button>
       </header>
-      <div class="create-body">
+      <div class="create-body use-body">
         <nav v-if="names.length" class="variable-steps" aria-label="填写步骤">
           <button v-for="(name, position) in names" :key="name" type="button" :disabled="busy" :aria-current="step === 'variable' && index === position ? 'step' : undefined" :data-variable-step="position" @click="jump(position)">
             <span>{{ position + 1 }}</span> {{ name }} <small>{{ resolved(name) ? '已填' : '待填' }}</small>
@@ -164,6 +164,9 @@ function back() {
 </script>
 
 <style scoped>
+.use-body { grid-auto-rows: max-content; }
+.use-body .preview-box { min-height: 240px; max-height: min(55vh, 640px); }
+.use-assets { min-width: 0; }
 .variable-steps { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
 .variable-steps button { display: flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; max-width: 100%; overflow-wrap: anywhere; }
 .variable-steps button[aria-current] { border-color: var(--text); color: var(--text); background: var(--sidebar); }
