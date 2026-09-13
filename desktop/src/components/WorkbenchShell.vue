@@ -114,6 +114,17 @@
           </div>
         </nav>
 
+        <div v-show="contentKind === 'skills'" class="sidebar-toolbar"><span>Skill 分类</span><span>自动分类</span></div>
+        <nav v-show="contentKind === 'skills'" class="category-tree skills-category-tree" aria-label="Skill 分类">
+          <p class="skills-category-scope">{{ skillsMode === 'square' ? '数量仅含当前已加载来源' : '数量按 Skill 计，合并同源安装' }}</p>
+          <button v-for="category in skillCategories" :key="category.id" type="button" class="tree-row"
+            :data-skill-category="category.id || 'all'" :class="{active:skillsCategories[skillsMode] === category.id}"
+            :aria-pressed="skillsCategories[skillsMode] === category.id" :disabled="skillsBusy" @click="selectSkillCategory(category.id)">
+            <span class="tree-icon"><AppIcon :name="category.icon"/></span><span>{{ category.name }}</span>
+            <span class="tree-count" :title="skillsCategorySummary[skillsMode]?.scope">{{ skillsCategorySummary[skillsMode]?.ready ? skillsCategorySummary[skillsMode].counts[category.id] : '—' }}</span>
+          </button>
+        </nav>
+
         <div class="sidebar-bottom">
           <button v-if="session.loggedIn" type="button" data-testid="open-publications" @click="publicationsOpen = true"><AppIcon name="file" /><span>我的发布</span><span class="sidebar-bottom-action">›</span></button>
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
@@ -371,7 +382,7 @@
           </template>
         </section>
       </main>
-      <SkillsPage v-if="skillsVisited" v-show="contentKind === 'skills' && !hasTaskPage" ref="skillsPage" :mode="skillsMode" @busy="skillsBusy = $event"/>
+      <SkillsPage v-if="skillsVisited" v-show="contentKind === 'skills' && !hasTaskPage" ref="skillsPage" :mode="skillsMode" :category="skillsCategories[skillsMode]" @categories="skillsCategorySummary[$event.mode] = $event" @busy="skillsBusy = $event"/>
       <div v-show="hasTaskPage" class="task-host" data-testid="task-host">
     <section v-if="addingCategory" v-page-focus="closeCategoryDialog" class="workspace-page category-page" role="region" aria-labelledby="category-page-title">
       <header class="modal-header"><h2 id="category-page-title">新建分类</h2><button type="button" class="page-back" aria-label="返回" :disabled="categoryBusy" @click="closeCategoryDialog">← 返回</button></header>
@@ -643,6 +654,7 @@ import { parseModelNames } from "../platform/modelCatalog.js";
 import { uiText } from "../platform/uiStrings.js";
 import { downloadSquareItem, completeSquareImages, fetchSquareContent, fetchSquareCatalog, listSquarePage } from "../platform/square.js";
 import WindowedPromptGrid from './WindowedPromptGrid.vue';
+import {skillCategories} from '../platform/skillCategories.js';
 import SkillsPage from './SkillsPage.vue';
 import SiteNotice from '../../../shared/SiteNotice.vue';
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
@@ -723,6 +735,8 @@ const emit = defineEmits(["open-launcher", "library-changed"]);
 
 const space = ref("local");
 const contentKind = ref("prompts"), skillsMode = ref("local"), skillsVisited = ref(false), skillsBusy = ref(false), skillsPage = ref(null);
+const skillsCategories = ref({local:'',square:''}), skillsCategorySummary = ref({local:null,square:null});
+function selectSkillCategory(id) { if (skillsBusy.value) return; if (skillsCategories.value[skillsMode.value] === id) skillsPage.value?.showList?.(); else skillsCategories.value[skillsMode.value] = id; }
 function openSkills(mode) { if (skillsBusy.value) return; cancelSquare(); contentKind.value = "skills"; skillsMode.value = mode; skillsVisited.value = true; }
 const sidebarCollapsed = ref(false);
 const viewportWidth = ref(window.innerWidth);
