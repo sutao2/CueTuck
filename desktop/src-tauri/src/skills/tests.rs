@@ -622,12 +622,10 @@ async fn real_public_skill_download_to_isolated_target() {
 async fn real_public_catalogs_are_accessible() {
     let github = remote::Github::new().unwrap();
     let cancel = std::sync::atomic::AtomicBool::new(false);
-    for repo in [
-        "anthropics/skills",
-        "openai/plugins",
-        "vercel-labs/agent-skills",
-        "badlogic/pi-skills",
-    ] {
+    let sources: Vec<serde_json::Value> =
+        serde_json::from_str(include_str!("../../../src/data/skill-sources.json")).unwrap();
+    for source in sources {
+        let repo = source["value"].as_str().unwrap();
         let catalog = github.catalog(repo, &cancel).await.unwrap();
         assert!(!catalog.entries.is_empty());
         eprintln!(
@@ -784,4 +782,55 @@ fn preview_cache_is_bounded_and_durable_backups_are_not_pruned() {
     }
     assert!(fs::read_dir(data.join("staging")).unwrap().count() <= 8);
     assert!(b.path.join("SKILL.md").is_file());
+}
+
+#[tokio::test]
+#[ignore = "explicit expanded public source download check; isolated temporary files only"]
+async fn real_public_expanded_source_packages() {
+    let github = remote::Github::new().unwrap();
+    let cancel = std::sync::atomic::AtomicBool::new(false);
+    let sources: Vec<serde_json::Value> =
+        serde_json::from_str(include_str!("../../../src/data/skill-sources.json")).unwrap();
+    for source in sources.into_iter().skip(4) {
+        let repo = source["value"].as_str().unwrap();
+        let catalog = github.catalog(repo, &cancel).await.unwrap();
+        let entry = catalog.entries.first().expect("source must contain Skills");
+        let t = tempfile::tempdir().unwrap();
+        let p = github
+            .prepare(
+                t.path(),
+                Source {
+                    repo: catalog.repo.clone(),
+                    reference: catalog.reference,
+                    commit: catalog.commit.clone(),
+                    directory: entry.directory.clone(),
+                    license: catalog.license.clone(),
+                },
+                &cancel,
+                |_, _, _| {},
+            )
+            .await
+            .unwrap_or_else(|e| panic!("{repo}: {e}"));
+        assert!(p.package.files.iter().any(|f| f.path == "SKILL.md"));
+        assert_eq!(
+            files::package(
+                &install::prepared_dir(t.path(), &p.id)
+                    .unwrap()
+                    .join("package")
+            )
+            .unwrap()
+            .digest,
+            p.package.digest
+        );
+        eprintln!(
+            "verified {} entries {} license {} commit {} sample {} files {} bytes {}",
+            repo,
+            catalog.entries.len(),
+            catalog.license,
+            catalog.commit,
+            entry.directory,
+            p.package.files.len(),
+            p.package.bytes
+        );
+    }
 }
