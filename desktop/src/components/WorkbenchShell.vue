@@ -130,11 +130,12 @@
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
             <AppIcon name="settings" /><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
           </button>
+          <div v-if="sessionRestoreError" class="session-restore-error" role="status"><span>{{ sessionRestoreError }}</span><button type="button" data-testid="retry-session" :disabled="sessionRestoring" @click="restoreSavedSession">重试</button></div>
           <div class="sidebar-account">
             <button type="button" class="account-button" data-testid="open-login"
-              :title="session.loggedIn ? session.email : t('login')" @click="openAccount">
+              :disabled="sessionRestoring" :title="session.loggedIn ? session.email : t('login')" @click="openAccount">
               <span class="avatar">{{ session.loggedIn ? (session.email?.[0] || "已") : "游" }}</span>
-              <span>{{ session.loggedIn ? session.email || t("loggedIn") : t("login") }}</span>
+              <span>{{ sessionRestoring ? "恢复登录中…" : session.loggedIn ? session.email || t("loggedIn") : t("login") }}</span>
             </button>
             <button type="button" class="preference-toggle" :title="dark ? t('switchLight') : t('switchDark')" @click="toggleTheme">
               <AppIcon :name="dark ? 'sun' : 'moon'" />
@@ -216,11 +217,8 @@
           </div>
           <div class="filter-spacer"></div>
           <div class="filter-controls">
-            <SearchableSelect v-if="space === 'square'" v-model="contentLanguage" aria-label="广场内容语言" :options="[{value:'zh',label:'中文优先'},{value:'original',label:'作者原文'}]" @change="onModelFilter" />
-          <label class="compact-select">
-            <span>{{ t("model") }}</span>
-            <SearchableSelect data-testid="model-filter" v-model="modelFilter" @change="onModelFilter" :options="[{value:'',label:t('allModels')}, ...modelOptions.map(name => ({value:name,label:space === 'square' ? remoteCatalog?.models.find(item => item.id === name)?.name || name : name}))]" />
-          </label>
+            <SearchableSelect class="toolbar-select language-filter" v-if="space === 'square'" v-model="contentLanguage" aria-label="广场内容语言" :options="[{value:'zh',label:'中文优先'},{value:'original',label:'作者原文'}]" @change="onModelFilter" />
+          <SearchableSelect class="toolbar-select model-filter" :aria-label="t('model')" :title="modelFilter || t('allModels')" data-testid="model-filter" v-model="modelFilter" @change="onModelFilter" :options="[{value:'',label:t('allModels')}, ...modelOptions.map(name => ({value:name,label:space === 'square' ? remoteCatalog?.models.find(item => item.id === name)?.name || name : name}))]" />
           <div class="view-switch" aria-label="视图切换">
             <button type="button" :class="{ active: view === 'grid' }" :aria-pressed="view === 'grid'" title="网格视图" @click="view = 'grid'"><AppIcon name="grid" /></button>
             <button type="button" :class="{ active: view === 'list' }" :aria-pressed="view === 'list'" title="列表视图" @click="view = 'list'"><AppIcon name="list" /></button>
@@ -649,7 +647,7 @@ import BatchOrganize from './BatchOrganize.vue';
 import LocalPromptDetail from './LocalPromptDetail.vue';
 import { extractVariables } from '../lib/renderPrompt.js';
 import UsePromptModal from "./UsePromptModal.vue";
-import { getSession, logoutSession } from "../platform/session.js";
+import { getSession, logoutSession, restoreSession } from "../platform/session.js";
 import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
 import { parseModelNames } from "../platform/modelCatalog.js";
 import { uiText } from "../platform/uiStrings.js";
@@ -861,6 +859,23 @@ const newCategoryName = ref("");
 const categoryError = ref("");
 const theme = ref("light");
 const session = ref(getSession());
+const sessionRestoring = ref(false), sessionRestoreError = ref('');
+async function restoreSavedSession() {
+  if (sessionRestoring.value) return;
+  sessionRestoring.value = true;
+  sessionRestoreError.value = '';
+  try {
+    await restoreSession();
+    session.value = getSession();
+  } catch {
+    sessionRestoreError.value = '登录暂未恢复，请检查网络或钥匙串权限';
+  } finally { sessionRestoring.value = false; }
+  if (session.value.loggedIn) {
+    await refreshFavorites();
+    if (space.value === 'square') await loadSquare();
+  }
+}
+onMounted(restoreSavedSession);
 const loginReason = ref("");
 const publishResume = ref(false);
 const pendingPublish = ref(false);
@@ -1425,6 +1440,7 @@ async function startPublish() {
 
 async function finishLogin() {
   session.value = getSession();
+  sessionRestoreError.value = "";
   loginReason.value = "";
   await refreshFavorites();
   if (space.value === 'square') await loadSquare();

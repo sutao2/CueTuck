@@ -157,3 +157,17 @@ it('closes an unchanged editor and prevents closing or deleting during save', as
   await w.setProps({busy:false,error:'保存失败'});
   expect(w.get('input').element.value).toBe('保存中');
 });
+
+it('restores the account on mount and offers retry after a temporary failure', async () => {
+  const restore = vi.spyOn(session, 'restoreSession').mockRejectedValueOnce(new Error('offline')).mockImplementationOnce(async () => {
+    session.setSessionTransport(async () => ({access_token:'acc.restored',email:'restored@example.test'}));
+    await session.loginSession({email:'restored@example.test',password:'test'});
+    return session.getSession();
+  });
+  await shell();
+  expect(restore).toHaveBeenCalledTimes(1);
+  expect(w.text()).toContain('登录暂未恢复');
+  await w.get('[data-testid="retry-session"]').trigger('click'); await flushPromises();
+  expect(w.get('[data-testid="open-login"]').text()).toContain('restored@example.test');
+  expect(w.find('[data-testid="retry-session"]').exists()).toBe(false);
+});

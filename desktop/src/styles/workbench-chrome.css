@@ -333,7 +333,13 @@ body.theme-dark .primary-button { color: #202020; }
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 14%, transparent);
 }
 .filter-tabs { display: flex; align-self: center; gap: 2px; }
-.filter-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.filter-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; max-width: 100%; }
+.filter-controls .toolbar-select { box-sizing: border-box; width: auto; height: 34px; min-height: 34px; padding: 0 10px; border-radius: 7px; font-size: 12px; }
+.filter-controls .language-filter { width: 104px; }
+.filter-controls .model-filter { width: 146px; }
+.session-restore-error { display: flex; align-items: center; gap: 8px; padding: 8px 16px; color: var(--muted); font-size: 11px; }
+.session-restore-error span { min-width: 0; }
+.session-restore-error button { flex-shrink: 0; }
 .filter-tabs button {
   min-width: 48px;
   height: 32px;
@@ -951,3 +957,5 @@ body[data-density="compact"] .app-shell .collection-card-preview { margin: -12px
 
 .skills-category-scope { padding: 0 9px 8px; margin: 0; color: var(--faint); font-size: 10px; line-height: 1.5; }
 .skills-category-tree .tree-row:disabled { opacity: .55; cursor: wait; }
+
+.settings-content .searchable-select { min-width: 0; max-width: 100%; min-height: 34px; height: 34px; padding: 0 10px; border-color: var(--line-strong); font-size: 12px; }

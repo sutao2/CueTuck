@@ -3,6 +3,7 @@ let accountEmail = null;
 let testTransport = null;
 let testMeTransport = null;
 let oauthProviderList = [];
+let refreshPending = null;
 
 function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -24,6 +25,7 @@ function stripRefreshFromWebStorage() {
 export function resetMemorySession() {
   accessToken = null;
   accountEmail = null;
+  refreshPending = null;
   testTransport = null;
   testMeTransport = null;
   oauthProviderList = [];
@@ -67,6 +69,7 @@ export async function listOAuthProviders() {
 export async function loginSession({ email, password } = {}) {
   const title = String(email ?? "").trim();
   if (!title || !password) throw new Error("邮箱和密码不能为空");
+  if (refreshPending) await refreshPending.catch(() => {});
   let result;
   if (testTransport) {
     result = await testTransport({ email: title, password });
@@ -83,6 +86,7 @@ export async function loginOAuthSession(provider, { signal } = {}) {
   if (name !== "google" && name !== "github") {
     throw new Error("不支持的登录方式");
   }
+  if (refreshPending) await refreshPending.catch(() => {});
   let result;
   if (testTransport) {
     result = await testTransport({ provider: name });
@@ -135,24 +139,31 @@ function wait(ms, signal) {
   });
 }
 
-export async function refreshSession() {
-  let result;
-  if (testTransport) {
-    result = await testTransport({ refresh: true });
-  } else if (isTauri()) {
-    result = await tauriInvoke("refresh_local_session");
-  } else {
-    throw new Error("浏览器预览不持久化登录令牌");
-  }
-  return applySession(result, accountEmail);
+export function restoreSession() {
+  if (!isTauri() || getSession().loggedIn) return Promise.resolve(getSession());
+  return refreshSession();
+}
+
+export function refreshSession() {
+  if (refreshPending) return refreshPending;
+  refreshPending = (async () => {
+    let result;
+    if (testTransport) result = await testTransport({ refresh: true });
+    else if (isTauri()) result = await tauriInvoke("refresh_local_session");
+    else throw new Error("浏览器预览不持久化登录令牌");
+    applySession(result ?? {}, accountEmail);
+    return getSession();
+  })().finally(() => { refreshPending = null; });
+  return refreshPending;
 }
 
 export async function logoutSession() {
+  if (refreshPending) await refreshPending.catch(() => {});
   const token = accessToken;
   accessToken = null;
   accountEmail = null;
   if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
-  if (token && isTauri()) {
+  if (isTauri()) {
     try {
       await tauriInvoke("logout_local_session", { accessToken: token });
     } catch {
