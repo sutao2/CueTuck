@@ -60,7 +60,7 @@
               :disabled="busy"
               @mousedown.prevent
               @click="activate(row, 'default')"
-              @mouseenter="selectedIndex = index"
+              @mousemove="selectedIndex = index"
             >
               <span class="result-icon">{{ rowIcon(row) }}</span>
               <span class="result-copy">
@@ -73,7 +73,7 @@
           <p v-else-if="!searching && !feedback" class="launcher-empty">没有找到相关提示词</p>
           <div v-if="query.trim()" class="quick-actions" aria-label="输入快捷操作">
             <p class="group-title">使用当前输入</p>
-            <button v-for="(action, index) in quickActions" :key="action.action" role="option" :aria-selected="selectedIndex === results.length + index" :id="`launcher-result-${results.length + index}`" type="button" class="result-row" :class="{active: selectedIndex === results.length + index}" :disabled="busy" @click="runQuickAction(action.action)" @mouseenter="selectedIndex = results.length + index">
+            <button v-for="(action, index) in quickActions" :key="action.action" :aria-selected="selectedIndex === results.length + index" :id="`launcher-result-${results.length + index}`" type="button" role="option" tabindex="-1" class="result-row" :class="{active: selectedIndex === results.length + index}" :disabled="busy" @mousedown.prevent @click="runQuickAction(action.action)" @mousemove="selectedIndex = results.length + index">
               <span class="result-icon">{{ action.icon }}</span><span class="row-title">{{ action.title }}</span>
             </button>
           </div>

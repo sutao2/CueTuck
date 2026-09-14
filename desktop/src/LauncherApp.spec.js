@@ -99,6 +99,22 @@ describe("LauncherApp", () => {
     expect(w.get('[data-testid="launcher-chrome"]').classes()).not.toContain("is-collapsed");
   });
 
+  it("keeps keyboard selection when layout puts an action under a stationary pointer", async () => {
+    await createLocalPrompt({ title: "官网生成器", content: "写官网" });
+    const w = mount(LauncherApp);
+    await flushPromises();
+    await w.get("input").setValue("官网");
+    await flushPromises();
+    const rows = w.findAll('[role="option"]');
+    await rows[2].trigger('mouseenter');
+    expect(rows[0].attributes('aria-selected')).toBe('true');
+    await rows[2].trigger('mousemove');
+    expect(rows[2].attributes('aria-selected')).toBe('true');
+    await w.get('input').trigger('keydown', { key: 'ArrowUp' });
+    await rows[2].trigger('mouseenter');
+    expect(rows[1].attributes('aria-selected')).toBe('true');
+  });
+
   it("opens fill step when Enter hits a variable prompt", async () => {
     await createLocalPrompt({ title: "问候", content: "你好 {{姓名}}" });
     const w = mount(LauncherApp);

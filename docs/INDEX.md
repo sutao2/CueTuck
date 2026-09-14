@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-14-full-regression.md](plans/2026-09-14-full-regression.md) | 实施中 | 全面检查产品缺陷 | 全端回归、启动器高亮和下拉边界修复 |
 | [plans/2026-09-14-launcher-copy-utf8.md](plans/2026-09-14-launcher-copy-utf8.md) | 已完成 | Mac 回车关闭却未复制 | 显式 UTF-8 和剪贴板回读确认，中文、emoji、多行实机验收通过 |
 | [plans/2026-09-14-beta13-release.md](plans/2026-09-14-beta13-release.md) | 已发布 | 发布 beta.13 | 双平台同提交构建、全量 CI、签名更新和 7 个公开附件已验 |
 | [plans/2026-09-14-login-nickname.md](plans/2026-09-14-login-nickname.md) | 已实现并安装 | 登录后设置昵称 | 582 项测试通过；邮箱/OAuth 与恢复会话补全昵称，真实填写待用户 |

@@ -23,15 +23,20 @@ const open=ref(false), query=ref(''), active=ref(0), trigger=ref(null), search=r
 const listId=`select-${useId()}`;
 const selected=computed(() => props.options.find(item => item.value === props.modelValue));
 const matches=computed(() => props.options.filter(item => String(item.label).toLocaleLowerCase().includes(query.value.trim().toLocaleLowerCase())));
-const visible=computed(() => matches.value.slice(0,100));
+const visible=computed(() => {
+  const rows=matches.value.slice(0,100);
+  if(!query.value.trim() && selected.value && !rows.includes(selected.value)) rows.splice(99,1,selected.value);
+  return rows;
+});
 watch(query, () => { active.value=0; });
 watch(() => props.disabled, value => { if(value) close(false); });
 async function show() {
   if(props.disabled) return;
-  query.value=''; open.value=true; active.value=Math.max(0,Math.min(99,props.options.findIndex(item => item.value === props.modelValue)));
+  query.value=''; open.value=true; active.value=Math.max(0,visible.value.findIndex(item => item.value === props.modelValue));
   const rect=trigger.value.getBoundingClientRect();
   const below=window.innerHeight-rect.bottom, above=rect.top;
-  position.value={ left:`${Math.max(8, Math.min(rect.left,window.innerWidth-280))}px`, width:`${Math.min(Math.max(rect.width,260),window.innerWidth-16)}px`, maxHeight:`${Math.max(140,Math.min(380,Math.max(below,above)-16))}px`, ...(below >= 280 || below >= above ? {top:`${rect.bottom+6}px`} : {bottom:`${window.innerHeight-rect.top+6}px`}) };
+  const width=Math.min(Math.max(rect.width,260),window.innerWidth-16);
+  position.value={ left:`${Math.max(8, Math.min(rect.left,window.innerWidth-width-8))}px`, width:`${width}px`, maxHeight:`${Math.max(140,Math.min(380,Math.max(below,above)-16))}px`, ...(below >= 280 || below >= above ? {top:`${rect.bottom+6}px`} : {bottom:`${window.innerHeight-rect.top+6}px`}) };
   document.addEventListener('pointerdown', outside); window.addEventListener('resize', resize); document.addEventListener('scroll', scroll, true);
   await nextTick(); search.value?.focus(); scrollActive();
 }

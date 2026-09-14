@@ -380,6 +380,10 @@ mod restore_tests {
     use crate::session::MemoryRefreshStore;
     use std::io::{Read, Write};
 
+    fn client() -> reqwest::Client {
+        reqwest::Client::builder().no_proxy().timeout(Duration::from_secs(5)).build().unwrap()
+    }
+
     fn server(status: u16, body: &'static str) -> (String, std::thread::JoinHandle<()>) {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
@@ -398,7 +402,7 @@ mod restore_tests {
     async fn restore_rotates_credentials_and_returns_only_access() {
         let store = MemoryRefreshStore::default(); store.save_refresh("ref.old").unwrap();
         let (url, handle) = server(200, r#"{"email":"test@example.test","access_token":"acc.new","refresh_token":"ref.new"}"#);
-        let session = refresh_saved_session(&store, &reqwest::Client::new(), &url).await.unwrap().unwrap();
+        let session = refresh_saved_session(&store, &client(), &url).await.unwrap().unwrap();
         handle.join().unwrap();
         assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.new"));
         assert_eq!(session.email, "test@example.test");
@@ -411,7 +415,7 @@ mod restore_tests {
         for (status, body) in [(503, "{}"), (429, "{}"), (200, "{}"), (200, r#"{"email":"x","access_token":"bad","refresh_token":"ref.new"}"#)] {
             let store = MemoryRefreshStore::default(); store.save_refresh("ref.old").unwrap();
             let (url, handle) = server(status, body);
-            assert!(refresh_saved_session(&store, &reqwest::Client::new(), &url).await.is_err());
+            assert!(refresh_saved_session(&store, &client(), &url).await.is_err());
             handle.join().unwrap();
             assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.old"));
         }
@@ -420,12 +424,12 @@ mod restore_tests {
     #[tokio::test]
     async fn restore_clears_only_rejected_credentials_and_skips_empty_store() {
         let store = MemoryRefreshStore::default();
-        assert!(refresh_saved_session(&store, &reqwest::Client::new(), "invalid-url").await.unwrap().is_none());
+        assert!(refresh_saved_session(&store, &client(), "invalid-url").await.unwrap().is_none());
         store.save_refresh("ref.old").unwrap();
-        assert!(refresh_saved_session(&store, &reqwest::Client::new(), "invalid-url").await.is_err());
+        assert!(refresh_saved_session(&store, &client(), "invalid-url").await.is_err());
         assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.old"));
         let (url, handle) = server(401, "{}");
-        assert!(refresh_saved_session(&store, &reqwest::Client::new(), &url).await.unwrap().is_none());
+        assert!(refresh_saved_session(&store, &client(), &url).await.unwrap().is_none());
         handle.join().unwrap(); assert_eq!(store.load_refresh().unwrap(), None);
     }
 }
