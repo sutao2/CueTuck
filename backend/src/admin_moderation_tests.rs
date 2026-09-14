@@ -255,3 +255,32 @@ async fn moderation_quota_is_atomic_and_audit_failure_rolls_back() {
         .unwrap();
     assert_eq!(count, 1);
 }
+
+#[tokio::test]
+async fn admin_usage_exemption_preserves_moderation_and_current_role() {
+    let (state, owner, _) = setup().await;
+    let pg = state.db.as_ref().unwrap();
+    let mut config = policy(0);
+    config["daily_limit"] = json!(1);
+    assert_eq!(request(&state, "PUT", "/v1/admin/moderation", &owner, config).await.0, StatusCode::OK);
+    for role in ["user", "reviewer", "support", "admin", "owner"] {
+        let email = format!("quota-{role}@mod.test");
+        pg.upsert_account(&email, Some("test-password"), role).await.unwrap();
+        let token = state.issue_session(email.clone()).await.unwrap().access_token;
+        for i in 0..2 {
+            // Invalid variable structure must still go to manual review, even for admins.
+            let result = request(&state, "POST", "/v1/publications", &token,
+                post(&format!("{role}-{i}"), &format!("bad }}}} before {{{{ {role}-{i}"))).await;
+            let allowed = i == 0 || matches!(role, "admin" | "owner");
+            assert_eq!(result.0, if allowed { StatusCode::OK } else { StatusCode::TOO_MANY_REQUESTS }, "{role}-{i}");
+            if allowed { assert_eq!(result.1["status"], "pending"); }
+        }
+        if matches!(role, "admin" | "owner") {
+            sqlx::query(&format!("UPDATE {} SET role='user' WHERE email=$1", pg.t("accounts")))
+                .bind(&email).execute(&pg.pool).await.unwrap();
+            assert_eq!(request(&state, "POST", "/v1/publications", &token,
+                post(&format!("{role}-demoted"), "new body")).await.0, StatusCode::TOO_MANY_REQUESTS);
+        }
+    }
+    sqlx::query(&format!("DROP SCHEMA {} CASCADE", pg.schema)).execute(&pg.pool).await.unwrap();
+}

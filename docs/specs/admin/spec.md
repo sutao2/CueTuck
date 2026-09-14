@@ -85,7 +85,7 @@ owner MUST 能重新认证后维护审核 API 密钥、端点、模型标识和�
 
 ### Requirement: 可配置自动审核
 
-owner MUST 能配置自动审核开关、每作者 24 小时投稿限额、低风险自动通过/高风险转人工阈值，以及重复、结构、敏感词、图片和 AI 检查。默认关闭。写入带版本、事务审计，页面不可将加载失败的默认值保存为真实配置。
+owner MUST 能配置自动审核开关、普通作者 24 小时投稿限额（admin / owner 豁免）、低风险自动通过/高风险转人工阈值，以及重复、结构、敏感词、图片和 AI 检查。默认关闭。写入带版本、事务审计，页面不可将加载失败的默认值保存为真实配置。
 
 #### Scenario: 真实初筛和不可用依赖
 
@@ -102,7 +102,7 @@ owner MUST 能配置自动审核开关、每作者 24 小时投稿限额、低�
 
 ### Requirement: 举报与确定性安全规则
 
-owner/admin MUST 能检索举报、分派给有效运营管理员、记录处理理由、驳回或下架结案。写入携带 revision，已结案不能再次处置；下架与案件/历史/审计同事务。用户只能举报在线广场内容，读取自己的状态和结案原因；同人同目标未结案去重、每日最多 20 件。后台不能浏览私有库。
+owner/admin MUST 能检索举报、分派给有效运营管理员、记录处理理由、驳回或下架结案。写入携带 revision，已结案不能再次处置；下架与案件/历史/审计同事务。用户只能举报在线广场内容，读取自己的状态和结案原因；同人同目标未结案去重、普通账号每 24 小时最多 20 件，admin / owner 免次数限制。后台不能浏览私有库。
 
 #### Scenario: 处置冲突与失败
 
@@ -458,3 +458,11 @@ owner MUST 使用当前密码及 revision 配置通知渠道、阈值、每日�
 | 看到邮箱与角色 | `backend` `admin_lists_user_emails_and_roles`；`admin-web` `AdminApp.spec.js` lists emails and roles without password or delete controls |
 | 关闭公开广场 | `backend` `admin_can_close_public_square`；`admin-web` `AdminApp.spec.js` saves the anonymous square setting |
 | 重启后设置仍在 | `backend` `publication_favorite_and_settings_survive_postgres` |
+
+### Requirement: 管理员个人使用次数豁免
+
+投稿与举报的次数豁免 MUST 使用事务内重新验证并锁定的当前账号角色，仅 admin / owner 适用；reviewer / support 按普通账号执行。角色降级立即恢复限额，不扩展后台权限，不跳过内容审核、目标可见性、去重或审计。翻译额度规则见[翻译规格](../translation/spec.md)。
+
+- Given admin / owner 已达到个人投稿或举报次数 When 再次提交有效内容 Then 仍可提交，按原有审核和审计规则处理。
+- Given 普通角色达到次数 When 提交新内容 Then 返回 429，不落新记录。
+- Given 管理员被降级且已超过额度 When 使用原会话提交 Then 按普通角色拒绝；已提交记录不删除。

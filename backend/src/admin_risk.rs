@@ -23,12 +23,11 @@ pub(crate) async fn actor_lock(
     actor: &str,
     token: &str,
     admin: bool,
-) -> Result<(), StatusCode> {
+) -> Result<String, StatusCode> {
     let role:Option<String> = sqlx::query_scalar(&format!("SELECT role FROM {} a WHERE email=$1 AND NOT disabled AND EXISTS(SELECT 1 FROM {} WHERE email=a.email AND token=$2) FOR UPDATE",pg.t("accounts"),pg.t("access_tokens"))).bind(actor).bind(token).fetch_optional(&mut **tx).await.map_err(db_error)?;
-    match role.as_deref() {
+    match role {
         None => Err(StatusCode::UNAUTHORIZED),
-        Some("owner" | "admin") => Ok(()),
-        Some(_) if !admin => Ok(()),
+        Some(role) if !admin || matches!(role.as_str(), "owner" | "admin") => Ok(role),
         _ => Err(StatusCode::FORBIDDEN),
     }
 }
@@ -234,7 +233,7 @@ pub async fn create(
     }
     let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let mut tx = pg.pool.begin().await.map_err(db_error)?;
-    actor_lock(
+    let role = actor_lock(
         pg,
         &mut tx,
         &actor,
@@ -265,7 +264,7 @@ pub async fn create(
     .fetch_one(&mut *tx)
     .await
     .map_err(db_error)?;
-    if count >= 20 {
+    if count >= 20 && !matches!(role.as_str(), "admin" | "owner") {
         return Err(StatusCode::TOO_MANY_REQUESTS);
     }
     let id = uuid::Uuid::new_v4().to_string();

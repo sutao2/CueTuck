@@ -287,3 +287,34 @@ async fn rule_versions_matching_and_audit_rollback() {
         .1;
     assert_eq!(reports["items"][0]["revision"], 0);
 }
+
+#[tokio::test]
+async fn admin_usage_exemption_preserves_report_dedup_and_current_role() {
+    let (state, _, _, _) = fixture().await;
+    let pg = state.db.as_ref().unwrap();
+    for role in ["user", "reviewer", "support", "admin", "owner"] {
+        let email = format!("quota-{role}@risk.test");
+        pg.upsert_account(&email, Some("test-password"), role).await.unwrap();
+        let token = state.issue_session(email.clone()).await.unwrap().access_token;
+        sqlx::query(&format!("INSERT INTO {}(id,target_id,reporter,category,reason,status) SELECT $1||n,'old',$2,'other','previous','dismissed' FROM generate_series(1,20) n", pg.t("reports")))
+            .bind(role).bind(&email).execute(&pg.pool).await.unwrap();
+        let input = json!({"target_id":"risk-item","category":"other","reason":"new report"});
+        let result = request(&state, "POST", "/v1/reports", &token, input.clone()).await;
+        let allowed = matches!(role, "admin" | "owner");
+        assert_eq!(result.0, if allowed { StatusCode::OK } else { StatusCode::TOO_MANY_REQUESTS }, "{role}");
+        if allowed {
+            assert_eq!(request(&state, "POST", "/v1/reports", &token, input.clone()).await.1["id"], result.1["id"]);
+            assert_eq!(request(&state, "POST", "/v1/reports", &token,
+                json!({"target_id":"missing","category":"other","reason":"new"})).await.0, StatusCode::NOT_FOUND);
+            sqlx::query(&format!("UPDATE {} SET role='user' WHERE email=$1", pg.t("accounts")))
+                .bind(&email).execute(&pg.pool).await.unwrap();
+            sqlx::query(&format!("UPDATE {} SET status='dismissed' WHERE reporter=$1", pg.t("reports")))
+                .bind(&email).execute(&pg.pool).await.unwrap();
+            assert_eq!(request(&state, "POST", "/v1/reports", &token, input).await.0, StatusCode::TOO_MANY_REQUESTS);
+        }
+        let count: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM {} WHERE reporter=$1", pg.t("reports")))
+            .bind(&email).fetch_one(&pg.pool).await.unwrap();
+        assert_eq!(count, if allowed {21} else {20});
+    }
+    sqlx::query(&format!("DROP SCHEMA {} CASCADE", pg.schema)).execute(&pg.pool).await.unwrap();
+}
