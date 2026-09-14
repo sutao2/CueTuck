@@ -107,8 +107,9 @@ describe("LauncherApp", () => {
     await flushPromises();
     const rows = w.findAll('[role="option"]');
     await rows[2].trigger('mouseenter');
+    await rows[2].trigger('mousemove', { movementX: 0, movementY: 0 });
     expect(rows[0].attributes('aria-selected')).toBe('true');
-    await rows[2].trigger('mousemove');
+    await rows[2].trigger('mousemove', { movementX: 1, movementY: 0 });
     expect(rows[2].attributes('aria-selected')).toBe('true');
     await w.get('input').trigger('keydown', { key: 'ArrowUp' });
     await rows[2].trigger('mouseenter');
