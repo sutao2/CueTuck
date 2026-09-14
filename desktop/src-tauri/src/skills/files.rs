@@ -63,6 +63,11 @@ pub fn no_links(path: &Path) -> Result<()> {
             return Err("目录路径不可包含 .. 或 .".into());
         }
         cursor.push(c);
+        // A Windows prefix (especially \\?\C:) is not a complete root yet.
+        // Inspect it only after RootDir has been appended.
+        if matches!(c, Component::Prefix(_)) {
+            continue;
+        }
         match fs::symlink_metadata(&cursor) {
             Ok(m) if m.file_type().is_symlink() => {
                 #[cfg(target_os = "macos")]
