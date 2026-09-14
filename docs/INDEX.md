@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-14-prompt-translation.md](plans/2026-09-14-prompt-translation.md) | 功能验收，批量运行中 | 实现中英文版本和模型选择 | beta.10 已发布，广场中文队列持续执行；修复翻译 IPC 登录凭据丢失 |
+| [plans/2026-09-14-prompt-translation.md](plans/2026-09-14-prompt-translation.md) | 功能验收，批量运行中 | 实现中英文版本和模型选择 | beta.10 已发布，广场中文队列持续执行；修复翻译 IPC 登录凭据丢失与批量任务误占个人额度 |
 | [specs/translation/spec.md](specs/translation/spec.md) | 现行 | 修改翻译与模型发现 | 草稿获取模型、凭据隔离、语言版本与失败合同 |
 | [plans/2026-09-14-prompt-translation-design.md](plans/2026-09-14-prompt-translation-design.md) | 设计完成 | 广场中文化与按需英文翻译 | 页面原型已检查；原文保留与低价模型方案，未执行线上翻译 |
 | [designs/prompt-translation.html](designs/prompt-translation.html) | 原型 | 预览中英文版本页面 | 可交互示例，不调用模型或修改线上内容 |

@@ -14,6 +14,7 @@ impl Pg{
   sqlx::query(&format!("INSERT INTO {}(id,data) VALUES(true,$1) ON CONFLICT DO NOTHING",self.t("translation_config"))).bind(json!(Config::default())).execute(&self.pool).await?;
   sqlx::query(&format!("CREATE TABLE IF NOT EXISTS {} (item_id TEXT NOT NULL REFERENCES {}(id) ON DELETE CASCADE,target TEXT NOT NULL CHECK(target IN ('zh','en')),status TEXT NOT NULL DEFAULT 'queued',attempts INTEGER NOT NULL DEFAULT 0,claim TEXT,lease_until TIMESTAMPTZ,next_at TIMESTAMPTZ NOT NULL DEFAULT now(),data JSONB,error TEXT,actor TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now(),PRIMARY KEY(item_id,target))",self.t("prompt_translations"),self.t("square_items"))).execute(&self.pool).await?;
   sqlx::query(&format!("CREATE TABLE IF NOT EXISTS {} (day DATE PRIMARY KEY,tokens BIGINT NOT NULL DEFAULT 0)",self.t("translation_usage"))).execute(&self.pool).await?;
+  sqlx::query(&format!("CREATE TABLE IF NOT EXISTS {} (actor TEXT NOT NULL,day DATE NOT NULL,requests INTEGER NOT NULL CHECK(requests BETWEEN 0 AND 20),PRIMARY KEY(actor,day))",self.t("translation_personal_usage"))).execute(&self.pool).await?;
   // Invalidate at the source write, not by reading every full body while browsing.
   sqlx::query(&format!("CREATE OR REPLACE FUNCTION {}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.title IS DISTINCT FROM OLD.title OR NEW.content IS DISTINCT FROM OLD.content OR NEW.members IS DISTINCT FROM OLD.members THEN DELETE FROM {} WHERE item_id=OLD.id; END IF; RETURN NEW; END $$",self.t("invalidate_translation"),self.t("prompt_translations"))).execute(&self.pool).await?;
   sqlx::query(&format!("DROP TRIGGER IF EXISTS invalidate_translation ON {}",self.t("square_items"))).execute(&self.pool).await?;
@@ -92,8 +93,12 @@ pub async fn enqueue(State(state):State<AppState>,headers:HeaderMap,Path((id,tar
  if !pg.translation_config().await?.enabled{return Err(StatusCode::SERVICE_UNAVAILABLE)}
  let mut tx=pg.pool.begin().await.map_err(db_error)?;
  sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))").bind(format!("{}:translation-user:{actor}",pg.schema)).execute(&mut *tx).await.map_err(db_error)?;
- let count:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {} WHERE actor=$1 AND created_at>now()-interval '1 day'",pg.t("prompt_translations"))).bind(&actor).fetch_one(&mut *tx).await.map_err(db_error)?;if count>=20{return Err(StatusCode::TOO_MANY_REQUESTS)}
- sqlx::query(&format!("INSERT INTO {}(item_id,target,actor) VALUES($1,$2,$3) ON CONFLICT(item_id,target) DO UPDATE SET status='queued',attempts=0,error=NULL,next_at=now() WHERE {}.status='failed'",pg.t("prompt_translations"),pg.t("prompt_translations"))).bind(&id).bind(&target).bind(&actor).execute(&mut *tx).await.map_err(db_error)?;tx.commit().await.map_err(db_error)?;
+ let changed=sqlx::query(&format!("INSERT INTO {}(item_id,target,actor) VALUES($1,$2,$3) ON CONFLICT(item_id,target) DO UPDATE SET status='queued',attempts=0,error=NULL,next_at=now() WHERE {}.status='failed'",pg.t("prompt_translations"),pg.t("prompt_translations"))).bind(&id).bind(&target).bind(&actor).execute(&mut *tx).await.map_err(db_error)?.rows_affected();
+ if changed>0 {
+  let allowed=sqlx::query(&format!("INSERT INTO {}(actor,day,requests) VALUES($1,CURRENT_DATE,1) ON CONFLICT(actor,day) DO UPDATE SET requests={}.requests+1 WHERE {}.requests<20",pg.t("translation_personal_usage"),pg.t("translation_personal_usage"),pg.t("translation_personal_usage"))).bind(&actor).execute(&mut *tx).await.map_err(db_error)?.rows_affected();
+  if allowed==0{return Err(StatusCode::TOO_MANY_REQUESTS)}
+ }
+ tx.commit().await.map_err(db_error)?;
  Ok(Json(pg.translation_versions(&id).await?))
 }
 impl AppState{pub fn start_translation_worker(&self){let state=self.clone();tokio::spawn(async move{loop{let _=run_one(&state).await;tokio::time::sleep(std::time::Duration::from_secs(1)).await;}});}}
@@ -132,6 +137,22 @@ async fn run_one(state:&AppState)->Result<(),StatusCode>{
 }
 #[cfg(test)]mod tests{
  use super::*;use crate::admin_security_tests::{state,request};
+ #[tokio::test]async fn admin_batch_does_not_consume_personal_translation_quota(){
+  let state=state().await;let pg=state.db.as_ref().unwrap();
+  pg.upsert_account("quota-owner@example.com",Some("test-password"),"owner").await.unwrap();
+  let session=state.issue_session("quota-owner@example.com".into()).await.unwrap();
+  sqlx::query(&format!("INSERT INTO {}(id,title,kind,content,visibility) SELECT 'quota-'||n,'Sample','prompt','中文正文','online' FROM generate_series(1,21) n",pg.t("square_items"))).execute(&pg.pool).await.unwrap();
+  sqlx::query(&format!("UPDATE {} SET data=jsonb_set(data,'{{enabled}}','true') WHERE id",pg.t("translation_config"))).execute(&pg.pool).await.unwrap();
+  assert_eq!(request(&state,"POST","/v1/admin/translation/actions",&session.access_token,json!({"action":"queue"})).await.0,StatusCode::OK);
+  let code=request(&state,"POST","/v1/square/items/quota-1/translations/en",&session.access_token,json!(null)).await.0;
+  assert_eq!(code,StatusCode::OK,"Batch work must not exhaust the administrator's personal translation quota");
+  let used:i32=sqlx::query_scalar(&format!("SELECT requests FROM {} WHERE actor='quota-owner@example.com' AND day=CURRENT_DATE",pg.t("translation_personal_usage"))).fetch_one(&pg.pool).await.unwrap();assert_eq!(used,1);
+  sqlx::query(&format!("UPDATE {} SET requests=20",pg.t("translation_personal_usage"))).execute(&pg.pool).await.unwrap();
+  assert_eq!(request(&state,"POST","/v1/square/items/quota-1/translations/en",&session.access_token,json!(null)).await.0,StatusCode::OK);
+  assert_eq!(request(&state,"POST","/v1/square/items/quota-2/translations/en",&session.access_token,json!(null)).await.0,StatusCode::TOO_MANY_REQUESTS);
+  assert!(pg.translation_versions("quota-2").await.unwrap()["en"].is_null());
+  sqlx::query(&format!("DROP SCHEMA {} CASCADE",pg.schema)).execute(&pg.pool).await.unwrap();
+ }
  #[tokio::test]async fn versions_are_private_until_online_and_invalidated_by_source_changes(){
   let state=state().await;let pg=state.db.as_ref().unwrap();
   sqlx::query(&format!("INSERT INTO {}(id,title,kind,content,visibility) VALUES('translate-test','Hello','prompt','Hello {{name}}','online')",pg.t("square_items"))).execute(&pg.pool).await.unwrap();
