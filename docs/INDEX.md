@@ -6,6 +6,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-14-prompt-translation-design.md](plans/2026-09-14-prompt-translation-design.md) | 设计完成 | 广场中文化与按需英文翻译 | 页面原型已检查；原文保留与低价模型方案，未执行线上翻译 |
+| [designs/prompt-translation.html](designs/prompt-translation.html) | 原型 | 预览中英文版本页面 | 可交互示例，不调用模型或修改线上内容 |
 | [plans/2026-09-14-windows-skill-detail.md](plans/2026-09-14-windows-skill-detail.md) | 验收 | Windows 打开 Skill 详情报 os error 1 | Windows 原版复现、修复回归转绿；beta.9 双平台发布与更新资产已验 |
 | [plans/2026-09-13-skills-release.md](plans/2026-09-13-skills-release.md) | 验收 | Skills 双平台发版 | beta.8 双平台已公开，全量 CI、签名/哈希与匿名更新清单已验 |
 | [plans/2026-09-13-viewer-launcher-polish.md](plans/2026-09-13-viewer-launcher-polish.md) | 验收 | 精简启动器、图片查看器、紧凑卡片与新图标 | beta.7 双平台已发布，524 项前端、Mac 实机与 Windows 安装测试、发布资产已验 |
