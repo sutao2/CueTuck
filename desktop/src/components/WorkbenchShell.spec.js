@@ -217,6 +217,7 @@ describe("WorkbenchShell", () => {
   beforeEach(() => {
     resetMemoryLibrary();
     resetMemorySession();
+    setMeTransport({ get: async () => ({ display_name: '测试用户', bio: '' }) });
     resetLibrarySync();
     resetUpdates();
     resetBilling();
