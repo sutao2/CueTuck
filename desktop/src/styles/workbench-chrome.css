@@ -338,8 +338,8 @@ body.theme-dark .primary-button { color: #202020; }
 .filter-controls .language-filter { width: 104px; }
 .filter-controls .model-filter { width: 146px; }
 .session-restore-error { display: flex; align-items: center; gap: 8px; padding: 8px 16px; color: var(--muted); font-size: 11px; }
-.session-restore-error span { min-width: 0; }
-.session-restore-error button { flex-shrink: 0; }
+.session-restore-error span { flex: 1; min-width: 0; line-height: 1.5; }
+.session-restore-error button { width: auto; flex-shrink: 0; white-space: nowrap; }
 .filter-tabs button {
   min-width: 48px;
   height: 32px;
