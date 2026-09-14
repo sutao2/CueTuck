@@ -6,6 +6,13 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [i18n/README.en.md](i18n/README.en.md) | 现行 | 阅读 English 项目介绍 | README 译本，共享真实截图与语言导航 |
+| [i18n/README.ja.md](i18n/README.ja.md) | 现行 | 阅读 日本語 项目介绍 | README 译本，共享真实截图与语言导航 |
+| [i18n/README.ko.md](i18n/README.ko.md) | 现行 | 阅读 한국어 项目介绍 | README 译本，共享真实截图与语言导航 |
+| [i18n/README.es.md](i18n/README.es.md) | 现行 | 阅读 Español 项目介绍 | README 译本，共享真实截图与语言导航 |
+| [i18n/README.fr.md](i18n/README.fr.md) | 现行 | 阅读 Français 项目介绍 | README 译本，共享真实截图与语言导航 |
+| [i18n/README.de.md](i18n/README.de.md) | 现行 | 阅读 Deutsch 项目介绍 | README 译本，共享真实截图与语言导航 |
+| [plans/2026-09-14-readme.md](plans/2026-09-14-readme.md) | 已验收 | 改写项目首页与译本 | 中文默认、七语言导航、四张实际截图和链接/GFM 验证 |
 | [plans/2026-09-14-full-regression.md](plans/2026-09-14-full-regression.md) | 已验收 | 全面检查产品缺陷 | 三处交互修复；全端回归、远程 CI 与 Mac 安装实测通过，边界见记录 |
 | [plans/2026-09-14-launcher-copy-utf8.md](plans/2026-09-14-launcher-copy-utf8.md) | 已完成 | Mac 回车关闭却未复制 | 显式 UTF-8 和剪贴板回读确认，中文、emoji、多行实机验收通过 |
 | [plans/2026-09-14-beta13-release.md](plans/2026-09-14-beta13-release.md) | 已发布 | 发布 beta.13 | 双平台同提交构建、全量 CI、签名更新和 7 个公开附件已验 |
