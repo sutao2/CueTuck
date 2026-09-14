@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed, 'sidebar-resizing': sidebarDrag !== null }" :style="{ '--sidebar-width': `${sidebarWidth}px` }">
+  <div class="app-shell" :inert="session.loggedIn && !profileReady ? '' : undefined" :class="{ 'sidebar-collapsed': sidebarCollapsed, 'sidebar-resizing': sidebarDrag !== null }" :style="{ '--sidebar-width': `${sidebarWidth}px` }">
     <header
       v-show="!settingsOpen || Boolean(loginReason)"
       :inert="globalSearchOpen ? '' : undefined"
@@ -626,6 +626,7 @@
         <AppIcon name="search" /> {{ t("launcher") }} <kbd>{{ shortcutLabel }}</kbd>
       </button>
     </footer>
+    <NicknameSetup v-if="session.loggedIn && !profileReady" :key="session.email" @ready="finishProfile" @logout="cancelProfile" />
   </div>
 </template>
 
@@ -642,6 +643,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
+import NicknameSetup from "./NicknameSetup.vue";
 import SettingsModal from "./SettingsModal.vue";
 import { updateState, startUpdateChecks } from "../platform/updates.js";
 let stopUpdateChecks;
@@ -792,6 +794,7 @@ onUnmounted(() => {
 });
 
 function handleWorkbenchShortcut(event) {
+  if (session.value.loggedIn && !profileReady.value) return;
   if (batchBusy.value || skillsBusy.value) return;
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
   if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
@@ -866,6 +869,8 @@ const newCategoryName = ref("");
 const categoryError = ref("");
 const theme = ref("light");
 const session = ref(getSession());
+const profileReady = ref(false);
+watch(() => session.value.email, () => { profileReady.value = false; }, { flush: 'sync' });
 const sessionRestoring = ref(false), sessionRestoreError = ref('');
 async function restoreSavedSession() {
   if (sessionRestoring.value) return;
@@ -1450,6 +1455,17 @@ async function startPublish() {
 async function finishLogin() {
   session.value = getSession();
   sessionRestoreError.value = "";
+  profileReady.value = false;
+}
+
+async function cancelProfile() {
+  await logoutFromSettings();
+  closeLoginPage();
+}
+
+async function finishProfile() {
+  profileReady.value = true;
+  if (!loginReason.value) return;
   loginReason.value = "";
   await refreshFavorites();
   if (space.value === 'square') await loadSquare();
