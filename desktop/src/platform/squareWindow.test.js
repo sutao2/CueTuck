@@ -20,3 +20,8 @@ it('handles empty data and clamps to the final incomplete row', () => {
   const rows = buildRows(Array.from({ length: 49 }, () => ({})), 3, false, 14);
   expect(visibleRange(rows, rows.at(-1).top, 720, 3, 49).end).toBe(49);
 });
+
+it('reserves image and attachment space for published covers before they load', () => {
+  expect(buildRows([{preview_asset:{id:"image"}}],1,false,14)[0].height).toBe(434);
+  expect(buildRows([{preview_asset:{id:"image"}}],1,true,14)[0].height).toBe(116);
+});

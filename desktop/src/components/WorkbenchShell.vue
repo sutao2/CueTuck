@@ -289,6 +289,7 @@
               @contextmenu.prevent="openContextMenu($event, item)"
             >
               <img decoding="async" v-if="space === 'square' && referenceImages(item).length && !failedReferenceImages[item.id]" class="square-reference-cover" :src="referenceImages(item)[0]" :alt="item.title" loading="lazy" referrerpolicy="no-referrer" @error="failedReferenceImages[item.id] = true">
+              <PublishedImage v-if="space === 'square' && item.preview_asset && !referenceImages(item).length" class="square-reference-cover" :item-id="item.id" :file="item.preview_asset" :title="item.title" />
               <LocalPromptCover v-if="space === 'local' && item.kind === 'prompt' && item.image_count" :prompt-id="item.id" :title="item.title" :revision="item.updated_at" />
               <div
                 v-if="item.kind === 'collection' && coverPreview(item).length"
@@ -499,7 +500,12 @@
             <p v-if="publishAssetsLoading" role="status">正在读取附件…</p>
             <p v-else-if="publishAssetsError" role="alert">{{ publishAssetsError }} <button type="button" @click="loadPublishAssets">重试</button></p>
             <p v-else-if="!publishAssets.length" class="use-hint">所选内容没有附件。</p>
-            <label v-for="asset in publishAssets" :key="asset.id" class="publication-file"><input v-model="publishAssetIds" type="checkbox" :value="asset.id" data-testid="publish-asset"><span>{{ asset.name }}<small v-if="asset.memberTitle">所属提示词：{{ asset.memberTitle }}</small><small>{{ formatBytes(assetSize(asset)) }} · {{ asset.mime }}</small></span></label>
+            <div v-if="publishAssets.some(asset => asset.mime.startsWith('image/'))" class="publication-image-summary">
+              <span>已选择 {{ publishAssets.filter(asset => asset.mime.startsWith('image/') && publishAssetIds.includes(asset.id)).length }} 张图片</span>
+              <button type="button" class="button ghost-button" data-testid="select-publish-images" @click="publishAssetIds = [...new Set([...publishAssetIds, ...publishAssets.filter(asset => asset.mime.startsWith('image/')).map(asset => asset.id)])]">选择全部图片</button>
+              <p v-if="!publishAssets.some(asset => asset.mime.startsWith('image/') && publishAssetIds.includes(asset.id))" role="status">尚未选择图片，本次发布不会包含本地图片。</p>
+            </div>
+            <label v-for="asset in publishAssets" :key="asset.id" class="publication-file"><input v-model="publishAssetIds" type="checkbox" :value="asset.id" data-testid="publish-asset"><img v-if="asset.mime.startsWith('image/')" class="publication-image-preview" :src="assetUrl(asset)" :alt="asset.name" loading="lazy"><span>{{ asset.name }}<small v-if="asset.memberTitle">所属提示词：{{ asset.memberTitle }}</small><small>{{ formatBytes(assetSize(asset)) }} · {{ asset.mime }}</small></span></label>
           </fieldset>
         </div>
         <footer class="modal-footer">
@@ -628,7 +634,7 @@ import SearchableSelect from "./SearchableSelect.vue";
 import { formatMetric } from '../platform/contentMetrics.js';
 import AppIcon from "./AppIcon.vue";
 import GlobalSearch from "./GlobalSearch.vue";
-import { listPromptAssets, assetSize, formatBytes } from '../platform/assets.js';
+import { listPromptAssets, assetSize, formatBytes, assetUrl } from '../platform/assets.js';
 import { uploadPrivateAsset } from '../platform/privateMedia.js';
 import { vDialogFocus } from "../lib/dialogFocus.js";
 import { vPageFocus } from "../lib/pageFocus.js";
@@ -658,6 +664,7 @@ import SkillsPage from './SkillsPage.vue';
 import SiteNotice from '../../../shared/SiteNotice.vue';
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
 import { parseCoverUrls } from "../lib/cover.js";
+import PublishedImage from "./PublishedImage.vue";
 import { referenceImages } from "../lib/squareReference.js";
 import LocalPromptCover from './LocalPromptCover.vue';
 const failedReferenceImages = ref({});
@@ -2110,6 +2117,9 @@ onMounted(async () => {
 .title-tool { white-space: nowrap; }
 .browse-pagination { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 24px 0; color: var(--muted); font-size: 12px; }
 .publication-files { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 20px 0; }
+.publication-image-preview { width: 80px; height: 60px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+.publication-image-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.publication-image-summary p { width: 100%; margin: 0; color: var(--muted); font-size: 12px; }
 .publication-files legend { font-size: 13px; font-weight: 600; padding: 0 6px; }
 .publication-file { display: flex; gap: 12px; align-items: center; padding: 12px 0; }
 .publication-file input { width: 16px; height: 16px; flex: none; }

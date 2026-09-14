@@ -50,9 +50,12 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         let page_sql = format!("SELECT jsonb_build_object('id',s.id,'title',left({title},160),'kind',s.kind,
             'excerpt',left({excerpt},240),'content_language',CASE WHEN tr.status='ready' THEN 'zh' ELSE 'original' END,'model',s.model,'category_id',s.category_id,'member_count',s.member_count,
             'is_favorite',{favorite},'download_count',s.download_count,
+            'preview_asset',(SELECT a FROM jsonb_array_elements(COALESCE(p.asset_refs,'[]'::jsonb)) a WHERE a->>'mime' IN ('image/png','image/jpeg','image/gif','image/webp') LIMIT 1),
+            'image_count',(SELECT count(*) FROM jsonb_array_elements(COALESCE(p.asset_refs,'[]'::jsonb)) a WHERE a->>'mime' IN ('image/png','image/jpeg','image/gif','image/webp')),
+            'asset_count',jsonb_array_length(COALESCE(p.asset_refs,'[]'::jsonb)),
             'favorite_count',(SELECT count(*) FROM {} f WHERE f.item_id=s.id),'reference',CASE WHEN jsonb_typeof(s.reference->'images'->0)='string'
             THEN jsonb_build_object('images',jsonb_build_array(left(s.reference->'images'->>0,2048))) ELSE NULL END)
-            FROM {} s {translated_join} WHERE {filter} ORDER BY {order} LIMIT $6 OFFSET $7", pg.t("favorites"), pg.t("square_items"));
+            FROM {} s {translated_join} LEFT JOIN {} p ON p.id=s.id AND p.status='approved' WHERE {filter} ORDER BY {order} LIMIT $6 OFFSET $7", pg.t("favorites"), pg.t("square_items"), pg.t("publications"));
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
             let mut tx = pg.pool.begin().await?;
             sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY").execute(&mut *tx).await?;
