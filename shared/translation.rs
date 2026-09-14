@@ -58,7 +58,26 @@ pub fn parse(value:Value)->Result<Output,String>{
     if choice["finish_reason"]!="stop"||text.is_empty()||text.len()>131072||!choice["message"]["refusal"].is_null()||!choice["message"]["tool_calls"].is_null(){return Err("模型未返回完整译文，原文已保留".into());}
     Ok(Output{text:text.into(),input_tokens:value["usage"]["prompt_tokens"].as_u64().unwrap_or(0),output_tokens:value["usage"]["completion_tokens"].as_u64().unwrap_or(0),usage_complete:value["usage"]["prompt_tokens"].as_u64().is_some()&&value["usage"]["completion_tokens"].as_u64().is_some()})
 }
+// Pace every MT call, including JSON fields and fallback spans. Keep the deadline
+// outside the request future so cancellation cannot immediately release a burst.
+fn mt_delay(result:&Result<Output,String>)->std::time::Duration {
+    let millis=match result {
+        Ok(value) if value.usage_complete => value.input_tokens.saturating_add(value.output_tokens).saturating_mul(2).max(1200),
+        _ => 60_000,
+    };
+    std::time::Duration::from_millis(millis)
+}
 async fn send(client:&reqwest::Client,endpoint:&str,key:&str,model:&str,text:&str,target:&str)->Result<Output,String>{
+    static NEXT_MT: tokio::sync::Mutex<Option<tokio::time::Instant>> = tokio::sync::Mutex::const_new(None);
+    if !model.starts_with("qwen-mt-"){return send_request(client,endpoint,key,model,text,target).await}
+    let mut next=NEXT_MT.lock().await;
+    if let Some(deadline)=*next {tokio::time::sleep_until(deadline).await;}
+    *next=Some(tokio::time::Instant::now()+std::time::Duration::from_secs(60));
+    let result=send_request(client,endpoint,key,model,text,target).await;
+    *next=Some(tokio::time::Instant::now()+mt_delay(&result));
+    result
+}
+async fn send_request(client:&reqwest::Client,endpoint:&str,key:&str,model:&str,text:&str,target:&str)->Result<Output,String>{
     let mut body=request(model,text,target)?;
     if !model.starts_with("qwen-mt-") && url::Url::parse(endpoint).ok().and_then(|u|u.host_str().map(str::to_owned)).is_some_and(|h| h=="dashscope.aliyuncs.com"||h.ends_with(".aliyuncs.com")){body["enable_thinking"]=json!(false);}
     let mut response=client.post(endpoint).bearer_auth(key).json(&body).send().await.map_err(|_|"翻译连接失败或超时")?;
@@ -146,6 +165,14 @@ async fn translate_span(client:&reqwest::Client,endpoint:&str,key:&str,model:&st
 }
 #[cfg(test)]mod tests{
  use super::*;
+ #[test]fn mt_pacing_accounts_for_usage_and_failed_requests(){
+   let output=|input,output,complete|Ok(Output{text:"ok".into(),input_tokens:input,output_tokens:output,usage_complete:complete});
+   assert_eq!(mt_delay(&output(120,33,true)).as_millis(),1200);
+   assert_eq!(mt_delay(&output(3000,2000,true)).as_secs(),10);
+   assert_eq!(mt_delay(&output(0,0,false)).as_secs(),60);
+   assert_eq!(mt_delay(&Err("HTTP 429".into())).as_secs(),60);
+ }
+
  #[test]fn protects_templates_code_urls_and_parameters(){let src="Translate {{topic}} {argument name=\"name\" default=\"Alice\"} ${lang} {style} `npm run dev` https://example.com/path --ar 3:4\n```js\nconst x = 1;\n```";let p=protect(src);assert!(!p.text.contains("{{topic}}"));assert_eq!(p.restore(&p.text).unwrap(),src);assert!(p.restore(&p.text.replace("KEEP0END","KEEP9END")).is_err());assert!(p.restore(&format!("{} {{{{added}}}}",p.text)).is_err());}
  #[test]fn validates_complete_output_and_uses_translation_api(){assert!(request("qwen-mt-flash","hello","zh").unwrap().get("translation_options").is_some());assert!(request("other","hello","fr").is_err());assert!(parse(json!({"choices":[{"finish_reason":"length","message":{"content":"partial"}}]})).is_err());let long="你好，世界。\u{3000}".repeat(3000);let p=protect(&long);assert_eq!(chunks(&p.text).join(""),p.text);assert!(chunks(&p.text).iter().all(|s|s.len()<=6000));}
  #[test]fn accepts_chinese_punctuation_adjacent_to_protected_url(){let src="Read https://example.com/source .";let p=protect(src);let marker=&p.tokens[0].0;let translated=p.restore(&format!("阅读{marker}。" )).unwrap();assert_eq!(translated,"阅读https://example.com/source。");validate_pair(src,&translated).unwrap();assert!(validate_pair(src,"阅读https://other.example/。").is_err());}
