@@ -74,9 +74,29 @@ describe("WorkbenchShell", () => {
     expect(count('测试大分类')).toBe('105');
     fail = true;
     await w.get('[data-sort="最新"]').trigger('click'); await flushPromises();
-    expect(count('测试大分类')).toBe('—');
+    expect(count('测试大分类')).toBe('105');
     await w.get('[data-space="local"]').trigger('click'); await flushPromises();
     expect(count('全部提示词')).toBe('0');
+    w.unmount();
+  });
+  it('keeps global counts visible during category requests and sends only the selected category page', async () => {
+    setCatalogTransport(async () => ({ categories: [{ id: 'a', name: '分类甲', parent_id: null }, { id: 'b', name: '分类乙', parent_id: null }], models: [] }));
+    let finish;
+    const transport = vi.fn(({ categoryId }) => categoryId ? new Promise(resolve => { finish = resolve; }) : Promise.resolve({ items: [], total: 120, next_offset: null, category_counts: { a: 100, b: 20 }, category_total: 120 }));
+    setSquarePageTransport(transport);
+    const w = mount(WorkbenchShell); await flushPromises();
+    await w.get('[data-space="square"]').trigger('click'); await flushPromises();
+    const category = name => w.findAll('.category-tree .tree-row').find(row => row.text().includes(name));
+    await category('分类乙').trigger('click'); await flushPromises();
+    expect(category('全部提示词').get('.tree-count').text()).toBe('120');
+    expect(category('分类甲').get('.tree-count').text()).toBe('100');
+    expect(category('分类乙').get('.tree-count').text()).toBe('20');
+    expect(transport.mock.calls.at(-1)[0]).toMatchObject({ categoryId: 'b', offset: 0 });
+    finish({ items: [{ id: 'b1', title: '乙的提示词', kind: 'prompt', category_id: 'b' }], total: 20, next_offset: null });
+    await flushPromises();
+    expect(w.get('.result-count').text()).toContain('20');
+    expect(category('全部提示词').get('.tree-count').text()).toBe('120');
+    expect(transport).toHaveBeenCalledTimes(2);
     w.unmount();
   });
   it('loads bounded pages while keeping DOM windowed and resets after filtering', async () => {
