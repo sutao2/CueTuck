@@ -42,11 +42,11 @@
             <article v-for="(member, index) in item.members" :key="index" data-testid="square-detail-member">
               <h3>{{ member.title }}</h3>
               <p v-if="member.model">{{ member.model }}</p>
-              <PromptLanguage :text="member.content" :square-id="item.id" :member-index="index" default-language="zh" @change="memberTranslations[index] = $event" /><pre class="square-body">{{ memberTranslations[index] || member.content }}</pre>
+              <PromptLanguage :text="member.content" :square-id="item.id" :initial-versions="item.translations || {}" :member-index="index" default-language="zh" @change="memberTranslations[index] = $event" /><pre class="square-body">{{ memberTranslations[index] || member.content }}</pre>
               <PublishedAttachments :item-id="item.id" :references="(item.asset_refs || []).filter(file => member.asset_ids?.includes(file.id))" />
             </article>
           </template>
-          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" default-language="zh" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || '还没有正文' }}</pre></template>
+          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" :initial-versions="item.translations || {}" default-language="zh" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || '还没有正文' }}</pre></template>
           <PublishedAttachments v-if="item.kind !== 'collection'" :item-id="item.id" :references="item.asset_refs || []" />
         </template>
         <p v-if="note" role="status">{{ note }}</p>
