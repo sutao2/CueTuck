@@ -1545,7 +1545,7 @@ async function loadSquare(refreshCatalog = false) {
   squareController = new AbortController();
   const signal = squareController.signal;
   squareItems.value = [];
-  squareCategoryCounts.value = null; squareCategoryTotal.value = null;
+  // Global category totals remain valid while a different filtered page loads.
   squareTotal.value = 0; squareNextOffset.value = null;
   squareMoreLoading.value = false; squareMoreError.value = false;
   failedReferenceImages.value = {};
