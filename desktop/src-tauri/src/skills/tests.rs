@@ -23,6 +23,26 @@ fn root(path: &Path) -> Root {
     }
 }
 #[test]
+fn opens_scanned_skill_details_with_canonical_unicode_paths() {
+    let t = tempfile::tempdir().unwrap();
+    let dir = t.path().join("用户 Skills");
+    let path = dir.join("插件 缓存/sample");
+    skill(&path, "Detail content");
+    for readonly in [false, true] {
+        let mut r = root(&dir);
+        r.readonly = readonly;
+        let roots = vec![r];
+        let registry = Registry::default();
+        let scan = local::scan(&roots, &registry);
+        assert_eq!(scan.skills.len(), 1, "{:?}", scan.warnings);
+        let detail = local::detail(&roots, &registry, &scan.skills[0].path).unwrap();
+        assert!(detail.body.contains("Detail content"));
+        assert_eq!(detail.files.len(), 2);
+        let canonical = path.canonicalize().unwrap();
+        assert_eq!(files::package(&canonical).unwrap().digest, detail.digest);
+    }
+}
+#[test]
 fn parses_yaml_and_copies_complete_package_without_execution() {
     let t = tempfile::tempdir().unwrap();
     let src = t.path().join("source");
