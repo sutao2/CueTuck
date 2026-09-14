@@ -1,3 +1,6 @@
+#[path = "../../shared/translation.rs"]
+mod prompt_translation;
+mod translation;
 mod admin_operations;
 mod admin_catalog_migration;
 mod oauth_verification;
@@ -199,6 +202,8 @@ pub struct SquareContentResponse {
     pub model: Option<String>,
     pub kind: String,
     pub members: Vec<PublishedPrompt>,
+    #[serde(default)]
+    translations: serde_json::Value,
 }
 
 #[derive(Deserialize)]
@@ -436,6 +441,11 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/admin/ai/config", get(admin_ai::get).put(admin_ai::save))
         .route("/v1/admin/ai/history", get(admin_ai::history))
         .route("/v1/admin/ai/test", post(admin_ai::test))
+        .route("/v1/admin/ai/models/discover", post(translation::discover))
+        .route("/v1/admin/translation", get(translation::get).put(translation::save))
+        .route("/v1/admin/translation/actions", post(translation::action))
+        .route("/v1/square/items/:id/translations", get(translation::versions))
+        .route("/v1/square/items/:id/translations/:target", post(translation::enqueue))
         .route("/v1/admin/ai/jobs", get(ai_jobs::list))
         .route("/v1/admin/ai/jobs/:id/retry", post(ai_jobs::retry))
         .route("/v1/admin/mail/config", get(admin_mail::get).put(admin_mail::save))
@@ -924,6 +934,7 @@ async fn get_square_item_content(
     if !state.square_public().await? { require_user(&state, &headers).await?; }
     let item = state.get_item(&id).await?.ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(SquareContentResponse {
+        translations: if let Some(pg)=&state.db {pg.translation_versions(&id).await?} else {serde_json::json!({})},
         asset_refs: media::public_references(&state, &id).await?,
         reference: item.reference,
         id: item.id,

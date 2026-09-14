@@ -46,7 +46,8 @@ impl AppState {
                 .has_mail_secrets()
                 .await
                 .map_err(|_| "read encrypted mail configuration")?
-            || pg.has_notification_secrets().await.map_err(|_|"read encrypted notification configuration")?;
+            || pg.has_notification_secrets().await.map_err(|_|"read encrypted notification configuration")?
+            || pg.has_translation_secret().await.map_err(|_|"read encrypted translation configuration")?;
         let key_file = std::env::var("PROMPTARK_OAUTH_KEY_FILE")
             .unwrap_or_else(|_| ".promptark/oauth.key".into());
         let key = crate::oauth_admin::load_key(std::path::Path::new(&key_file), existing_oauth)?;

@@ -36,6 +36,7 @@
         <ReportManagement v-if="page === 'reports'" ref="riskForm" @busy-change="securityBusy = $event" />
         <SafetyRules v-if="page === 'rules'" ref="riskForm" @busy-change="securityBusy = $event" />
         <ModerationSettings v-if="page === 'moderation'" ref="riskForm" @busy-change="securityBusy = $event" />
+        <TranslationSettings v-if="page === 'translation'" ref="riskForm" @busy-change="securityBusy = $event" />
         <fieldset v-if="page === 'ai-models' || page === 'ai-skills'" :disabled="aiJobsBusy" style="border:0;padding:0;margin:0;min-width:0"><AiSettings :key="page" ref="riskForm" :mode="page === 'ai-models' ? 'models' : 'skills'" @busy-change="securityBusy = $event" /></fieldset>
         <fieldset v-if="page === 'ai-models'" :disabled="securityBusy" style="border:0;padding:0;margin:0;min-width:0"><AiJobs @busy-change="aiJobsBusy = $event" /></fieldset>
         <MailSettings v-if="page === 'mail'" ref="riskForm" @busy-change="securityBusy = $event" />
@@ -70,6 +71,7 @@ import ReportManagement from './ReportManagement.vue';
 import SafetyRules from './SafetyRules.vue';
 import ModerationSettings from './ModerationSettings.vue';
 import AiSettings from './AiSettings.vue';
+import TranslationSettings from './TranslationSettings.vue';
 import MailSettings from './MailSettings.vue';
 import NotificationSettings from './NotificationSettings.vue';
 import IdentitySettings from './IdentitySettings.vue';
@@ -89,6 +91,7 @@ const pageIcon = computed(() => adminNavGroups.flatMap(group => group.items).fin
 const configurationPages = ['oauth','settings','security','moderation','mail','notifications','identity','ai-skills'];
 titles.reports='举报与风控'; titles.rules='安全规则';
 titles.moderation='自动审核'; descriptions.moderation='设置投稿限额、初筛检查与人工复核边界。';
+titles['translation']='提示词翻译'; descriptions['translation']='中英文版本、模型配置与后台翻译进度。';
 titles['ai-models']='审核模型'; descriptions['ai-models']='加密接口配置、连接测试与真实审核结果。';
 titles['ai-skills']='审核 Skills'; descriptions['ai-skills']='配置版本化审核指令、适用范围和模型路由。';
 titles.mail='邮件服务'; descriptions.mail='配置加密 SMTP，查看投递状态和失败重试。';

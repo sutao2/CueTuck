@@ -109,9 +109,64 @@ pub async fn optimize_launcher_prompt(text: String) -> Result<String, String> {
     let response = client()?.post(format!("{}/chat/completions",config.endpoint)).bearer_auth(&config.api_key).json(&optimization_body(&config,&text)).send().await.map_err(|_| "AI 连接失败或超时，原文已保留")?;
     optimized(bounded(response).await?)
 }
+// Separate cache: private translations are never part of library sync or publication.
+fn translation_cache(dir:&std::path::Path)->Result<rusqlite::Connection,String>{
+    std::fs::create_dir_all(dir).map_err(|_|"无法创建翻译缓存目录")?;
+    let db=rusqlite::Connection::open(dir.join("translations.sqlite")).map_err(|_|"无法打开翻译缓存")?;
+    db.execute_batch("CREATE TABLE IF NOT EXISTS translations (hash TEXT NOT NULL,target TEXT NOT NULL,data TEXT NOT NULL,updated INTEGER NOT NULL,PRIMARY KEY(hash,target));").map_err(|_|"无法初始化翻译缓存")?;
+    Ok(db)
+}
+fn cached_translation(dir:&std::path::Path,text:&str,target:&str)->Result<Option<Value>,String>{
+    use rusqlite::OptionalExtension;
+    let db=translation_cache(dir)?;
+    let data:Option<String>=db.query_row("SELECT data FROM translations WHERE hash=?1 AND target=?2",rusqlite::params![crate::prompt_translation::fingerprint(text),target],|r|r.get(0)).optional().map_err(|_|"读取翻译缓存失败")?;
+    data.map(|s|serde_json::from_str(&s).map_err(|_|"翻译缓存损坏".into())).transpose()
+}
+fn cache_translation(dir:&std::path::Path,text:&str,target:&str,value:&Value)->Result<(),String>{
+    let mut db=translation_cache(dir)?;let tx=db.transaction().map_err(|_|"无法保存译文")?;
+    tx.execute("INSERT INTO translations(hash,target,data,updated) VALUES(?1,?2,?3,unixepoch()) ON CONFLICT(hash,target) DO UPDATE SET data=excluded.data,updated=excluded.updated",rusqlite::params![crate::prompt_translation::fingerprint(text),target,value.to_string()]).map_err(|_|"无法保存译文")?;
+    tx.execute("DELETE FROM translations WHERE rowid NOT IN (SELECT rowid FROM translations ORDER BY updated DESC,rowid DESC LIMIT 500)",[]).map_err(|_|"无法整理翻译缓存")?;
+    tx.commit().map_err(|_|"无法保存译文".into())
+}
+#[tauri::command]
+pub fn cache_downloaded_translation(app:tauri::AppHandle,text:String,target:String,translated:String)->Result<(),String>{
+ use tauri::Manager;
+ crate::prompt_translation::request("", "", &target)?;
+ if text.len()>131072||translated.len()>131072||translated.trim().is_empty(){return Err("下载的译文无效".into())}
+ crate::prompt_translation::validate_pair(&text,&translated)?;
+ cache_translation(&app.path().app_data_dir().map_err(|_|"无法读取本机目录")?,&text,&target,&json!({"text":translated,"target":target,"downloaded":true}))
+}
+#[tauri::command]
+pub fn get_prompt_translation(app:tauri::AppHandle,text:String,target:String)->Result<Option<Value>,String>{
+    use tauri::Manager;
+    crate::prompt_translation::request("", "", &target)?;
+    cached_translation(&app.path().app_data_dir().map_err(|_|"无法读取本机目录")?,&text,&target)
+}
+#[tauri::command]
+pub async fn translate_local_prompt(app:tauri::AppHandle,text:String,target:String)->Result<Value,String>{
+    use tauri::Manager;
+    static LOCK:tokio::sync::Mutex<()>=tokio::sync::Mutex::const_new(());
+    let _lock=LOCK.lock().await;
+    crate::prompt_translation::request("", "", &target)?;
+    let dir=app.path().app_data_dir().map_err(|_|"无法读取本机目录")?;
+    if let Some(value)=cached_translation(&dir,&text,&target)?{return Ok(value)}
+    let config=load()?;validate_endpoint(&config)?;
+    if config.translation_model.is_empty(){return Err("请在设置 → AI 与模型 → 本机模型配置中选择翻译模型".into())}
+    let output=crate::prompt_translation::translate(&client()?,&format!("{}/chat/completions",config.endpoint),&config.api_key,&config.translation_model,&text,&target).await?;
+    let value=json!({"text":output.text,"target":target,"model":config.translation_model});
+    cache_translation(&dir,&text,&target,&value)?;Ok(value)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn translation_cache_survives_restart_and_invalidates_source_changes(){
+        let dir=tempfile::tempdir().unwrap();
+        cache_translation(dir.path(),"hello {name}","zh",&json!({"text":"你好 {name}"})).unwrap();
+        assert_eq!(cached_translation(dir.path(),"hello {name}","zh").unwrap().unwrap()["text"],"你好 {name}");
+        assert!(cached_translation(dir.path(),"hello {other}","zh").unwrap().is_none());
+        assert!(cached_translation(dir.path(),"hello {name}","en").unwrap().is_none());
+    }
     #[test]
     fn model_discovery_does_not_require_model_or_forward_saved_key_to_new_endpoint() {
         let old: Config = serde_json::from_value(json!({"endpoint":"https://example.com/v1","model":"old","api_key":"private"})).unwrap();

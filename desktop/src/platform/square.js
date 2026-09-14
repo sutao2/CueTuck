@@ -34,7 +34,7 @@ export function resetSquare() {
 }
 
 export function setSquarePageTransport(transport) { testPageTransport = transport; }
-export async function listSquarePage({ sort = '推荐', query = '', model = '', categoryId = null, offset = 0, signal } = {}) {
+export async function listSquarePage({ sort = '推荐', query = '', model = '', categoryId = null, offset = 0, signal, contentLanguage = 'zh' } = {}) {
   signal?.throwIfAborted();
   let payload;
   if (testPageTransport) payload = await testPageTransport({ sort, query, model, categoryId, offset, signal });
@@ -48,10 +48,10 @@ export async function listSquarePage({ sort = '推荐', query = '', model = '', 
     const cancel = () => { tauriInvoke('cancel_square_page', { request_id: requestId }).catch(() => {}); };
     signal?.addEventListener('abort', cancel, { once: true });
     try {
-      payload = await tauriInvoke('list_square_page', { sort, query, model, category_id: categoryId, offset, request_id: requestId, access_token: getSession().accessToken || null });
+      payload = await tauriInvoke('list_square_page', { sort, query, model, category_id: categoryId, content_language: contentLanguage, offset, request_id: requestId, access_token: getSession().accessToken || null });
     } finally { signal?.removeEventListener('abort', cancel); }
   } else {
-    const params = new URLSearchParams({ sort, q: query, offset: String(offset), limit: '48' });
+    const params = new URLSearchParams({ sort, q: query, offset: String(offset), limit: '48', content_language: contentLanguage });
     if (model) params.set('model', model);
     if (categoryId) params.set('category_id', categoryId);
     const token = getSession().accessToken;
@@ -209,6 +209,16 @@ async function downloadNewSquareItem(id, onCountUpdated, onProgress) {
       categoryId: localCategory(payload.category_id),
       model: payload.model,
     });
+  }
+  if (isTauri()) {
+    for (const target of ['zh','en']) {
+      const entry=payload.translations?.[target];
+      if (entry?.status !== 'ready' || entry.version?.source?.content !== payload.content) continue;
+      const pairs=payload.kind === 'collection' ? (payload.members || []).map((member,index)=>[member.content,entry.version?.members?.[index]?.content]) : [[payload.content,entry.version?.content]];
+      for (const [text,translated] of pairs) if (typeof text === 'string' && typeof translated === 'string') {
+        try { await tauriInvoke('cache_downloaded_translation',{text,target,translated}); } catch { /* A translation cache failure must not undo a completed original download. */ }
+      }
+    }
   }
   void recordAnonymousDownload(id, onCountUpdated);
   return row;

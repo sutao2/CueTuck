@@ -6,7 +6,8 @@
     </header>
     <div class="create-body">
       <p v-if="prompt.model || prompt.author" class="use-hint">{{ [prompt.model, prompt.author].filter(Boolean).join(' · ') }}</p>
-      <pre class="reading-content">{{ prompt.content || '还没有正文' }}</pre>
+      <PromptLanguage :text="prompt.content" @change="translated = $event" />
+      <pre class="reading-content">{{ translated || '还没有正文' }}</pre>
       <template v-if="prompt.asset_count">
         <h3>参考资料</h3>
         <p v-if="loading" role="status">正在读取附件…</p>
@@ -25,8 +26,10 @@ import { onMounted, ref } from 'vue';
 import { vPageFocus } from '../lib/pageFocus.js';
 import { listPromptAssets } from '../platform/assets.js';
 import AttachmentPanel from './AttachmentPanel.vue';
+import PromptLanguage from './PromptLanguage.vue';
 const props = defineProps({ prompt: { type: Object, required: true } });
 defineEmits(['cancel', 'edit', 'use']);
+const translated = ref('');
 const assets = ref([]), loading = ref(false), error = ref('');
 async function load() {
   loading.value = true; error.value = '';

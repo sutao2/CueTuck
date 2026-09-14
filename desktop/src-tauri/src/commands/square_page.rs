@@ -12,7 +12,7 @@ pub fn cancel_square_page(request_id: String) {
 }
 
 #[tauri::command]
-pub async fn list_square_page(sort: String, query: String, model: String, category_id: Option<String>, offset: u32, request_id: String, access_token: Option<String>) -> Result<serde_json::Value, String> {
+pub async fn list_square_page(sort: String, query: String, model: String, content_language: Option<String>, category_id: Option<String>, offset: u32, request_id: String, access_token: Option<String>) -> Result<serde_json::Value, String> {
     if request_id.len() > 64 || offset > 100_000 { return Err("分页参数无效".into()); }
     let (sender, canceled) = oneshot::channel();
     {
@@ -26,6 +26,7 @@ pub async fn list_square_page(sort: String, query: String, model: String, catego
             let mut request = crate::http::client()?.get(format!("{}/v1/square/browse", crate::api_config::api_base()?))
                 .timeout(Duration::from_secs(10))
                 .query(&[("sort", sort), ("q", query), ("model", model), ("offset", offset.to_string()), ("limit", "48".into())]);
+            if let Some(language) = content_language { request = request.query(&[("content_language", language)]); }
             if let Some(category) = category_id { request = request.query(&[("category_id", category)]); }
             if let Some(token) = access_token { request = request.bearer_auth(token); }
             let mut response = request.send().await.map_err(|_| "广场连接失败".to_string())?;

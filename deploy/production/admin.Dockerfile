@@ -5,6 +5,7 @@ RUN npm ci
 COPY admin-web/ ./
 COPY shared/ /build/shared/
 COPY desktop/src/styles/tokens.css /build/desktop/src/styles/tokens.css
+COPY desktop/src/components/SearchableSelect.vue /build/desktop/src/components/SearchableSelect.vue
 COPY desktop/src/components/AppIcon.vue /build/desktop/src/components/AppIcon.vue
 COPY desktop/src/assets/app-icon.png /build/desktop/src/assets/app-icon.png
 ARG VITE_API_BASE=https://prompt-admin.likh.cn

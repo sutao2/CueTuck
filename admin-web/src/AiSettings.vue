@@ -8,8 +8,8 @@
         <p v-if="!draft.models.length" class="empty-state">尚未配置审核模型。要求 AI 的投稿会进入人工队列。</p>
         <article v-for="(model,index) in draft.models" :key="model.id" class="ai-card">
           <div class="panel-heading"><h3>{{ model.name || '新模型' }}</h3><span class="badge">{{ modelState(model.id) }}</span><button type="button" @click="removeModel(index)">移除</button></div>
-          <div class="ai-fields"><label>显示名称<input v-model="model.name" maxlength="80" required :data-testid="`ai-model-name-${index}`"></label><label>模型标识<input v-model="model.model" maxlength="200" required placeholder="填写提供商的模型 ID"></label>
-            <label class="wide">完整 Chat Completions 地址<input v-model="model.endpoint" type="url" required placeholder="https://…/v1/chat/completions"></label><label>API 密钥<input v-model="secrets[model.id]" type="password" autocomplete="new-password" :placeholder="configuredKeys[model.id] ? '已加密保存，留空保留' : '首次启用必须填写'" maxlength="4096"></label><label>单模型超时（秒）<input v-model.number="model.timeout_seconds" type="number" min="1" max="15" required></label>
+          <div class="ai-fields"><label>显示名称<input v-model="model.name" maxlength="80" required :data-testid="`ai-model-name-${index}`"></label><label>模型<SearchableSelect v-model="model.model" :options="modelOptions(model)" aria-label="审核模型" placeholder="获取模型后选择" /><button type="button" :disabled="discovering === model.id || !model.endpoint" @click="discover(model)">{{ discovering === model.id ? '正在获取…' : '获取模型列表' }}</button></label>
+            <label class="wide">完整 Chat Completions 地址<input v-model="model.endpoint" @input="delete modelLists[model.id]" type="url" required placeholder="https://…/v1/chat/completions"></label><label>API 密钥<input v-model="secrets[model.id]" @input="delete modelLists[model.id]" type="password" autocomplete="new-password" :placeholder="configuredKeys[model.id] ? '已加密保存，留空保留' : '首次启用必须填写'" maxlength="4096"></label><label>单模型超时（秒）<input v-model.number="model.timeout_seconds" type="number" min="1" max="15" required></label>
           </div><div class="ai-checks"><label><input v-model="model.enabled" type="checkbox">启用</label><label><input v-model="model.vision" type="checkbox">允许发送稿件图片给此视觉模型</label><label><input v-model="model.json_mode" type="checkbox">请求 JSON object 模式</label><label><input v-model="model.redact" type="checkbox">发送前遮盖文本邮箱和常见令牌（不遮盖图片）</label></div><p class="muted">图片限 PNG/JPEG/WebP、最多 4 张和 10 MiB，只读取稿件选中的附件；需在 Skill 路由中选择视觉模型。图片内敏感信息不会自动遮盖。附件最终公开仍须人工确认。</p>
           <small class="muted">仅接受公网 HTTPS，不跟随重定向。百炼使用非思考 JSON 模式；不兼容的接口会显示测试失败。文本检查不代表完成图片审核。</small>
         </article><button type="button" data-testid="ai-add-model" @click="addModel">添加审核模型</button>
@@ -36,10 +36,14 @@
   </section>
 </template>
 <script setup>
+import SearchableSelect from '../../desktop/src/components/SearchableSelect.vue';
 import {computed,onMounted,ref} from 'vue';
-import {getAiConfig,saveAiConfig,testAiConfig,getAiHistory,listCatalog} from './adminApi.js';
+import {discoverAiModels,getAiConfig,saveAiConfig,testAiConfig,getAiHistory,listCatalog} from './adminApi.js';
 defineProps({mode:{type:String,default:'models'}});const emit=defineEmits(['busy-change']);
 const draft=ref(null),saved=ref(''),secrets=ref({}),configuredKeys=ref({}),password=ref(''),tests=ref([]),categories=ref([]),loading=ref(false),busy=ref(false),error=ref(''),message=ref('');
+const modelLists=ref({}),discovering=ref('');
+function modelOptions(model){const ids=modelLists.value[model.id]||[];return [...new Set([...ids,model.model].filter(Boolean))].map(id=>({value:id,label:ids.includes(id)?id:`${id}（已有配置，待核实）`}));}
+async function discover(model){setBusy(true);discovering.value=model.id;error.value='';try{const result=await discoverAiModels({endpoint:model.endpoint,key:secrets.value[model.id]||'',model_id:model.id});if(result.error)throw Error(result.error);modelLists.value[model.id]=result.models;message.value=`已获取 ${result.models.length} 个模型，选择后保存。`;}catch(e){error.value=e.message;}finally{discovering.value='';setBusy(false);}}
 const imageSample=ref(false);
 const testSkill=ref(''),testModel=ref(''),sample=ref(''),testResult=ref(null),history=ref([]),historyLoading=ref(false);
 const decisionNames={approve:'建议通过',reject:'建议驳回',manual:'需人工复核'};

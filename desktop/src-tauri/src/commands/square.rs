@@ -8,6 +8,8 @@ struct SquareListResponse {
 #[derive(Deserialize, serde::Serialize)]
 pub struct SquareContentResponse {
     #[serde(default)]
+    translations: serde_json::Value,
+    #[serde(default)]
     reference: Option<serde_json::Value>,
     id: String,
     title: String,
@@ -205,4 +207,15 @@ async fn favorite_request(method: &str, id: Option<&str>, access_token: &str) ->
         return Ok(serde_json::json!({ "ok": true }));
     }
     response.json().await.map_err(|error| error.to_string())
+}
+
+#[tauri::command(rename_all="snake_case")]
+pub async fn square_translations(id:String,target:Option<String>,access_token:Option<String>)->Result<serde_json::Value,String>{
+ let mut url=url::Url::parse(&api_base()?).map_err(|_|"服务地址无效")?;
+ {let mut path=url.path_segments_mut().map_err(|_|"服务地址无效")?;path.extend(["v1","square","items",&id,"translations"]);if let Some(t)=&target{if t!="zh"&&t!="en"{return Err("语言无效".into())}path.push(t);}}
+ let client=crate::http::client()?;let mut req=if target.is_some(){client.post(url)}else{client.get(url)};
+ if let Some(token)=access_token{req=req.bearer_auth(token)}
+ let response=req.send().await.map_err(|_|"翻译服务连接失败")?;
+ if !response.status().is_success(){return Err(match response.status().as_u16(){401=>"请先登录再生成广场译文",429=>"今日翻译次数已用完，请稍后重试",503=>"广场翻译暂时暂停，请稍后重试",404=>"该提示词已不可用",_=>"读取翻译失败，请重试"}.into())}
+ response.json().await.map_err(|_|"翻译响应无效".into())
 }
