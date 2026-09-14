@@ -190,7 +190,15 @@ pub struct SquareItem {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct PublicPublisher {
+    pub display_name: String,
+    pub bio: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct SquareContentResponse {
+    #[serde(default)]
+    pub publisher: Option<PublicPublisher>,
     #[serde(default)]
     pub asset_refs: Vec<library::AssetReference>,
     #[serde(default)]
@@ -934,6 +942,7 @@ async fn get_square_item_content(
     if !state.square_public().await? { require_user(&state, &headers).await?; }
     let item = state.get_item(&id).await?.ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(SquareContentResponse {
+        publisher: square_publisher(&state, &id).await?,
         translations: if let Some(pg)=&state.db {pg.translation_versions(&id).await?} else {serde_json::json!({})},
         asset_refs: media::public_references(&state, &id).await?,
         reference: item.reference,
@@ -944,6 +953,22 @@ async fn get_square_item_content(
         model: item.model,
         kind: item.kind,
         members: item.members,
+    }))
+}
+
+async fn square_publisher(state: &AppState, id: &str) -> Result<Option<PublicPublisher>, StatusCode> {
+    let email = if let Some(pg) = &state.db {
+        sqlx::query_scalar::<_, Option<String>>(&format!("SELECT author_email FROM {} WHERE id=$1 AND status='approved'", pg.t("publications")))
+            .bind(id).fetch_optional(&pg.pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.flatten()
+    } else {
+        state.publications.lock().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .iter().find(|row| row.id == id && row.status == "approved").and_then(|row| row.author_email.clone())
+    };
+    let Some(email) = email else { return Ok(None) };
+    let profile = state.get_profile(&email).await?;
+    Ok(Some(PublicPublisher {
+        display_name: profile.display_name.filter(|name| !name.trim().is_empty()).unwrap_or_else(|| "未设置昵称".into()),
+        bio: profile.bio.filter(|bio| !bio.trim().is_empty()),
     }))
 }
 
@@ -1221,6 +1246,26 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn square_publisher_exposes_only_current_public_profile() {
+        let state = crate::admin_security_tests::state().await;
+        let pg = state.db.as_ref().unwrap();
+        pg.put_profile("private@example.test", Some("公开昵称"), Some("公开简介")).await.unwrap();
+        sqlx::query(&format!("INSERT INTO {}(id,title,kind,content,visibility) VALUES('pub-author','Title','prompt','body','online')",pg.t("square_items"))).execute(&pg.pool).await.unwrap();
+        sqlx::query(&format!("INSERT INTO {}(id,source_id,status,author_email) VALUES('pub-author','local','approved','private@example.test')",pg.t("publications"))).execute(&pg.pool).await.unwrap();
+        let read = || crate::admin_security_tests::request(&state,"GET","/v1/square/items/pub-author/content","",serde_json::json!({}));
+        let (status, body) = read().await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body["publisher"], serde_json::json!({"display_name":"公开昵称","bio":"公开简介"}));
+        assert!(!body.to_string().contains("private@example.test"));
+        pg.put_profile("private@example.test", None, None).await.unwrap();
+        assert_eq!(read().await.1["publisher"]["display_name"], "未设置昵称");
+        sqlx::query(&format!("UPDATE {} SET status='pending' WHERE id='pub-author'",pg.t("publications"))).execute(&pg.pool).await.unwrap();
+        assert!(read().await.1["publisher"].is_null());
+        sqlx::query(&format!("UPDATE {} SET visibility='offline' WHERE id='pub-author'",pg.t("square_items"))).execute(&pg.pool).await.unwrap();
+        assert_eq!(read().await.0, StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
     async fn serves_square_item_content_without_login() {
         let app = app(AppState::with_square_items(vec![SquareItem {
             reference: None,
@@ -1250,6 +1295,7 @@ mod tests {
         assert_eq!(payload["id"], "sq-1");
         assert_eq!(payload["title"], "自然光群像");
         assert_eq!(payload["content"], "清透蓝天下的多元人物群像。");
+        assert!(payload["publisher"].is_null());
     }
 
     #[tokio::test]

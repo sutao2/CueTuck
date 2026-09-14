@@ -8,6 +8,8 @@ struct SquareListResponse {
 #[derive(Deserialize, serde::Serialize)]
 pub struct SquareContentResponse {
     #[serde(default)]
+    publisher: Option<PublicPublisher>,
+    #[serde(default)]
     translations: serde_json::Value,
     #[serde(default)]
     reference: Option<serde_json::Value>,
@@ -24,6 +26,12 @@ pub struct SquareContentResponse {
     members: Vec<serde_json::Value>,
     #[serde(default)]
     asset_refs: Vec<super::media::Reference>,
+}
+
+#[derive(Deserialize, serde::Serialize)]
+struct PublicPublisher {
+    display_name: String,
+    bio: Option<String>,
 }
 
 fn prompt_kind() -> String { "prompt".into() }
@@ -218,4 +226,19 @@ pub async fn square_translations(id:String,target:Option<String>,access_token:Op
  let response=req.send().await.map_err(|_|"翻译服务连接失败")?;
  if !response.status().is_success(){return Err(match response.status().as_u16(){401=>"请先登录再生成广场译文",429=>"今日翻译次数已用完，请稍后重试",503=>"广场翻译暂时暂停，请稍后重试",404=>"该提示词已不可用",_=>"读取翻译失败，请重试"}.into())}
  response.json().await.map_err(|_|"翻译响应无效".into())
+}
+
+#[cfg(test)]
+mod publisher_tests {
+    use super::*;
+    #[test]
+    fn detail_preserves_public_publisher_and_accepts_older_servers() {
+        let mut payload=serde_json::json!({"id":"item","title":"Title","content":"body","category_id":null,"model":null});
+        let legacy:SquareContentResponse=serde_json::from_value(payload.clone()).unwrap();
+        assert!(legacy.publisher.is_none());
+        payload["publisher"]=serde_json::json!({"display_name":"公开昵称","bio":"公开简介","email":"private@example.test"});
+        let current:SquareContentResponse=serde_json::from_value(payload).unwrap();
+        let forwarded=serde_json::to_value(current).unwrap();
+        assert_eq!(forwarded["publisher"],serde_json::json!({"display_name":"公开昵称","bio":"公开简介"}));
+    }
 }
