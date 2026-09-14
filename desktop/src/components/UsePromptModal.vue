@@ -8,6 +8,7 @@
         <button type="button" class="page-back" aria-label="返回" :disabled="busy" @click="$emit('cancel')">← 返回</button>
       </header>
       <div class="create-body use-body">
+        <PromptLanguage :text="prompt.content" :disabled="busy" @change="template = $event" />
         <nav v-if="names.length" class="variable-steps" aria-label="填写步骤">
           <button v-for="(name, position) in names" :key="name" type="button" :disabled="busy" :aria-current="step === 'variable' && index === position ? 'step' : undefined" :data-variable-step="position" @click="jump(position)">
             <span>{{ position + 1 }}</span> {{ name }} <small>{{ resolved(name) ? '已填' : '待填' }}</small>
@@ -65,6 +66,7 @@ import { vPageFocus } from "../lib/pageFocus.js";
 import { extractVariables, renderPrompt, variableDefaults } from "../lib/renderPrompt.js";
 import { hintForVariable } from "../platform/variableHints.js";
 import AttachmentPanel from './AttachmentPanel.vue';
+import PromptLanguage from './PromptLanguage.vue';
 import { listPromptAssets } from '../platform/assets.js';
 
 const assets = ref([]), assetLoading = ref(false), assetError = ref('');
@@ -85,6 +87,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["cancel", "copied"]);
 
+const template = ref(props.prompt.content);
 const names = extractVariables(props.prompt.content);
 const values = ref(variableDefaults(props.prompt.content));
 const index = ref(0);
@@ -120,7 +123,7 @@ function showPreview() {
   if (props.busy) return;
   preserveValue(); step.value = 'preview';
 }
-const preview = computed(() => renderPrompt(props.prompt.content, values.value));
+const preview = computed(() => renderPrompt(template.value, values.value));
 const heading = computed(() => (step.value === "preview" ? "确认并使用提示词" : currentName.value));
 const stepLabel = computed(() =>
   step.value === "preview" ? "预览" : `变量 ${index.value + 1} / ${names.length}`,

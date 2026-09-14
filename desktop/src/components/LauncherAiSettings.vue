@@ -11,7 +11,7 @@
         <div><button type="button" class="button" data-testid="ai-fetch-models" :disabled="!endpoint.trim()" @click="fetchModels">{{ busy ? '处理中…' : '获取模型列表' }}</button><small>填写接口后直接获取，无需先保存模型。</small></div>
         <label class="field"><span>启动器优化模型</span><SearchableSelect v-model="model" data-testid="ai-model" aria-label="启动器优化模型" :options="options" :disabled="busy || loading" placeholder="获取模型列表后选择" /></label>
         <label class="field"><span>本地翻译模型</span><SearchableSelect v-model="translationModel" data-testid="ai-translation-model" aria-label="本地翻译模型" :options="options" :disabled="busy || loading" placeholder="未配置翻译模型" /><small>百炼可选择 qwen-mt-flash 等专用翻译模型，也可使用通用文本模型。模型列表可搜索；列表可见不代表已通过调用测试。</small></label>
-        <div class="modal-actions"><button type="button" class="button primary-button" data-testid="ai-save" :disabled="!model && !translationModel" @click="save">保存本机 AI 配置</button><button type="button" class="button" :disabled="dirty || !saved.model" @click="test">测试优化模型</button><button type="button" class="button" :disabled="!saved.endpoint" @click="clear">清除配置与密钥</button></div>
+        <div class="modal-actions"><button type="button" class="button primary-button" data-testid="ai-save" :disabled="!model && !translationModel" @click="save">保存本机 AI 配置</button><button type="button" class="button" :disabled="dirty || !saved.model" @click="test">测试优化模型</button><button type="button" class="button" :disabled="dirty || !saved.translation_model" @click="testTranslation">测试翻译模型</button><button type="button" class="button" :disabled="!saved.endpoint" @click="clear">清除配置与密钥</button></div>
       </fieldset>
       <p v-if="note" role="status">{{ note }}</p><button v-if="loadFailed" class="button" type="button" @click="load">重试读取</button>
       <small>获取列表只读取模型目录；测试只发送固定示例，不读取个人提示词。列表失败不会替换已保存配置。</small>
@@ -20,6 +20,7 @@
 </template>
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
+import { translateOnce } from '../platform/translation.js';
 import SearchableSelect from './SearchableSelect.vue';
 import { getLauncherAiConfig, saveLauncherAiConfig, clearLauncherAiConfig, listLauncherAiModels, optimizeLauncherPrompt } from '../platform/launcherAi.js';
 const emit=defineEmits(['dirty','busy']);
@@ -36,6 +37,7 @@ function config(){return {endpoint:endpoint.value,model:model.value,translation_
 function save(){return operation(async()=>{apply(await saveLauncherAiConfig(config()));note.value='AI 配置已保存在本机；尚未测试连接。';});}
 function fetchModels(){return operation(async()=>{models.value=[];const result=await listLauncherAiModels(config());if(!Array.isArray(result)||!result.length)throw Error('供应商未返回可选模型，请检查地址与密钥权限后重试');models.value=result;note.value=`已读取 ${models.value.length} 个模型；请选择用途模型并保存。`;});}
 function test(){return operation(async()=>{await optimizeLauncherPrompt('用三句话介绍如何整理书桌。');note.value='连接成功，优化模型已返回完整文本。';});}
+function testTranslation(){return operation(async()=>{const result=await translateOnce('Write a short greeting for {{name}}.','zh');note.value=`翻译测试通过：${result.text}`;});}
 function clear(){return operation(async()=>{await clearLauncherAiConfig();apply({});models.value=[];note.value='本机 AI 配置和密钥已清除。';});}
 onMounted(()=>{if(native)load();});
 </script>

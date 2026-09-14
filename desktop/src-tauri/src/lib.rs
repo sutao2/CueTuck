@@ -1,3 +1,5 @@
+#[path = "../../../shared/translation.rs"]
+mod prompt_translation;
 mod commands;
 mod skills;
 mod api_config;
@@ -33,6 +35,9 @@ pub fn run() {
             commands::ai::clear_launcher_ai_config,
             commands::ai::list_launcher_ai_models,
             commands::ai::optimize_launcher_prompt,
+            commands::ai::get_prompt_translation,
+            commands::ai::cache_downloaded_translation,
+            commands::ai::translate_local_prompt,
             commands::database::initialize_local_database,
             commands::database::export_local_sync_changes,
             commands::database::apply_local_sync_changes,
@@ -118,6 +123,7 @@ pub fn run() {
             commands::square_page::list_square_page,
             commands::square_page::cancel_square_page,
             commands::square::get_square_catalog,
+            commands::square::square_translations,
             commands::square::square_reports,
             commands::square::get_square_content,
             commands::square::record_square_download,

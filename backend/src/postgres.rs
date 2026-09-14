@@ -263,6 +263,7 @@ impl Pg {
         self.init_moderation().await?;
         self.init_ai().await?;
         self.init_ai_jobs().await?;
+        self.init_translation().await?;
         self.init_mail().await?;
         self.init_identity().await?;
         self.init_site().await?;

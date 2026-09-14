@@ -216,6 +216,7 @@
           </div>
           <div class="filter-spacer"></div>
           <div class="filter-controls">
+            <SearchableSelect v-if="space === 'square'" v-model="contentLanguage" aria-label="广场内容语言" :options="[{value:'zh',label:'中文优先'},{value:'original',label:'作者原文'}]" @change="onModelFilter" />
           <label class="compact-select">
             <span>{{ t("model") }}</span>
             <SearchableSelect data-testid="model-filter" v-model="modelFilter" @change="onModelFilter" :options="[{value:'',label:t('allModels')}, ...modelOptions.map(name => ({value:name,label:space === 'square' ? remoteCatalog?.models.find(item => item.id === name)?.name || name : name}))]" />
@@ -808,6 +809,7 @@ const selectedId = ref(null);
 const dark = ref(false);
 const view = ref("grid");
 const sortTab = ref("全部");
+const contentLanguage = ref("zh");
 const creating = ref(false);
 const editing = ref(null);
 const reading = ref(null);
@@ -1538,7 +1540,7 @@ async function loadSquare(refreshCatalog = false) {
     if (refreshCatalog === true || !remoteCatalog.value) await loadRemoteCatalog();
     if (request !== squareRequest || space.value !== 'square') return;
     if (sortTab.value === '收藏' && !getSession().loggedIn) { openLogin('收藏需要登录'); return; }
-    const page = await listSquarePage({ sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, signal });
+    const page = await listSquarePage({ contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, signal });
     if (request !== squareRequest || space.value !== 'square') return;
     squareItems.value = page.items;
     if (page.category_counts && Number.isInteger(page.category_total)) {
@@ -1561,7 +1563,7 @@ async function loadMoreSquare(retry = false) {
   const request = squareRequest, offset = squareNextOffset.value;
   squareMoreLoading.value = true; squareMoreError.value = false;
   try {
-    const page = await listSquarePage({ sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, offset, signal: squareController.signal });
+    const page = await listSquarePage({ contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, offset, signal: squareController.signal });
     if (request !== squareRequest || space.value !== 'square') return;
     const ids = new Set(squareItems.value.map(item => item.id));
     squareItems.value = [...squareItems.value, ...page.items.filter(item => !ids.has(item.id) && ids.add(item.id))];

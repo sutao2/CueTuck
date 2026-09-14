@@ -192,3 +192,8 @@ async function securityWrite(kind, extra) {
 }
 export function changeAdminPassword(currentPassword, newPassword) { return securityWrite('password', { config: { current_password: currentPassword, new_password: newPassword } }); }
 export function revokeAdminSessions() { return securityWrite('revokeSessions'); }
+
+export const discoverAiModels = config => request('aiDiscover',{riskPath:'ai/models/discover',method:'POST',config});
+export const getTranslation = () => request('translation',{riskPath:'translation'});
+export const saveTranslation = config => request('translationSave',{riskPath:'translation',method:'PUT',config});
+export const translationAction = action => request('translationAction',{riskPath:'translation/actions',method:'POST',config:{action}});

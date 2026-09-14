@@ -16,7 +16,7 @@ use std::collections::{HashMap, HashSet};
 fn db_error(_: sqlx::Error) -> StatusCode {
     StatusCode::INTERNAL_SERVER_ERROR
 }
-async fn owner_lock(
+pub(crate) async fn owner_lock(
     pg: &Pg,
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     actor: &str,
@@ -781,4 +781,11 @@ impl Pg {
         tx.commit().await.map_err(db_error)?;
         Ok(result)
     }
+}
+
+pub(crate) async fn discovery_key(state:&AppState,id:&str,endpoint:&str)->Result<String,StatusCode>{
+    let pg=state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let config=pg.ai_config().await?;
+    let model=config.models.iter().find(|m|m.config.id==id && m.config.endpoint==endpoint).ok_or(StatusCode::BAD_REQUEST)?;
+    crate::oauth_admin::unseal(&state.oauth_config.key,&format!("ai:{id}"),&model.encrypted_secret)
 }

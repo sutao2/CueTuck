@@ -42,11 +42,11 @@
             <article v-for="(member, index) in item.members" :key="index" data-testid="square-detail-member">
               <h3>{{ member.title }}</h3>
               <p v-if="member.model">{{ member.model }}</p>
-              <pre class="square-body">{{ member.content }}</pre>
+              <PromptLanguage :text="member.content" :square-id="item.id" :member-index="index" default-language="zh" @change="memberTranslations[index] = $event" /><pre class="square-body">{{ memberTranslations[index] || member.content }}</pre>
               <PublishedAttachments :item-id="item.id" :references="(item.asset_refs || []).filter(file => member.asset_ids?.includes(file.id))" />
             </article>
           </template>
-          <pre v-else class="square-body" data-testid="square-detail-content">{{ item.content || '还没有正文' }}</pre>
+          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" default-language="zh" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || '还没有正文' }}</pre></template>
           <PublishedAttachments v-if="item.kind !== 'collection'" :item-id="item.id" :references="item.asset_refs || []" />
         </template>
         <p v-if="note" role="status">{{ note }}</p>
@@ -62,6 +62,7 @@ import { vPageFocus } from "../lib/pageFocus.js";
 import ReportPanel from './ReportPanel.vue';
 import PublishedAttachments from './PublishedAttachments.vue';
 import ImageViewer from './ImageViewer.vue';
+import PromptLanguage from './PromptLanguage.vue';
 import { computed, ref, watch } from 'vue';
 import { referenceImages, referenceLink } from '../lib/squareReference.js';
 const props = defineProps({
@@ -77,7 +78,7 @@ const props = defineProps({
   favoriteBusy: Boolean,
 });
 defineEmits(['cancel', 'retry', 'download', 'favorite', 'complete-images']);
-const largeImage = ref(null);
+const largeImage = ref(null), translated = ref(''), memberTranslations = ref({});
 const imageIndex = ref(0), imageFailed = ref(false), imageLoaded = ref(false), imageKey = ref(0);
 const sourceImages = computed(() => referenceImages(props.item));
 const galleryImages = computed(() => sourceImages.value.map(url => ({ url, alt: props.item.title, source: referenceLink(props.item.reference.url) })));

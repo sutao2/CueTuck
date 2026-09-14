@@ -7,10 +7,11 @@ use crate::AppState;
 #[serde(deny_unknown_fields)]
 pub struct Browse {
     sort: Option<String>, q: Option<String>, category_id: Option<String>, model: Option<String>,
-    limit: Option<i64>, offset: Option<i64>,
+    limit: Option<i64>, offset: Option<i64>, content_language: Option<String>,
 }
 
 pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(input): Query<Browse>) -> Result<Json<Value>, StatusCode> {
+    let translated = match input.content_language.as_deref().unwrap_or("zh") {"zh"=>true,"original"=>false,_=>return Err(StatusCode::BAD_REQUEST)};
     let limit = input.limit.unwrap_or(48);
     let offset = input.offset.unwrap_or(0);
     let query = input.q.unwrap_or_default().trim().to_owned();
@@ -32,8 +33,11 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
     let (total, mut items, category_counts): (i64, Vec<Value>, Option<serde_json::Map<String, Value>>) = if let Some(pg) = &state.db {
         let pattern = (!query.is_empty()).then(|| format!("%{}%", query.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")));
         let favorite = format!("EXISTS(SELECT 1 FROM {} f WHERE f.email=$4 AND f.item_id=s.id)", pg.t("favorites"));
+        let translated_join = format!("LEFT JOIN {} tr ON tr.item_id=s.id AND tr.target='zh' AND tr.status='ready'", pg.t("prompt_translations"));
+        let title = if translated {"COALESCE(tr.data->>'title',s.title)"} else {"s.title"};
+        let excerpt = if translated {"COALESCE(tr.data->>'excerpt',s.excerpt)"} else {"s.excerpt"};
         let filter = format!(r#"s.visibility='online'
-            AND ($1::text IS NULL OR s.title ILIKE $1 ESCAPE '\' OR s.excerpt ILIKE $1 ESCAPE '\' OR s.reference->>'author' ILIKE $1 ESCAPE '\')
+            AND ($1::text IS NULL OR s.title ILIKE $1 ESCAPE '\' OR s.excerpt ILIKE $1 ESCAPE '\' OR s.reference->>'author' ILIKE $1 ESCAPE '\' OR tr.data->>'title' ILIKE $1 ESCAPE '\' OR tr.data->>'excerpt' ILIKE $1 ESCAPE '\')
             AND ($2::text IS NULL OR s.model=$2) AND ($3::text[]='{{}}' OR s.category_id=ANY($3))
             AND (NOT $5::boolean OR {favorite})"#);
         let order = match sort {
@@ -41,14 +45,14 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
             "hot" => "s.download_count DESC,s.title,s.id",
             _ => "s.recommended DESC,s.sort_index,s.id",
         };
-        let count_sql = format!("SELECT count(*) FROM {} s WHERE {filter}", pg.t("square_items"));
+        let count_sql = format!("SELECT count(*) FROM {} s {translated_join} WHERE {filter}", pg.t("square_items"));
         // Never select content/members, or return the complete reference document.
-        let page_sql = format!("SELECT jsonb_build_object('id',s.id,'title',left(s.title,160),'kind',s.kind,
-            'excerpt',left(s.excerpt,240),'model',s.model,'category_id',s.category_id,'member_count',s.member_count,
+        let page_sql = format!("SELECT jsonb_build_object('id',s.id,'title',left({title},160),'kind',s.kind,
+            'excerpt',left({excerpt},240),'content_language',CASE WHEN tr.status='ready' THEN 'zh' ELSE 'original' END,'model',s.model,'category_id',s.category_id,'member_count',s.member_count,
             'is_favorite',{favorite},'download_count',s.download_count,
             'favorite_count',(SELECT count(*) FROM {} f WHERE f.item_id=s.id),'reference',CASE WHEN jsonb_typeof(s.reference->'images'->0)='string'
             THEN jsonb_build_object('images',jsonb_build_array(left(s.reference->'images'->>0,2048))) ELSE NULL END)
-            FROM {} s WHERE {filter} ORDER BY {order} LIMIT $6 OFFSET $7", pg.t("favorites"), pg.t("square_items"));
+            FROM {} s {translated_join} WHERE {filter} ORDER BY {order} LIMIT $6 OFFSET $7", pg.t("favorites"), pg.t("square_items"));
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
             let mut tx = pg.pool.begin().await?;
             sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY").execute(&mut *tx).await?;
