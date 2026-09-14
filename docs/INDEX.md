@@ -6,10 +6,10 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-14-browse-session-followup.md](plans/2026-09-14-browse-session-followup.md) | 实施中 | 分类全部重载、翻译失败与重启登录 | 保留全局分类统计、部署额度修复及会话实机复验 |
-| [plans/2026-09-14-publication-images.md](plans/2026-09-14-publication-images.md) | 实施中 | 投稿后图片不显示、GIF 支持 | 图片选择、分页封面与详情图集已测，GIF 原文件保留；待部署 |
-| [plans/2026-09-14-session-restore-filters.md](plans/2026-09-14-session-restore-filters.md) | 实施中 | 更新后退出登录、广场筛选样式 | beta.12 本机安装，筛选与等待提示对齐；会话实机恢复待系统钥匙串授权 |
-| [plans/2026-09-14-prompt-translation.md](plans/2026-09-14-prompt-translation.md) | 功能验收，批量运行中 | 实现中英文版本和模型选择 | beta.10 已发布，广场中文队列持续执行；登录/额度修复待部署；管理员翻译、投稿与举报个人次数豁免已验，待部署 |
+| [plans/2026-09-14-browse-session-followup.md](plans/2026-09-14-browse-session-followup.md) | 验收 | 分类全部重载、翻译失败与重启登录 | 分类统计保留、API 已部署；英文翻译与重启恢复实机通过 |
+| [plans/2026-09-14-publication-images.md](plans/2026-09-14-publication-images.md) | 实施中 | 投稿后图片不显示、GIF 支持 | 图片选择、分页封面与详情图集已测，GIF 原文件保留；API 已部署 |
+| [plans/2026-09-14-session-restore-filters.md](plans/2026-09-14-session-restore-filters.md) | 验收 | 更新后退出登录、广场筛选样式 | beta.12 已安装，筛选对齐及更新/重启会话恢复实机通过 |
+| [plans/2026-09-14-prompt-translation.md](plans/2026-09-14-prompt-translation.md) | 功能验收，批量运行中 | 实现中英文版本和模型选择 | beta.10 已发布，广场中文队列持续执行；登录/额度修复已部署；管理员英文翻译生成与显示实机通过 |
 | [specs/translation/spec.md](specs/translation/spec.md) | 现行 | 修改翻译与模型发现 | 草稿获取模型、凭据隔离、语言版本与失败合同 |
 | [plans/2026-09-14-prompt-translation-design.md](plans/2026-09-14-prompt-translation-design.md) | 设计完成 | 广场中文化与按需英文翻译 | 页面原型已检查；原文保留与低价模型方案，未执行线上翻译 |
 | [designs/prompt-translation.html](designs/prompt-translation.html) | 原型 | 预览中英文版本页面 | 可交互示例，不调用模型或修改线上内容 |
