@@ -5,7 +5,11 @@
       <header class="detail-heading">
         <div>
           <h2 id="square-detail-title">{{ item.title }}</h2>
-          <div class="detail-meta"><span>{{ item.kind === 'collection' ? '提示词合集' : '提示词' }}</span><span v-if="item.model">{{ item.model }}</span><span v-if="item.author">{{ item.author }}</span></div>
+          <div class="detail-meta"><span>{{ item.kind === 'collection' ? '提示词合集' : '提示词' }}</span><span v-if="item.model">{{ item.model }}</span></div>
+          <div v-if="publisherName" class="detail-publisher" data-testid="square-publisher">
+            <span class="publisher-avatar" aria-hidden="true">{{ Array.from(publisherName)[0] }}</span>
+            <div><p><span class="publisher-label">{{ item.publisher ? '发布者' : '来源作者' }}</span><strong>{{ publisherName }}</strong></p><p v-if="item.publisher?.bio" class="publisher-bio">{{ item.publisher.bio }}</p></div>
+          </div>
         </div>
         <div class="detail-actions">
           <button v-if="downloaded && sourceImages.length && item.kind !== 'collection'" type="button" class="button ghost-button" :disabled="loading || Boolean(error) || downloading" data-testid="complete-square-images" @click="$emit('complete-images')">{{ downloading ? (downloadProgress || '正在补图…') : '补全参考图' }}</button>
@@ -86,6 +90,7 @@ defineEmits(['cancel', 'retry', 'download', 'favorite', 'complete-images']);
 const largeImage = ref(null), translated = ref(''), memberTranslations = ref({});
 const imageIndex = ref(0), imageFailed = ref(false), imageLoaded = ref(false), imageKey = ref(0);
 const publishedImages = computed(() => (props.item.asset_refs || []).filter(file => ['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime)));
+const publisherName = computed(() => props.item.publisher?.display_name || props.item.author || props.item.reference?.author || '');
 const sourceImages = computed(() => referenceImages(props.item));
 const galleryImages = computed(() => sourceImages.value.map(url => ({ url, alt: props.item.title, source: referenceLink(props.item.reference.url) })));
 const activeImage = computed(() => galleryImages.value[imageIndex.value] || galleryImages.value[0]);
@@ -108,6 +113,13 @@ watch(() => props.item.id, () => { largeImage.value=null; selectImage(0); });
 .detail-heading h2 { margin: 0; font-size: 26px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
 .detail-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 12px; }
 .detail-meta span + span::before { content: '·'; margin-right: 8px; }
+.detail-publisher { display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; min-width: 0; }
+.publisher-avatar { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; background: var(--sidebar); color: var(--muted); font-size: 14px; }
+.detail-publisher > div { min-width: 0; }
+.detail-publisher p { margin: 0; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.publisher-label { margin-right: 8px; color: var(--muted); }
+.detail-publisher strong { font-weight: 500; }
+.detail-publisher .publisher-bio { margin-top: 3px; color: var(--muted); white-space: pre-wrap; }
 .detail-actions { display: flex; flex-shrink: 0; gap: 8px; padding-top: 3px; }
 .detail-section-label { font-size: 12px; font-weight: 600; color: var(--muted); margin: 28px 0 12px; }
 .detail-content .square-body { margin: 0; padding: 0; border: 0; background: transparent; font-size: 14px; line-height: 1.9; }
