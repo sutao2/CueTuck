@@ -209,7 +209,7 @@ async fn favorite_request(method: &str, id: Option<&str>, access_token: &str) ->
     response.json().await.map_err(|error| error.to_string())
 }
 
-#[tauri::command(rename_all="snake_case")]
+#[tauri::command]
 pub async fn square_translations(id:String,target:Option<String>,access_token:Option<String>)->Result<serde_json::Value,String>{
  let mut url=url::Url::parse(&api_base()?).map_err(|_|"服务地址无效")?;
  {let mut path=url.path_segments_mut().map_err(|_|"服务地址无效")?;path.extend(["v1","square","items",&id,"translations"]);if let Some(t)=&target{if t!="zh"&&t!="en"{return Err("语言无效".into())}path.push(t);}}
