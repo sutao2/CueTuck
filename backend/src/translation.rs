@@ -93,8 +93,9 @@ pub async fn enqueue(State(state):State<AppState>,headers:HeaderMap,Path((id,tar
  if !pg.translation_config().await?.enabled{return Err(StatusCode::SERVICE_UNAVAILABLE)}
  let mut tx=pg.pool.begin().await.map_err(db_error)?;
  sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))").bind(format!("{}:translation-user:{actor}",pg.schema)).execute(&mut *tx).await.map_err(db_error)?;
+ let role=crate::admin_risk::actor_lock(pg,&mut tx,&actor,&crate::bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?,false).await?;
  let changed=sqlx::query(&format!("INSERT INTO {}(item_id,target,actor) VALUES($1,$2,$3) ON CONFLICT(item_id,target) DO UPDATE SET status='queued',attempts=0,error=NULL,next_at=now() WHERE {}.status='failed'",pg.t("prompt_translations"),pg.t("prompt_translations"))).bind(&id).bind(&target).bind(&actor).execute(&mut *tx).await.map_err(db_error)?.rows_affected();
- if changed>0 {
+ if changed>0 && !matches!(role.as_str(),"admin"|"owner") {
   let allowed=sqlx::query(&format!("INSERT INTO {}(actor,day,requests) VALUES($1,CURRENT_DATE,1) ON CONFLICT(actor,day) DO UPDATE SET requests={}.requests+1 WHERE {}.requests<20",pg.t("translation_personal_usage"),pg.t("translation_personal_usage"),pg.t("translation_personal_usage"))).bind(&actor).execute(&mut *tx).await.map_err(db_error)?.rows_affected();
   if allowed==0{return Err(StatusCode::TOO_MANY_REQUESTS)}
  }
@@ -146,11 +147,43 @@ async fn run_one(state:&AppState)->Result<(),StatusCode>{
   assert_eq!(request(&state,"POST","/v1/admin/translation/actions",&session.access_token,json!({"action":"queue"})).await.0,StatusCode::OK);
   let code=request(&state,"POST","/v1/square/items/quota-1/translations/en",&session.access_token,json!(null)).await.0;
   assert_eq!(code,StatusCode::OK,"Batch work must not exhaust the administrator's personal translation quota");
-  let used:i32=sqlx::query_scalar(&format!("SELECT requests FROM {} WHERE actor='quota-owner@example.com' AND day=CURRENT_DATE",pg.t("translation_personal_usage"))).fetch_one(&pg.pool).await.unwrap();assert_eq!(used,1);
-  sqlx::query(&format!("UPDATE {} SET requests=20",pg.t("translation_personal_usage"))).execute(&pg.pool).await.unwrap();
-  assert_eq!(request(&state,"POST","/v1/square/items/quota-1/translations/en",&session.access_token,json!(null)).await.0,StatusCode::OK);
-  assert_eq!(request(&state,"POST","/v1/square/items/quota-2/translations/en",&session.access_token,json!(null)).await.0,StatusCode::TOO_MANY_REQUESTS);
-  assert!(pg.translation_versions("quota-2").await.unwrap()["en"].is_null());
+  let used:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {} WHERE actor='quota-owner@example.com'",pg.t("translation_personal_usage"))).fetch_one(&pg.pool).await.unwrap();assert_eq!(used,0);
+  sqlx::query(&format!("DROP SCHEMA {} CASCADE",pg.schema)).execute(&pg.pool).await.unwrap();
+ }
+ #[tokio::test]async fn only_current_admin_roles_bypass_personal_translation_quota(){
+  let state=state().await;let pg=state.db.as_ref().unwrap();
+  sqlx::query(&format!("INSERT INTO {}(id,title,kind,content,visibility) SELECT 'role-quota-'||n,'Sample','prompt','中文正文','online' FROM generate_series(1,8) n",pg.t("square_items"))).execute(&pg.pool).await.unwrap();
+  sqlx::query(&format!("UPDATE {} SET data=jsonb_set(data,'{{enabled}}','true') WHERE id",pg.t("translation_config"))).execute(&pg.pool).await.unwrap();
+  for (i,role) in ["user","reviewer","support","admin","owner"].iter().enumerate(){
+   let email=format!("quota-{role}@example.com");pg.upsert_account(&email,Some("test-password"),role).await.unwrap();
+   let session=state.issue_session(email.clone()).await.unwrap();
+   sqlx::query(&format!("INSERT INTO {}(actor,day,requests) VALUES($1,CURRENT_DATE,20)",pg.t("translation_personal_usage"))).bind(&email).execute(&pg.pool).await.unwrap();
+   let id=format!("role-quota-{}",i+1);let path=format!("/v1/square/items/{id}/translations/en");
+   let code=request(&state,"POST",&path,&session.access_token,json!(null)).await.0;
+   let privileged=matches!(*role,"admin"|"owner");assert_eq!(code,if privileged{StatusCode::OK}else{StatusCode::TOO_MANY_REQUESTS},"{role}");
+   assert_eq!(!pg.translation_versions(&id).await.unwrap()["en"].is_null(),privileged);
+   let used:i32=sqlx::query_scalar(&format!("SELECT requests FROM {} WHERE actor=$1 AND day=CURRENT_DATE",pg.t("translation_personal_usage"))).bind(&email).fetch_one(&pg.pool).await.unwrap();assert_eq!(used,20);
+   if *role=="admin"{
+    sqlx::query(&format!("UPDATE {} SET role='user' WHERE email=$1",pg.t("accounts"))).bind(&email).execute(&pg.pool).await.unwrap();
+    assert_eq!(request(&state,"POST","/v1/square/items/role-quota-7/translations/en",&session.access_token,json!(null)).await.0,StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(request(&state,"POST",&path,&session.access_token,json!(null)).await.0,StatusCode::OK);
+   }
+  }
+  sqlx::query(&format!("DROP SCHEMA {} CASCADE",pg.schema)).execute(&pg.pool).await.unwrap();
+ }
+ #[tokio::test]async fn ordinary_translation_quota_remains_atomic_and_reuses_tasks(){
+  let state=state().await;let pg=state.db.as_ref().unwrap();let email="ordinary-quota@example.com";
+  pg.upsert_account(email,Some("test-password"),"user").await.unwrap();let session=state.issue_session(email.into()).await.unwrap();
+  sqlx::query(&format!("INSERT INTO {}(id,title,kind,content,visibility) SELECT 'ordinary-'||n,'Sample','prompt','中文正文','online' FROM generate_series(1,2) n",pg.t("square_items"))).execute(&pg.pool).await.unwrap();
+  sqlx::query(&format!("UPDATE {} SET data=jsonb_set(data,'{{enabled}}','true') WHERE id",pg.t("translation_config"))).execute(&pg.pool).await.unwrap();
+  sqlx::query(&format!("INSERT INTO {}(actor,day,requests) VALUES($1,CURRENT_DATE,19)",pg.t("translation_personal_usage"))).bind(email).execute(&pg.pool).await.unwrap();
+  let paths=["/v1/square/items/ordinary-1/translations/en","/v1/square/items/ordinary-2/translations/en"];
+  let (a,b)=tokio::join!(request(&state,"POST",paths[0],&session.access_token,json!(null)),request(&state,"POST",paths[1],&session.access_token,json!(null)));
+  let codes=[a.0,b.0];assert_eq!(codes.iter().filter(|&&c|c==StatusCode::OK).count(),1);assert_eq!(codes.iter().filter(|&&c|c==StatusCode::TOO_MANY_REQUESTS).count(),1);
+  let winner=codes.iter().position(|&c|c==StatusCode::OK).unwrap();
+  assert_eq!(request(&state,"POST",paths[winner],&session.access_token,json!(null)).await.0,StatusCode::OK);
+  let used:i32=sqlx::query_scalar(&format!("SELECT requests FROM {} WHERE actor=$1 AND day=CURRENT_DATE",pg.t("translation_personal_usage"))).bind(email).fetch_one(&pg.pool).await.unwrap();assert_eq!(used,20);
+  let jobs:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {} WHERE actor=$1",pg.t("prompt_translations"))).bind(email).fetch_one(&pg.pool).await.unwrap();assert_eq!(jobs,1);
   sqlx::query(&format!("DROP SCHEMA {} CASCADE",pg.schema)).execute(&pg.pool).await.unwrap();
  }
  #[tokio::test]async fn versions_are_private_until_online_and_invalidated_by_source_changes(){

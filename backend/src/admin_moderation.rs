@@ -89,7 +89,7 @@ impl Pg {
             .ok_or(StatusCode::UNAUTHORIZED)?;
         let mut tx = self.pool.begin().await.map_err(db_error)?;
         self.check_publishing(&mut tx).await?;
-        actor_lock(self, &mut tx, author, token, false).await?;
+        let role = actor_lock(self, &mut tx, author, token, false).await?;
         let data: Value = sqlx::query_scalar(&format!(
             "SELECT data FROM {} WHERE id=1 FOR SHARE",
             self.t("moderation_policy")
@@ -106,7 +106,7 @@ impl Pg {
             return Ok(result);
         }
         let count:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {} WHERE author_email=$1 AND created_at>=now()-interval '24 hours'",self.t("publications"))).bind(author).fetch_one(&mut *tx).await.map_err(db_error)?;
-        if count >= config.daily_limit {
+        if count >= config.daily_limit && !matches!(role.as_str(), "admin" | "owner") {
             return Err(StatusCode::TOO_MANY_REQUESTS);
         }
         let data: Value = sqlx::query_scalar(&format!(
