@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-14-windows-skill-detail.md](plans/2026-09-14-windows-skill-detail.md) | 实施中 | Windows 打开 Skill 详情报 os error 1 | 规范化路径逐级检查修复与 beta.9 补丁验证 |
+| [plans/2026-09-14-windows-skill-detail.md](plans/2026-09-14-windows-skill-detail.md) | 验收 | Windows 打开 Skill 详情报 os error 1 | Windows 原版复现、修复回归转绿；beta.9 双平台发布与更新资产已验 |
 | [plans/2026-09-13-skills-release.md](plans/2026-09-13-skills-release.md) | 验收 | Skills 双平台发版 | beta.8 双平台已公开，全量 CI、签名/哈希与匿名更新清单已验 |
 | [plans/2026-09-13-viewer-launcher-polish.md](plans/2026-09-13-viewer-launcher-polish.md) | 验收 | 精简启动器、图片查看器、紧凑卡片与新图标 | beta.7 双平台已发布，524 项前端、Mac 实机与 Windows 安装测试、发布资产已验 |
 | [architecture/decisions/0024-launcher-copy-only.md](architecture/decisions/0024-launcher-copy-only.md) | 现行 | 启动器操作范围 | 取代 0023 的复制输入与窗口粘贴入口，其余联网与本机 AI 决策保持 |
