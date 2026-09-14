@@ -3,8 +3,9 @@ export function buildRows(items, columns, list, gap) {
   const rows = [];
   let top = 0;
   for (let start = 0; start < items.length; start += columns) {
-    const cover = items.slice(start, start + columns).some(item => item.reference?.images?.[0]);
-    const height = list ? 116 : cover ? 410 : 256;
+    const cover = items.slice(start, start + columns).some(item => item.reference?.images?.[0] || item.preview_asset);
+    const publishedImages = items.slice(start, start + columns).some(item => item.preview_asset);
+    const height = list ? 116 : publishedImages ? 434 : cover ? 410 : 256;
     rows.push({ top, height });
     top += height + gap;
   }

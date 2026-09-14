@@ -142,3 +142,8 @@ M0–M4 MUST NOT 出现可成功提交审核的发布动作。M5 起以「选择
 | 冲刷发布到达服务端 | `syncQueue.test.js` flushes a queued publication when the transport recovers |
 | 合同提交 | `squareContract.test.js` `POST /v1/publications`；`backend` `create_publication_requires_access_and_keeps_pending` |
 | 通过后进广场列表 | `backend` `approve_with_snapshot_lists_on_square`；`approve_without_snapshot_does_not_list_on_square`；`square.test.js` submits a publication without changing the local copy |
+
+投稿附件选择 MUST 展示本机图片预览、已选图片数及显式全选图片操作。存在图片但未选择时明确提示仅发布文字，不默认上传。审核通过后，广场分页封面和详情图集展示批准清单中的图片，不能只显示外部导入参考图。详见[投稿图片计划](../../plans/2026-09-14-publication-images.md)。
+
+- Given 本机有图片但未勾选 When 提交 Then 明示只发布文字，不上传未选文件。
+- Given 图片已选并通过审核 When 查看广场列表和详情 Then 首图成为封面，图集可打开原图；未通过或下架不得读取。

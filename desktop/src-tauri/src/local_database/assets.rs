@@ -204,6 +204,24 @@ mod tests {
         assert_eq!(first_image(dir.path(), &row.id).unwrap().unwrap().data, original.data);
     }
     #[test]
+    fn gif_thumbnail_preserves_all_original_animation_frames() {
+        use image::{AnimationDecoder, Frame, Rgba, RgbaImage};
+        let dir = tempfile::tempdir().unwrap(); super::super::initialize_in_dir(dir.path()).unwrap();
+        let mut bytes = Vec::new();
+        {
+            let mut encoder = image::codecs::gif::GifEncoder::new(&mut bytes);
+            for color in [Rgba([255,0,0,255]), Rgba([0,0,255,255])] {
+                encoder.encode_frame(Frame::new(RgbaImage::from_pixel(16,16,color))).unwrap();
+            }
+        }
+        let row = save_prompt(dir.path(), None, "Animated", "body", None, None, &[file("animated.gif", &bytes, "image/gif")]).unwrap();
+        assert_eq!(first_thumbnail(dir.path(), &row.id).unwrap().unwrap().mime, "image/png");
+        let original = first_image(dir.path(), &row.id).unwrap().unwrap();
+        let restored = STANDARD.decode(original.data).unwrap(); assert_eq!(restored, bytes);
+        let frames = image::codecs::gif::GifDecoder::new(std::io::Cursor::new(restored)).unwrap().into_frames().collect_frames().unwrap();
+        assert_eq!(frames.len(), 2); assert_ne!(frames[0].buffer(), frames[1].buffer());
+    }
+    #[test]
     fn thumbnail_handles_supported_formats_small_images_invalid_data_and_limits() {
         let dir = tempfile::tempdir().unwrap(); super::super::initialize_in_dir(dir.path()).unwrap();
         for (format, name, mime) in [(image::ImageFormat::Jpeg, "test.jpg", "image/jpeg"), (image::ImageFormat::Gif, "test.gif", "image/gif"), (image::ImageFormat::WebP, "test.webp", "image/webp")] {

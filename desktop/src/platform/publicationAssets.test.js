@@ -158,3 +158,19 @@ it('only loads previews on explicit request and renders text as inert text', asy
   await vi.waitFor(() => expect(wrapper.get('pre').text()).toBe('public notes'));
   await wrapper.setProps({ itemId: 'another' }); expect(wrapper.find('pre').exists()).toBe(false);
 });
+it('shows local image previews and explicitly selects images without exposing other files', async () => {
+  await login();
+  const image={id:crypto.randomUUID(),name:'animation.gif',mime:'image/gif',data:btoa('GIF89a-example')};
+  const prompt=await createLocalPrompt({title:'Image publication',content:'body',assets:[image,file]});
+  wrapper=mount(WorkbenchShell); await flushPromises();
+  await wrapper.get('[data-space="square"]').trigger('click'); await flushPromises();
+  await wrapper.get('[data-testid="publish-prompt"]').trigger('click'); await flushPromises();
+  await selectOption(wrapper,'publish-source',prompt.id); await flushPromises();
+  expect(wrapper.get('.publication-image-preview').attributes('src')).toBe('data:image/gif;base64,'+image.data);
+  expect(wrapper.text()).toContain('本次发布不会包含本地图片');
+  await wrapper.get('[data-testid="select-publish-images"]').trigger('click');
+  const choices=wrapper.findAll('[data-testid="publish-asset"]');
+  expect(choices.filter(c=>c.element.checked)).toHaveLength(1);
+  expect(choices.find(c=>c.element.checked).element.value).toBe(image.id);
+  expect(wrapper.text()).toContain('已选择 1 张图片');
+});

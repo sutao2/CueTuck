@@ -35,6 +35,10 @@
             </div>
           </section>
           <p v-if="item.reference" class="reference-credit"><a v-if="referenceLink(item.reference.url)" :href="referenceLink(item.reference.url)" target="_blank" rel="noopener noreferrer">{{ item.reference.repository }} ↗</a> · {{ item.reference.author }} · <a v-if="referenceLink(item.reference.license_url)" :href="referenceLink(item.reference.license_url)" target="_blank" rel="noopener noreferrer">{{ item.reference.license }}</a></p>
+          <section v-if="publishedImages.length" class="published-gallery" aria-label="发布图片">
+            <h3>图片 · {{ publishedImages.length }}</h3>
+            <div><PublishedImage v-for="file in publishedImages" :key="file.id" :item-id="item.id" :file="file" :title="file.name" /></div>
+          </section>
           <h3 class="detail-section-label">{{ item.kind === 'collection' ? '合集内容' : '提示词正文' }}</h3>
           <template v-if="item.kind === 'collection'">
             <p>{{ item.members?.length || 0 }} 个提示词</p>
@@ -60,6 +64,7 @@
 <script setup>
 import { vPageFocus } from "../lib/pageFocus.js";
 import ReportPanel from './ReportPanel.vue';
+import PublishedImage from "./PublishedImage.vue";
 import PublishedAttachments from './PublishedAttachments.vue';
 import ImageViewer from './ImageViewer.vue';
 import PromptLanguage from './PromptLanguage.vue';
@@ -80,6 +85,7 @@ const props = defineProps({
 defineEmits(['cancel', 'retry', 'download', 'favorite', 'complete-images']);
 const largeImage = ref(null), translated = ref(''), memberTranslations = ref({});
 const imageIndex = ref(0), imageFailed = ref(false), imageLoaded = ref(false), imageKey = ref(0);
+const publishedImages = computed(() => (props.item.asset_refs || []).filter(file => ['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime)));
 const sourceImages = computed(() => referenceImages(props.item));
 const galleryImages = computed(() => sourceImages.value.map(url => ({ url, alt: props.item.title, source: referenceLink(props.item.reference.url) })));
 const activeImage = computed(() => galleryImages.value[imageIndex.value] || galleryImages.value[0]);
@@ -89,6 +95,8 @@ watch(() => props.item.id, () => { largeImage.value=null; selectImage(0); });
 </script>
 
 <style scoped>
+.published-gallery > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.published-gallery :deep(.published-image) { height: 200px; border-radius: 10px; }
 .square-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
 .square-reading-page { overflow: hidden; }
 .detail-scroll { overflow-y: auto; padding: 24px max(28px, calc((100% - 880px) / 2)) 48px; min-height: 0; }
