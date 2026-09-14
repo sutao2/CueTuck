@@ -210,7 +210,7 @@
           </section>
           <section v-else-if="current === 'models'">
             <h3>AI 与模型</h3>
-            <p>管理本机模型标签，以及独立的启动器 AI 优化配置。</p>
+            <p>管理本机模型标签，以及 AI 优化与提示词翻译的模型配置。</p>
             <div class="settings-group">
             <p class="save-mode-hint">本页修改后请点击「保存本机模型偏好」。</p>
             <label class="field">
