@@ -7,6 +7,8 @@ pub struct Config {
     pub endpoint: String,
     pub model: String,
     #[serde(default)]
+    pub translation_model: String,
+    #[serde(default)]
     pub api_key: String,
 }
 fn entry() -> Result<keyring::Entry, String> {
@@ -20,28 +22,34 @@ fn load() -> Result<Config, String> {
         Err(_) => Err("无法读取本机 AI 凭据，请检查系统授权".into()),
     }
 }
-fn validate(config: &Config) -> Result<url::Url, String> {
+fn validate_endpoint(config: &Config) -> Result<url::Url, String> {
     let url = url::Url::parse(&config.endpoint).map_err(|_| "接口地址无效")?;
     let local = matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"));
     if url.host_str().is_none() || !(url.scheme() == "https" || local && url.scheme() == "http")
         || !url.username().is_empty() || url.password().is_some() || url.query().is_some() || url.fragment().is_some()
-        || config.endpoint.len() > 2048 || config.model.trim().is_empty() || config.model.len() > 200 || config.api_key.len() > 4096 {
-        return Err("请输入 HTTPS API 基础地址及模型 ID；本机接口可使用 HTTP".into());
+        || config.endpoint.len() > 2048 || config.model.len() > 200 || config.translation_model.len() > 200 || config.api_key.len() > 4096 {
+        return Err("请输入 HTTPS API 基础地址；本机接口可使用 HTTP".into());
     }
     if !local && config.api_key.trim().is_empty() { return Err("请填写 API Key".into()); }
     Ok(url)
 }
-fn public(config: &Config) -> Value { json!({"endpoint":config.endpoint,"model":config.model,"has_key":!config.api_key.is_empty()}) }
+fn validate(config: &Config) -> Result<url::Url, String> {
+    if config.model.trim().is_empty() && config.translation_model.trim().is_empty() { return Err("请获取模型列表并选择至少一个用途模型".into()); }
+    validate_endpoint(config)
+}
+fn merge_saved_key(mut config: Config, old: &Config) -> Config {
+    config.endpoint = config.endpoint.trim().trim_end_matches('/').to_owned();
+    config.model = config.model.trim().to_owned();
+    config.translation_model = config.translation_model.trim().to_owned();
+    if config.api_key.is_empty() && old.endpoint == config.endpoint { config.api_key = old.api_key.clone(); }
+    config
+}
+fn public(config: &Config) -> Value { json!({"endpoint":config.endpoint,"model":config.model,"translation_model":config.translation_model,"has_key":!config.api_key.is_empty()}) }
 #[tauri::command]
 pub fn get_launcher_ai_config() -> Result<Value, String> { Ok(public(&load()?)) }
 #[tauri::command]
 pub fn save_launcher_ai_config(mut config: Config) -> Result<Value, String> {
-    config.endpoint = config.endpoint.trim().trim_end_matches('/').to_owned();
-    config.model = config.model.trim().to_owned();
-    if config.api_key.is_empty() {
-        let old = load()?;
-        if old.endpoint == config.endpoint { config.api_key = old.api_key; }
-    }
+    config = merge_saved_key(config, &load()?);
     validate(&config)?;
     entry()?.set_password(&serde_json::to_string(&config).map_err(|_| "AI 配置序列化失败")?).map_err(|_| "保存 AI 凭据失败")?;
     Ok(public(&config))
@@ -63,11 +71,20 @@ async fn bounded(mut response: reqwest::Response) -> Result<Value, String> {
     serde_json::from_slice(&bytes).map_err(|_| "AI 返回格式无效".into())
 }
 #[tauri::command]
-pub async fn list_launcher_ai_models() -> Result<Vec<String>, String> {
-    let config = load()?; validate(&config)?;
+pub async fn list_launcher_ai_models(config: Option<Config>) -> Result<Vec<String>, String> {
+    let saved = load()?;
+    let config = config.map(|draft| merge_saved_key(draft, &saved)).unwrap_or(saved);
+    validate_endpoint(&config)?;
     let result = bounded(client()?.get(format!("{}/models", config.endpoint)).bearer_auth(&config.api_key).send().await.map_err(|_| "模型列表连接失败或超时")?).await?;
-    let rows = result["data"].as_array().ok_or("供应商未提供模型列表，请手动填写模型 ID")?;
-    Ok(rows.iter().filter_map(|r|r["id"].as_str()).filter(|s|!s.is_empty() && s.len() <= 200).take(500).map(str::to_owned).collect())
+    parse_models(&result)
+}
+fn parse_models(result: &Value) -> Result<Vec<String>, String> {
+    let rows = result["data"].as_array().ok_or("供应商未提供兼容的模型列表，请检查 API 基础地址")?;
+    if rows.len() > 2000 { return Err("供应商模型列表过大，请使用专用接口".into()); }
+    let mut models: Vec<String> = rows.iter().filter_map(|r|r["id"].as_str()).filter(|s|!s.trim().is_empty() && s.len() <= 200).map(str::to_owned).collect();
+    models.sort(); models.dedup();
+    if models.is_empty() { return Err("供应商未返回可选模型，请检查密钥权限后重试".into()); }
+    Ok(models)
 }
 fn optimization_body(config: &Config, text: &str) -> Value {
     let mut body = json!({"model":config.model,"stream":false,"max_tokens":4096,"messages":[
@@ -88,6 +105,7 @@ fn optimized(value: Value) -> Result<String, String> {
 pub async fn optimize_launcher_prompt(text: String) -> Result<String, String> {
     if text.trim().is_empty() || text.len() > 32768 { return Err("请输入正文，最多 32 KB".into()); }
     let config = load()?; validate(&config)?;
+    if config.model.is_empty() { return Err("请先在本机模型配置中选择优化模型".into()); }
     let response = client()?.post(format!("{}/chat/completions",config.endpoint)).bearer_auth(&config.api_key).json(&optimization_body(&config,&text)).send().await.map_err(|_| "AI 连接失败或超时，原文已保留")?;
     optimized(bounded(response).await?)
 }
@@ -95,8 +113,20 @@ pub async fn optimize_launcher_prompt(text: String) -> Result<String, String> {
 mod tests {
     use super::*;
     #[test]
+    fn model_discovery_does_not_require_model_or_forward_saved_key_to_new_endpoint() {
+        let old: Config = serde_json::from_value(json!({"endpoint":"https://example.com/v1","model":"old","api_key":"private"})).unwrap();
+        assert!(old.translation_model.is_empty());
+        let same = merge_saved_key(Config { endpoint:" https://example.com/v1/ ".into(), ..Config::default() }, &old);
+        assert!(validate_endpoint(&same).is_ok()); assert_eq!(same.api_key,"private");
+        let changed = merge_saved_key(Config { endpoint:"https://other.example/v1".into(), ..Config::default() }, &old);
+        assert!(changed.api_key.is_empty()); assert!(validate_endpoint(&changed).is_err());
+        assert_eq!(parse_models(&json!({"data":[{"id":"b"},{"id":"a"},{"id":"a"},{"id":""}]})).unwrap(),vec!["a","b"]);
+        assert!(parse_models(&json!({"data":[]})).is_err());
+        assert!(parse_models(&json!({"error":"private"})).is_err());
+    }
+    #[test]
     fn protects_credentials_and_validates_endpoints() {
-        let mut c=Config{endpoint:"https://dashscope.aliyuncs.com/compatible-mode/v1".into(),model:"qwen3.8-max".into(),api_key:"private-fixture".into()};
+        let mut c=Config{endpoint:"https://dashscope.aliyuncs.com/compatible-mode/v1".into(),model:"qwen3.8-max".into(),translation_model:String::new(),api_key:"private-fixture".into()};
         assert!(validate(&c).is_ok()); assert!(!public(&c).to_string().contains("private-fixture"));
         assert_eq!(optimization_body(&c,"draft")["enable_thinking"],false);
         for bad in ["http://example.com/v1","https://user:pass@example.com/v1","https://example.com/v1?key=x","https://example.com/#x"] { c.endpoint=bad.into(); assert!(validate(&c).is_err()); }
