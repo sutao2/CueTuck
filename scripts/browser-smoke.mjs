@@ -143,10 +143,14 @@ try {
   await run('run-code', `async page => { await page.evaluate(async () => {
     const session = await import('/src/platform/session.js');
     session.setSessionTransport(async () => ({ email: 'qa@example.test', access_token: 'isolated-test' }));
+    let profile = { display_name: '', bio: '隔离验收简介' };
+    session.setMeTransport({ get: async () => profile, put: async value => (profile = value) });
     await session.loginSession({ email: 'qa@example.test', password: 'test' });
     (await import('/src/platform/square.js')).setMineTransport(async () => [{ id: 'qa', title: '隔离验收投稿', status: 'pending' }]);
   }); }`);
-  await click(/button "游 登录"/); await click(/button "查看我的发布"/);
+  await click(/button "游 登录"/);
+  await fill(/textbox "昵称"/, '验收作者'); await click(/button "保存并继续"/);
+  await click(/button "查看我的发布"/);
   await target(/隔离验收投稿/); await run('screenshot');
   await click(/button "(?:← )?返回"/); await click(/button "切换浅色主题"/);
   await run('resize', '1280', '850'); await run('screenshot');
