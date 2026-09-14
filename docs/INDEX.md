@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-14-beta13-release.md](plans/2026-09-14-beta13-release.md) | 打包中 | 发布 beta.13 | 双平台同提交构建、签名更新和公开附件验证 |
 | [plans/2026-09-14-login-nickname.md](plans/2026-09-14-login-nickname.md) | 已实现并安装 | 登录后设置昵称 | 582 项测试通过；邮箱/OAuth 与恢复会话补全昵称，真实填写待用户 |
 | [plans/2026-09-14-square-publisher.md](plans/2026-09-14-square-publisher.md) | 已验收 | 详情缺少发布作者 | 公开昵称与简介、来源作者区分和原生字段转发 |
 | [plans/2026-09-14-browse-session-followup.md](plans/2026-09-14-browse-session-followup.md) | 验收 | 分类全部重载、翻译失败与重启登录 | 分类统计保留、API 已部署；英文翻译与重启恢复实机通过 |
