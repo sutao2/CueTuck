@@ -871,12 +871,14 @@ async function restoreSavedSession() {
   if (sessionRestoring.value) return;
   sessionRestoring.value = true;
   sessionRestoreError.value = '';
+  const noticeTimer = setTimeout(() => { sessionRestoreError.value = '恢复较慢，如有系统钥匙串提示，请先完成授权'; }, 12000);
   try {
     await restoreSession();
+    sessionRestoreError.value = '';
     session.value = getSession();
   } catch {
     sessionRestoreError.value = '登录暂未恢复，请检查网络或钥匙串权限';
-  } finally { sessionRestoring.value = false; }
+  } finally { clearTimeout(noticeTimer); sessionRestoring.value = false; }
   if (session.value.loggedIn) {
     await refreshFavorites();
     if (space.value === 'square') await loadSquare();
