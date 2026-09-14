@@ -349,8 +349,8 @@ fn copy_text_to_clipboard(text: &str) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
         use std::io::Write;
-        use std::process::{Command, Stdio};
-        let mut child = Command::new("/usr/bin/pbcopy")
+        use std::process::Stdio;
+        let mut child = clipboard_command("/usr/bin/pbcopy")
             .stdin(Stdio::piped())
             .spawn()
             .map_err(|error| error.to_string())?;
@@ -361,7 +361,12 @@ fn copy_text_to_clipboard(text: &str) -> Result<(), String> {
             .write_all(text.as_bytes())
             .map_err(|error| error.to_string())?;
         let status = child.wait().map_err(|error| error.to_string())?;
-        if status.success() { Ok(()) } else { Err(format!("系统剪贴板写入失败：{status}")) }
+        if !status.success() { return Err(format!("系统剪贴板写入失败：{status}")); }
+        let pasted = clipboard_command("/usr/bin/pbpaste")
+            .args(["-Prefer", "txt"])
+            .output().map_err(|error| error.to_string())?;
+        if !pasted.status.success() { return Err("无法确认系统剪贴板内容，请重试".into()); }
+        verify_clipboard_text(text, &pasted.stdout)
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -370,8 +375,42 @@ fn copy_text_to_clipboard(text: &str) -> Result<(), String> {
     }
 }
 
+#[cfg(target_os = "macos")]
+fn clipboard_command(program: &str) -> std::process::Command {
+    let mut command = std::process::Command::new(program);
+    // GUI-launched applications need not inherit Terminal's UTF-8 locale.
+    command.env("LANG", "en_US.UTF-8").env("LC_ALL", "en_US.UTF-8");
+    command
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn verify_clipboard_text(expected: &str, actual: &[u8]) -> Result<(), String> {
+    if actual == expected.as_bytes() { Ok(()) }
+    else { Err("系统剪贴板内容未正确写入，请重试".into()) }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn clipboard_confirmation_rejects_empty_truncated_or_changed_unicode() {
+        let text = "中文提示词 🦜\n第二行 café";
+        assert!(super::verify_clipboard_text(text, text.as_bytes()).is_ok());
+        for bytes in [b"".as_slice(), "中文提示词".as_bytes(), b"old clipboard".as_slice()] {
+            assert!(super::verify_clipboard_text(text, bytes).is_err());
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn clipboard_commands_override_gui_locale_for_copy_and_confirmation() {
+        for program in ["/usr/bin/pbcopy", "/usr/bin/pbpaste"] {
+            let command = super::clipboard_command(program);
+            let env: std::collections::HashMap<_, _> = command.get_envs().collect();
+            assert_eq!(env[std::ffi::OsStr::new("LC_ALL")], Some(std::ffi::OsStr::new("en_US.UTF-8")));
+            assert_eq!(env[std::ffi::OsStr::new("LANG")], Some(std::ffi::OsStr::new("en_US.UTF-8")));
+        }
+    }
+
     #[test]
     fn remembers_fill_layout_until_explicit_reset() {
         let guard=super::LauncherFocusGuard::default();

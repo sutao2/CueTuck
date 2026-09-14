@@ -222,6 +222,21 @@ it("handles PageUp on a short list without a negative selection and mouse click 
   expect(w.get(".preview").text()).toBe(content);
 });
 
+it('keeps the Chinese draft and skips usage/closing when native clipboard confirmation fails', async () => {
+  await library.setLocalSetting('close_launcher_after_use', '1');
+  const command = vi.spyOn(windows, 'launcherCommand').mockResolvedValue();
+  const record = vi.spyOn(library, 'recordLocalPromptUse');
+  vi.spyOn(paste, 'copyLauncherText').mockRejectedValue(new Error('系统剪贴板内容未正确写入，请重试'));
+  const w = await open('{{材质}}');
+  await w.get('textarea').setValue('原生镍银合金 🦜\n第二行');
+  await w.get('textarea').trigger('keydown', { key: 'Enter' }); await flushPromises();
+  expect(w.text()).toContain('复制失败');
+  expect(w.get('textarea').element.value).toBe('原生镍银合金 🦜\n第二行');
+  expect(record).not.toHaveBeenCalled();
+  expect(command).not.toHaveBeenCalledWith('hide_launcher');
+  expect(await library.getLocalSetting('last_rendered_prompt')).toBe('');
+});
+
 it("copies directly, respects auto-close, and rejects empty content", async () => {
   const w = await open("纯文本");
   await button(w, "返回").trigger("click");
