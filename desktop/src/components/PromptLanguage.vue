@@ -14,7 +14,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { localVersion, squareVersions, translateOnce, sourceLanguage } from '../platform/translation.js';
-const props = defineProps({text:{type:String,default:''},squareId:{type:String,default:''},memberIndex:{type:Number,default:-1},defaultLanguage:{type:String,default:'original'},disabled:Boolean});
+const props = defineProps({text:{type:String,default:''},squareId:{type:String,default:''},memberIndex:{type:Number,default:-1},initialVersions:{type:Object,default:null},defaultLanguage:{type:String,default:'original'},disabled:Boolean});
 const emit=defineEmits(['change']);
 const tabs=[{id:'zh',label:'中文'},{id:'original',label:'原文'},{id:'en',label:'English'}];
 const selected=ref(props.defaultLanguage),versions=ref({}),busy=ref(false),error=ref(''),compare=ref(false);
@@ -24,7 +24,7 @@ function output(){emit('change',selected.value==='original'?props.text:current.v
 function acceptSquare(rows){for(const target of ['zh','en']){const entry=rows[target];if(entry?.status==='ready'){const source=props.memberIndex>=0?entry.version?.source?.members?.[props.memberIndex]?.content:entry.version?.source?.content;if(source!==undefined && source!==props.text)continue;const text=props.memberIndex>=0?entry.version?.members?.[props.memberIndex]?.content:entry.version?.content;if(typeof text==='string')versions.value[target]={text};}}}
 async function load(){const run=++generation;clearTimeout(timer);busy.value=false;error.value='';versions.value={};selected.value=props.defaultLanguage;compare.value=false;
   const lang=sourceLanguage(props.text);if(lang)versions.value[lang]={text:props.text,original:true};output();
-  try{if(props.squareId){const rows=await squareVersions(props.squareId);if(run!==generation)return;acceptSquare(rows);}else{for(const target of ['zh','en']){const cached=await localVersion(props.text,target);if(run!==generation)return;if(cached)versions.value[target]=cached;}}if(run===generation)output();}catch(e){/* Reading a cache must not block the original. Explicit generation reports errors. */}
+  try{if(props.squareId){const rows=props.initialVersions ?? await squareVersions(props.squareId);if(run!==generation)return;acceptSquare(rows);}else{for(const target of ['zh','en']){const cached=await localVersion(props.text,target);if(run!==generation)return;if(cached)versions.value[target]=cached;}}if(run===generation)output();}catch(e){/* Reading a cache must not block the original. Explicit generation reports errors. */}
 }
 function select(language){selected.value=language;error.value='';compare.value=false;output();}
 async function poll(run,target,attempt=0){try{const rows=await squareVersions(props.squareId);if(run!==generation)return;acceptSquare(rows);if(versions.value[target]){busy.value=false;output();return;}const state=rows[target];if(state?.status==='failed')throw Error(state.error||'翻译失败，原文仍可用');if(attempt>=60)throw Error('译文仍在后台排队，稍后重新打开即可查看');timer=setTimeout(()=>poll(run,target,attempt+1),3000);}catch(e){if(run===generation){busy.value=false;error.value=String(e.message||e);}}}
