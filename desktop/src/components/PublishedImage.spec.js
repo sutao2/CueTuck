@@ -6,11 +6,21 @@ import PublishedImage from './PublishedImage.vue';
 import SquareDetail from './SquareDetailModal.vue';
 const file={id:'image',mime:'image/gif',name:'animation.gif',data:btoa('GIF89a')};
 let wrapper;
-beforeEach(()=>load.mockReset()); afterEach(()=>wrapper?.unmount());
+beforeEach(()=>{load.mockReset();}); afterEach(()=>wrapper?.unmount());
 it('shows a published animated image and opens the original in the viewer',async()=>{
  load.mockResolvedValue(file); wrapper=mount(PublishedImage,{props:{itemId:'item',file}});await flushPromises();
  expect(wrapper.get('img').attributes('src')).toBe('data:image/gif;base64,'+file.data);
  await wrapper.get('button').trigger('click');expect(wrapper.findComponent({name:'ImageViewer'}).exists()).toBe(true);
+});
+it('applies the caller cover layout to the image button while loading and viewing',async()=>{
+ let finish;load.mockImplementation(()=>new Promise(resolve=>finish=resolve));
+ wrapper=mount(PublishedImage,{props:{itemId:'item',file},attrs:{class:'square-reference-cover',style:{width:'80px',height:'64px'}}});await flushPromises();
+ const cover=wrapper.get('button.published-image');
+ expect(cover.classes()).toContain('square-reference-cover');
+ expect(cover.element.style.width).toBe('80px');expect(cover.element.style.height).toBe('64px');
+ finish(file);await flushPromises();await cover.trigger('click');
+ expect(wrapper.findAll('.square-reference-cover')).toHaveLength(1);
+ expect(wrapper.get('button.published-image').classes()).toContain('square-reference-cover');
 });
 it('offers retry and ignores a result from a previous item',async()=>{
  let finish;load.mockImplementationOnce(()=>new Promise(resolve=>finish=resolve)).mockRejectedValueOnce(new Error('offline')).mockResolvedValue(file);
