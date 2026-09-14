@@ -208,7 +208,7 @@ function onSaveKeydown(event) {
 .editor-page .editor-metadata { display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--sidebar); }
 .editor-metadata .field { flex: 1 1 180px; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .editor-metadata .field > span { flex-shrink: 0; color: var(--muted); }
-.editor-metadata select { flex: 1; width: 0; min-width: 0; padding: 6px 26px 6px 8px; font-size: 12px; }
+.editor-metadata select, .editor-metadata :deep(.searchable-select) { flex: 1; width: 0; min-width: 0; padding: 6px 8px; font-size: 12px; }
 .editor-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .editor-tools .button { border-color: transparent; background: transparent; color: var(--muted); }
 .editor-tools .button:hover, .editor-tools .button[aria-expanded="true"] { background: var(--sidebar); color: var(--text); }

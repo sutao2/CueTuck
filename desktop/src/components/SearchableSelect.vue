@@ -1,6 +1,6 @@
 <template>
-  <button ref="trigger" v-bind="$attrs" type="button" class="searchable-select" :disabled="disabled" aria-haspopup="listbox" :aria-expanded="open" @click="toggle" @keydown.down.prevent="show" @keydown.up.prevent="show">
-    <span>{{ selected?.label || placeholder }}</span><span aria-hidden="true">⌄</span>
+  <button ref="trigger" v-bind="$attrs" type="button" class="searchable-select" :title="$attrs.title || selected?.label || placeholder" :disabled="disabled" aria-haspopup="listbox" :aria-expanded="open" @click="toggle" @keydown.down.prevent="show" @keydown.up.prevent="show">
+    <span>{{ selected?.label || placeholder }}</span><svg class="select-chevron" aria-hidden="true" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg>
   </button>
   <Teleport to="body">
     <div v-if="open" ref="panel" class="select-popup" :style="position" @keydown.esc.stop.prevent="close" @keydown.tab="close(false)">
@@ -50,12 +50,15 @@ async function navigate(event) {
 onUnmounted(() => close(false));
 </script>
 <style>
-.searchable-select { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-width:0; min-height:40px; padding:10px 12px; border:1px solid var(--line,#ddd); border-radius:8px; background:var(--surface,#fff); color:var(--text,#222); font:inherit; text-align:left; cursor:pointer; }
-.searchable-select > span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.searchable-select { box-sizing:border-box; display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-width:0; min-height:36px; padding:8px 10px; border:1px solid var(--line,#ddd); border-radius:8px; background:var(--surface,#fff); color:var(--text,#222); font:inherit; font-size:13px; line-height:20px; text-align:left; cursor:pointer; }
+.searchable-select > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.select-chevron { flex-shrink:0; width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.searchable-select:hover:not(:disabled) { border-color:var(--muted,#777); }
+.searchable-select:disabled { cursor:not-allowed; opacity:.5; }
 .searchable-select:focus-visible { outline:2px solid var(--text-muted,#777); outline-offset:2px; }
 .select-popup { position:fixed; z-index:2300; box-sizing:border-box; display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid var(--line,#ddd); background:var(--surface,#fff); color:var(--text,#222); border-radius:12px; box-shadow:0 8px 28px #0002; }
 .select-popup input { width:100%; box-sizing:border-box; flex-shrink:0; padding:10px; border:1px solid var(--line,#ddd); border-radius:6px; background:var(--surface,#fff); color:inherit; font:inherit; }
-.select-results { overflow:auto; min-height:0; }
+.select-results { overflow:auto; min-height:0; overscroll-behavior:contain; }
 .select-results button { display:block; width:100%; padding:10px; border:0; border-radius:6px; text-align:left; background:transparent; color:inherit; font:inherit; cursor:pointer; overflow-wrap:anywhere; }
 .select-results button.highlighted,.select-results button:hover { background:var(--hover,#eee); }
 .select-results button[aria-selected=true] { font-weight:600; }

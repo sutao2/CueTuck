@@ -200,31 +200,42 @@ pub async fn cancel_oauth_session(flow_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn logout_local_session(access_token: String) -> Result<(), String> {
-    let _ = http_client(true)?
-        .delete(format!("{}/v1/session", api_base()?))
-        .bearer_auth(&access_token)
-        .send()
-        .await;
-    KeyringRefreshStore.clear_refresh()
+pub async fn logout_local_session(access_token: Option<String>) -> Result<(), String> {
+    KeyringRefreshStore.clear_refresh()?;
+    if let Some(token) = access_token {
+        let _ = http_client(true)?
+            .delete(format!("{}/v1/session", api_base()?))
+            .bearer_auth(token)
+            .send()
+            .await;
+    }
+    Ok(())
 }
 
 #[tauri::command]
-pub async fn refresh_local_session() -> Result<SessionView, String> {
-    let refresh = KeyringRefreshStore
-        .load_refresh()?
-        .ok_or_else(|| "没有 refresh".to_string())?;
-    let response = http_client(true)?
-        .post(format!("{}/v1/session/refresh", api_base()?))
+pub async fn refresh_local_session() -> Result<Option<SessionView>, String> {
+    refresh_saved_session(&KeyringRefreshStore, &http_client(false)?, &api_base()?).await
+}
+
+async fn refresh_saved_session(
+    store: &(impl RefreshStore + Sync),
+    client: &reqwest::Client,
+    base: &str,
+) -> Result<Option<SessionView>, String> {
+    let Some(refresh) = store.load_refresh()? else { return Ok(None) };
+    let response = client.post(format!("{base}/v1/session/refresh"))
         .json(&serde_json::json!({ "refresh_token": refresh }))
-        .send()
-        .await
-        .map_err(|error| error.to_string())?;
-    if !response.status().is_success() {
-        return Err("刷新失败".to_string());
+        .send().await.map_err(|_| "暂时无法恢复登录，请检查网络后重试".to_string())?;
+    if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+        store.clear_refresh()?;
+        return Ok(None);
     }
-    let pair: TokenPair = response.json().await.map_err(|error| error.to_string())?;
-    persist_pair(pair)
+    if !response.status().is_success() {
+        return Err("暂时无法恢复登录，请稍后重试".to_string());
+    }
+    let pair: TokenPair = response.json().await.map_err(|_| "登录响应无效，请重试".to_string())?;
+    persist_session_tokens(store, &pair.access_token, &pair.refresh_token)?;
+    Ok(Some(SessionView { email: pair.email, access_token: pair.access_token }))
 }
 
 #[tauri::command]
@@ -361,4 +372,60 @@ pub async fn redeem_billing_code(
         return Err("兑换失败".to_string());
     }
     response.json().await.map_err(|error| error.to_string())
+}
+
+#[cfg(test)]
+mod restore_tests {
+    use super::*;
+    use crate::session::MemoryRefreshStore;
+    use std::io::{Read, Write};
+
+    fn server(status: u16, body: &'static str) -> (String, std::thread::JoinHandle<()>) {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let handle = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
+            let mut bytes = [0; 4096];
+            let size = stream.read(&mut bytes).unwrap();
+            assert!(String::from_utf8_lossy(&bytes[..size]).starts_with("POST /v1/session/refresh "));
+            write!(stream, "HTTP/1.1 {status} Response\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+        });
+        (url, handle)
+    }
+
+    #[tokio::test]
+    async fn restore_rotates_credentials_and_returns_only_access() {
+        let store = MemoryRefreshStore::default(); store.save_refresh("ref.old").unwrap();
+        let (url, handle) = server(200, r#"{"email":"test@example.test","access_token":"acc.new","refresh_token":"ref.new"}"#);
+        let session = refresh_saved_session(&store, &reqwest::Client::new(), &url).await.unwrap().unwrap();
+        handle.join().unwrap();
+        assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.new"));
+        assert_eq!(session.email, "test@example.test");
+        assert_eq!(session.access_token, "acc.new");
+        assert!(!serde_json::to_string(&session).unwrap().contains("ref.new"));
+    }
+
+    #[tokio::test]
+    async fn restore_preserves_credentials_on_transient_or_malformed_responses() {
+        for (status, body) in [(503, "{}"), (429, "{}"), (200, "{}"), (200, r#"{"email":"x","access_token":"bad","refresh_token":"ref.new"}"#)] {
+            let store = MemoryRefreshStore::default(); store.save_refresh("ref.old").unwrap();
+            let (url, handle) = server(status, body);
+            assert!(refresh_saved_session(&store, &reqwest::Client::new(), &url).await.is_err());
+            handle.join().unwrap();
+            assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.old"));
+        }
+    }
+
+    #[tokio::test]
+    async fn restore_clears_only_rejected_credentials_and_skips_empty_store() {
+        let store = MemoryRefreshStore::default();
+        assert!(refresh_saved_session(&store, &reqwest::Client::new(), "invalid-url").await.unwrap().is_none());
+        store.save_refresh("ref.old").unwrap();
+        assert!(refresh_saved_session(&store, &reqwest::Client::new(), "invalid-url").await.is_err());
+        assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.old"));
+        let (url, handle) = server(401, "{}");
+        assert!(refresh_saved_session(&store, &reqwest::Client::new(), &url).await.unwrap().is_none());
+        handle.join().unwrap(); assert_eq!(store.load_refresh().unwrap(), None);
+    }
 }

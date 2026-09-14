@@ -235,3 +235,12 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 | 桌面授权完成后浏览器离开提供商页面 | `backend` `oauth_browser_callback_renders_completion_and_preserves_polling` |
 | 登录界面列出已配置提供商 | `WorkbenchShell.spec.js` shows google on login when providers include google |
 | 未配置则只留邮箱密码 | `WorkbenchShell.spec.js` hides oauth buttons when providers empty |
+
+### Requirement: 桌面更新与重启恢复会话
+
+主窗口启动 MUST 使用原有系统凭据库中的 Refresh 恢复会话，更新不改变凭据服务名。无凭据时作为访客；网络或钥匙串读取失败保留凭据并显示重试，只有明确失效才清除。恢复不阻塞本地库初始化；并发恢复合并，登录和退出等待正在进行的恢复，避免旧恢复覆盖新账号或退出状态。浏览器预览不触发系统凭据读取，令牌不进入 Web Storage。
+
+- Given 更新前已登录且凭据有效 When 更新或重启主窗口 Then 自动恢复邮箱与鉴权收藏，原 Refresh 轮换保存。
+- Given 无凭据 When 首次启动 Then 正常访客，不显示错误。
+- Given 暂时断网或钥匙串无法读取 When 恢复失败后重试 Then 保留原凭据，再次可恢复，不误报凭据失效。
+- Given 正在恢复 When 用户退出或登录其他账号 Then 串行完成，最终状态以用户操作为准。
