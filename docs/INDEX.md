@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-14-square-publisher.md](plans/2026-09-14-square-publisher.md) | 实施中 | 详情缺少发布作者 | 公开昵称与简介、来源作者区分和原生字段转发 |
+| [plans/2026-09-14-square-publisher.md](plans/2026-09-14-square-publisher.md) | 已验收 | 详情缺少发布作者 | 公开昵称与简介、来源作者区分和原生字段转发 |
 | [plans/2026-09-14-browse-session-followup.md](plans/2026-09-14-browse-session-followup.md) | 验收 | 分类全部重载、翻译失败与重启登录 | 分类统计保留、API 已部署；英文翻译与重启恢复实机通过 |
 | [plans/2026-09-14-publication-images.md](plans/2026-09-14-publication-images.md) | 实施中 | 投稿后图片不显示、GIF 与列表错位 | API 已部署；修复封面组件属性丢失导致的列表错位 |
 | [plans/2026-09-14-session-restore-filters.md](plans/2026-09-14-session-restore-filters.md) | 验收 | 更新后退出登录、广场筛选样式 | beta.12 已安装，筛选对齐及更新/重启会话恢复实机通过 |
