@@ -1,3 +1,6 @@
+#[path = "../../shared/skill_bundle.rs"]
+mod skill_bundle;
+mod skill_market;
 #[path = "../../shared/translation.rs"]
 mod prompt_translation;
 mod translation;
@@ -404,6 +407,15 @@ impl AppState {
 
 pub fn app(state: AppState) -> Router {
     Router::new()
+        .route("/v1/skills", get(skill_market::browse).post(skill_market::submit).layer(axum::extract::DefaultBodyLimit::max(skill_bundle::MAX_BUNDLE_JSON)))
+        .route("/v1/skills/mine", get(skill_market::mine))
+        .route("/v1/skills/:id", get(skill_market::detail))
+        .route("/v1/skills/:id/bundle", get(skill_market::package))
+        .route("/v1/skills/:id/withdraw", post(skill_market::withdraw))
+        .route("/v1/admin/skills", get(skill_market::admin_list))
+        .route("/v1/admin/skills/:id", get(skill_market::admin_detail))
+        .route("/v1/admin/skills/:id/bundle", get(skill_market::admin_package))
+        .route("/v1/admin/skills/:id/review", post(skill_market::review))
         .route("/v1/health", get(health))
         .route("/v1/session", post(create_session).delete(delete_session))
         .route("/v1/session/identity/options", get(identity::options))

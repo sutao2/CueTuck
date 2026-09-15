@@ -1,3 +1,5 @@
+#[path = "../../../shared/skill_bundle.rs"]
+mod skill_bundle;
 #[path = "../../../shared/translation.rs"]
 mod prompt_translation;
 mod commands;
@@ -28,6 +30,7 @@ pub fn run() {
     builder
         .invoke_handler(tauri::generate_handler![
             commands::skills::skills_command,
+            commands::skills::skill_market_request,
             commands::skills::skills_choose_directory,
             commands::skills::skills_cancel,
             commands::ai::get_launcher_ai_config,

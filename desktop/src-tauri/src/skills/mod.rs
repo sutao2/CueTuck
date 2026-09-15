@@ -1,3 +1,4 @@
+pub mod authoring;
 pub mod files;
 pub mod install;
 pub mod local;

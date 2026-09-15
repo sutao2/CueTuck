@@ -272,6 +272,7 @@ impl Pg {
         self.init_catalog_redirects().await?;
         self.init_oauth_verification().await?;
         self.init_notifications().await?;
+        self.init_skill_market().await?;
         Ok(())
     }
 

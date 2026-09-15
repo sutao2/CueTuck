@@ -18,6 +18,9 @@ pub struct SkillsState {
 #[serde(tag = "action", rename_all = "snake_case")]
 pub enum Request {
     Snapshot,
+    Create { name:String, body:String },
+    ExportBundle { id:String },
+    PrepareBundle { bundle:crate::skill_bundle::Bundle, digest:String },
     Catalog {
         input: String,
     },
@@ -127,6 +130,9 @@ fn run_local(
     let mut registry = files::load_registry(&dir)?;
     install::recover(&dir, &mut registry)?;
     match request {
+        Request::Create {name,body} => value(skills::authoring::create(&dir,&defaults,&name,&body)?),
+        Request::ExportBundle {id} => value(skills::authoring::export(&dir,&id)?),
+        Request::PrepareBundle {bundle,digest} => value(skills::authoring::prepare(&dir,bundle,&digest)?),
         Request::PrepareLocal { path } => value(install::prepare_local(&dir, &path)?),
         Request::ReadPrepared { id, file } => {
             install::prepared(&dir, &id)?;
@@ -387,4 +393,18 @@ pub async fn skills_choose_directory(app: AppHandle) -> skills::Result<Option<St
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// Fixed endpoints only; the account token never goes to a repository URL.
+#[tauri::command]
+pub async fn skill_market_request(window:tauri::WebviewWindow,action:String,id:Option<String>,query:Option<serde_json::Value>,body:Option<serde_json::Value>,access_token:Option<String>)->skills::Result<serde_json::Value>{
+    if window.label()!="main"{return Err("请从主窗口访问 Skill 社区".into());}
+    let suffix=match action.as_str(){"browse"=>"/v1/skills".to_string(),"mine"=>"/v1/skills/mine".into(),"submit"=>"/v1/skills".into(),"detail"|"bundle"|"withdraw"=>{let id=id.ok_or("缺少 Skill 编号")?;uuid::Uuid::parse_str(&id).map_err(|_|"Skill 编号无效")?;format!("/v1/skills/{id}{}",match action.as_str(){"bundle"=>"/bundle","withdraw"=>"/withdraw",_=>""})},_=>return Err("不支持的社区操作".into())};
+    let client=crate::http::client()?;let url=format!("{}{suffix}",crate::api_config::api_base()?);
+    let mut request=if matches!(action.as_str(),"submit"|"withdraw"){client.post(url).json(&body.ok_or("缺少请求内容")?)}else{client.get(url)};
+    if let Some(query)=query{request=request.query(&query);}if let Some(token)=access_token{request=request.bearer_auth(token);}
+    let mut response=request.timeout(std::time::Duration::from_secs(90)).send().await.map_err(|_|"Skill 社区连接失败，请重试")?;
+    if !response.status().is_success(){return Err(match response.status().as_u16(){401=>"请登录后继续，或重新登录刷新会话",403=>"当前账号或站点不允许此操作",404=>"Skill 不存在或已下架",409=>"内容状态已变化，请刷新后重试",413=>"Skill 文件包超过大小上限",422=>"请先在账号设置中填写昵称",429=>"今日发布次数已用完",400=>"Skill 名称、许可或文件包不符合要求",_=>"Skill 社区暂时不可用，请重试"}.into());}
+    let mut bytes=Vec::new();while let Some(chunk)=response.chunk().await.map_err(|_|"读取 Skill 响应失败")?{if bytes.len()+chunk.len()>crate::skill_bundle::MAX_BUNDLE_JSON{return Err("Skill 响应超过大小上限".into());}bytes.extend_from_slice(&chunk);}
+    serde_json::from_slice(&bytes).map_err(|_|"Skill 社区返回了无效响应".into())
 }

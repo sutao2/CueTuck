@@ -2,7 +2,7 @@ FROM rust:1.93-bookworm@sha256:7c4ae649a84014c467d79319bbf17ce2632ae8b8be123ac2f
 WORKDIR /build/backend
 COPY backend/Cargo.toml backend/Cargo.lock ./
 COPY backend/src ./src
-COPY shared/translation.rs /build/shared/translation.rs
+COPY shared/translation.rs shared/skill_bundle.rs /build/shared/
 ENV CARGO_BUILD_JOBS=1
 RUN cargo build --release --locked && strip target/release/promptark-api
 
