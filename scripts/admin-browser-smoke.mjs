@@ -8,7 +8,8 @@ import {fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const artifacts=resolve(root,'output/playwright',`admin-${Date.now()}`);await mkdir(artifacts,{recursive:true});
-const origin='http://127.0.0.1:1432', session=`admin-smoke-${process.pid}`,exec=promisify(execFile);
+const port=process.env.PROMPTARK_ADMIN_SMOKE_PORT || '1432';
+const origin=`http://127.0.0.1:${port}`, session=`admin-smoke-${process.pid}`,exec=promisify(execFile);
 const identity={email:'owner@fixture.test',role:'owner',permissions:{users:true,configuration:true,roles:true}};
 let site={revision:0,name:'Fixture community',description:'Test only',support_email:'',logo_url:'',publishing_open:true,square_public:true,announcement:'',announcement_start:null,announcement_end:null};
 let status='pending',saves=0,queries=[],actions='',snapshot='',serverLog='';
@@ -34,7 +35,7 @@ const api=createServer(async(req,res)=>{
   return send(404,{});
 });
 await new Promise(done=>api.listen(0,'127.0.0.1',done));
-const vite=spawn(process.execPath,[resolve(root,'admin-web/node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port','1432','--strictPort'],{cwd:resolve(root,'admin-web'),env:{...process.env,VITE_API_BASE:`http://127.0.0.1:${api.address().port}`},stdio:['ignore','pipe','pipe']});
+const vite=spawn(process.execPath,[resolve(root,'admin-web/node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port',port,'--strictPort'],{cwd:resolve(root,'admin-web'),env:{...process.env,VITE_API_BASE:`http://127.0.0.1:${api.address().port}`},stdio:['ignore','pipe','pipe']});
 vite.stdout.on('data',c=>serverLog+=c);vite.stderr.on('data',c=>serverLog+=c);
 async function run(...args){const {stdout}=await exec(process.execPath,[resolve(root,'desktop/node_modules/@playwright/cli/playwright-cli.js'),`-s=${session}`,...args],{cwd:artifacts,timeout:60000,maxBuffer:2097152});actions+=stdout;if(stdout.includes('### Error'))throw Error(stdout);const path=stdout.match(/\[Snapshot\]\(([^)]+)\)/)?.[1];if(path)snapshot=await readFile(resolve(artifacts,path),'utf8');snapshot=stdout.match(/```yaml\n([\s\S]*?)```/)?.[1]||snapshot;return stdout;}
 async function target(pattern){for(let i=0;i<8;i++){await run('snapshot');const line=snapshot.split('\n').find(l=>pattern.test(l)&&!l.includes('[disabled]'));if(line)return line.match(/\[ref=(e\d+)\]/)?.[1];}throw Error(`Missing ${pattern}\n${snapshot}`);}

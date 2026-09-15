@@ -45,11 +45,11 @@ it('preserves selection on rejected publication and keeps success visible after 
   const source = await library.createLocalPrompt({ title: 'source', content: 'body' }); await shell(); await publish();
   await selectOption(w, 'publish-source', source.id); await flushPromises();
   setPublishTransport(async () => { throw Error('offline'); });
-  await w.get('[data-testid=publish-submit]').trigger('click'); await flushPromises();
+  await submitPreview(w); await flushPromises();
   expect(selectComponent(w, 'publish-source').props('modelValue')).toBe(source.id);
   expect(w.get('[data-testid=publish-resume]').text()).toContain('发布失败');
   setPublishTransport(async () => ({ status: 'pending' }));
-  await w.get('[data-testid=publish-submit]').trigger('click'); await flushPromises();
+  await submitPreview(w); await flushPromises();
   expect(w.find('[data-testid=publish-resume]').exists()).toBe(false);
   expect(w.get('[data-testid=publish-notice]').text()).toContain('已提交审核');
 });
@@ -87,4 +87,20 @@ it('keeps successful library feedback when queue persistence throws', async () =
   await settings(); await w.get('[data-testid=sync-now]').trigger('click'); await flushPromises();
   expect(w.get('[data-testid=sync-note]').text()).toContain('个人库已同步；队列处理失败');
   expect(w.find('[data-testid=retry-sync-queue]').exists()).toBe(true);
+});
+
+async function submitPreview(wrapper) {
+  const preview=wrapper.find('[data-testid="publish-submit"]');
+  if(preview.exists()) { await preview.trigger('click'); await flushPromises(); }
+  const confirm=wrapper.find('[data-testid="publish-confirm"]');
+  if(confirm.exists()) { await confirm.trigger('click'); await flushPromises(); }
+}
+
+it('previews the exact selected content without submitting and preserves selection when returning',async()=>{
+ const source=await library.createLocalPrompt({title:'公开标题',content:'公开正文'});const send=vi.fn(async()=>({status:'pending'}));setPublishTransport(send);
+ await shell();await publish();await selectOption(w,'publish-source',source.id);await flushPromises();
+ await w.get('[data-testid=publish-submit]').trigger('click');await flushPromises();
+ expect(send).not.toHaveBeenCalled();expect(w.get('[data-testid=publication-preview]').text()).toContain('公开正文');expect(w.get('[data-testid=publication-preview]').text()).toContain('不会公开任何附件');
+ await w.findAll('button').find(b=>b.text()==='返回修改').trigger('click');await flushPromises();expect(selectComponent(w,'publish-source').props('modelValue')).toBe(source.id);
+ await submitPreview(w);expect(send).toHaveBeenCalledTimes(1);
 });

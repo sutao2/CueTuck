@@ -46,13 +46,14 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
     let cached = if sort == "recommended" { state.recommendations.get(&key)? } else { None };
     if sort == "recommended" && offset > 0 && cached.is_none() { return Err(StatusCode::CONFLICT); }
     let (total, mut items, category_counts): (i64, Vec<Value>, Option<serde_json::Map<String, Value>>) = if let Some(pg) = &state.db {
-        let pattern = (!query.is_empty()).then(|| format!("%{}%", query.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")));
+        let patterns = crate::prompt_search::patterns(&query);
+        let pattern = (!patterns.is_empty()).then_some(patterns);
         let favorite = format!("EXISTS(SELECT 1 FROM {} f WHERE f.email=$4 AND f.item_id=s.id)", pg.t("favorites"));
         let translated_join = format!("LEFT JOIN {} tr ON tr.item_id=s.id AND tr.target='zh' AND tr.status='ready'", pg.t("prompt_translations"));
         let title = if translated {"COALESCE(tr.data->>'title',s.title)"} else {"s.title"};
         let excerpt = if translated {"COALESCE(tr.data->>'excerpt',s.excerpt)"} else {"s.excerpt"};
         let filter = format!(r#"s.visibility='online'
-            AND ($1::text IS NULL OR s.title ILIKE $1 ESCAPE '\' OR s.excerpt ILIKE $1 ESCAPE '\' OR s.reference->>'author' ILIKE $1 ESCAPE '\' OR tr.data->>'title' ILIKE $1 ESCAPE '\' OR tr.data->>'excerpt' ILIKE $1 ESCAPE '\')
+            AND ($1::text[] IS NULL OR s.title ILIKE ANY($1) OR s.excerpt ILIKE ANY($1) OR s.reference->>'author' ILIKE ANY($1) OR tr.data->>'title' ILIKE ANY($1) OR tr.data->>'excerpt' ILIKE ANY($1))
             AND ($2::text IS NULL OR s.model=$2) AND ($3::text[]='{{}}' OR s.category_id=ANY($3))
             AND (NOT $5::boolean OR {favorite}) AND NOT(s.id=ANY($9::text[]))"#);
         let order = match sort {
@@ -77,9 +78,9 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
             sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY").execute(&mut *tx).await?;
             let snapshot = if sort == "recommended" {
                 if let Some(snapshot) = cached.clone() { Some(snapshot) } else {
-                    let sql = format!("SELECT s.id,s.recommended,s.download_count,EXTRACT(EPOCH FROM s.listed_at)::float8 AS listed FROM {} s {translated_join} WHERE {filter} LIMIT 100001",pg.t("square_items")).replace("$9", "$6");
+                    let sql = format!("SELECT s.id,s.title,s.recommended,s.download_count,EXTRACT(EPOCH FROM s.listed_at)::float8 AS listed FROM {} s {translated_join} WHERE {filter} LIMIT 100001",pg.t("square_items")).replace("$9", "$6");
                     let rows = sqlx::query(&sql).bind(&pattern).bind(&model).bind(&ids).bind(&email).bind(false).bind(&excluded).fetch_all(&mut *tx).await?;
-                    let rows = rows.into_iter().map(|row|Candidate { id:row.get("id"),featured:row.get("recommended"),downloads:row.get("download_count"),listed:row.get("listed") }).collect();
+                    let rows = rows.into_iter().map(|row|Candidate { id:row.get("id"),literal:!query.is_empty() && row.get::<String,_>("title").to_lowercase().contains(&query.to_lowercase()),featured:row.get("recommended"),downloads:row.get("download_count"),listed:row.get("listed") }).collect();
                     Some(state.recommendations.insert(key.clone(),rows,&seed).map_err(|_|sqlx::Error::Protocol("recommendation capacity".into()))?)
                 }
             } else { None };
@@ -98,7 +99,7 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         }).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
     } else {
         let favorites = if let Some(email) = &email { state.favorite_ids(email).await? } else { vec![] };
-        let needle = query.to_lowercase();
+        let needles = crate::prompt_search::terms(&query);
         let mut rows = state.all_items().await?;
         let category_counts = if offset == 0 {
             let mut counts = serde_json::Map::new();
@@ -108,8 +109,8 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
             }
             Some(counts)
         } else { None };
-        rows.retain(|p| (needle.is_empty() || p.title.to_lowercase().contains(&needle) || p.excerpt.as_deref().unwrap_or("").to_lowercase().contains(&needle)
-                || p.reference.as_ref().and_then(|r|r["author"].as_str()).unwrap_or("").to_lowercase().contains(&needle))
+        rows.retain(|p| (needles.is_empty() || needles.iter().any(|needle|p.title.to_lowercase().contains(needle) || p.excerpt.as_deref().unwrap_or("").to_lowercase().contains(needle)
+                || p.reference.as_ref().and_then(|r|r["author"].as_str()).unwrap_or("").to_lowercase().contains(needle)))
             && model.as_ref().is_none_or(|m|p.model.as_ref()==Some(m))
             && (ids.is_empty() || p.category_id.as_ref().is_some_and(|id|ids.contains(id)))
             && (sort != "favorites" || favorites.contains(&p.id)) && !excluded.contains(&p.id));
@@ -121,7 +122,7 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         });
         let total;
         if sort == "recommended" {
-            let snapshot = match cached { Some(ids)=>ids, None=>state.recommendations.insert(key,rows.iter().map(|p|Candidate {id:p.id.clone(),featured:false,downloads:*counts.get(&p.id).unwrap_or(&0),listed:None}).collect(),&seed)? };
+            let snapshot = match cached { Some(ids)=>ids, None=>state.recommendations.insert(key,rows.iter().map(|p|Candidate {id:p.id.clone(),literal:!query.is_empty() && p.title.to_lowercase().contains(&query.to_lowercase()),featured:false,downloads:*counts.get(&p.id).unwrap_or(&0),listed:None}).collect(),&seed)? };
             total=snapshot.len() as i64;
             if offset+limit < total {recommendation_next=Some(offset+limit);}
             let mut by_id: std::collections::HashMap<_,_> = rows.into_iter().map(|p|(p.id.clone(),p)).collect();
@@ -143,6 +144,19 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
 mod tests {
     use super::*;
     use crate::admin_security_tests::{state, request};
+    #[tokio::test]
+    async fn multilingual_and_typo_search_keeps_literal_matches_first() {
+        let state=state().await;let pg=state.db.as_ref().unwrap();
+        for (id,title) in [("search-photo","photography guide"),("search-zh","摄影模板")] {
+            sqlx::query(&format!("INSERT INTO {} (id,title,kind,excerpt,visibility) VALUES($1,$2,'prompt','search-test','online')",pg.t("square_items"))).bind(id).bind(title).execute(&pg.pool).await.unwrap();
+        }
+        for query in ["photography","photograpy"] {
+            let (code,page)=request(&state,"GET",&format!("/v1/square/browse?q={query}&recommendation=search"),"",json!(null)).await;
+            assert_eq!(code,StatusCode::OK);assert_eq!(page["total"],2);
+            if query=="photography" {assert_eq!(page["items"][0]["id"],"search-photo");}
+        }
+        sqlx::query(&format!("DROP SCHEMA {} CASCADE",pg.schema)).execute(&pg.pool).await.unwrap();
+    }
     #[tokio::test]
     async fn recommendation_twenty_thousand_candidates_stays_bounded() {
         let state=state().await;let pg=state.db.as_ref().unwrap();

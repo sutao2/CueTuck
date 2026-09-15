@@ -281,7 +281,7 @@ pub fn list_prompts_in_dir(
     category_id: Option<&str>,
 ) -> Result<Vec<PromptRecord>, String> {
     let connection = open_db(dir)?;
-    let pattern = format!("%{}%", query.trim());
+    let pattern = serde_json::to_string(&crate::prompt_search::patterns(query)).map_err(|e|e.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT p.id, p.title, p.summary, p.content, p.category_id, p.collection_id, COALESCE(p.use_count, 0),
@@ -292,7 +292,7 @@ pub fn list_prompts_in_dir(
              LEFT JOIN categories c ON c.id = p.category_id
              LEFT JOIN categories parent ON parent.id = c.parent_id
              WHERE p.deleted_at IS NULL
-               AND (?1 = '' OR p.title LIKE ?2 OR p.content LIKE ?2 OR IFNULL(c.name, '') LIKE ?2 OR IFNULL(parent.name, '') LIKE ?2)
+               AND (?1 = '' OR EXISTS(SELECT 1 FROM json_each(?2) term WHERE p.title LIKE term.value ESCAPE '\\' OR p.content LIKE term.value ESCAPE '\\' OR IFNULL(c.name, '') LIKE term.value ESCAPE '\\' OR IFNULL(parent.name, '') LIKE term.value ESCAPE '\\'))
                AND (
                     ?3 IS NULL
                     OR (?3 = '__uncategorized__' AND c.id IS NULL)
@@ -327,4 +327,16 @@ pub fn move_prompt_category_in_dir(dir: &Path, id: &str, category_id: Option<&st
     ).map_err(|e| e.to_string())?;
     if changed == 0 { return Err("提示词不存在".into()); }
     transaction.commit().map_err(|e| e.to_string())
+}
+
+#[cfg(test)] mod search_tests {
+    use super::*;
+    #[test] fn bilingual_typo_and_literal_wildcards() {
+        let dir=tempfile::tempdir().unwrap();super::super::initialize_in_dir(dir.path()).unwrap();
+        create_prompt_in_dir(dir.path(),"摄影模板","photo",None).unwrap();
+        create_prompt_in_dir(dir.path(),"100 percent","unrelated",None).unwrap();
+        assert_eq!(list_prompts_in_dir(dir.path(),"photograpy",None).unwrap().len(),1);
+        assert!(list_prompts_in_dir(dir.path(),"100%",None).unwrap().is_empty());
+        assert_eq!(list_prompts_in_dir(dir.path(),"photography",None).unwrap().len(),1);
+    }
 }

@@ -4,6 +4,7 @@ use sha2::{Digest, Sha256};
 
 pub struct Candidate {
     pub id: String,
+    pub literal: bool,
     pub featured: bool,
     pub downloads: i64,
     pub listed: Option<f64>,
@@ -44,7 +45,7 @@ fn rank(rows: Vec<Candidate>, seed: &str, now: f64) -> Vec<String> {
         let noise = u64::from_be_bytes(digest[..8].try_into().unwrap()) as f64 / u64::MAX as f64;
         let fresh = row.listed.map(|time| (1.0 - (now - time).max(0.0) / (30.0 * 86400.0)).clamp(0.0,1.0)).unwrap_or(0.0);
         let popularity = (row.downloads.max(0) as f64 + 1.0).ln() / max_popularity;
-        let score = noise * 0.60 + if row.featured {0.20} else {0.0} + fresh * 0.10 + popularity * 0.10;
+        let score = if row.literal {2.0} else {0.0} + noise * 0.60 + if row.featured {0.20} else {0.0} + fresh * 0.10 + popularity * 0.10;
         (row.id, score)
     }).collect();
     scored.sort_by(|a,b|b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
@@ -54,7 +55,7 @@ fn rank(rows: Vec<Candidate>, seed: &str, now: f64) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn rows() -> Vec<Candidate> { (0..150).map(|i|Candidate {id:format!("id-{i}"),featured:false,downloads:i,listed:None}).collect() }
+    fn rows() -> Vec<Candidate> { (0..150).map(|i|Candidate {id:format!("id-{i}"),literal:false,featured:false,downloads:i,listed:None}).collect() }
     #[test]
     fn stable_rotation_and_positive_quality_signals() {
         let a = rank(rows(), "a", 0.0); let b = rank(rows(), "b", 0.0);

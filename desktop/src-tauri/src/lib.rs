@@ -1,3 +1,5 @@
+#[path = "../../../shared/search.rs"]
+mod prompt_search;
 #[path = "../../../shared/skill_bundle.rs"]
 mod skill_bundle;
 #[path = "../../../shared/translation.rs"]

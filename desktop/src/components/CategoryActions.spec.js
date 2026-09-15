@@ -61,7 +61,7 @@ it('hides custom root trees in the square and never publishes private category I
   await flushPromises();
   await selectOption(wrapper, 'publish-source', collection.id);
   await flushPromises();
-  await wrapper.get('[data-testid="publish-submit"]').trigger('click');
+  await submitPreview(wrapper);
   await flushPromises();
   expect(publish).toHaveBeenCalledWith(expect.objectContaining({ members: [expect.objectContaining({ category_id: null })] }));
   expect(publish.mock.calls[0][0]).not.toHaveProperty('categoryId');
@@ -147,3 +147,10 @@ it('keeps a failed deletion visible and hides management actions in the square',
   expect(wrapper.find('[data-testid="add-category"]').exists()).toBe(false);
   expect(wrapper.find('[aria-label="删除分类 周报"]').exists()).toBe(false);
 });
+
+async function submitPreview(wrapper) {
+  const preview=wrapper.find('[data-testid="publish-submit"]');
+  if(preview.exists()) { await preview.trigger('click'); await flushPromises(); }
+  const confirm=wrapper.find('[data-testid="publish-confirm"]');
+  if(confirm.exists()) { await confirm.trigger('click'); await flushPromises(); }
+}

@@ -197,7 +197,7 @@ describe("WorkbenchShell", () => {
     const w=mount(WorkbenchShell);await flushPromises();await w.get('[data-space="square"]').trigger('click');await flushPromises();
     await w.get('[data-testid="publish-prompt"]').trigger('click');await flushPromises();await selectOption(w, 'publish-source', created.id);
     await selectOption(w, 'publish-category', 'remote-root');await selectOption(w, 'publish-model', 'remote-model');
-    await w.get('[data-testid="publish-submit"]').trigger('click');await flushPromises();
+    await submitPreview(w);await flushPromises();
     expect(publish.mock.calls[0][0]).toMatchObject({categoryId:'remote-root',model:'remote-model'});
     expect((await listLocalPrompts())[0]).toMatchObject({content:'本地正文',category_id:'cat-image-0',model:'Flux'});w.unmount();
   });
@@ -288,13 +288,13 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="publish-prompt"]').trigger("click");
     await flushPromises();
     await selectOption(w, 'publish-source', collection.id);
-    await w.get('[data-testid="publish-submit"]').trigger("click");
+    await submitPreview(w);
     await flushPromises();
     expect(w.get('[data-testid="publish-resume"]').text()).toContain("至少需要一条");
     expect(publish).not.toHaveBeenCalled();
     const member = await createLocalPrompt({ title: "成员", content: "完整正文", categoryId: "cat-software-0", model: "GPT" });
     await addPromptToCollection(member.id, collection.id);
-    await w.get('[data-testid="publish-submit"]').trigger("click");
+    await submitPreview(w);
     await flushPromises();
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ kind: "collection", members: [
       { title: "成员", content: "完整正文", category_id: "cat-software-0", model: "GPT" },
@@ -972,7 +972,7 @@ describe("WorkbenchShell", () => {
     expect(card.get('[data-testid="download-square"]').attributes('title')).toBe('下载');
     await card.trigger('contextmenu');
     expect(w.find('[role="menu"]').exists()).toBe(false);
-    expect(card.find('[data-testid="card-more"]').exists()).toBe(false);
+    expect(card.find('[data-testid="card-more"]').exists()).toBe(true);
     await card.get(".prompt-title").trigger("click"); await flushPromises();
     await w.get('[data-testid="favorite-square"]').trigger("click");
     await flushPromises();
@@ -1071,7 +1071,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="login-modal"] form').trigger("submit");
     await flushPromises();
     await selectOption(w, 'publish-source', created.id);
-    await w.get('[data-testid="publish-submit"]').trigger("click");
+    await submitPreview(w);
     await flushPromises();
     await w.get('[data-space="local"]').trigger("click");
     await flushPromises();
@@ -1944,3 +1944,10 @@ describe("WorkbenchShell", () => {
     expect(seen.at(-1).model).toBe("Flux");
   });
 });
+
+async function submitPreview(wrapper) {
+  const preview=wrapper.find('[data-testid="publish-submit"]');
+  if(preview.exists()) { await preview.trigger('click'); await flushPromises(); }
+  const confirm=wrapper.find('[data-testid="publish-confirm"]');
+  if(confirm.exists()) { await confirm.trigger('click'); await flushPromises(); }
+}

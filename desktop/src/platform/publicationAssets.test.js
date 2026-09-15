@@ -72,10 +72,10 @@ it('publishes only selected collection files with member links, preserving selec
   expect(new Set(choices.map(choice => choice.element.value)).size).toBe(2);
   const choice = wrapper.findAll('.publication-file').find(label => label.text().includes('notes.txt')).get('input'); await choice.setValue(true);
   const fetcher = vi.fn(async () => new Response('fail',{status:503})); vi.stubGlobal('fetch',fetcher);
-  await wrapper.get('[data-testid="publish-submit"]').trigger('click'); await flushPromises();
+  await submitPreview(wrapper); await flushPromises();
   expect(publish).not.toHaveBeenCalled(); expect(choice.element.checked).toBe(true);
   fetcher.mockImplementation(async () => Response.json({ ...reference,id:reference.media_id }));
-  await wrapper.get('[data-testid="publish-submit"]').trigger('click');
+  await submitPreview(wrapper);
   await vi.waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
   const sent = publish.mock.calls[0][0]; expect(sent.assetRefs).toEqual([{...reference,id:choice.element.value}]);
   expect(sent.members.find(member => member.title === '成员一').asset_ids).toEqual([choice.element.value]);
@@ -89,7 +89,7 @@ it('refuses to publish a selected file after its member was removed', async () =
   const { collection,first } = await collectionSource();
   await wrapper.findAll('.publication-file').find(label => label.text().includes('notes.txt')).get('input').setValue(true);
   await removePromptFromCollection(first.id,collection.id);
-  await wrapper.get('[data-testid="publish-submit"]').trigger('click'); await flushPromises();
+  await submitPreview(wrapper); await flushPromises();
   expect(wrapper.text()).toContain('成员已移出合集'); expect(fetcher).not.toHaveBeenCalled(); expect(publish).not.toHaveBeenCalled();
 });
 it('shows collection files under the matching member without automatically loading bytes', () => {
@@ -144,10 +144,10 @@ it('defaults to no public files, clears choices on source changes and retains ch
   await selectOption(wrapper, 'publish-source', first.id); await flushPromises();
   expect(wrapper.get('[data-testid="publish-asset"]').element.checked).toBe(false);
   await wrapper.get('[data-testid="publish-asset"]').setValue(true);
-  await wrapper.get('[data-testid="publish-submit"]').trigger('click'); await flushPromises();
+  await submitPreview(wrapper); await flushPromises();
   expect(wrapper.text()).toContain('发布失败'); expect(wrapper.get('[data-testid="publish-asset"]').element.checked).toBe(true); expect(publish).not.toHaveBeenCalled();
   fetcher.mockImplementation(async () => Response.json({ ...reference, id: reference.media_id }));
-  await wrapper.get('[data-testid="publish-submit"]').trigger('click');
+  await submitPreview(wrapper);
   await vi.waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
   expect(publish.mock.calls[0][0].assetRefs).toEqual([reference]);
 });
@@ -174,3 +174,10 @@ it('shows local image previews and explicitly selects images without exposing ot
   expect(choices.find(c=>c.element.checked).element.value).toBe(image.id);
   expect(wrapper.text()).toContain('已选择 1 张图片');
 });
+
+async function submitPreview(wrapper) {
+ const preview=wrapper.find('[data-testid="publish-submit"]');
+ if(preview.exists()){await preview.trigger('click');await flushPromises();}
+ const confirm=wrapper.find('[data-testid="publish-confirm"]');
+ if(confirm.exists()){await confirm.trigger('click');await flushPromises();}
+}

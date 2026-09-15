@@ -26,7 +26,7 @@
       <div id="global-search-results" ref="resultList" class="global-search-results" role="listbox" aria-label="搜索结果" :aria-busy="loading">
         <button v-for="(row, index) in results" :id="`global-result-${index}`" :key="row.item.id" type="button" role="option" tabindex="-1" :aria-selected="active === index" class="global-search-result" @click="choose(row)">
           <span class="global-search-kind"><AppIcon :name="row.item.kind === 'collection' ? 'folder' : 'file'" /></span>
-          <span class="global-search-result-copy"><strong>{{ row.item.title }}</strong><small>{{ row.excerpt || '暂无摘要' }}</small></span>
+          <span class="global-search-result-copy"><strong><SearchHighlight :text="row.item.title" :query="query" /></strong><small><SearchHighlight :text="row.excerpt || '暂无摘要'" :query="query" /></small></span>
           <span class="global-search-type">{{ row.item.kind === 'collection' ? '合集' : '提示词' }}</span>
         </button>
       </div>
@@ -37,6 +37,7 @@
 
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
+import SearchHighlight from './SearchHighlight.vue';
 import AppIcon from './AppIcon.vue';
 import { vDialogFocus } from '../lib/dialogFocus.js';
 import { getLocalSetting, listLocalCollections, listLocalPrompts } from '../platform/library.js';
@@ -88,7 +89,7 @@ async function search() {
       items = page.items.map(item => ({ ...item, is_favorite: favorites.includes(item.id) })); count = page.total;
     }
     if (token !== request) return;
-    results.value = items.slice(0, 48).map(item => ({ item, excerpt: (item.content || item.description || '').slice(0, 240).replace(/\s+/g, ' ') }));
+    results.value = items.slice(0, 48).map(item => ({ item, excerpt: (item.excerpt || item.content || item.description || '').slice(0, 240).replace(/\s+/g, ' ') }));
     total.value = count; active.value = 0;
     if (resultList.value) resultList.value.scrollTop = 0;
   } catch (cause) {

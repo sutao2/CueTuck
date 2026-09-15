@@ -36,7 +36,7 @@ async function openSquare() {
 it('uses the complete ready Chinese template from a summary card without importing or counting a download', async () => {
   const record = vi.spyOn(library, 'recordLocalPromptUse');
   const w = await openSquare();
-  expect(w.find('[data-testid="card-more"]').exists()).toBe(false);
+  expect(w.find('[data-testid="card-more"]').exists()).toBe(true);
   await w.get('[data-testid="use-square"]').trigger('click'); await flushPromises();
   expect(w.get('[data-testid="use-modal"]').isVisible()).toBe(true);
   expect(w.get('[data-testid="square-detail"]').isVisible()).toBe(false);

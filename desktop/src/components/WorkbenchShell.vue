@@ -230,19 +230,10 @@
         <p v-if="space === 'square' && sortTab === '最新'" class="square-sort-note">按上架时间从新到旧排序</p>
         <p v-if="space === 'square' && sortTab === '热门'" class="square-sort-note" data-testid="square-sort-note">按已记录下载量从高到低排序 · 仅包含开启匿名统计后的下载</p>
 
-        <div
-          v-if="space === 'square' && squareOffline"
-          data-testid="square-offline"
-          class="offline-banner"
-        >
-          <span>◌</span>
-          <div>
-            <strong>暂时无法连接广场</strong>
-            <small>广场列表暂时不可用，本地库仍可离线使用。</small>
-          </div>
-          <button type="button" data-testid="retry-square" @click="loadSquare(true)">重试</button>
-          <button type="button" data-testid="go-local" @click="openLocal">前往本地</button>
-        </div>
+        <ContentState v-if="space === 'square' && squareOffline" data-testid="square-offline" kind="error" compact title="暂时无法连接广场" description="广场列表暂时不可用，本地库仍可离线使用。">
+          <button type="button" class="button" data-testid="retry-square" @click="loadSquare(true)">重试</button>
+          <button type="button" class="button" data-testid="go-local" @click="openLocal">前往本地</button>
+        </ContentState>
         <div
           v-if="space === 'square' && squareBlocked"
           data-testid="square-blocked"
@@ -269,9 +260,7 @@
             <button type="button" class="clear-filters" data-testid="clear-filters" @click="clearFilters()">清除筛选</button>
           </div>
           <template v-if="!(space === 'square' && (squareOffline || squareBlocked))">
-          <div v-if="space === 'square' && squareLoading" class="browse-loading" role="status" data-testid="browse-loading">
-            <span>正在加载提示词…</span><div v-for="n in 3" :key="n" class="loading-row" aria-hidden="true"><i></i><i></i><i></i></div>
-          </div>
+          <ContentState v-if="space === 'square' && squareLoading" kind="loading" title="正在加载提示词…" data-testid="browse-loading" />
           <WindowedPromptGrid
             v-else-if="displayedItems.length"
             :items="space === 'square' ? displayedItems : pagedItems"
@@ -308,10 +297,10 @@
                 <span v-if="cardCategory(item)" class="card-category" :title="cardCategory(item)">{{ cardCategory(item) }}</span>
                 <span v-if="showModelTags && item.model" class="model-tag" data-testid="model-tag">{{ item.model }}</span>
               </div>
-              <h3><button type="button" class="prompt-title" @click.stop="openItem(item)">{{ item.title }}</button></h3>
+              <h3><button type="button" class="prompt-title" @click.stop="openItem(item)"><SearchHighlight :text="item.title" :query="query" /></button></h3>
               <p v-if="item.author" class="prompt-author" data-testid="prompt-author">{{ item.author }}</p>
               <p class="prompt-excerpt">
-                {{ cardExcerpt(item) }}
+                <SearchHighlight :text="cardExcerpt(item)" :query="query" />
               </p>
               <div v-if="item.asset_count" class="card-assets" data-testid="card-assets">
                 <span v-if="item.image_count"><AppIcon name="image" />{{ item.image_count }} 张图片</span>
@@ -357,17 +346,14 @@
             </article>
             </template>
           </WindowedPromptGrid>
-          <div v-else class="empty-state">
-            <span class="empty-glyph"><AppIcon :name="space === 'square' ? 'square' : 'library'" /></span>
-            <h3>{{ emptyHeading }}</h3>
-            <p>{{ emptyCopy }}</p>
+          <ContentState v-else class="empty-state" :title="emptyHeading" :description="emptyCopy" :icon="space === 'square' ? 'square' : 'library'">
             <button v-if="hasContentFilter" type="button" class="button" @click="clearFilters()">清除筛选</button>
             <div v-else-if="space === 'local' && sortTab === '全部'" class="empty-actions">
               <button type="button" class="button primary-button" @click="creating = true">新建提示词</button>
               <button type="button" class="button" @click="settingsPage = 'data'; settingsOpen = true">导入文件</button>
               <button type="button" class="button" @click="openSquare">去广场挑选</button>
             </div>
-          </div>
+          </ContentState>
           <div v-if="space === 'square' && !squareLoading && (squareItems.length || squareNextOffset !== null)" class="browse-pagination" role="status">
             <span v-if="squareMoreLoading">正在加载更多…</span>
             <template v-else-if="squareNextOffset !== null">
@@ -485,7 +471,8 @@
           </div>
           <button type="button" class="page-back" aria-label="返回" :disabled="publishBusy" @click="publishResume = false">← 返回</button>
         </header>
-        <div class="create-body">
+        <PublicationPreview v-if="publishPreview" :title="publishPreview.source.title" :content="publishPreview.source.content" :members="publishPreview.members" :assets="publishPreview.assets" :category="remoteCatalog?.categories.find(c => c.id === publishPreview.categoryId)?.name" :model="publishPreview.model" />
+        <div v-show="!publishPreview" class="create-body">
           <p v-if="publishSourcesLoading" role="status">正在读取本地内容…</p>
           <p v-else-if="publishSourcesError" role="alert">{{ publishSourcesError }} <button type="button" data-testid="retry-publish-sources" @click="openPublish">重新读取</button></p>
           <p v-else-if="!publishSources.length" role="status">本地库还没有内容，请返回本地提示词新建后再发布。</p>
@@ -513,16 +500,17 @@
             <label v-for="asset in publishAssets" :key="asset.id" class="publication-file"><input v-model="publishAssetIds" type="checkbox" :value="asset.id" data-testid="publish-asset"><img v-if="asset.mime.startsWith('image/')" class="publication-image-preview" :src="assetUrl(asset)" :alt="asset.name" loading="lazy"><span>{{ asset.name }}<small v-if="asset.memberTitle">所属提示词：{{ asset.memberTitle }}</small><small>{{ formatBytes(assetSize(asset)) }} · {{ asset.mime }}</small></span></label>
           </fieldset>
         </div>
+        <p v-if="publishPreview && operationNote" role="status">{{ operationNote }}</p>
         <footer class="modal-footer">
-          <button type="button" class="button ghost-button" :disabled="publishBusy" @click="publishResume = false">返回</button>
+          <button type="button" class="button ghost-button" :disabled="publishBusy" @click="publishPreview ? (publishPreview = null) : (publishResume = false)">{{ publishPreview ? '返回修改' : '返回' }}</button>
           <button
             type="button"
             class="button primary-button"
-            data-testid="publish-submit"
+            :data-testid="publishPreview ? 'publish-confirm' : 'publish-submit'"
             :disabled="!publishSourceId || publishBusy || publishSourcesLoading || Boolean(publishSourcesError) || publishAssetsLoading || Boolean(publishAssetsError)"
-            @click="submitPublish"
+            @click="publishPreview ? submitPublish() : previewPublish()"
           >
-            {{ publishBusy ? '正在提交…' : '提交审核' }}
+            {{ publishBusy ? '正在处理…' : publishPreview ? '确认提交审核' : '预览发布' }}
           </button>
         </footer>
       </section>
@@ -641,6 +629,9 @@ import { listPromptAssets, assetSize, formatBytes, assetUrl } from '../platform/
 import { uploadPrivateAsset } from '../platform/privateMedia.js';
 import { vDialogFocus } from "../lib/dialogFocus.js";
 import { vPageFocus } from "../lib/pageFocus.js";
+import SearchHighlight from './SearchHighlight.vue';
+import ContentState from './ContentState.vue';
+import PublicationPreview from './PublicationPreview.vue';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";
@@ -900,10 +891,11 @@ onMounted(restoreSavedSession);
 const loginReason = ref("");
 const publishResume = ref(false);
 const pendingPublish = ref(false);
+const publishPreview = ref(null);
 const publishSources = ref([]);
 const publishSourcesLoading = ref(false), publishSourcesError = ref('');
 let publishSourcesRequest = 0;
-watch(publishResume, value => { if (!value) ++publishSourcesRequest; }, { flush: 'sync' });
+watch(publishResume, value => { if (!value) { ++publishSourcesRequest; publishPreview.value = null; } }, { flush: 'sync' });
 onUnmounted(() => { ++publishSourcesRequest; });
 const publishSourceId = ref("");
 const publishCategoryId = ref(null), publishModel = ref(null);
@@ -929,7 +921,7 @@ async function loadPublishAssets() {
   catch (error) { if (version === publishAssetsVersion) publishAssetsError.value = `附件读取失败：${error.message || error}`; }
   finally { if (version === publishAssetsVersion) publishAssetsLoading.value = false; }
 }
-watch(() => session.value.email, () => { publishAssetIds.value = []; });
+watch(() => session.value.email, () => { publishAssetIds.value = []; publishPreview.value = null; });
 onUnmounted(() => { ++publishAssetsVersion; });
 watch(publishSourceId, id => {
   const source = publishSources.value.find(item => item.id === id);
@@ -1504,19 +1496,35 @@ async function finishProfile() {
   }
 }
 
+async function previewPublish() {
+  if (publishBusy.value || !publishSourceId.value || publishAssetsLoading.value || publishAssetsError.value) return;
+  const source = publishSources.value.find(item => item.id === publishSourceId.value), token = getSession().accessToken;
+  const request = publishSourcesRequest;
+  publishBusy.value = true;
+  try {
+    if (!source) throw Error('未选择本地内容');
+    const members = source.kind === 'collection' ? await listCollectionMembers(source.id) : undefined;
+    if (members && !members.length) throw Error('合集至少需要一条提示词才能发布');
+    if (members?.some(member => !member.title?.trim() || !member.content?.trim())) throw Error('合集成员标题和正文不能为空');
+    if (request !== publishSourcesRequest || token !== getSession().accessToken || !publishResume.value) return;
+    publishPreview.value = JSON.parse(JSON.stringify({ source, members, assets: publishAssets.value.filter(asset => publishAssetIds.value.includes(asset.id)), categoryId: remoteCatalog.value ? publishCategoryId.value : publicationCategory(source.category_id), model: remoteCatalog.value ? publishModel.value : source.model, token }));
+  } catch (error) { operationNote.value = `预览失败：${error.message || error}`; }
+  finally { publishBusy.value = false; }
+}
 async function submitPublish() {
   if (!publishSourceId.value || publishBusy.value || publishSourcesLoading.value || publishSourcesError.value || publishAssetsLoading.value || publishAssetsError.value) return;
+  if (!publishPreview.value) return;
   publishBusy.value = true;
-  const source = publishSources.value.find((item) => item.id === publishSourceId.value);
+  const snapshot = publishPreview.value, source = snapshot.source;
   const account = getSession();
-  const selectedAssets = publishAssets.value.filter(asset => publishAssetIds.value.includes(asset.id));
-  const assertAccount = () => { if (!account.accessToken || getSession().accessToken !== account.accessToken) throw new Error('账号已变化，请重新确认公开附件'); };
+  const selectedAssets = snapshot.assets;
+  const assertAccount = () => { if (!account.accessToken || snapshot.token !== account.accessToken || getSession().accessToken !== account.accessToken) throw new Error('账号已变化，请重新确认公开附件'); };
   try {
     if (!source) throw new Error("未选择本地内容");
     assertAccount();
     let members;
     if (source.kind === 'collection') {
-      const currentMembers = await listCollectionMembers(source.id);
+      const currentMembers = snapshot.members;
       if (selectedAssets.some(asset => !currentMembers.some(member => member.id === asset.memberId))) throw new Error('所选附件的成员已移出合集，请重新选择本地内容');
       members = currentMembers.map(member => ({
         title: member.title, content: member.content, category_id: publicationCategory(member.category_id), model: member.model,
@@ -1537,8 +1545,8 @@ async function submitPublish() {
       sourceId: publishSourceId.value,
       title: source?.title,
       content: source?.content ?? "",
-      categoryId: remoteCatalog.value ? publishCategoryId.value : publicationCategory(source?.category_id),
-      model: remoteCatalog.value ? publishModel.value : source?.model,
+      categoryId: snapshot.categoryId,
+      model: snapshot.model,
       ...(source.kind === "collection" ? { kind: "collection", members } : {}),
       ...(assetRefs.length ? { assetRefs } : {}),
     });

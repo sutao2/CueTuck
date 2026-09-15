@@ -1,3 +1,4 @@
+import { matchesSearch } from '../../../shared/search.js';
 import { serializeCoverUrls } from "../lib/cover.js";
 import { validateAssets, resetMemoryAssets, memoryAssets, storeMemoryAssets } from './assets.js';
 
@@ -113,9 +114,7 @@ function matchesQuery(row, query, categories) {
   if (!needle) return true;
   const category = categories.find((item) => item.id === row.category_id);
   const parent = categories.find((item) => item.id === category?.parent_id);
-  return `${row.title} ${row.content} ${category?.name ?? ""} ${parent?.name ?? ""}`
-    .toLowerCase()
-    .includes(needle);
+  return matchesSearch(`${row.title} ${row.content} ${category?.name ?? ""} ${parent?.name ?? ""}`, needle);
 }
 
 function inCategory(row, categoryId, categories) {

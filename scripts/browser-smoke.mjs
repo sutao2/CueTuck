@@ -83,6 +83,7 @@ try {
   await run('screenshot');
   await click(/button "返回应用"/);
   await target(/本地库是空的/);
+  await click(/button "展开侧栏"/);
   // Isolated reference-image fixture. No real public download or local desktop write.
   await run('run-code', `async page => {
     await page.route('https://cms-assets.youmind.com/image-smoke.png',route=>route.fulfill({status:200,contentType:'image/png',path:${JSON.stringify(resolve(root,'desktop/src/assets/app-icon.png'))},headers:{'access-control-allow-origin':'*'}}));

@@ -8,11 +8,11 @@ it('blocks changed bundles and retries without a false installation',async()=>{s
 it('requires explicit withdrawal and sends the current review status',async()=>{const t=vi.fn(async action=>action==='detail'?item:{items:[item],total:1,category_counts:{ai:1}});setSkillMarketTransport(t);w=mount(SkillCommunity,{props:{mine:true}});await flushPromises();await w.get('.skills-list-row').trigger('click');await flushPromises();await click('撤回发布');expect(t.mock.calls.some(([a])=>a==='withdraw')).toBe(false);await click('确认撤回');expect(t).toHaveBeenCalledWith('withdraw',{id:'one',body:{status:'withdrawn',expected_status:'approved',reason:'作者撤回'}});});
 it('guides an empty community to GitHub and hides pagination until there are multiple pages',async()=>{
  let total=0;setSkillMarketTransport(async()=>({items:total?[item]:[],total,category_counts:total?{ai:total}:{}}));w=mount(SkillCommunity);await flushPromises();
- expect(w.text()).toContain('社区还没有公开的 Skill');expect(w.find('.skills-pagination').exists()).toBe(false);await w.get('.community-empty button').trigger('click');expect(w.emitted('browse-github')).toHaveLength(1);
+ expect(w.text()).toContain('社区还没有公开的 Skill');expect(w.find('.skills-pagination').exists()).toBe(false);await w.get('.content-state.empty button').trigger('click');expect(w.emitted('browse-github')).toHaveLength(1);
  total=24;await w.get('[aria-label="刷新"]').trigger('click');await flushPromises();expect(w.find('.skills-pagination').exists()).toBe(false);
  total=25;await w.get('[aria-label="刷新"]').trigger('click');await flushPromises();expect(w.find('.skills-pagination').exists()).toBe(true);expect(w.text()).toContain('第 1 / 2 页');
 });
 it('distinguishes a search with no matches from an author without publications',async()=>{
  setSkillMarketTransport(async()=>({items:[],total:0,category_counts:{}}));w=mount(SkillCommunity,{props:{mine:true}});await flushPromises();expect(w.text()).toContain('你还没有发布 Skill');
- await w.get('input').setValue('missing');await w.get('form').trigger('submit');await flushPromises();expect(w.text()).toContain('没有找到匹配的 Skill');expect(w.find('.community-empty button').exists()).toBe(false);
+ await w.get('input').setValue('missing');await w.get('form').trigger('submit');await flushPromises();expect(w.text()).toContain('没有找到匹配的 Skill');expect(w.get('.content-state.empty button').text()).toBe('清除搜索');
 });

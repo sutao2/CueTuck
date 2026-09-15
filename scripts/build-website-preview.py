@@ -29,3 +29,5 @@ classification = classification.replace("import sources from '../data/skill-sour
 (out / 'shared/skillCategories.mjs').write_text(classification)
 shutil.copy2(root / 'desktop/src/lib/renderPrompt.js', out / 'shared/renderPrompt.mjs')
 shutil.copy2(root / 'docs/assets/readme/square.png', out / 'assets/square.png')
+search = (root / 'shared/search.js').read_text().replace("import aliases from './search-aliases.json';", "const aliases = " + (root / 'shared/search-aliases.json').read_text() + ";")
+(out / 'shared/search.mjs').write_text(search)

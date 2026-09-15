@@ -4,7 +4,8 @@
    <form class="community-search skills-search" @submit.prevent="search"><AppIcon name="search"/><input v-model="query" :disabled="busy" aria-label="搜索社区 Skills" :placeholder="mine?'搜索我的发布…':'搜索 Skill 名称或描述…'"/><button type="submit" :disabled="busy" aria-label="搜索" title="搜索 · Enter">↵</button></form>
    <button class="button community-refresh" :disabled="busy" aria-label="刷新" title="刷新" @click="load"><AppIcon name="refresh"/></button>
   </div>
-  <p v-if="error" role="alert" class="skills-alert">{{ error }} <button class="button" :disabled="busy" @click="retry">重试</button></p>
+  <ContentState v-if="error" kind="error" compact title="内容加载失败" :description="error"><button class="button" :disabled="busy" @click="retry">重试</button></ContentState>
+  <ContentState v-if="busy&&!items.length" kind="loading" title="正在加载 Skills…" />
   <template v-if="selected">
    <button class="button" :disabled="busy" @click="selected=null">← 返回列表</button><h2>{{ selected.title }}</h2><p>{{ selected.description }}</p>
    <p class="muted">发布者：{{ selected.publisher?.display_name }} · {{ skillStatus(selected.status) }} · 许可：{{ selected.license }}</p>
@@ -17,17 +18,16 @@
   <template v-else>
    <div class="community-results"><span>{{ mine?'我的发布':'社区作品' }}<small v-if="mine">审核通过后公开展示</small></span><span class="muted" role="status">{{ busy?'正在加载…':`共 ${total} 个 Skill` }}</span></div>
    <section class="skills-list"><button v-for="item in items" :key="item.id" class="skills-list-row" :disabled="busy" @click="open(item.id)"><span class="skills-list-icon"><AppIcon name="skills"/></span><span class="skills-row-main"><strong>{{ item.title }}</strong><span>{{ item.description }}</span><small>{{ skillCategoryName(item.category) }} · {{ item.publisher?.display_name }} · {{ item.license }}</small><span v-if="mine&&item.reason">{{ item.reason }}</span></span><span class="skills-badge">{{ mine?skillStatus(item.status):'查看并安装' }}</span><span>›</span></button></section>
-   <div v-if="!busy&&!items.length&&!error" class="community-empty">
-    <span class="community-empty-icon"><AppIcon :name="query.trim()||category?'search':mine?'file':'skills'"/></span>
-    <h2>{{ query.trim()||category?'没有找到匹配的 Skill':mine?'你还没有发布 Skill':'社区还没有公开的 Skill' }}</h2>
-    <p>{{ query.trim()||category?'试试其他关键词，或在左侧切换分类。':mine?'在右上角选择「发布到社区」，提交后可在这里查看审核进度。':'已有开源 Skill 可在 GitHub 来源中浏览和安装。你也可以创建并发布自己的作品。' }}</p>
+   <ContentState v-if="!busy&&!items.length&&!error" :title="query.trim()||category?'没有找到匹配的 Skill':mine?'你还没有发布 Skill':'社区还没有公开的 Skill'" :description="query.trim()||category?'试试其他关键词，或在左侧切换分类。':mine?'发布后可以在这里查看审核进度。':'已有开源 Skill 可在 GitHub 来源中浏览和安装。你也可以创建并发布自己的作品。'" icon="skills">
     <button v-if="!mine&&!query.trim()&&!category" class="button" @click="emit('browse-github')">浏览 GitHub 来源 <span aria-hidden="true">→</span></button>
-   </div>
+    <button v-if="query.trim()" class="button" @click="query='';search()">清除搜索</button>
+   </ContentState>
    <div v-if="total>24&&!error" class="skills-pagination"><button :disabled="busy||offset===0" @click="offset-=24;load()">上一页</button><span>第 {{ Math.floor(offset/24)+1 }} / {{ Math.ceil(total/24) }} 页</span><button :disabled="busy||offset+24>=total" @click="offset+=24;load()">下一页</button></div>
   </template>
  </section>
 </template>
 <script setup>
+import ContentState from './ContentState.vue';
 import {computed,ref,watch,onMounted,onUnmounted} from 'vue';
 import {skillMarket,skillStatus} from '../platform/skillMarket.js';
 import {skillCategoryName,skillCategoryCounts} from '../platform/skillCategories.js';

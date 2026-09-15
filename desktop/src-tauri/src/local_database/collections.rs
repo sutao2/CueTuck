@@ -79,7 +79,7 @@ pub fn list_collections_in_dir(
     category_id: Option<&str>,
 ) -> Result<Vec<CollectionRecord>, String> {
     let connection = open_db(dir)?;
-    let pattern = format!("%{}%", query.trim());
+    let pattern = serde_json::to_string(&crate::prompt_search::patterns(query)).map_err(|e|e.to_string())?;
     let mut statement = connection
         .prepare(
             "SELECT col.id, col.title, col.description, col.category_id, col.cover_type, col.cover_json,
@@ -88,7 +88,7 @@ pub fn list_collections_in_dir(
              LEFT JOIN categories c ON c.id = col.category_id
              LEFT JOIN categories parent ON parent.id = c.parent_id
              WHERE col.deleted_at IS NULL
-               AND (?1 = '' OR col.title LIKE ?2 OR IFNULL(c.name, '') LIKE ?2 OR IFNULL(parent.name, '') LIKE ?2)
+               AND (?1 = '' OR EXISTS(SELECT 1 FROM json_each(?2) term WHERE col.title LIKE term.value ESCAPE '\\' OR IFNULL(c.name, '') LIKE term.value ESCAPE '\\' OR IFNULL(parent.name, '') LIKE term.value ESCAPE '\\'))
                AND (
                     ?3 IS NULL
                     OR (?3 = '__uncategorized__' AND c.id IS NULL)

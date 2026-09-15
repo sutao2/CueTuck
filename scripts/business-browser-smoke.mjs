@@ -34,7 +34,7 @@ try {
   await click(/button "＋ 添加文件"/);await run('upload',file);await target(/查看 business-notes.txt/);await click(/button "保存"/);
   await click(/tab "提示词广场"/);await click(/button "发布提示词"/);
   await run('select',await target(/combobox "本地内容"/),'Business 验收提示词');
-  await run('check',await target(/checkbox "business-notes.txt/));await click(/button "提交审核"/);await target(/已提交|提交成功/);
+  await run('check',await target(/checkbox "business-notes.txt/));await click(/button "预览发布"/);await click(/button "确认提交审核"/);await target(/已提交|提交成功/);
   await run('run-code',`async page=>{await page.evaluate(async api=>{const token=(await import('/src/platform/session.js')).getSession().accessToken;const headers={authorization:'Bearer '+token};if((await fetch(api+'/v1/admin/me',{headers})).status!==403)throw Error('User has admin access');const mine=await (await fetch(api+'/v1/publications/mine',{headers})).json();const p=mine.items.find(p=>p.title==='Business 验收提示词');if(!p||p.status!=='pending'||p.asset_refs.length!==1)throw Error('Missing pending snapshot');if((await fetch(api+'/v1/square/items/'+p.id+'/assets/'+p.asset_refs[0].id)).status!==404)throw Error('Pending file publicly exposed');},${JSON.stringify(api)});}`);
   await run('tab-new','http://127.0.0.1:1434');await fill(/textbox "邮箱"/,'owner@business.test');await fill(/textbox "密码"/,'Business-only-password');await click(/button "登录"/);
   await fill(/textbox "搜索投稿"/,'Business 验收提示词');await click(/button "查询"/);await target(/Business 验收提示词/);await click(/button "通过"/);await click(/button "确认审核"/);await target(/审核已保存/);await run('screenshot');

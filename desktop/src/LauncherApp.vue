@@ -64,7 +64,7 @@
             >
               <span class="result-icon">{{ rowIcon(row) }}</span>
               <span class="result-copy">
-                <span class="row-title">{{ row.title }}</span>
+                <span class="row-title"><SearchHighlight :text="row.title" :query="query" /></span>
                 <span class="row-desc">{{ rowDesc(row) }}</span>
               </span>
               <span class="pill">{{ scope === 'square' ? (row.kind === 'collection' ? '选择提示词' : '使用') : rowIcon(row) === 'VAR' ? '变量' : '提示词' }}</span>
@@ -150,6 +150,7 @@
 </template>
 
 <script setup>
+import SearchHighlight from './components/SearchHighlight.vue';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { rankLauncherResults } from './lib/launcherRanking.js';
 import { listLocalFavoriteIds } from './platform/localFavorites.js';
