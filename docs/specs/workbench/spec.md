@@ -232,18 +232,18 @@
 - THEN 只出现已标星的本地条目
 - AND 不因此请求广场收藏接口
 
-#### Scenario: 右键只提供已有动作
+#### Scenario: 移除重复右键入口
 
-- GIVEN 内容区有一条本地提示词
-- WHEN 用户在卡片上右键
-- THEN 菜单含编辑、使用、本机收藏与删除
-- AND 不得出现未实现的举报或分享
+- GIVEN 本地库或广场内容区有提示词
+- WHEN 用户在卡片或列表行上右键
+- THEN 不打开应用操作菜单；底栏及空态不再提示右键操作
+- AND 不拦截输入框的系统复制、粘贴菜单；补充操作通过可见「···」进入
 
 #### Scenario: 可见更多菜单与多选列表
 
 - GIVEN 本地提示词卡片或列表
 - WHEN 点击更多按钮并使用方向键、Home/End 或 Escape
-- THEN 菜单与右键共享操作，跳过禁用项；Escape 收起并恢复原按钮焦点
+- THEN 菜单提供编辑、复制副本、本机收藏与删除，跳过禁用项；Escape 收起并恢复原按钮焦点
 - AND 批量整理时列表行首显示选择框，选中项有描边；切换空间不保留上一空间的操作提示
 
 #### Scenario: 跨页整理与返回位置
@@ -334,7 +334,7 @@
 | 切换网格列表 | `WorkbenchShell.spec.js` shows the same prompts as rows in list view |
 | 本地最近只含已使用 | `WorkbenchShell.spec.js` shows recently used local prompts on the recent tab；`library.test.js` records last_used_at when a prompt is used |
 | 本地收藏只含本机星标 | `WorkbenchShell.spec.js` shows only starred local prompts on the favorite tab；`localFavorites.test.js` toggles a local favorite id in settings |
-| 右键只提供已有动作 | `WorkbenchShell.spec.js` opens a context menu with existing local actions |
+| 移除重复右键入口 | `WorkbenchShell.spec.js` ignores right-click and opens local actions only from the more button；广场收藏场景检查右键不打开菜单 |
 | macOS 主窗口 | `WorkbenchShell.spec.js` uses mac chrome on macos；`windowChrome.test.js` gives traffic-light inset and glyph shortcut on macos |
 | 标题栏折叠入口不跳位 | `WorkbenchShell.spec.js` keeps the sidebar toggle outside the drag region；Playwright 两态坐标与窄窗口测量 |
 | 截图参考框架 / 全局搜索 / 页面筛选 | `WorkbenchShell.spec.js` 入口分工；`GlobalSearch.spec.js` 范围、组字、取消与状态；`WorkbenchGlobalSearch.spec.js` 跨页面、键盘与草稿保护；Playwright 实际交互 |

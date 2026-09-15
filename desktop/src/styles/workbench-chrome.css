@@ -715,7 +715,6 @@ body.theme-dark .primary-button { color: #202020; }
 .status-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .status-sep { width: 1px; height: 12px; background: var(--line-strong); }
 .status-spacer { flex: 1; }
-.muted-status { opacity: 0.75; }
 .status-button {
   height: 18px;
   display: flex;
@@ -905,7 +904,6 @@ body.theme-dark .settings-content input[type="checkbox"]:checked::before { backg
   .settings-content { padding: 28px 24px; }
   .settings-content .field { grid-template-columns: minmax(0, 1fr) 150px; }
   .settings-content .field:has(textarea) { grid-template-columns: minmax(0, 1fr); }
-  .muted-status { display: none; }
   .prompt-card.as-row { grid-template-columns: minmax(0, 1fr) auto; }
 }
 @media (prefers-reduced-motion: reduce) {

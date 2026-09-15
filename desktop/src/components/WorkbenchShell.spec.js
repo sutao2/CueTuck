@@ -970,6 +970,8 @@ describe("WorkbenchShell", () => {
     await flushPromises();
     const card = w.get('.prompt-card');
     expect(card.get('[data-testid="download-square"]').attributes('title')).toBe('下载');
+    await card.trigger('contextmenu');
+    expect(w.find('[role="menu"]').exists()).toBe(false);
     await card.get('[data-testid="card-more"]').trigger('click');
     expect(w.get('[data-testid="context-menu"]').text()).not.toMatch(/下载|收藏/);
     await w.get('[data-action="details"]').trigger('click'); await flushPromises();
@@ -1831,7 +1833,7 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell);
     await flushPromises();
     const card = w.findAll(".prompt-card").find((row) => row.text().includes("星标条目"));
-    await card.trigger("contextmenu", { clientX: 20, clientY: 20 });
+    await card.get('[data-testid="card-more"]').trigger('click');
     await w.get('[data-testid="context-menu"] [data-action="favorite"]').trigger("click");
     await flushPromises();
     expect(w.get('.download-notice').text()).toContain("已收藏");
@@ -1841,11 +1843,17 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="library-view"]').text()).not.toContain("普通条目");
   });
 
-  it("opens a context menu with existing local actions", async () => {
+  it("ignores right-click and opens local actions only from the more button", async () => {
     await createLocalPrompt({ title: "可编辑", content: "x" });
     const w = mount(WorkbenchShell);
     await flushPromises();
     await w.get(".prompt-card").trigger("contextmenu", { clientX: 40, clientY: 80 });
+    expect(w.find('[role="menu"]').exists()).toBe(false);
+    expect(w.text()).not.toContain('右键');
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    w.get('.inline-search input').element.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    await w.get('[data-testid="card-more"]').trigger('click');
     const menu = w.get('[data-testid="context-menu"]');
     expect(menu.text()).toContain("编辑");
     expect(menu.text()).not.toContain("使用");

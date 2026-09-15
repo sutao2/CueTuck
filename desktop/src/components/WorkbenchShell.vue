@@ -286,7 +286,6 @@
               :class="{ collection: item.kind === 'collection', 'as-row': view === 'list', 'is-selected': selecting && selectedPrompts.includes(item.id) }"
               @click="selecting && space === 'local' && item.kind === 'prompt' ? selectPrompt(item.id) : openItem(item)"
               :inert="batchBusy ? '' : undefined"
-              @contextmenu.prevent="openContextMenu($event, item)"
             >
               <img decoding="async" v-if="space === 'square' && referenceImages(item).length && !failedReferenceImages[item.id]" class="square-reference-cover" :src="referenceImages(item)[0]" :alt="item.title" loading="lazy" referrerpolicy="no-referrer" @error="failedReferenceImages[item.id] = true">
               <PublishedImage v-if="space === 'square' && item.preview_asset && !referenceImages(item).length" class="square-reference-cover" :item-id="item.id" :file="item.preview_asset" :title="item.title" />
@@ -587,7 +586,6 @@
       data-testid="context-menu-layer"
       @keydown.esc.stop="closeContextMenu"
       @click="closeContextMenu"
-      @contextmenu.prevent="closeContextMenu"
     >
       <div
         class="context-menu"
@@ -620,8 +618,6 @@
       <span class="status-item">{{ databaseLabel }}</span>
       <span class="status-item">本地 <strong>{{ localCount }}</strong> 条</span>
       <span class="status-spacer"></span>
-      <span class="status-item muted-status">{{ t("moreActions") }}</span>
-      <span class="status-sep"></span>
       <button type="button" class="status-button" @click="$emit('open-launcher')">
         <AppIcon name="search" /> {{ t("launcher") }} <kbd>{{ shortcutLabel }}</kbd>
       </button>
@@ -1076,7 +1072,7 @@ const emptyHeading = computed(() => {
 const emptyCopy = computed(() => {
   if (hasContentFilter.value && !(space.value === 'square' && squareOffline.value)) return t('emptyFilteredHint');
   if (sortTab.value === '最近') return '使用过的提示词会出现在这里，方便下次继续。';
-  if (sortTab.value === '收藏') return space.value === 'local' ? '右键提示词选择收藏，在这里快速找到常用内容。' : '收藏喜欢的社区提示词后，可在这里再次找到。';
+  if (sortTab.value === '收藏') return space.value === 'local' ? '点击提示词的「···」选择收藏，在这里快速找到常用内容。' : '收藏喜欢的社区提示词后，可在这里再次找到。';
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
 const locationLabel = computed(() => contentKind.value === "skills" ? (skillsMode.value === "local" ? "本机 Skills" : "Skill 广场") : (space.value === "square" ? t("square") : t("local")));

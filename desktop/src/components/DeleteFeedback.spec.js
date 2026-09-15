@@ -12,7 +12,7 @@ async function setup() {
   w = mount(WorkbenchShell); await flushPromises();
 }
 async function requestDelete() {
-  await w.get('.prompt-card').trigger('contextmenu');
+  await w.get('[data-testid="card-more"]').trigger('click');
   await w.get('[data-action="delete"]').trigger('click');
 }
 it('confirms list deletion without a modal and reports success and count changes', async () => {
