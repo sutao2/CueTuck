@@ -18,6 +18,7 @@ mod media;
 mod media_reclaim;
 mod square_search;
 mod square_browse;
+mod recommendation;
 #[cfg(test)]
 mod media_tests;
 #[cfg(test)]
@@ -90,6 +91,7 @@ pub use password::{hash_password, verify_password};
 
 #[derive(Clone)]
 pub struct AppState {
+    recommendations: Arc<recommendation::Recommendations>,
     users: Arc<Mutex<HashMap<String, String>>>,
     roles: Arc<Mutex<HashMap<String, String>>>,
     access: Arc<Mutex<HashMap<String, String>>>,
@@ -120,6 +122,7 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
+            recommendations: Arc::new(recommendation::Recommendations::default()),
             users: Arc::new(Mutex::new(HashMap::new())),
             roles: Arc::new(Mutex::new(HashMap::new())),
             access: Arc::new(Mutex::new(HashMap::new())),

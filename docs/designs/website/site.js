@@ -8,6 +8,7 @@ const API = ''; // Public browsing uses the existing same-origin API.
 const paths={search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',grid:'<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="14" y="3" width="6" height="6" rx="1"/><rect x="3" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',list:'<path d="M8 5h13M8 12h13M8 19h13M3 5h.1M3 12h.1M3 19h.1"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/>',arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',code:'<path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18"/>',write:'<path d="m4 16-1 5 5-1L21 7l-4-4Zm10-10 4 4"/>',image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="8" r="2"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',brief:'<rect x="3" y="6" width="18" height="15" rx="2"/><path d="M8 6V3h8v3M3 12h18m-11 0v3h4v-3"/>',folder:'<path d="M3 7V4h6l3 3h9v13H3Z"/>',spark:'<path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z"/>',plus:'<path d="M12 5v14M5 12h14"/>',copy:'<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>'};
 const icon = n => `<svg aria-hidden="true" viewBox="0 0 24 24">${paths[n]||paths.folder}</svg>`;
 const saved = new Map(), drafts = [], repoCache = new Map(), bodyCache = new Map();
+let recommendation=null, recommendationFilter='';
 let route='', category='', query='', model='', sort='推荐', language='zh', view='grid', offset=0;
 let catalog=null, sources=null, repo='anthropics/skills', skillData=null, items=[], total=0, nextOffset=null, counts=null, allCount=null;
 let busy=false, listError='', generation=0, controller, searchTimer, toastTimer, detailController, detailGeneration=0, activeItem, activeBody='';
@@ -45,7 +46,7 @@ function renderCategories() {
 function workspace() {
   const titles={app:['提示词广场','浏览社区发布的提示词，按用途与模型查找。'],skills:['Skill 广场','浏览与客户端相同的公开 GitHub 来源。'],favorites:['本页暂存','当前标签页暂存的内容，刷新或关闭后清空。'],drafts:['本页草稿','仅保留在当前标签页，不写入账号库或桌面本机库。']};
   const [title,subtitle]=titles[route];
-  return `<section class="workspace"><aside class="sidebar"><span class="sidebar-heading">浏览</span><a class="side-link ${route==='app'?'active':''}" href="#app">${icon('grid')}提示词广场</a><a class="side-link ${route==='skills'?'active':''}" href="#skills">${icon('code')}Skill 广场</a><div class="side-separator"></div><span class="sidebar-heading">本页内容</span><a class="side-link ${route==='favorites'?'active':''}" href="#favorites">${icon('star')}本页暂存<span class="count" data-saved-count>${saved.size}</span></a><a class="side-link ${route==='drafts'?'active':''}" href="#drafts">${icon('write')}本页草稿<span class="count">${drafts.length}</span></a><div class="side-separator"></div><span class="sidebar-heading">分类</span><div id="categories"></div><div class="side-bottom"><a class="side-link" href="#download">${icon('folder')}下载桌面客户端 ↗</a><button class="side-link" data-account>${icon('brief')}账号与数据说明</button></div></aside><div class="work-content"><div class="breadcrumb">CueTuck / ${title}</div><div class="work-heading"><div><h1>${title}</h1><p>${subtitle}</p></div><button class="button" data-create>${icon('plus')}新建草稿</button></div>${route==='skills'?`<div class="source-panel"><label for="repo">公开来源</label><input id="repo" list="sources" value="${esc(repo)}" aria-label="搜索或选择 Skill 来源"><datalist id="sources"></datalist><button class="button small" data-refresh>刷新来源</button><p id="source-meta">正在读取公开目录…</p></div>`:''}<div class="mobile-navigation"><a href="#favorites">本页暂存</a><a href="#drafts">草稿</a><select id="mobile-category" aria-label="选择分类"></select></div><div class="toolbar"><label class="search-field">${icon('search')}<input type="search" id="search" aria-label="搜索内容" placeholder="${route==='skills'?'搜索当前来源的名称、路径或已加载说明':'搜索标题或正文…'}" value="${esc(query)}"></label>${route==='app'?`<input id="model" list="models" aria-label="搜索或选择模型" placeholder="全部模型" value="${esc(model)}"><datalist id="models"></datalist><select id="language" aria-label="正文语言"><option value="zh" ${language==='zh'?'selected':''}>中文优先</option><option value="original" ${language==='original'?'selected':''}>原文</option></select>`:''}<div class="view-controls"><button data-view="grid" class="${view==='grid'?'active':''}" aria-label="网格视图">${icon('grid')}</button><button data-view="list" class="${view==='list'?'active':''}" aria-label="列表视图">${icon('list')}</button></div></div><div class="results-heading"><div class="result-tabs">${route==='app'?['推荐','最新','热门'].map(s=>`<button data-sort="${s}" class="${sort===s?'active':''}">${s}</button>`).join(''):'<span>当前结果</span>'}</div><span id="result-count" aria-live="polite"></span></div><div id="cards" class="cards ${view==='list'?'list':''}"></div><div id="pagination"></div></div></section>`;
+  return `<section class="workspace"><aside class="sidebar"><span class="sidebar-heading">浏览</span><a class="side-link ${route==='app'?'active':''}" href="#app">${icon('grid')}提示词广场</a><a class="side-link ${route==='skills'?'active':''}" href="#skills">${icon('code')}Skill 广场</a><div class="side-separator"></div><span class="sidebar-heading">本页内容</span><a class="side-link ${route==='favorites'?'active':''}" href="#favorites">${icon('star')}本页暂存<span class="count" data-saved-count>${saved.size}</span></a><a class="side-link ${route==='drafts'?'active':''}" href="#drafts">${icon('write')}本页草稿<span class="count">${drafts.length}</span></a><div class="side-separator"></div><span class="sidebar-heading">分类</span><div id="categories"></div><div class="side-bottom"><a class="side-link" href="#download">${icon('folder')}下载桌面客户端 ↗</a><button class="side-link" data-account>${icon('brief')}账号与数据说明</button></div></aside><div class="work-content"><div class="breadcrumb">CueTuck / ${title}</div><div class="work-heading"><div><h1>${title}</h1><p>${subtitle}</p></div><button class="button" data-create>${icon('plus')}新建草稿</button></div>${route==='skills'?`<div class="source-panel"><label for="repo">公开来源</label><input id="repo" list="sources" value="${esc(repo)}" aria-label="搜索或选择 Skill 来源"><datalist id="sources"></datalist><button class="button small" data-refresh>刷新来源</button><p id="source-meta">正在读取公开目录…</p></div>`:''}<div class="mobile-navigation"><a href="#favorites">本页暂存</a><a href="#drafts">草稿</a><select id="mobile-category" aria-label="选择分类"></select></div><div class="toolbar"><label class="search-field">${icon('search')}<input type="search" id="search" aria-label="搜索内容" placeholder="${route==='skills'?'搜索当前来源的名称、路径或已加载说明':'搜索标题或正文…'}" value="${esc(query)}"></label>${route==='app'?`<input id="model" list="models" aria-label="搜索或选择模型" placeholder="全部模型" value="${esc(model)}"><datalist id="models"></datalist><select id="language" aria-label="正文语言"><option value="zh" ${language==='zh'?'selected':''}>中文优先</option><option value="original" ${language==='original'?'selected':''}>原文</option></select>`:''}<div class="view-controls"><button data-view="grid" class="${view==='grid'?'active':''}" aria-label="网格视图">${icon('grid')}</button><button data-view="list" class="${view==='list'?'active':''}" aria-label="列表视图">${icon('list')}</button></div></div><div class="results-heading"><div class="result-tabs">${route==='app'?['推荐','最新','热门'].map(s=>`<button data-sort="${s}" class="${sort===s?'active':''}">${s}</button>`).join(''):'<span>当前结果</span>'}</div><span id="result-count" aria-live="polite"></span>${route==='app'?'<button class="button small" data-refresh id="ranking-refresh">换一批</button>':''}</div><p id="ranking-note" class="source-meta"></p><div id="cards" class="cards ${view==='list'?'list':''}"></div><div id="pagination"></div></div></section>`;
 }
 function fillDictionaries() {
   renderCategories();
@@ -72,12 +73,16 @@ async function loadList() {
   busy=true; listError=''; items=[]; renderCards();
   try {
     if (route==='app') {
+      $('#ranking-refresh').textContent=sort==='推荐'?'换一批':'刷新';
+      $('#ranking-note').textContent=sort==='推荐'?'精选、下载热度与新内容 · 每小时轮换，翻页保持本轮顺序':sort==='最新'?'按上架时间从新到旧排序':'按已记录累计下载量从高到低排序';
       if (!catalog) catalog=await requestJson(`${API}/v1/square/catalog`,{signal});
       if (current!==generation) return;
       fillDictionaries();
-      const page=await browsePrompts(API,{query,category,model,sort,language,offset},{signal});
+      const filter=JSON.stringify([query,category,model,sort,language]);
+      if(filter!==recommendationFilter){recommendation=null;recommendationFilter=filter;}
+      const page=await browsePrompts(API,{query,category,model,sort,language,offset,recommendation},{signal});
       if (current!==generation) return;
-      items=page.items; total=page.total; nextOffset=page.next_offset;
+      recommendation=page.recommendation || recommendation; items=page.items; total=page.total; nextOffset=page.next_offset;
       if (page.category_counts) { counts=page.category_counts; allCount=page.category_total; }
     } else {
       let rows;
@@ -114,7 +119,7 @@ async function loadDescriptions(current,signal) {
     }
   }));
 }
-function resetFilters() { category=''; query=''; model=''; offset=0; }
+function resetFilters() { category=''; query=''; model=''; offset=0; recommendation=null; recommendationFilter=''; }
 function render() {
   clearTimeout(searchTimer);
   controller?.abort(); generation++; detailController?.abort(); detailGeneration++;
@@ -188,9 +193,9 @@ document.addEventListener('click',async e=>{
   if(el.hasAttribute('data-retry-detail'))openItem(activeItem.id);
   if(el.dataset.image){$('#image-viewer img').src=el.dataset.image;$('#image-viewer').showModal();}
   if(el.dataset.view){view=el.dataset.view;$('#cards').classList.toggle('list',view==='list');document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));}
-  if(el.dataset.sort){sort=el.dataset.sort;offset=0;document.querySelectorAll('[data-sort]').forEach(b=>b.classList.toggle('active',b.dataset.sort===sort));loadList();}
+  if(el.dataset.sort){sort=el.dataset.sort;recommendation=null;offset=0;document.querySelectorAll('[data-sort]').forEach(b=>b.classList.toggle('active',b.dataset.sort===sort));loadList();}
   if(el.dataset.page){offset=el.dataset.page==='prev'?Math.max(0,offset-PAGE_SIZE):nextOffset;loadList();window.scrollTo(0,0);}
-  if(el.hasAttribute('data-refresh')){if(route==='skills')repoCache.delete(repo);loadList();}
+  if(el.hasAttribute('data-refresh')){if(route==='skills')repoCache.delete(repo);if(route==='app'){recommendation=sort==='推荐'?crypto.randomUUID():null;offset=0;}loadList();}
   if(el.hasAttribute('data-clear')){resetFilters();$('#main').innerHTML=workspace();fillDictionaries();loadList();}
   if(el.dataset.save){const p=activeItem?.id===el.dataset.save?activeItem:currentItem(el.dataset.save);if(!p)return;saved.has(p.id)?saved.delete(p.id):saved.set(p.id,p);notify(saved.has(p.id)?'已暂存到本页，刷新后清空。':'已取消暂存');if(route==='favorites')loadList();else renderCards();if($('[data-detail-save]'))$('[data-detail-save]').textContent=saved.has(p.id)?'取消暂存':'暂存到本页';}
   if(el.hasAttribute('data-copy')){el.disabled=true;try{await navigator.clipboard.writeText($('#prompt-text').textContent);notify('已复制提示词');}catch{notify('复制失败，请选择正文手动复制。');}finally{el.disabled=false;}}

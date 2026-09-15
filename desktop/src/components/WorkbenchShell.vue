@@ -166,7 +166,7 @@
           </div>
           <div class="content-actions" :inert="batchBusy ? '' : undefined">
             <button v-if="space === 'local' && prompts.length" type="button" class="button ghost-button" data-testid="select-prompts" @click="selecting = !selecting; selectedPrompts = []">{{ selecting ? '取消多选' : '批量整理' }}</button>
-            <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="loadSquare(true)"><AppIcon name="refresh" />{{ t("refresh") }}</button>
+            <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="refreshSquare"><AppIcon name="refresh" />{{ sortTab === '推荐' ? '换一批' : t("refresh") }}</button>
             <button
               v-if="space === 'square'"
               type="button"
@@ -225,6 +225,8 @@
           </div>
           </div>
         </section>
+        <p v-if="space === 'square' && sortTab === '推荐'" class="square-sort-note">精选、下载热度与新内容 · 每小时轮换，换一批发现更多</p>
+        <p v-if="space === 'square' && sortTab === '最新'" class="square-sort-note">按上架时间从新到旧排序</p>
         <p v-if="space === 'square' && sortTab === '热门'" class="square-sort-note" data-testid="square-sort-note">按已记录下载量从高到低排序 · 仅包含开启匿名统计后的下载</p>
 
         <div
@@ -365,11 +367,11 @@
               <button type="button" class="button" @click="openSquare">去广场挑选</button>
             </div>
           </div>
-          <div v-if="space === 'square' && !squareLoading && squareItems.length" class="browse-pagination" role="status">
+          <div v-if="space === 'square' && !squareLoading && (squareItems.length || squareNextOffset !== null)" class="browse-pagination" role="status">
             <span v-if="squareMoreLoading">正在加载更多…</span>
             <template v-else-if="squareNextOffset !== null">
-              <span v-if="squareMoreError">加载失败，已有内容仍可浏览。</span>
-              <button type="button" class="button" data-testid="square-load-more" @click="loadMoreSquare(true)">{{ squareMoreError ? '重试加载' : '加载更多' }}</button>
+              <span v-if="squareMoreError">{{ squareMoreError }} 已有内容仍可浏览。</span>
+              <button type="button" class="button" data-testid="square-load-more" @click="recommendationExpired ? refreshSquare() : loadMoreSquare(true)">{{ recommendationExpired ? '换一批' : squareMoreError ? '重试加载' : '加载更多' }}</button>
             </template>
             <span v-else>已显示全部 {{ squareTotal }} 条</span>
           </div>
@@ -958,9 +960,11 @@ onUnmounted(() => { layoutDisposed = true; });
 const squareItems = ref([]);
 const squareCategoryCounts = ref(null), squareCategoryTotal = ref(null);
 const contentScroller = ref(null);
+const recommendationSeed = ref(null);
 const squareTotal = ref(0), squareNextOffset = ref(null), squareMoreLoading = ref(false), squareMoreError = ref(false);
 let squareController;
 function cancelSquare() { squareController?.abort(); }
+const recommendationExpired = computed(() => String(squareMoreError.value).includes("推荐已过期"));
 const squareOffline = ref(false);
 const squareLoading = ref(false);
 const squareBlocked = ref(false);
@@ -1557,7 +1561,9 @@ function scheduleSearch(event) {
 }
 onUnmounted(() => { cancelSearch(); cancelSquare(); ++squareRequest; ++localRequest; ++catalogRequest; });
 
-async function loadSquare(refreshCatalog = false) {
+function refreshSquare() { return loadSquare(true, sortTab.value === '推荐' ? crypto.randomUUID() : null); }
+async function loadSquare(refreshCatalog = false, seed = null) {
+  recommendationSeed.value = seed;
   cancelSearch();
   cancelSquare();
   const request = ++squareRequest;
@@ -1584,8 +1590,9 @@ async function loadSquare(refreshCatalog = false) {
     if (refreshCatalog === true || !remoteCatalog.value) await loadRemoteCatalog();
     if (request !== squareRequest || space.value !== 'square') return;
     if (sortTab.value === '收藏' && !getSession().loggedIn) { openLogin('收藏需要登录'); return; }
-    const page = await listSquarePage({ contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, signal });
+    const page = await listSquarePage({ recommendation: recommendationSeed.value, contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, signal });
     if (request !== squareRequest || space.value !== 'square') return;
+    recommendationSeed.value = page.recommendation || seed;
     squareItems.value = page.items;
     if (page.category_counts && Number.isInteger(page.category_total)) {
       squareCategoryCounts.value = page.category_counts; squareCategoryTotal.value = page.category_total;
@@ -1607,14 +1614,14 @@ async function loadMoreSquare(retry = false) {
   const request = squareRequest, offset = squareNextOffset.value;
   squareMoreLoading.value = true; squareMoreError.value = false;
   try {
-    const page = await listSquarePage({ contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, offset, signal: squareController.signal });
+    const page = await listSquarePage({ recommendation: recommendationSeed.value, contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, offset, signal: squareController.signal });
     if (request !== squareRequest || space.value !== 'square') return;
     const ids = new Set(squareItems.value.map(item => item.id));
     squareItems.value = [...squareItems.value, ...page.items.filter(item => !ids.has(item.id) && ids.add(item.id))];
     squareTotal.value = page.total; squareNextOffset.value = page.next_offset;
     await refreshFavorites();
-  } catch {
-    if (request === squareRequest) squareMoreError.value = true;
+  } catch (error) {
+    if (request === squareRequest) squareMoreError.value = String(error.message || error);
   } finally { if (request === squareRequest) squareMoreLoading.value = false; }
 }
 

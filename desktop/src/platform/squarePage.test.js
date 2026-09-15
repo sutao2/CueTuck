@@ -30,9 +30,21 @@ it('rejects oversized pages, invalid totals and non-advancing cursors', async ()
     { items: Array(49).fill({ id: 'x' }), total: 49, next_offset: null },
     { items: [{ id: 'x' }], total: -1, next_offset: null },
     { items: [{ id: 'x' }], total: 3, next_offset: 48 },
-    { items: [], total: 3, next_offset: 96 },
   ]) {
     setSquarePageTransport(async () => page);
     await expect(listSquarePage({ offset: 48 })).rejects.toThrow('分页响应无效');
   }
+});
+
+
+it('passes recommendation snapshots and accepts an empty removed slice with a next offset', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ok:true,json:async()=>({items:[],total:120,next_offset:96,recommendation:'test-seed'})})));
+  const page = await listSquarePage({offset:48,recommendation:'test-seed'});
+  expect(fetch.mock.calls[0][0]).toContain('recommendation=test-seed');
+  expect(page.next_offset).toBe(96);
+});
+it('explains an expired recommendation without falling back to an unrelated page', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ok:false,status:409})));
+  await expect(listSquarePage({offset:48,recommendation:'expired'})).rejects.toThrow('本轮推荐已过期');
+  expect(fetch).toHaveBeenCalledTimes(1);
 });

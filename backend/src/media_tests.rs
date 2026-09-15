@@ -803,16 +803,16 @@ async fn approved_gif_appears_in_browse_without_exposing_unselected_assets() {
     assert_eq!(status,StatusCode::OK); let id=p["id"].as_str().unwrap();
     let path=format!("/v1/square/items/{id}/assets/{}",reference["id"].as_str().unwrap());
     assert_eq!(get(&state,"",&path).await.status(),StatusCode::NOT_FOUND);
-    let (_,before)=crate::admin_security_tests::request(&state,"GET","/v1/square/browse?q=GIF%20gallery%20QA","",json!({})).await;
+    let (_,before)=crate::admin_security_tests::request(&state,"GET","/v1/square/browse?q=GIF%20gallery%20QA&sort=latest","",json!({})).await;
     assert_eq!(before["total"],0);
     state.db.as_ref().unwrap().review_publication(id,"approved",None,Some(("owner@example.com",&admin))).await.unwrap();
-    let (status,page)=crate::admin_security_tests::request(&state,"GET","/v1/square/browse?q=GIF%20gallery%20QA","",json!({})).await;
+    let (status,page)=crate::admin_security_tests::request(&state,"GET","/v1/square/browse?q=GIF%20gallery%20QA&sort=latest","",json!({})).await;
     assert_eq!(status,StatusCode::OK); let row=&page["items"][0];
     assert_eq!(row["preview_asset"],reference); assert_eq!(row["image_count"],1); assert_eq!(row["asset_count"],1);
     assert!(row.get("content").is_none()); assert!(!page.to_string().contains(private["id"].as_str().unwrap()));
     let response=get(&state,"",&path).await;assert_eq!(response.status(),StatusCode::OK);
     assert_eq!(to_bytes(response.into_body(),1024).await.unwrap().as_ref(),gif);
     sqlx::query(&format!("UPDATE {} SET visibility='offline' WHERE id=$1",state.db.as_ref().unwrap().t("square_items"))).bind(id).execute(&state.db.as_ref().unwrap().pool).await.unwrap();
-    let (_,after)=crate::admin_security_tests::request(&state,"GET","/v1/square/browse?q=GIF%20gallery%20QA","",json!({})).await;assert_eq!(after["total"],0);
+    let (_,after)=crate::admin_security_tests::request(&state,"GET","/v1/square/browse?q=GIF%20gallery%20QA&sort=latest","",json!({})).await;assert_eq!(after["total"],0);
     assert_eq!(get(&state,"",&path).await.status(),StatusCode::NOT_FOUND);
 }

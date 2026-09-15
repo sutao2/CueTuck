@@ -29,3 +29,9 @@ test('metadata descriptions are treated as text, including multiline YAML',()=>{
  assert.equal(skillDescription('---\nname: test\ndescription: >\n  First line\n  second line\n---\n# body'),'First line second line');
  assert.equal(skillDescription('---\ndescription: "<script>text only</script>"\n---'),'<script>text only</script>');
 });
+
+test('recommendation seed is carried through pages and expiration is explicit',async()=>{
+ let url;const page=await browsePrompts('',{offset:24,recommendation:'test-seed'},{fetcher:async u=>{url=u;return json({items:[],total:90,next_offset:48,recommendation:'test-seed'});}});
+ assert.match(url,/recommendation=test-seed/);assert.equal(page.next_offset,48);
+ await assert.rejects(browsePrompts('',{recommendation:'expired',offset:24},{fetcher:async()=>({ok:false,status:409})}),/本轮推荐已过期/);
+});

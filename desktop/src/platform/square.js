@@ -34,10 +34,10 @@ export function resetSquare() {
 }
 
 export function setSquarePageTransport(transport) { testPageTransport = transport; }
-export async function listSquarePage({ sort = '推荐', query = '', model = '', categoryId = null, offset = 0, signal, contentLanguage = 'zh' } = {}) {
+export async function listSquarePage({ sort = '推荐', query = '', model = '', categoryId = null, offset = 0, signal, contentLanguage = 'zh', recommendation = null } = {}) {
   signal?.throwIfAborted();
   let payload;
-  if (testPageTransport) payload = await testPageTransport({ sort, query, model, categoryId, offset, signal });
+  if (testPageTransport) payload = await testPageTransport({ sort, query, model, categoryId, offset, signal, recommendation });
   else if (testTransport || testFavoriteTransport) {
     // Legacy fixtures only; production must never fall back to the unbounded endpoint.
     const favorites = testFavoriteTransport && getSession().loggedIn ? await listFavorites() : [];
@@ -48,10 +48,11 @@ export async function listSquarePage({ sort = '推荐', query = '', model = '', 
     const cancel = () => { tauriInvoke('cancel_square_page', { request_id: requestId }).catch(() => {}); };
     signal?.addEventListener('abort', cancel, { once: true });
     try {
-      payload = await tauriInvoke('list_square_page', { sort, query, model, category_id: categoryId, content_language: contentLanguage, offset, request_id: requestId, access_token: getSession().accessToken || null });
+      payload = await tauriInvoke('list_square_page', { sort, query, model, category_id: categoryId, content_language: contentLanguage, recommendation, offset, request_id: requestId, access_token: getSession().accessToken || null });
     } finally { signal?.removeEventListener('abort', cancel); }
   } else {
     const params = new URLSearchParams({ sort, q: query, offset: String(offset), limit: '48', content_language: contentLanguage });
+    if (recommendation) params.set('recommendation', recommendation);
     if (model) params.set('model', model);
     if (categoryId) params.set('category_id', categoryId);
     const token = getSession().accessToken;
@@ -61,13 +62,13 @@ export async function listSquarePage({ sort = '推荐', query = '', model = '', 
     const timer = setTimeout(abort, 10_000);
     try {
       const response = await fetch(`${apiBase()}/v1/square/browse?${params}`, { signal: controller.signal, headers: token ? { Authorization: `Bearer ${token}` } : {} });
-      if (!response.ok) throw new Error('广场暂时不可用');
+      if (!response.ok) throw new Error(response.status === 409 ? '本轮推荐已过期，请点击换一批重新加载。' : '广场暂时不可用');
       payload = await response.json();
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
   }
   signal?.throwIfAborted();
   if (!Array.isArray(payload?.items) || payload.items.length > 48 || !Number.isInteger(payload.total) || payload.total < 0
-    || (payload.next_offset !== null && (!Number.isInteger(payload.next_offset) || payload.next_offset <= offset || !payload.items.length))) throw new Error('广场分页响应无效');
+    || (payload.next_offset !== null && (!Number.isInteger(payload.next_offset) || payload.next_offset <= offset))) throw new Error('广场分页响应无效');
   return payload;
 }
 

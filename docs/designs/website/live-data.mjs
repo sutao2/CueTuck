@@ -1,12 +1,14 @@
 export const PAGE_SIZE = 24;
 export async function requestJson(url, { signal, fetcher = fetch } = {}) {
   const response = await fetcher(url, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000), credentials: 'omit' });
+  if (response.status === 409) throw Error('本轮推荐已过期，请换一批重新加载。');
   if (!response.ok) throw Error(response.status === 403 || response.status === 429 ? '来源访问受限，请稍后重试。' : `内容加载失败（${response.status}），请重试。`);
   return response.json();
 }
 export async function browsePrompts(base, filters = {}, options = {}) {
-  const { query = '', category = '', model = '', sort = '推荐', language = 'zh', offset = 0 } = filters;
+  const { query = '', category = '', model = '', sort = '推荐', language = 'zh', offset = 0, recommendation = null } = filters;
   const params = new URLSearchParams({ q: query, category_id: category, model, sort, content_language: language, offset: String(offset), limit: String(PAGE_SIZE) });
+  if (recommendation) params.set('recommendation', recommendation);
   const page = await requestJson(`${base}/v1/square/browse?${params}`, options);
   if (!Array.isArray(page.items) || page.items.length > PAGE_SIZE || !Number.isInteger(page.total) || page.total < 0 || (page.next_offset !== null && (!Number.isInteger(page.next_offset) || page.next_offset <= offset))) throw Error('广场分页响应无效，请重试。');
   return page;

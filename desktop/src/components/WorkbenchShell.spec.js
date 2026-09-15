@@ -135,7 +135,8 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell); await flushPromises();
     await w.get('[data-space="square"]').trigger('click'); await flushPromises();
     await w.get('[data-testid="square-load-more"]').trigger('click'); await flushPromises();
-    expect(w.text()).toContain('加载失败，已有内容仍可浏览');
+    expect(w.text()).toContain('已有内容仍可浏览');
+    expect(w.text()).toContain('offline');
     expect(w.findAll('.prompt-card')).toHaveLength(1);
     fail = false;
     await w.get('[data-testid="square-load-more"]').trigger('click'); await flushPromises();
