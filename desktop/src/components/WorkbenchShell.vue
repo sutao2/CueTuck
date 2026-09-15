@@ -217,7 +217,7 @@
           </div>
           <div class="filter-spacer"></div>
           <div class="filter-controls">
-            <SearchableSelect class="toolbar-select language-filter" v-if="space === 'square'" v-model="contentLanguage" aria-label="广场内容语言" :options="[{value:'zh',label:'中文优先'},{value:'original',label:'作者原文'}]" @change="onModelFilter" />
+            <SearchableSelect class="toolbar-select language-filter" data-testid="language-filter" v-if="space === 'square'" v-model="contentLanguage" aria-label="广场内容语言" :options="[{value:'zh',label:'中文优先'},{value:'original',label:'作者原文'}]" @change="onModelFilter" />
           <SearchableSelect class="toolbar-select model-filter" :aria-label="t('model')" :title="modelFilter || t('allModels')" data-testid="model-filter" v-model="modelFilter" @change="onModelFilter" :options="[{value:'',label:t('allModels')}, ...modelOptions.map(name => ({value:name,label:space === 'square' ? remoteCatalog?.models.find(item => item.id === name)?.name || name : name}))]" />
           <div class="view-switch" aria-label="视图切换">
             <button type="button" :class="{ active: view === 'grid' }" :aria-pressed="view === 'grid'" title="网格视图" @click="view = 'grid'"><AppIcon name="grid" /></button>
@@ -320,9 +320,10 @@
               </div>
               <div class="card-footer">
                 <template v-if="space === 'square'">
+                  <button type="button" class="card-action card-primary" data-testid="use-square" :disabled="useBusy" @click.stop="openSquareDetail(item, item.kind !== 'collection')">{{ item.kind === 'collection' ? '选择提示词' : '使用' }}</button>
                   <button
                     type="button"
-                    class="card-action card-primary card-icon-action"
+                    class="card-action card-icon-action"
                     :title="downloadActionLabel(item.id)"
                     :aria-label="downloadActionLabel(item.id)"
                     data-testid="download-square"
@@ -345,8 +346,7 @@
                   </button>
                 </template>
                 <template v-else-if="item.kind === 'prompt'">
-                  <button type="button" class="card-action card-primary" @click.stop="startUse(item)">使用</button>
-                  <button v-if="!extractVariables(item.content).length" type="button" class="card-action" :disabled="useBusy" @click.stop="quickCopy(item)">复制</button>
+                  <button type="button" class="card-action card-primary" :disabled="useBusy" @click.stop="startUse(item)">使用</button>
                 </template>
                 <button v-else type="button" class="card-action card-primary" @click.stop="openItem(item)">打开合集</button>
                 <button type="button" v-if="contextActions(item).length" class="card-action card-more" data-testid="card-more" :aria-label="`${item.title}的更多操作`" aria-haspopup="menu" @click.stop="openContextMenu($event, item)">···</button>
@@ -416,7 +416,7 @@
     />
     <MyPublications v-if="publicationsOpen" v-show="!loginReason" :session="session" :initial-kind="contentKind==='skills'?'skills':'prompts'" @busy="publicationsBusy=$event" @cancel="publicationsOpen = false" @login="openLogin('查看我的发布')" />
     <LocalPromptDetail v-if="reading" :key="reading.id" v-show="!editing && !using && !loginReason"
-      :prompt="reading" @cancel="reading = null" @edit="editing = reading" @use="startUse(reading)" />
+      :prompt="reading" @cancel="reading = null" @edit="editing = reading" @use="startUse($event)" />
     <UsePromptModal
       v-if="using"
       v-show="!loginReason"
@@ -448,7 +448,10 @@
     />
     <SquareDetailModal
       v-if="squareDetail"
-      v-show="!loginReason"
+      v-show="!loginReason && !using"
+      :default-language="contentLanguage"
+      :use-busy="useBusy"
+      @use="startUse($event)"
       :item="squareDetail"
       :back-label="space === 'local' ? '返回本地列表' : '返回广场'"
       :loading="squareDetailLoading"
@@ -655,6 +658,7 @@ import { getSession, logoutSession, restoreSession } from "../platform/session.j
 import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
 import { parseModelNames } from "../platform/modelCatalog.js";
 import { uiText } from "../platform/uiStrings.js";
+import { squarePromptForUse } from "../lib/squarePromptUse.js";
 import { downloadSquareItem, completeSquareImages, fetchSquareContent, fetchSquareCatalog, listSquarePage } from "../platform/square.js";
 import WindowedPromptGrid from './WindowedPromptGrid.vue';
 import {skillCategories} from '../platform/skillCategories.js';
@@ -1318,7 +1322,7 @@ function closeSquareDetail() {
   squareDetail.value = null;
 }
 
-async function openSquareDetail(item) {
+async function openSquareDetail(item, useImmediately = false) {
   const request = ++detailRequest;
   squareDetail.value = { ...item };
   squareDetailLoading.value = true;
@@ -1326,7 +1330,10 @@ async function openSquareDetail(item) {
   operationNote.value = "";
   try {
     const content = await fetchSquareContent(item.id);
-    if (request === detailRequest) squareDetail.value = { ...squareDetail.value, ...content, download_count: squareDetail.value.download_count, favorite_count: squareDetail.value.favorite_count };
+    if (request === detailRequest) {
+      squareDetail.value = { ...squareDetail.value, ...content, download_count: squareDetail.value.download_count, favorite_count: squareDetail.value.favorite_count };
+      if (useImmediately && squareDetail.value.kind !== 'collection') await startUse(squarePromptForUse(squareDetail.value, contentLanguage.value));
+    }
   } catch (error) {
     if (request === detailRequest) squareDetailError.value = `读取详情失败：${error.message || error}`;
   } finally {
@@ -1337,7 +1344,7 @@ async function openSquareDetail(item) {
 const extraLauncherUnlisteners = [];
 onUnmounted(() => extraLauncherUnlisteners.forEach(stop => stop()));
 let downloadsDisposed = false;
-onUnmounted(() => { downloadsDisposed = true; });
+onUnmounted(() => { downloadsDisposed = true; detailRequest += 1; });
 
 function downloadActionLabel(id) { return downloadBusy.value.includes(id) ? downloadLabel(id) : downloadedIds.value.includes(id) ? '打开本地副本' : '下载'; }
 
@@ -1705,7 +1712,6 @@ function openContextMenu(event, item) {
 function contextActions(item) {
   if (space.value === "square") {
     return [
-      { id: "details", label: '查看详情' },
       ...(downloadedIds.value.includes(item.id) && referenceImages(item).length ? [{ id: 'complete-images', label: '补全参考图', disabled: downloadBusy.value.includes(item.id) }] : []),
     ];
   }
@@ -1714,7 +1720,7 @@ function contextActions(item) {
   }
   return [
     { id: "edit", label: t("edit") },
-    { id: 'duplicate', label: '复制副本' },
+    { id: 'duplicate', label: '创建本地副本' },
     {
       id: "favorite",
       label: localFavoriteIds.value.includes(item.id) ? t("unfavorite") : t("favorite"),
@@ -1727,13 +1733,11 @@ async function runContextAction(action) {
   const item = contextMenu.value?.item;
   closeContextMenu();
   if (!item) return;
-  if (action === 'details') { await openSquareDetail(item); return; }
   if (action === 'complete-images') { await completeImages(item); return; }
   if (action === "edit" || action === "open") {
     if (action === "edit") editing.value = item; else openItem(item);
     return;
   }
-  if (action === "copy") { await quickCopy(item); return; }
   if (action === "duplicate") { await duplicatePrompt(item); return; }
   if (action === "use") {
     startUse(item);
@@ -1933,6 +1937,7 @@ async function confirmRemovePrompt() {
 async function finishUse(text) {
   if (useBusy.value) return;
   const prompt = using.value;
+  if (!prompt || !text?.trim()) { useError.value = "提示词内容为空，未修改剪贴板。"; return; }
   useBusy.value = true;
   useError.value = "";
   try {
@@ -1944,14 +1949,14 @@ async function finishUse(text) {
   }
   if (using.value?.id === prompt.id) using.value = null;
   try {
-    await recordLocalPromptUse(prompt.id);
+    if (!prompt.remote) await recordLocalPromptUse(prompt.id);
   } catch (error) {
     notifyOperation(`已复制，但保存使用记录失败：${error.message || error}。无需再次复制。`, false, 'copy');
     useBusy.value = false;
     return;
   }
   notifyOperation(`已复制「${prompt.title}」。`, true, 'copy');
-  try { await refreshOperationView(); }
+  try { if (!prompt.remote) await refreshOperationView(); }
   catch (error) { notifyOperation(`已复制，但刷新失败：${error.message || error}`, false, 'copy', true); }
   finally { useBusy.value = false; }
 }
@@ -1967,19 +1972,6 @@ async function openDownloaded(item) {
     openLocal();
     if (collection) await openCollection(collection); else reading.value = row;
   } catch (error) { notifyOperation(`打开失败：${error.message || error}`, false); }
-}
-
-async function quickCopy(item) {
-  if (useBusy.value) return;
-  useBusy.value = true;
-  let copied = false;
-  try {
-    await navigator.clipboard.writeText(item.content); copied = true;
-    await recordLocalPromptUse(item.id);
-    notifyOperation(`已复制「${item.title}」。`, true, 'copy');
-    await refreshOperationView();
-  } catch (error) { notifyOperation(`${copied ? '已复制，但记录或刷新失败' : '复制失败'}：${error.message || error}`, false, 'copy'); }
-  finally { useBusy.value = false; }
 }
 
 async function duplicatePrompt(item) {
@@ -2082,9 +2074,12 @@ function useCollectionMember(member) {
   startUse(member);
 }
 
-function startUse(member) {
+async function startUse(member) {
+  if (useBusy.value || !member) return;
+  if (!member.content?.trim()) { notifyOperation('提示词内容为空，未修改剪贴板。', false); return; }
   useError.value = "";
   using.value = member;
+  if (!extractVariables(member.content).length) await finishUse(member.content);
 }
 
 function editOpenedCollection() {

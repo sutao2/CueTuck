@@ -331,7 +331,6 @@ describe("WorkbenchShell", () => {
     const w = mount(WorkbenchShell);
     await flushPromises();
     await w.get(".card-action").trigger("click");
-    await w.get('[data-testid="use-next"]').trigger("click");
     await flushPromises();
     expect(w.get('[data-testid="use-modal"]').text()).toContain("复制失败");
     expect((await listLocalPrompts())[0].use_count).toBe(0);
@@ -972,9 +971,8 @@ describe("WorkbenchShell", () => {
     expect(card.get('[data-testid="download-square"]').attributes('title')).toBe('下载');
     await card.trigger('contextmenu');
     expect(w.find('[role="menu"]').exists()).toBe(false);
-    await card.get('[data-testid="card-more"]').trigger('click');
-    expect(w.get('[data-testid="context-menu"]').text()).not.toMatch(/下载|收藏/);
-    await w.get('[data-action="details"]').trigger('click'); await flushPromises();
+    expect(card.find('[data-testid="card-more"]').exists()).toBe(false);
+    await card.get(".prompt-title").trigger("click"); await flushPromises();
     await w.get('[data-testid="favorite-square"]').trigger("click");
     await flushPromises();
     expect(favoriteCalls.some((call) => call.method === "PUT" && call.id === "sq-1")).toBe(true);

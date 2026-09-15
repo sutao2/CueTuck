@@ -127,7 +127,7 @@ describe("LauncherApp", () => {
     expect(w.get(".preview").text()).toContain("{{姓名}}");
   });
 
-  it("previews plain prompts and keeps clipboard failures out of usage history", async () => {
+  it("automatically copies plain prompts and keeps clipboard failures out of usage history", async () => {
     await createLocalPrompt({ title: "普通正文", content: "未复制的文本" });
     const writeText = vi.fn().mockRejectedValueOnce(new Error("denied")).mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -137,8 +137,7 @@ describe("LauncherApp", () => {
     await flushPromises();
     await w.get("input").trigger("keydown", { key: "Enter" });
     expect(w.get(".preview").text()).toBe("未复制的文本");
-    expect(writeText).not.toHaveBeenCalled();
-    await w.findAll("button").find((button) => button.text() === "复制").trigger("click");
+    expect(writeText).toHaveBeenCalledExactlyOnceWith("未复制的文本");
     await flushPromises();
     expect(w.get('[data-testid="launcher-feedback"]').text()).toContain("复制失败");
     expect((await library.listLocalPrompts())[0].use_count).toBe(0);

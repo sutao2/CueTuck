@@ -239,12 +239,16 @@ it('keeps the Chinese draft and skips usage/closing when native clipboard confir
 
 it("copies directly, respects auto-close, and rejects empty content", async () => {
   const w = await open("纯文本");
+  expect(writeText).toHaveBeenCalledExactlyOnceWith("纯文本");
+  writeText.mockClear();
   await button(w, "返回").trigger("click");
   await flushPromises();
   await w.get("input").trigger("keydown", { key: "Enter", ctrlKey: true });
   await flushPromises();
   expect(writeText).toHaveBeenCalledExactlyOnceWith("纯文本");
-  expect(w.find(".preview").exists()).toBe(false);
+  expect(w.find(".preview").exists()).toBe(true);
+  await button(w, "返回").trigger("click");
+  await flushPromises();
   await library.setLocalSetting("close_launcher_after_use", "1");
   await w.get("input").trigger("keydown", { key: "Enter", metaKey: true });
   await flushPromises();

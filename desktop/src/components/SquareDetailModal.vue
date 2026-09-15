@@ -12,9 +12,10 @@
           </div>
         </div>
         <div class="detail-actions">
+          <button v-if="item.kind !== 'collection'" type="button" class="button primary-button" data-testid="square-detail-use" :disabled="loading || Boolean(error) || useBusy || !(translated || item.content)?.trim()" @click="$emit('use', { ...item, content: translated || item.content, remote: true, asset_count: 0 })">使用</button>
           <button v-if="downloaded && sourceImages.length && item.kind !== 'collection'" type="button" class="button ghost-button" :disabled="loading || Boolean(error) || downloading" data-testid="complete-square-images" @click="$emit('complete-images')">{{ downloading ? (downloadProgress || '正在补图…') : '补全参考图' }}</button>
           <button type="button" class="button ghost-button" :disabled="favoriteBusy" @click="$emit('favorite')">{{ favorite ? '已收藏' : '收藏' }}</button>
-          <button type="button" class="button primary-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (!downloaded && item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? (downloadProgress || '正在下载…') : downloaded ? '打开本地副本' : '下载到本地' }}</button>
+          <button type="button" class="button ghost-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (!downloaded && item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? (downloadProgress || '正在下载…') : downloaded ? '打开本地副本' : '下载到本地' }}</button>
         </div>
       </header>
       <div class="detail-content">
@@ -48,13 +49,13 @@
             <p>{{ item.members?.length || 0 }} 个提示词</p>
             <p v-if="!item.members?.length">该合集缺少成员快照，暂时无法下载。</p>
             <article v-for="(member, index) in item.members" :key="index" data-testid="square-detail-member">
-              <h3>{{ member.title }}</h3>
+              <div class="member-heading"><h3>{{ member.title }}</h3><button type="button" class="button" data-testid="square-member-use" :disabled="useBusy || !(memberTranslations[index] || member.content)?.trim()" @click="$emit('use', { ...member, content: memberTranslations[index] || member.content, remote: true, asset_count: 0 })">使用</button></div>
               <p v-if="member.model">{{ member.model }}</p>
-              <PromptLanguage :text="member.content" :square-id="item.id" :initial-versions="item.translations || {}" :member-index="index" default-language="zh" @change="memberTranslations[index] = $event" /><pre class="square-body">{{ memberTranslations[index] || member.content }}</pre>
+              <PromptLanguage :text="member.content" :square-id="item.id" :initial-versions="item.translations || {}" :member-index="index" :default-language="defaultLanguage" @change="memberTranslations[index] = $event" /><pre class="square-body">{{ memberTranslations[index] || member.content }}</pre>
               <PublishedAttachments :item-id="item.id" :references="(item.asset_refs || []).filter(file => member.asset_ids?.includes(file.id))" />
             </article>
           </template>
-          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" :initial-versions="item.translations || {}" default-language="zh" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || '还没有正文' }}</pre></template>
+          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" :initial-versions="item.translations || {}" :default-language="defaultLanguage" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || '还没有正文' }}</pre></template>
           <PublishedAttachments v-if="item.kind !== 'collection'" :item-id="item.id" :references="item.asset_refs || []" />
         </template>
         <p v-if="note" role="status">{{ note }}</p>
@@ -78,6 +79,8 @@ const props = defineProps({
   item: { type: Object, required: true },
   backLabel: { type: String, default: '返回广场' },
   loading: Boolean,
+  useBusy: Boolean,
+  defaultLanguage: { type: String, default: 'zh' },
   error: { type: String, default: '' },
   note: { type: String, default: '' },
   downloading: Boolean,
@@ -86,7 +89,7 @@ const props = defineProps({
   favorite: Boolean,
   favoriteBusy: Boolean,
 });
-defineEmits(['cancel', 'retry', 'download', 'favorite', 'complete-images']);
+defineEmits(['cancel', 'retry', 'download', 'favorite', 'complete-images', 'use']);
 const largeImage = ref(null), translated = ref(''), memberTranslations = ref({});
 const imageIndex = ref(0), imageFailed = ref(false), imageLoaded = ref(false), imageKey = ref(0);
 const publishedImages = computed(() => (props.item.asset_refs || []).filter(file => ['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime)));
@@ -96,7 +99,7 @@ const galleryImages = computed(() => sourceImages.value.map(url => ({ url, alt: 
 const activeImage = computed(() => galleryImages.value[imageIndex.value] || galleryImages.value[0]);
 function retryImage() { imageFailed.value = false; imageLoaded.value = false; imageKey.value++; }
 function selectImage(index) { imageIndex.value = index; retryImage(); }
-watch(() => props.item.id, () => { largeImage.value=null; selectImage(0); });
+watch(() => props.item.id, () => { largeImage.value=null; translated.value=''; memberTranslations.value={}; selectImage(0); });
 </script>
 
 <style scoped>
@@ -120,7 +123,8 @@ watch(() => props.item.id, () => { largeImage.value=null; selectImage(0); });
 .publisher-label { margin-right: 8px; color: var(--muted); }
 .detail-publisher strong { font-weight: 500; }
 .detail-publisher .publisher-bio { margin-top: 3px; color: var(--muted); white-space: pre-wrap; }
-.detail-actions { display: flex; flex-shrink: 0; gap: 8px; padding-top: 3px; }
+.member-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
+.detail-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 3px; }
 .detail-section-label { font-size: 12px; font-weight: 600; color: var(--muted); margin: 28px 0 12px; }
 .detail-content .square-body { margin: 0; padding: 0; border: 0; background: transparent; font-size: 14px; line-height: 1.9; }
 .reference-credit { color: var(--muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }

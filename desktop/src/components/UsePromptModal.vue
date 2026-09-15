@@ -8,7 +8,7 @@
         <button type="button" class="page-back" aria-label="返回" :disabled="busy" @click="$emit('cancel')">← 返回</button>
       </header>
       <div class="create-body use-body">
-        <PromptLanguage :text="prompt.content" :disabled="busy" @change="template = $event" />
+        <PromptLanguage v-if="!prompt.remote" :text="prompt.content" :disabled="busy" @change="template = $event" />
         <nav v-if="names.length" class="variable-steps" aria-label="填写步骤">
           <button v-for="(name, position) in names" :key="name" type="button" :disabled="busy" :aria-current="step === 'variable' && index === position ? 'step' : undefined" :data-variable-step="position" @click="jump(position)">
             <span>{{ position + 1 }}</span> {{ name }} <small>{{ resolved(name) ? '已填' : '待填' }}</small>
@@ -35,7 +35,7 @@
           </label>
         </template>
         <template v-else>
-          <p class="use-hint">确认后复制到剪贴板，并记一次使用。</p>
+          <p class="use-hint">{{ prompt.remote ? '复制当前版本正文；不会下载到本地或增加下载次数。' : '确认后复制到剪贴板，并记一次使用。' }}</p>
           <p v-if="missing.length" class="use-hint" data-testid="missing-variables">还有 {{ missing.length }} 项未填写，复制时将保留占位符。点击上方参数可补填。</p>
           <pre class="preview-box" data-testid="use-preview">{{ preview }}</pre>
         </template>

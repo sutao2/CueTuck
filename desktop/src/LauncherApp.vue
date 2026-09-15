@@ -67,7 +67,7 @@
                 <span class="row-title">{{ row.title }}</span>
                 <span class="row-desc">{{ rowDesc(row) }}</span>
               </span>
-              <span class="pill">{{ scope === 'square' ? '查看详情' : rowIcon(row) === 'VAR' ? '变量' : '提示词' }}</span>
+              <span class="pill">{{ scope === 'square' ? (row.kind === 'collection' ? '选择提示词' : '使用') : rowIcon(row) === 'VAR' ? '变量' : '提示词' }}</span>
             </button>
           </div>
           <p v-else-if="!searching && !feedback" class="launcher-empty">没有找到相关提示词</p>
@@ -82,10 +82,11 @@
         <footer v-if="!isCollapsed" class="launcher-foot">
           <div class="launcher-keys">
             <span><kbd>↑↓</kbd> 选择</span>
-            <span><kbd>Enter</kbd> 填写/预览</span>
+            <span><kbd>Enter</kbd> 使用</span>
             <span><kbd>{{ copyChord }}</kbd> 复制</span>
             <span><kbd>Esc</kbd> 关闭</span>
           </div>
+          <button v-if="scope === 'square' && searchRows[selectedIndex]?.remote" type="button" class="ghost" :disabled="busy" @click="viewSquareDetail(searchRows[selectedIndex])">查看详情</button>
         </footer>
       </template>
 
@@ -139,6 +140,7 @@
           <div class="fill-keys" :title="`${copyChord} 随时复制 · Esc 关闭`"><span><kbd>↵</kbd> {{ variableNames.length ? '下一项 / 末项复制' : '复制' }}</span><span v-if="variableNames.length"><kbd>⇧↵</kbd> 换行</span></div>
           <div class="launcher-actions">
             <button type="button" class="ghost" :disabled="busy" @click="backToSearch">返回</button>
+            <button v-if="active?.remote" type="button" class="ghost" :disabled="busy" @click="viewSquareDetail(active)">查看详情</button>
             <button ref="copyButton" type="button" class="primary" :disabled="busy" @click="copyRendered">复制</button>
             </div>
         </footer>
@@ -149,7 +151,8 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import { listSquarePage } from './platform/square.js';
+import { squarePromptForUse } from './lib/squarePromptUse.js';
+import { fetchSquareContent, listSquarePage } from './platform/square.js';
 import { getLauncherAiConfig, optimizeLauncherPrompt } from './platform/launcherAi.js';
 import { invokeCommand } from './platform/tauri.js';
 import appIcon from "./assets/app-icon.png";
@@ -306,19 +309,37 @@ function selectWithPointer(event, index) {
   if (event.movementX || event.movementY) selectedIndex.value = index;
 }
 
+async function viewSquareDetail(row) {
+  try { await openDestination('square-detail', row.id); }
+  catch (error) { feedback.value = String(error.message || error); }
+}
+
 async function activate(row, mode) {
   if (!row || busy.value) return;
   if (row.action) { await runQuickAction(row.action); return; }
-  if (row.remote) { try { await openDestination('square-detail',row.id); } catch(e){feedback.value=String(e.message||e);} return; }
+  if (row.remote) {
+    if (row.kind === 'collection') { await viewSquareDetail(row); return; }
+    const version = lifecycleVersion, request = searchRequest;
+    actionBusy.value = true;
+    feedback.value = '正在读取完整提示词…';
+    try {
+      const content = await fetchSquareContent(row.id);
+      if (disposed || version !== lifecycleVersion || request !== searchRequest) return;
+      if (content.kind === 'collection') { await viewSquareDetail(row); return; }
+      row = squarePromptForUse({ ...row, ...content });
+    } catch (error) { feedback.value = `读取失败：${error.message || error}，请重试。`; return; }
+    finally { actionBusy.value = false; }
+  }
+  if (!row.content?.trim()) { feedback.value = '提示词内容为空，未修改剪贴板。'; return; }
   feedback.value = "";
   active.value = row;
   values.clear();
   for (const [name,value] of Object.entries(variableDefaults(row.content))) values.set(name,value);
-  if (mode === "copy") {
-    copyRendered();
+  step.value = "fill";
+  if (mode === "copy" || !variableNames.value.length) {
+    await copyRendered();
     return;
   }
-  step.value = "fill";
   focusedVariable.value = variableNames.value[0] || "";
   await focusCurrent();
 }
@@ -390,7 +411,7 @@ async function finishUse(text, id) {
 async function copyRendered() {
   if (busy.value || !active.value) return;
   const text = preview.value;
-  const id = active.value.id;
+  const id = active.value.remote ? null : active.value.id;
   if (!text.trim()) { feedback.value = "提示词内容为空，未修改剪贴板。"; return; }
   useBusy.value = true;
   feedback.value = "正在复制…";

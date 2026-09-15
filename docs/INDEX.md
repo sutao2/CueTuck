@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-15-direct-prompt-use.md](plans/2026-09-15-direct-prompt-use.md) | 已验收，未发版 | 广场与启动器直接使用 | 618 项测试、浏览器真实复制与窄窗布局通过 |
 | [plans/2026-09-15-beta16-release.md](plans/2026-09-15-beta16-release.md) | 已发布部署 | 部署昵称弹窗修复 | beta.16 双平台、CI、签名更新与官网入口已验 |
 | [plans/2026-09-15-nickname-startup.md](plans/2026-09-15-nickname-startup.md) | 已随 beta.16 发布 | 启动重复要求填写个人信息 | 延迟读取不闪现弹窗；602 项回归与 Mac 构建通过 |
 | [plans/2026-09-15-launcher-website.md](plans/2026-09-15-launcher-website.md) | 已上线验收 | 官网主线与根域名入口 | 根域名官网、启动器首屏与七语言 README；公网与多尺寸验证 |

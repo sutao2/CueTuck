@@ -17,7 +17,7 @@
     </div>
     <footer class="modal-footer">
       <button type="button" class="button ghost-button" data-testid="detail-edit" @click="$emit('edit')">编辑</button>
-      <button type="button" class="button primary-button" @click="$emit('use')">使用提示词</button>
+      <button type="button" class="button primary-button" @click="$emit('use', { ...prompt, content: translated || prompt.content })">使用提示词</button>
     </footer>
   </section>
 </template>
