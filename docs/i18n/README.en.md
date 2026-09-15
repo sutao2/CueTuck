@@ -8,19 +8,23 @@
 
 [简体中文](../../README.md) · **English** · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
-A local-first desktop workspace for prompts. Keep reusable prompts, reference images and agent Skills together; search, fill in variables, and copy the result into your AI tool.
+Your desktop prompt launcher. Open CueTuck with a global shortcut, find a reusable prompt, fill its variables and copy it into your AI tool. A local library, reference images and Skills management keep your workflows close at hand.
 
-[Download preview](https://github.com/sutao2/CueTuck/releases) · [Documentation](../../docs/INDEX.md) · [Report an issue](https://github.com/sutao2/CueTuck/issues)
+[Website](https://prompt.likh.cn/) · [Download preview](https://github.com/sutao2/CueTuck/releases) · [Documentation](../../docs/INDEX.md) · [Report an issue](https://github.com/sutao2/CueTuck/issues)
 
-![Prompt marketplace: categories, image cards, search and filters](../../docs/assets/readme/square.png)
+![CueTuck standalone launcher: prompt search and quick actions](../../docs/assets/readme/launcher-search.png)
+
+## Keep your work moving, with one shortcut
+
+Press **Control + Space** by default (configurable in Settings), type a keyword and navigate with **↑ / ↓**. Press **Enter** to copy a prompt without variables; otherwise fill and preview it first, then copy the result. New input can become a saved prompt, an AI optimization request using your own model, or an explicit marketplace search.
 
 ## What you can do
 
 | Feature | Workflow |
 |---|---|
+| Standalone launcher | Open with a configurable global shortcut, search, fill variables and copy. Quickly create prompts, optimize with AI or explicitly search the marketplace. |
 | Prompt marketplace | Browse by category, model or keyword. Inspect images, sources and authors; download prompts or save favorites. |
 | Local library | Organize, search, favorite and edit prompts and references. Switch between cards and a list. |
-| Standalone launcher | Open with a configurable global shortcut, search, fill variables and copy. Quickly create prompts, optimize with AI or explicitly search the marketplace. |
 | Translation and AI | Switch marketplace content between Chinese, original and English versions. Use your own model for local translation and optimization; fetch available models and select one. |
 | Skills management | Browse public sources, discover local Skills, manage agent and installation scope, install, restore backups and check for updates manually. |
 | MCP integration | Let compatible agents search, read and render local prompts. Public marketplace tools are optional. |

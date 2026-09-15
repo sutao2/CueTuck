@@ -8,19 +8,23 @@
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · **Français** · [Deutsch](README.de.md)
 
-Un espace de travail de bureau qui privilégie le stockage local de vos prompts. Rangez modèles, images de référence et Skills pour agents ; recherchez un prompt, renseignez ses variables, puis copiez le résultat dans votre outil d’IA.
+Votre lanceur de prompts pour ordinateur. Ouvrez CueTuck avec un raccourci global, trouvez un modèle, remplissez ses variables et copiez le résultat dans votre outil d’IA. Bibliothèque locale, images de référence et gestion des Skills gardent vos méthodes de travail à portée de main.
 
-[Télécharger la préversion](https://github.com/sutao2/CueTuck/releases) · [Documentation](../../docs/INDEX.md) · [Signaler un problème](https://github.com/sutao2/CueTuck/issues)
+[Site officiel](https://prompt.likh.cn/) · [Télécharger la préversion](https://github.com/sutao2/CueTuck/releases) · [Documentation](../../docs/INDEX.md) · [Signaler un problème](https://github.com/sutao2/CueTuck/issues)
 
-![Catalogue de prompts : catégories, images, recherche et filtres](../../docs/assets/readme/square.png)
+![Lanceur indépendant de CueTuck : recherche de prompts et actions rapides](../../docs/assets/readme/launcher-search.png)
+
+## Un raccourci pour poursuivre votre travail
+
+Le raccourci par défaut est **Control + Space** (modifiable dans les réglages). Saisissez un mot-clé et sélectionnez avec **↑ / ↓**. **Entrée** copie les prompts sans variables ; sinon, remplissez les variables, vérifiez l’aperçu et copiez le résultat. Vous pouvez aussi créer un prompt, optimiser le texte avec votre propre modèle d’IA ou lancer une recherche dans la communauté.
 
 ## Fonctionnalités
 
 | Fonction | Usage |
 |---|---|
+| Lanceur indépendant | Ouvrir avec un raccourci global configurable, rechercher, remplir les variables et copier. Créer un prompt, l’améliorer avec l’IA ou lancer une recherche dans le catalogue. |
 | Catalogue de prompts | Explorer par catégorie, modèle ou mot-clé ; consulter images, sources et auteurs ; télécharger ou ajouter aux favoris. |
 | Bibliothèque locale | Classer, rechercher, gérer les favoris et modifier textes et références. Basculer entre cartes et liste. |
-| Lanceur indépendant | Ouvrir avec un raccourci global configurable, rechercher, remplir les variables et copier. Créer un prompt, l’améliorer avec l’IA ou lancer une recherche dans le catalogue. |
 | Traduction et IA | Afficher les versions chinoise, originale et anglaise du catalogue. Utiliser votre propre modèle pour la traduction et l’amélioration locales, en le choisissant dans la liste récupérée auprès du fournisseur. |
 | Gestion des Skills | Parcourir les sources publiques, découvrir les Skills locaux, gérer agent et portée, installer, restaurer les sauvegardes et rechercher manuellement les mises à jour. |
 | Intégration MCP | Permettre aux agents compatibles de rechercher, lire et compléter les prompts locaux. Les outils du catalogue public sont facultatifs. |

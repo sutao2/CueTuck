@@ -69,8 +69,9 @@ try{
   await click(/button "预览"/);await target(/可执行的产品方案/);await capture('variables');
   }
   await run('goto',`${origin}/launcher.html`);await run('resize','760','560');
-  await run('run-code',`async page=>{await page.evaluate(async sample=>{await (await import('/src/platform/library.js')).createLocalPrompt(sample);},${JSON.stringify(samples[0])});}`);
-  await run('run-code',`async page=>{await page.getByRole('combobox').fill('产品'); await page.getByRole('option').filter({hasText:'把想法变成产品方案'}).waitFor({state:'visible'}); await page.getByRole('combobox').press('Enter');}`);await target(/填写变量/);
+  await run('run-code',`async page=>{await page.evaluate(async samples=>{const library=await import('/src/platform/library.js');for(const sample of samples)await library.createLocalPrompt(sample);},${JSON.stringify([samples[0],{title:'产品需求评审',content:'检查 {{需求文档}} 的目标、边界与验收标准，列出需要澄清的问题。'},{title:'产品发布文案',content:'为 {{产品名称}} 撰写发布文案，说明解决的问题、适用人群和开始使用的方法。'}])});}`);
+  await run('run-code',`async page=>{await page.getByRole('combobox').fill('产品'); await page.getByRole('option').filter({hasText:'把想法变成产品方案'}).waitFor({state:'visible'}); }`);await capture('launcher-search');
+  await run('run-code',`async page=>{await page.getByRole('option').filter({hasText:'把想法变成产品方案'}).click();}`);await target(/填写变量/);
   await fill(/textbox "产品想法"/,'一个能随时唤起的提示词工作台');await fill(/textbox "目标用户"/,'经常使用 AI 的开发者与内容创作者');await capture('launcher');
   console.log(`README screenshots captured: ${output}`);
 }finally{

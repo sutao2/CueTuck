@@ -8,19 +8,23 @@
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · **Español** · [Français](README.fr.md) · [Deutsch](README.de.md)
 
-Un espacio de trabajo de escritorio que prioriza el almacenamiento local de tus prompts. Organiza plantillas, imágenes de referencia y Skills para agentes; busca, completa variables y copia el resultado a tu herramienta de IA.
+Tu lanzador de prompts para escritorio. Abre CueTuck con un atajo global, busca una plantilla, completa sus variables y copia el resultado a tu herramienta de IA. La biblioteca local, las imágenes de referencia y la gestión de Skills mantienen tus flujos de trabajo a mano.
 
-[Descargar versión preliminar](https://github.com/sutao2/CueTuck/releases) · [Documentación](../../docs/INDEX.md) · [Informar de un problema](https://github.com/sutao2/CueTuck/issues)
+[Sitio web](https://prompt.likh.cn/) · [Descargar versión preliminar](https://github.com/sutao2/CueTuck/releases) · [Documentación](../../docs/INDEX.md) · [Informar de un problema](https://github.com/sutao2/CueTuck/issues)
 
-![Catálogo de prompts con categorías, imágenes, búsqueda y filtros](../../docs/assets/readme/square.png)
+![Lanzador independiente de CueTuck: búsqueda de prompts y acciones rápidas](../../docs/assets/readme/launcher-search.png)
+
+## Sigue trabajando con un solo atajo
+
+Pulsa **Control + Space** de forma predeterminada (configurable en Ajustes), escribe una palabra clave y selecciona con **↑ / ↓**. **Enter** copia los prompts sin variables; si las tienen, complétalas, revisa la vista previa y copia el resultado. También puedes crear un prompt, optimizar el texto con tu propio modelo de IA o buscar en la comunidad.
 
 ## Funciones
 
 | Función | Qué permite |
 |---|---|
+| Lanzador independiente | Abrir con un atajo global configurable, buscar, completar variables y copiar. Crear prompts, mejorarlos con IA o buscar explícitamente en el catálogo. |
 | Catálogo de prompts | Explorar por categoría, modelo o palabra clave; consultar imágenes, fuentes y autores; descargar o guardar favoritos. |
 | Biblioteca local | Clasificar, buscar, marcar favoritos y editar texto y referencias. Alternar entre tarjetas y lista. |
-| Lanzador independiente | Abrir con un atajo global configurable, buscar, completar variables y copiar. Crear prompts, mejorarlos con IA o buscar explícitamente en el catálogo. |
 | Traducción e IA | Alternar entre chino, original e inglés en el catálogo. Usar tu propio modelo para traducción y mejora locales, eligiéndolo de una lista obtenida del proveedor. |
 | Gestión de Skills | Explorar fuentes públicas, descubrir Skills locales, gestionar agente y ámbito, instalar, restaurar copias y buscar actualizaciones manualmente. |
 | Integración MCP | Permitir que agentes compatibles busquen, lean y completen prompts locales. Las herramientas del catálogo público son opcionales. |

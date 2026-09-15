@@ -6,11 +6,12 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-15-launcher-website.md](plans/2026-09-15-launcher-website.md) | 实施中 | 官网主线与根域名入口 | 启动器优先、真实截图、七语言 README 与生产路由 |
 | [plans/2026-09-15-beta15-release.md](plans/2026-09-15-beta15-release.md) | 已发布 | 核对最新客户端发行 | beta.15 双平台、全量 CI、签名与公开更新验收 |
 | [plans/2026-09-15-skill-publishing.md](plans/2026-09-15-skill-publishing.md) | 已实施部署 | Skills 创建、社区发布与安装 | 持久草稿、完整包投稿、人工审核与安装闭环；来源操作边界与统一投稿管理 |
 | [plans/2026-09-15-website-live-data.md](plans/2026-09-15-website-live-data.md) | 已部署验收 | 网页数据与风格修正 | 真实提示词分页、15 个 Skill 来源与中性工作台；公网和多尺寸验收 |
 | [plans/2026-09-15-website-design.md](plans/2026-09-15-website-design.md) | 已被后续改版取代 | 追溯官网首版设计 | 首版示例数据与视觉历史；部署入口继续使用 |
-| [designs/website/index.html](designs/website/index.html) | 公开数据预览 | 预览官网与在线工作台 | 中性白灰、真实广场与来源、变量填写；账号功能尚未接入 |
+| [designs/website/index.html](designs/website/index.html) | 官网与公开数据浏览 | 修改官网与网页工作台 | 启动器优先、真实应用截图；广场公开浏览，账号功能尚未接入 |
 | [plans/2026-09-15-remove-context-menu.md](plans/2026-09-15-remove-context-menu.md) | 已验收 | 精简重复右键入口 | 保留可见更多操作与系统编辑菜单；115 项测试和构建通过，未发版 |
 | [plans/2026-09-15-beta14-release.md](plans/2026-09-15-beta14-release.md) | 已发布 | 追溯 beta.14 发行 | beta.14 双平台构建、CI、签名与公开更新验收 |
 | [i18n/README.en.md](i18n/README.en.md) | 现行 | 阅读 English 项目介绍 | README 译本，共享真实截图与语言导航 |

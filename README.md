@@ -8,19 +8,23 @@
 
 **简体中文** · [English](docs/i18n/README.en.md) · [日本語](docs/i18n/README.ja.md) · [한국어](docs/i18n/README.ko.md) · [Español](docs/i18n/README.es.md) · [Français](docs/i18n/README.fr.md) · [Deutsch](docs/i18n/README.de.md)
 
-本地优先的桌面提示词工作台。把常用提示词、参考图片和智能体 Skills 收好，搜索、填写变量，再复制到你正在使用的 AI 工具。
+你的桌面提示词启动器。用一个全局快捷键唤起 CueTuck，搜索常用模板、填写变量、回车复制，再粘贴到正在使用的 AI 工具。提示词库、参考图片与 Skills 管理，让好用的工作方式随时可用。
 
-[下载预览版](https://github.com/sutao2/CueTuck/releases) · [使用与开发文档](docs/INDEX.md) · [反馈问题](https://github.com/sutao2/CueTuck/issues)
+[官网](https://prompt.likh.cn/) · [下载预览版](https://github.com/sutao2/CueTuck/releases) · [使用与开发文档](docs/INDEX.md) · [反馈问题](https://github.com/sutao2/CueTuck/issues)
 
-![CueTuck 提示词广场：分类浏览、图片卡片、搜索与筛选](docs/assets/readme/square.png)
+![CueTuck 独立启动器：搜索提示词与快捷操作](docs/assets/readme/launcher-search.png)
+
+## 一个快捷键，接上你的工作
+
+默认 **Control + Space** 唤起（可在设置中修改）；输入关键词，用 **↑ / ↓** 选择。无变量的提示词按 **Enter** 复制；有变量时先填写并预览，再复制结果。输入新想法，还能快捷创建提示词、使用自己的模型进行 AI 优化，或主动搜索广场。
 
 ## 能做什么
 
 | 功能 | 用法 |
 |---|---|
+| 独立启动器 | 用可配置的全局快捷键唤起，搜索提示词、填写变量并复制；也能快捷创建、AI 优化和主动搜索广场。 |
 | 提示词广场 | 按分类、模型和关键词发现内容，查看图片、来源与作者，下载到本地或收藏。 |
 | 本地提示词 | 分类整理、搜索、收藏、编辑正文和参考资料；卡片或列表视图随时切换。 |
-| 独立启动器 | 用可配置的全局快捷键唤起，搜索提示词、填写变量并复制；也能快捷创建、AI 优化和主动搜索广场。 |
 | 翻译与 AI | 广场支持中文、原文和英文版本；本地翻译与优化使用你配置的模型，支持获取模型列表后选择。 |
 | Skills 管理 | 浏览公开来源、发现本机 Skills，按智能体与安装范围管理，支持安装、备份恢复和手动检查更新。 |
 | MCP 接入 | 让兼容 MCP 的智能体搜索、读取和渲染本地提示词；可显式开启公开广场工具。 |

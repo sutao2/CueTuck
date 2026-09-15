@@ -6,11 +6,13 @@ import shutil
 root = Path(__file__).resolve().parents[1]
 out = root / 'output' / 'website-preview'
 out.mkdir(parents=True, exist_ok=True)
-for name in ('index.html', 'site.css', 'site.js', 'live-data.mjs'):
+for name in ('index.html', 'site.css', 'landing.css', 'site.js', 'live-data.mjs', 'robots.txt', 'sitemap.xml'):
     shutil.copy2(root / 'docs' / 'designs' / 'website' / name, out / name)
 (out / 'assets').mkdir(exist_ok=True)
 for source, name in (
     ('docs/assets/readme/library.png', 'library.png'),
+    ('docs/assets/readme/launcher.png', 'launcher.png'),
+    ('docs/assets/readme/launcher-search.png', 'launcher-search.png'),
     ('desktop/src-tauri/icons/128x128.png', 'icon.png'),
 ):
     shutil.copy2(root / source, out / 'assets' / name)

@@ -8,19 +8,23 @@
 
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Français](README.fr.md) · **Deutsch**
 
-Ein Desktop-Arbeitsplatz für Prompts mit lokaler Speicherung im Mittelpunkt. Sammle Vorlagen, Referenzbilder und Skills für Agenten, suche nach einem Prompt, fülle Variablen aus und kopiere das Ergebnis in dein KI-Werkzeug.
+Dein Prompt-Launcher für den Desktop. Öffne CueTuck per globalem Tastenkürzel, finde eine Vorlage, fülle ihre Variablen aus und kopiere das Ergebnis in dein KI-Tool. Lokale Bibliothek, Referenzbilder und Skills-Verwaltung halten deine Arbeitsabläufe griffbereit.
 
-[Vorschauversion herunterladen](https://github.com/sutao2/CueTuck/releases) · [Dokumentation](../../docs/INDEX.md) · [Fehler melden](https://github.com/sutao2/CueTuck/issues)
+[Website](https://prompt.likh.cn/) · [Vorschauversion herunterladen](https://github.com/sutao2/CueTuck/releases) · [Dokumentation](../../docs/INDEX.md) · [Fehler melden](https://github.com/sutao2/CueTuck/issues)
 
-![Prompt-Katalog mit Kategorien, Bildern, Suche und Filtern](../../docs/assets/readme/square.png)
+![Eigenständiger CueTuck-Launcher: Prompt-Suche und Schnellaktionen](../../docs/assets/readme/launcher-search.png)
+
+## Mit einem Tastenkürzel weiterarbeiten
+
+Standardmäßig öffnet **Control + Space** den Launcher (in den Einstellungen änderbar). Gib ein Stichwort ein und wähle mit **↑ / ↓**. **Enter** kopiert Prompts ohne Variablen; andernfalls fülle sie aus, prüfe die Vorschau und kopiere das Ergebnis. Du kannst auch einen Prompt erstellen, Text mit deinem eigenen KI-Modell optimieren oder den Marktplatz durchsuchen.
 
 ## Funktionen
 
 | Funktion | Möglichkeiten |
 |---|---|
+| Eigenständiger Launcher | Per einstellbarem globalem Tastenkürzel öffnen, suchen, Variablen ausfüllen und kopieren. Prompts erstellen, mit KI verbessern oder gezielt im Katalog suchen. |
 | Prompt-Katalog | Nach Kategorie, Modell oder Stichwort suchen. Bilder, Quellen und Autoren ansehen, Prompts herunterladen oder als Favoriten speichern. |
 | Lokale Bibliothek | Inhalte kategorisieren, durchsuchen, favorisieren und Texte sowie Referenzen bearbeiten. Zwischen Karten und Listen wechseln. |
-| Eigenständiger Launcher | Per einstellbarem globalem Tastenkürzel öffnen, suchen, Variablen ausfüllen und kopieren. Prompts erstellen, mit KI verbessern oder gezielt im Katalog suchen. |
 | Übersetzung und KI | Im Katalog zwischen Chinesisch, Original und Englisch wechseln. Für lokale Übersetzung und Optimierung ein eigenes Modell aus der abgerufenen Modellliste auswählen. |
 | Skills-Verwaltung | Öffentliche Quellen durchsuchen, lokale Skills finden, nach Agent und Geltungsbereich verwalten, installieren, Sicherungen wiederherstellen und manuell nach Updates suchen. |
 | MCP-Anbindung | Kompatible Agenten können lokale Prompts suchen, lesen und mit Variablen ausfüllen. Werkzeuge für den öffentlichen Katalog sind optional. |
