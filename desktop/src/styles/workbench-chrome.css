@@ -957,3 +957,8 @@ body[data-density="compact"] .app-shell .collection-card-preview { margin: -12px
 .skills-category-tree .tree-row:disabled { opacity: .55; cursor: wait; }
 
 .settings-content .searchable-select { min-width: 0; max-width: 100%; min-height: 34px; height: 34px; padding: 0 10px; border-color: var(--line-strong); font-size: 12px; }
+
+@media (max-width: 900px) {
+  .filter-controls { margin-left: 0; flex: 1 1 auto; }
+  .square-sort-note { padding: 8px 20px; }
+}

@@ -1,7 +1,7 @@
 .skill-authoring textarea{resize:vertical;min-height:80px}.skill-authoring .skills-actions{margin:16px 0}.skill-authoring .skills-actions>:first-child{min-width:180px}.skill-authoring ul{font:12px/1.7 var(--font-code);overflow-wrap:anywhere}
-.skills-page { padding:28px 32px 48px; overflow:auto; background:var(--surface); }
-.skills-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:24px; }
-.skills-header h1 { margin:0 0 8px; font-size:26px; letter-spacing:-.5px; }
+.skills-page { padding:22px 32px 32px; overflow:auto; background:var(--surface); }
+.skills-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.skills-header h1 { margin:0 0 8px; font-size:22px; line-height:1.35; letter-spacing:-.5px; }
 .skills-header p { margin:0; font-size:13px; line-height:1.7; }
 .skills-header .skills-eyebrow { font-size:10px; letter-spacing:1.6px; margin-bottom:6px; color:var(--muted); }
 .muted { color:var(--muted); font-size:12px; line-height:1.65; }
@@ -91,3 +91,14 @@
 .skills-market-tabs button[aria-current="page"]{border-bottom-color:var(--text);color:var(--text)}
 .skills-market-tabs button:hover{color:var(--text)}
 .skills-header>.skills-actions>.button{display:inline-flex;align-items:center;gap:7px}
+
+.skills-header > div { min-width:0; }
+.skills-header h1 { overflow-wrap:anywhere; }
+.skills-header > .skills-actions { justify-content:flex-end; }
+.skills-page .skills-search { box-sizing:border-box; min-height:34px; border-radius:7px; }
+.skills-page .skills-search input { padding:8px 0; font-size:12px; }
+.skills-page .skills-source-controls { gap:8px; flex-wrap:wrap; }
+.skills-page .skills-source-controls > :first-child { min-width:180px; flex:1; }
+.skills-page .skills-panel:has(.skills-source-controls) { padding:16px; }
+@media(max-width:1100px){.skills-header{flex-wrap:wrap}.skills-header > .skills-actions{justify-content:flex-start}}
+@media(max-width:700px){.skills-filters{grid-template-columns:minmax(0,1fr)}.skills-page{padding:20px}.skills-header > .skills-actions{width:100%}}

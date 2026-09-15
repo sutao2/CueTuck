@@ -11,13 +11,14 @@
             <div><p><span class="publisher-label">{{ item.publisher ? '发布者' : '来源作者' }}</span><strong>{{ publisherName }}</strong></p><p v-if="item.publisher?.bio" class="publisher-bio">{{ item.publisher.bio }}</p></div>
           </div>
         </div>
+      </header>
         <div class="detail-actions">
           <button v-if="item.kind !== 'collection'" type="button" class="button primary-button" data-testid="square-detail-use" :disabled="loading || Boolean(error) || useBusy || !(translated || item.content)?.trim()" @click="$emit('use', { ...item, content: translated || item.content, remote: true, asset_count: 0 })">使用</button>
           <button v-if="downloaded && sourceImages.length && item.kind !== 'collection'" type="button" class="button ghost-button" :disabled="loading || Boolean(error) || downloading" data-testid="complete-square-images" @click="$emit('complete-images')">{{ downloading ? (downloadProgress || '正在补图…') : '补全参考图' }}</button>
           <button type="button" class="button ghost-button" :disabled="favoriteBusy" @click="$emit('favorite')">{{ favorite ? '已收藏' : '收藏' }}</button>
           <button type="button" class="button ghost-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (!downloaded && item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? (downloadProgress || '正在下载…') : downloaded ? '打开本地副本' : '下载到本地' }}</button>
         </div>
-      </header>
+
       <div class="detail-content">
         <p v-if="loading" role="status">正在读取详情…</p>
         <div v-else-if="error" role="alert">
@@ -25,6 +26,23 @@
           <button type="button" class="button ghost-button" data-testid="square-detail-retry" @click="$emit('retry')">重试</button>
         </div>
         <template v-else>
+          <div class="detail-reading-grid" :class="{ 'has-media': sourceImages.length || publishedImages.length }">
+          <section class="detail-text" aria-label="提示词内容">
+          <h3 class="detail-section-label">{{ item.kind === 'collection' ? '合集内容' : '提示词正文' }}</h3>
+          <template v-if="item.kind === 'collection'">
+            <p>{{ item.members?.length || 0 }} 个提示词</p>
+            <p v-if="!item.members?.length">该合集缺少成员快照，暂时无法下载。</p>
+            <article v-for="(member, index) in item.members" :key="index" data-testid="square-detail-member">
+              <div class="member-heading"><h3>{{ member.title }}</h3><button type="button" class="button" data-testid="square-member-use" :disabled="useBusy || !(memberTranslations[index] || member.content)?.trim()" @click="$emit('use', { ...member, content: memberTranslations[index] || member.content, remote: true, asset_count: 0 })">使用</button></div>
+              <p v-if="member.model">{{ member.model }}</p>
+              <PromptLanguage :text="member.content" :square-id="item.id" :initial-versions="item.translations || {}" :member-index="index" :default-language="defaultLanguage" @change="memberTranslations[index] = $event" /><pre class="square-body">{{ memberTranslations[index] || member.content }}</pre>
+              <PublishedAttachments :item-id="item.id" :references="(item.asset_refs || []).filter(file => member.asset_ids?.includes(file.id))" />
+            </article>
+          </template>
+          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" :initial-versions="item.translations || {}" :default-language="defaultLanguage" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || '还没有正文' }}</pre></template>
+          <PublishedAttachments v-if="item.kind !== 'collection'" :item-id="item.id" :references="item.asset_refs || []" />
+          </section>
+          <aside v-if="sourceImages.length || publishedImages.length || item.reference" class="detail-media" aria-label="参考资料">
           <section v-if="sourceImages.length" class="detail-gallery" aria-label="来源参考图">
             <div class="gallery-label"><span>来源参考图 · 非本软件生成</span></div>
             <figure>
@@ -44,19 +62,8 @@
             <h3>图片 · {{ publishedImages.length }}</h3>
             <div :class="{ 'single-image': publishedImages.length === 1 }"><PublishedImage v-for="file in publishedImages" :key="file.id" :item-id="item.id" :file="file" :title="file.name" /></div>
           </section>
-          <h3 class="detail-section-label">{{ item.kind === 'collection' ? '合集内容' : '提示词正文' }}</h3>
-          <template v-if="item.kind === 'collection'">
-            <p>{{ item.members?.length || 0 }} 个提示词</p>
-            <p v-if="!item.members?.length">该合集缺少成员快照，暂时无法下载。</p>
-            <article v-for="(member, index) in item.members" :key="index" data-testid="square-detail-member">
-              <div class="member-heading"><h3>{{ member.title }}</h3><button type="button" class="button" data-testid="square-member-use" :disabled="useBusy || !(memberTranslations[index] || member.content)?.trim()" @click="$emit('use', { ...member, content: memberTranslations[index] || member.content, remote: true, asset_count: 0 })">使用</button></div>
-              <p v-if="member.model">{{ member.model }}</p>
-              <PromptLanguage :text="member.content" :square-id="item.id" :initial-versions="item.translations || {}" :member-index="index" :default-language="defaultLanguage" @change="memberTranslations[index] = $event" /><pre class="square-body">{{ memberTranslations[index] || member.content }}</pre>
-              <PublishedAttachments :item-id="item.id" :references="(item.asset_refs || []).filter(file => member.asset_ids?.includes(file.id))" />
-            </article>
-          </template>
-          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" :initial-versions="item.translations || {}" :default-language="defaultLanguage" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || '还没有正文' }}</pre></template>
-          <PublishedAttachments v-if="item.kind !== 'collection'" :item-id="item.id" :references="item.asset_refs || []" />
+          </aside>
+          </div>
         </template>
         <p v-if="note" role="status">{{ note }}</p>
         <ReportPanel v-if="!loading && !error" :key="item.id" :target-id="item.id" />
@@ -108,8 +115,8 @@ watch(() => props.item.id, () => { largeImage.value=null; translated.value=''; m
 .published-gallery :deep(.published-image img) { object-fit: contain; }
 .published-gallery .single-image :deep(.published-image) { height: auto; aspect-ratio: 16 / 9; max-height: 420px; }
 .square-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
-.square-reading-page { overflow: hidden; }
-.detail-scroll { overflow-y: auto; padding: 24px max(28px, calc((100% - 880px) / 2)) 48px; min-height: 0; }
+.square-reading-page { overflow: hidden; container-type: inline-size; }
+.detail-scroll { overflow-y: auto; padding: 24px max(28px, calc((100% - 1120px) / 2)) 48px; min-height: 0; }
 .detail-navigation { margin-bottom: 22px; }
 .detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
 .detail-heading > div { min-width: 0; }
@@ -124,8 +131,8 @@ watch(() => props.item.id, () => { largeImage.value=null; translated.value=''; m
 .detail-publisher strong { font-weight: 500; }
 .detail-publisher .publisher-bio { margin-top: 3px; color: var(--muted); white-space: pre-wrap; }
 .member-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
-.detail-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 3px; }
-.detail-section-label { font-size: 12px; font-weight: 600; color: var(--muted); margin: 28px 0 12px; }
+.detail-actions { display: flex; flex-wrap: wrap; gap: 8px; position: sticky; top: -24px; z-index: 5; background: var(--surface); padding: 12px 0; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+.detail-section-label { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 12px; }
 .detail-content .square-body { margin: 0; padding: 0; border: 0; background: transparent; font-size: 14px; line-height: 1.9; }
 .reference-credit { color: var(--muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
 .reference-credit a { color: inherit; }
@@ -140,7 +147,7 @@ watch(() => props.item.id, () => { largeImage.value=null; translated.value=''; m
 figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; margin-top: 10px; }
 figcaption a { color: inherit; text-decoration: none; }
 figcaption a:hover { text-decoration: underline; }
-.gallery-thumbs { display: flex; gap: 8px; margin-top: 14px; }
+.gallery-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .gallery-thumbs button { position: relative; width: 76px; height: 50px; padding: 3px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); overflow: hidden; }
 .gallery-thumbs button[aria-pressed='true'] { border-color: var(--text); }
 .gallery-thumbs img { width: 100%; height: 100%; object-fit: cover; border-radius: 3px; }
@@ -148,4 +155,19 @@ figcaption a:hover { text-decoration: underline; }
 .detail-content :deep(.report-panel) { margin-top: 32px; padding-top: 16px; border-color: var(--line); --border-color: var(--line); --panel-bg: var(--surface); }
 .detail-content :deep(.report-panel > summary) { color: var(--muted); font-size: 11px; }
 @media (max-width: 1000px) { .detail-heading { flex-direction: column; gap: 14px; } .detail-heading h2 { font-size: 23px; } }
+
+.detail-reading-grid { display: grid; gap: 28px; align-items: start; }
+.detail-reading-grid.has-media { grid-template-columns: minmax(0, 1fr) minmax(220px, 30%); }
+.detail-text, .detail-media { min-width: 0; }
+.detail-media { padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.detail-media .published-gallery h3 { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+.detail-media .published-gallery { margin-top: 16px; }
+.detail-media .published-gallery:first-child { margin-top: 0; }
+@container (max-width: 760px) {
+  .detail-reading-grid.has-media { grid-template-columns: minmax(0, 1fr); }
+  .detail-scroll { padding: 20px; }
+  .detail-actions { top: -20px; }
+  .gallery-stage { max-height: 280px; }
+}
+@media (max-width: 1000px) { .detail-reading-grid.has-media { grid-template-columns: minmax(0, 1fr); } }
 </style>

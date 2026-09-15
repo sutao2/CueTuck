@@ -147,7 +147,7 @@
         </div>
       </aside>
 
-      <div v-show="!sidebarCollapsed" class="sidebar-resizer" role="separator" tabindex="0"
+      <div v-show="!sidebarCollapsed && viewportWidth >= 900" class="sidebar-resizer" role="separator" tabindex="0"
         aria-label="调整侧栏宽度" aria-orientation="vertical" aria-controls="workbench-sidebar"
         :aria-valuenow="sidebarWidth" :aria-valuemin="200" :aria-valuemax="sidebarMaxWidth"
         @pointerdown="startSidebarResize" @pointermove="moveSidebarResize"
@@ -748,8 +748,12 @@ const contentKind = ref("prompts"), skillsMode = ref("local"), skillsVisited = r
 const skillsCategories = ref({local:'',square:''}), skillsCategorySummary = ref({local:null,square:null});
 function selectSkillCategory(id) { if (skillsBusy.value) return; if (skillsCategories.value[skillsMode.value] === id) skillsPage.value?.showList?.(); else skillsCategories.value[skillsMode.value] = id; }
 function openSkills(mode) { if (skillsBusy.value) return; cancelSquare(); contentKind.value = "skills"; skillsMode.value = mode; skillsVisited.value = true; }
-const sidebarCollapsed = ref(false);
 const viewportWidth = ref(window.innerWidth);
+const wideSidebarCollapsed = ref(false), narrowSidebarCollapsed = ref(true);
+const sidebarCollapsed = computed({
+  get: () => viewportWidth.value < 900 ? narrowSidebarCollapsed.value : wideSidebarCollapsed.value,
+  set: value => { if (viewportWidth.value < 900) narrowSidebarCollapsed.value = value; else wideSidebarCollapsed.value = value; },
+});
 const preferredSidebarWidth = ref(null);
 const sidebarMaxWidth = computed(() => Math.max(200, Math.min(400, viewportWidth.value - 560)));
 const sidebarWidth = computed(() => Math.max(200, Math.min(sidebarMaxWidth.value,
@@ -942,7 +946,7 @@ async function loadLayout() {
     const saved = raw ? JSON.parse(raw) : {};
     if (layoutDisposed) return;
     if (Number.isFinite(saved?.width) && saved.width >= 200 && saved.width <= 400) preferredSidebarWidth.value = saved.width;
-    if (typeof saved?.collapsed === 'boolean') sidebarCollapsed.value = saved.collapsed;
+    if (typeof saved?.collapsed === 'boolean') wideSidebarCollapsed.value = saved.collapsed;
     if (['grid', 'list'].includes(saved?.view)) view.value = saved.view;
   } catch { operationNote.value = '布局偏好读取失败，已使用默认布局。'; }
   await nextTick();
@@ -950,11 +954,11 @@ async function loadLayout() {
 }
 function saveLayout() {
   if (!layoutReady || layoutDisposed) return;
-  const value = JSON.stringify({ width: preferredSidebarWidth.value ?? 260, collapsed: sidebarCollapsed.value, view: view.value });
+  const value = JSON.stringify({ width: preferredSidebarWidth.value ?? 260, collapsed: wideSidebarCollapsed.value, view: view.value });
   layoutWrites = layoutWrites.then(() => setLocalSetting('workbench_layout', value))
     .catch(() => { operationNote.value = '布局偏好保存失败，本次调整仍可使用。'; });
 }
-watch([sidebarCollapsed, view], saveLayout);
+watch([wideSidebarCollapsed, view], saveLayout);
 onMounted(loadLayout);
 onUnmounted(() => { layoutDisposed = true; });
 const squareItems = ref([]);

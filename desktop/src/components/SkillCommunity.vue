@@ -49,12 +49,12 @@ defineExpose({reload:load});
 <style scoped>
 .community-skills{margin-top:20px}
 .community-toolbar{display:flex;align-items:center;gap:10px}
-.community-search{flex:1;min-width:0;max-width:680px;height:40px;box-sizing:border-box}
+.community-search{margin:0;flex:1;min-width:0;height:34px;box-sizing:border-box}
 .community-search input{background:transparent}
 .community-search button{border:0;border-radius:4px;background:var(--sidebar);color:var(--muted);font-size:15px;width:26px;height:24px;flex-shrink:0;cursor:pointer}
 .community-search:focus-within{border-color:var(--muted)}
-.community-toolbar>.button{height:40px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
-.community-refresh{width:40px;justify-content:center;padding:0}
+.community-toolbar>.button{height:34px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+.community-refresh{width:34px;justify-content:center;padding:0}
 .community-results{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:24px 0 12px;font-size:12px;color:var(--text)}
 .community-results small{margin-left:12px;color:var(--muted);font-size:11px}
 .community-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;min-height:280px;padding:40px 24px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
