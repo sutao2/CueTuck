@@ -46,7 +46,7 @@
           <p v-if="feedback" role="status" data-testid="launcher-feedback" class="launcher-empty">{{ feedback }}</p>
           <p v-if="searching" role="status" class="launcher-empty">正在搜索…</p>
           <div v-if="results.length">
-            <p class="group-title">{{ scope === 'square' ? '广场搜索 · 显示前 20 条' : '本地提示词' }}</p>
+            <p class="group-title">{{ scope === 'square' ? '广场搜索 · 显示前 20 条' : '本地提示词 · 匹配优先，兼顾常用与收藏' }}</p>
             <button
               v-for="(row, index) in results"
               :key="row.id"
@@ -151,6 +151,8 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { rankLauncherResults } from './lib/launcherRanking.js';
+import { listLocalFavoriteIds } from './platform/localFavorites.js';
 import { squarePromptForUse } from './lib/squarePromptUse.js';
 import { fetchSquareContent, listSquarePage } from './platform/square.js';
 import { getLauncherAiConfig, optimizeLauncherPrompt } from './platform/launcherAi.js';
@@ -226,7 +228,11 @@ async function searchCurrent(request) {
       squareController = new AbortController();
       const page = await listSquarePage({query:needle,signal:squareController.signal});
       rows = page.items.slice(0,20).map(row=>({...row,remote:true}));
-    } else rows = await listLocalPrompts({ query: needle });
+    } else {
+      const [local, favorites] = await Promise.all([listLocalPrompts({ query: needle }), listLocalFavoriteIds()]);
+      if (request !== searchRequest) return;
+      rows = rankLauncherResults(local, needle, favorites);
+    }
     if (request === searchRequest) results.value = rows.slice(0, launcherPreferences.value.resultLimit);
   } catch (error) {
     if (request === searchRequest) { results.value = []; feedback.value = `搜索失败：${error.message || error}`; }

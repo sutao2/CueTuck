@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "tauri": "tauri",
-    "tauri:nsis": "tauri build --bundles nsis"
+    "tauri:nsis": "tauri build --bundles nsis",
+    "test:core": "vitest run src/LauncherApp.spec.js src/LauncherInteraction.spec.js src/LauncherQuickActions.spec.js src/LauncherRanking.spec.js src/lib/launcherRanking.test.js src/platform/sessionRestore.test.js src/platform/translationTransport.test.js src/platform/publicationAssets.test.js src/platform/referenceAssets.test.js src/platform/square.test.js src/platform/updateFlow.test.js src/components/DownloadFeedback.spec.js src/components/FilesAndPublications.spec.js src/components/UpdateStatus.spec.js src/components/RecommendationRanking.spec.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
