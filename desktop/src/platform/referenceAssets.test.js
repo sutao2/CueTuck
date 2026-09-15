@@ -2,11 +2,11 @@ import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { resetMemoryLibrary, listLocalPrompts, updateLocalPrompt, deleteLocalPrompt } from './library.js';
 import { resetSquare, setDownloadStatsTransport, setSquareContentTransport, downloadSquareItem, completeSquareImages } from './square.js';
 import { listPromptAssets } from './assets.js';
-import { downloadReferenceImages } from './referenceAssets.js';
+import { downloadReferenceImages, clearReferenceImageCache } from './referenceAssets.js';
 const url='https://cms-assets.youmind.com/test.png';
 const png=Uint8Array.from([137,80,78,71,13,10,26,10]);
 const item={id:'image-prompt',title:'配图',content:'原始正文',reference:{images:[url]}};
-beforeEach(()=>{resetMemoryLibrary();resetSquare(); setDownloadStatsTransport(async () => ({ download_count: 1 }));setSquareContentTransport(async()=>item);});
+beforeEach(()=>{clearReferenceImageCache();resetMemoryLibrary();resetSquare(); setDownloadStatsTransport(async () => ({ download_count: 1 }));setSquareContentTransport(async()=>item);});
 afterEach(()=>vi.unstubAllGlobals());
 it('downloads reference bytes atomically and without credentials or attribution in text',async()=>{
   const fetcher=vi.fn(async()=>new Response(png));vi.stubGlobal('fetch',fetcher);
@@ -40,6 +40,7 @@ it('deduplicates and bounds allowed URLs, rejects oversized bytes and never load
   const fetcher=vi.fn(async()=>new Response(png));vi.stubGlobal('fetch',fetcher);
   await downloadReferenceImages({reference:{images:[url,url,'http://cms-assets.youmind.com/a','https://cms-assets.youmind.com:8443/a','https://private.test/a','https://user:pass@cms-assets.youmind.com/a']}});
   expect(fetcher).toHaveBeenCalledTimes(1);
+  clearReferenceImageCache();
   fetcher.mockImplementation(async()=>new Response(new Uint8Array(5*1024*1024+1)));
   await expect(downloadReferenceImages(item)).rejects.toThrow('5 MiB');
 });
@@ -80,4 +81,19 @@ it('aborts in-flight images and stops queued downloads after a failure without i
   expect(aborted).toBe(2);
   expect(await listLocalPrompts()).toHaveLength(0);
   expect(stats).not.toHaveBeenCalled();
+});
+
+it('reuses validated successful images on retry, expires the cache and creates fresh asset ids',async()=>{
+  vi.useFakeTimers();
+  try {
+    const second=url+'?retry';
+    const fetcher=vi.fn(async(address)=>address===second?new Response('error',{status:503}):new Response(png));vi.stubGlobal('fetch',fetcher);
+    await expect(downloadReferenceImages({reference:{images:[url,second]}})).rejects.toThrow();
+    fetcher.mockImplementation(async()=>new Response(png));
+    const first=await downloadReferenceImages({reference:{images:[url,second]}});
+    expect(fetcher.mock.calls.filter(([address])=>address===url)).toHaveLength(1);
+    const again=await downloadReferenceImages({reference:{images:[url,second]}});
+    expect(again[0].id).not.toBe(first[0].id);expect(fetcher).toHaveBeenCalledTimes(3);
+    vi.advanceTimersByTime(300001);await downloadReferenceImages({reference:{images:[url]}});expect(fetcher).toHaveBeenCalledTimes(4);
+  } finally { vi.useRealTimers(); }
 });

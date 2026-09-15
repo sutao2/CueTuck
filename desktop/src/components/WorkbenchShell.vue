@@ -166,7 +166,8 @@
           </div>
           <div class="content-actions" :inert="batchBusy ? '' : undefined">
             <button v-if="space === 'local' && prompts.length" type="button" class="button ghost-button" data-testid="select-prompts" @click="selecting = !selecting; selectedPrompts = []">{{ selecting ? '取消多选' : '批量整理' }}</button>
-            <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="refreshSquare"><AppIcon name="refresh" />{{ sortTab === '推荐' ? '换一批' : t("refresh") }}</button>
+            <button v-if="space === 'square' && sortTab === '推荐' && dismissedRecommendations.length" type="button" class="button ghost-button" @click="restoreRecommendations">恢复推荐偏好</button>
+            <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="refreshSquare"><AppIcon name="refresh" />{{ sortTab === '推荐' ? (!squareLoading && !squareItems.length && recentRecommendations.length ? '重新浏览' : '换一批') : t("refresh") }}</button>
             <button
               v-if="space === 'square'"
               type="button"
@@ -965,6 +966,23 @@ const squareItems = ref([]);
 const squareCategoryCounts = ref(null), squareCategoryTotal = ref(null);
 const contentScroller = ref(null);
 const recommendationSeed = ref(null);
+const dismissedRecommendations = ref([]);
+let recommendationExclude = [], recentRecommendations = [];
+async function restoreRecommendations() {
+  dismissedRecommendations.value = [];
+  await setLocalSetting('recommendation_dismissed', '[]');
+  return loadSquare();
+}
+async function dismissRecommendation(item) {
+  if (dismissedRecommendations.value.length >= 200) { notifyOperation('已保存 200 条不感兴趣，请先恢复推荐偏好。', false); return; }
+  const ids = [...new Set([...dismissedRecommendations.value, item.id])];
+  try {
+    await setLocalSetting('recommendation_dismissed', JSON.stringify(ids));
+    dismissedRecommendations.value = ids;
+    await loadSquare(false, crypto.randomUUID());
+    notifyOperation('已设为不感兴趣；可在推荐工具栏恢复。', true);
+  } catch { notifyOperation('推荐偏好保存失败，请重试。', false); }
+}
 const squareTotal = ref(0), squareNextOffset = ref(null), squareMoreLoading = ref(false), squareMoreError = ref(false);
 let squareController;
 function cancelSquare() { squareController?.abort(); }
@@ -1565,7 +1583,10 @@ function scheduleSearch(event) {
 }
 onUnmounted(() => { cancelSearch(); cancelSquare(); ++squareRequest; ++localRequest; ++catalogRequest; });
 
-function refreshSquare() { return loadSquare(true, sortTab.value === '推荐' ? crypto.randomUUID() : null); }
+function refreshSquare() {
+  if (sortTab.value === '推荐') recentRecommendations = squareItems.value.length ? [...new Set([...recentRecommendations, ...squareItems.value.map(item => item.id)])].slice(-48) : [];
+  return loadSquare(true, sortTab.value === '推荐' ? crypto.randomUUID() : null);
+}
 async function loadSquare(refreshCatalog = false, seed = null) {
   recommendationSeed.value = seed;
   cancelSearch();
@@ -1594,7 +1615,13 @@ async function loadSquare(refreshCatalog = false, seed = null) {
     if (refreshCatalog === true || !remoteCatalog.value) await loadRemoteCatalog();
     if (request !== squareRequest || space.value !== 'square') return;
     if (sortTab.value === '收藏' && !getSession().loggedIn) { openLogin('收藏需要登录'); return; }
-    const page = await listSquarePage({ recommendation: recommendationSeed.value, contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, signal });
+    if (sortTab.value === '推荐') {
+      const raw = await getLocalSetting('recommendation_dismissed');
+      try { const ids = JSON.parse(raw || '[]'); dismissedRecommendations.value = Array.isArray(ids) ? ids.filter(id => typeof id === 'string' && id.length <= 200).slice(0, 200) : []; } catch { dismissedRecommendations.value = []; }
+      if (request !== squareRequest || signal.aborted) return;
+    }
+    recommendationExclude = sortTab.value === '推荐' ? [...new Set([...dismissedRecommendations.value, ...recentRecommendations])] : [];
+    const page = await listSquarePage({ exclude: recommendationExclude, recommendation: recommendationSeed.value, contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, signal });
     if (request !== squareRequest || space.value !== 'square') return;
     recommendationSeed.value = page.recommendation || seed;
     squareItems.value = page.items;
@@ -1618,7 +1645,7 @@ async function loadMoreSquare(retry = false) {
   const request = squareRequest, offset = squareNextOffset.value;
   squareMoreLoading.value = true; squareMoreError.value = false;
   try {
-    const page = await listSquarePage({ recommendation: recommendationSeed.value, contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, offset, signal: squareController.signal });
+    const page = await listSquarePage({ exclude: recommendationExclude, recommendation: recommendationSeed.value, contentLanguage: contentLanguage.value, sort: sortTab.value, query: query.value, model: modelFilter.value, categoryId: selectedId.value, offset, signal: squareController.signal });
     if (request !== squareRequest || space.value !== 'square') return;
     const ids = new Set(squareItems.value.map(item => item.id));
     squareItems.value = [...squareItems.value, ...page.items.filter(item => !ids.has(item.id) && ids.add(item.id))];
@@ -1723,6 +1750,7 @@ function openContextMenu(event, item) {
 function contextActions(item) {
   if (space.value === "square") {
     return [
+      ...(sortTab.value === "推荐" ? [{ id: "not-interested", label: "不感兴趣" }] : []),
       ...(downloadedIds.value.includes(item.id) && referenceImages(item).length ? [{ id: 'complete-images', label: '补全参考图', disabled: downloadBusy.value.includes(item.id) }] : []),
     ];
   }
@@ -1744,6 +1772,7 @@ async function runContextAction(action) {
   const item = contextMenu.value?.item;
   closeContextMenu();
   if (!item) return;
+  if (action === 'not-interested') { await dismissRecommendation(item); return; }
   if (action === 'complete-images') { await completeImages(item); return; }
   if (action === "edit" || action === "open") {
     if (action === "edit") editing.value = item; else openItem(item);

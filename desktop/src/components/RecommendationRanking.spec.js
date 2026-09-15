@@ -39,3 +39,15 @@ it('can continue when every item on the first snapshot page was removed',async()
  const w=await open();await w.get('[data-testid="square-load-more"]').trigger('click');await flushPromises();
  expect(w.text()).toContain('下一页内容');expect(w.findAll('.prompt-card')).toHaveLength(1);
 });
+it('persists dismissals, preserves exclusions during paging, and restores preferences',async()=>{
+ const transport=vi.fn(async ({exclude,offset,recommendation})=>({items:exclude.includes('one')?[{id:'two',title:'第二条',kind:'prompt'}]:[{id:'one',title:'第一条',kind:'prompt'}],total:2,next_offset:offset?null:48,recommendation:recommendation||'feedback'}));setSquarePageTransport(transport);
+ const w=await open();await w.get('[data-testid="card-more"]').trigger('click');await button(w,'不感兴趣').trigger('click');await flushPromises();
+ expect(transport.mock.calls.at(-1)[0].exclude).toContain('one');expect(w.text()).not.toContain('第一条');
+ await w.get('[data-testid="square-load-more"]').trigger('click');await flushPromises();expect(transport.mock.calls.at(-1)[0].exclude).toEqual(['one']);
+ await w.get('[data-sort="最新"]').trigger('click');await flushPromises();expect(transport.mock.calls.at(-1)[0].exclude).toEqual([]);
+ await w.get('[data-sort="推荐"]').trigger('click');await flushPromises();await button(w,'恢复推荐偏好').trigger('click');await flushPromises();expect(transport.mock.calls.at(-1)[0].exclude).toEqual([]);
+});
+it('excludes the previous loaded batch when changing recommendations',async()=>{
+ const transport=vi.fn(async({exclude,recommendation})=>({items:[{id:exclude.includes('one')?'two':'one',title:'内容',kind:'prompt'}],total:2,next_offset:null,recommendation:recommendation||'batch'}));setSquarePageTransport(transport);
+ const w=await open();await button(w,'换一批').trigger('click');await flushPromises();expect(transport.mock.calls.at(-1)[0].exclude).toEqual(['one']);
+});

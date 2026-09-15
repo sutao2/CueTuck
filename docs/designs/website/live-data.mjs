@@ -6,9 +6,10 @@ export async function requestJson(url, { signal, fetcher = fetch } = {}) {
   return response.json();
 }
 export async function browsePrompts(base, filters = {}, options = {}) {
-  const { query = '', category = '', model = '', sort = '推荐', language = 'zh', offset = 0, recommendation = null } = filters;
+  const { query = '', category = '', model = '', sort = '推荐', language = 'zh', offset = 0, recommendation = null, exclude = [] } = filters;
   const params = new URLSearchParams({ q: query, category_id: category, model, sort, content_language: language, offset: String(offset), limit: String(PAGE_SIZE) });
   if (recommendation) params.set('recommendation', recommendation);
+  if (exclude.length) params.set('exclude', JSON.stringify(exclude));
   const page = await requestJson(`${base}/v1/square/browse?${params}`, options);
   if (!Array.isArray(page.items) || page.items.length > PAGE_SIZE || !Number.isInteger(page.total) || page.total < 0 || (page.next_offset !== null && (!Number.isInteger(page.next_offset) || page.next_offset <= offset))) throw Error('广场分页响应无效，请重试。');
   return page;

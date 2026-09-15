@@ -34,10 +34,10 @@ export function resetSquare() {
 }
 
 export function setSquarePageTransport(transport) { testPageTransport = transport; }
-export async function listSquarePage({ sort = '推荐', query = '', model = '', categoryId = null, offset = 0, signal, contentLanguage = 'zh', recommendation = null } = {}) {
+export async function listSquarePage({ sort = '推荐', query = '', model = '', categoryId = null, offset = 0, signal, contentLanguage = 'zh', recommendation = null, exclude = [] } = {}) {
   signal?.throwIfAborted();
   let payload;
-  if (testPageTransport) payload = await testPageTransport({ sort, query, model, categoryId, offset, signal, recommendation });
+  if (testPageTransport) payload = await testPageTransport({ sort, query, model, categoryId, offset, signal, recommendation, exclude });
   else if (testTransport || testFavoriteTransport) {
     // Legacy fixtures only; production must never fall back to the unbounded endpoint.
     const favorites = testFavoriteTransport && getSession().loggedIn ? await listFavorites() : [];
@@ -48,11 +48,12 @@ export async function listSquarePage({ sort = '推荐', query = '', model = '', 
     const cancel = () => { tauriInvoke('cancel_square_page', { request_id: requestId }).catch(() => {}); };
     signal?.addEventListener('abort', cancel, { once: true });
     try {
-      payload = await tauriInvoke('list_square_page', { sort, query, model, category_id: categoryId, content_language: contentLanguage, recommendation, offset, request_id: requestId, access_token: getSession().accessToken || null });
+      payload = await tauriInvoke('list_square_page', { sort, query, model, category_id: categoryId, content_language: contentLanguage, recommendation, exclude, offset, request_id: requestId, access_token: getSession().accessToken || null });
     } finally { signal?.removeEventListener('abort', cancel); }
   } else {
     const params = new URLSearchParams({ sort, q: query, offset: String(offset), limit: '48', content_language: contentLanguage });
     if (recommendation) params.set('recommendation', recommendation);
+    if (exclude.length) params.set('exclude', JSON.stringify(exclude));
     if (model) params.set('model', model);
     if (categoryId) params.set('category_id', categoryId);
     const token = getSession().accessToken;

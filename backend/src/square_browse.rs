@@ -9,7 +9,7 @@ use sqlx::Row;
 #[serde(deny_unknown_fields)]
 pub struct Browse {
     sort: Option<String>, q: Option<String>, category_id: Option<String>, model: Option<String>,
-    limit: Option<i64>, offset: Option<i64>, content_language: Option<String>, recommendation: Option<String>,
+    limit: Option<i64>, offset: Option<i64>, content_language: Option<String>, recommendation: Option<String>, exclude: Option<String>,
 }
 
 pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(input): Query<Browse>) -> Result<Json<Value>, StatusCode> {
@@ -26,6 +26,13 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         || input.category_id.as_ref().is_some_and(|s| s.len() > 200) { return Err(StatusCode::BAD_REQUEST); }
     let seed = input.recommendation.unwrap_or_else(|| format!("hour-{}", chrono::Utc::now().timestamp() / 3600));
     if seed.is_empty() || seed.len() > 64 || !seed.bytes().all(|c|c.is_ascii_alphanumeric() || c==b'-') { return Err(StatusCode::BAD_REQUEST); }
+    let mut excluded: Vec<String> = match input.exclude {
+        Some(raw) if raw.len() <= 12000 => serde_json::from_str(&raw).map_err(|_|StatusCode::BAD_REQUEST)?,
+        Some(_) => return Err(StatusCode::BAD_REQUEST), None => vec![],
+    };
+    if excluded.len() > 256 || excluded.iter().any(|id|id.is_empty() || id.len()>200) { return Err(StatusCode::BAD_REQUEST); }
+    if sort != "recommended" { excluded.clear(); }
+    excluded.sort(); excluded.dedup();
     let mut recommendation_next = None;
     let email = crate::optional_access_email(&state, &headers).await;
     if !state.square_public().await? || sort == "favorites" { crate::require_user(&state, &headers).await?; }
@@ -35,7 +42,7 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         if let Some(pg) = &state.db { pg.catalog_entries("categories", false).await? } else { crate::admin_catalog::seed_categories() }
     } else { vec![] };
     let ids: Vec<String> = category.iter().cloned().chain(categories.iter().filter(|c| c.parent_id.as_ref() == category.as_ref()).map(|c| c.id.clone())).collect();
-    let key = serde_json::to_string(&(&seed, &query, &model, &ids, translated)).map_err(|_|StatusCode::INTERNAL_SERVER_ERROR)?;
+    let key = serde_json::to_string(&(&seed, &query, &model, &ids, translated, &excluded)).map_err(|_|StatusCode::INTERNAL_SERVER_ERROR)?;
     let cached = if sort == "recommended" { state.recommendations.get(&key)? } else { None };
     if sort == "recommended" && offset > 0 && cached.is_none() { return Err(StatusCode::CONFLICT); }
     let (total, mut items, category_counts): (i64, Vec<Value>, Option<serde_json::Map<String, Value>>) = if let Some(pg) = &state.db {
@@ -47,14 +54,14 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         let filter = format!(r#"s.visibility='online'
             AND ($1::text IS NULL OR s.title ILIKE $1 ESCAPE '\' OR s.excerpt ILIKE $1 ESCAPE '\' OR s.reference->>'author' ILIKE $1 ESCAPE '\' OR tr.data->>'title' ILIKE $1 ESCAPE '\' OR tr.data->>'excerpt' ILIKE $1 ESCAPE '\')
             AND ($2::text IS NULL OR s.model=$2) AND ($3::text[]='{{}}' OR s.category_id=ANY($3))
-            AND (NOT $5::boolean OR {favorite})"#);
+            AND (NOT $5::boolean OR {favorite}) AND NOT(s.id=ANY($9::text[]))"#);
         let order = match sort {
             "latest" => "s.listed_at DESC NULLS LAST,s.id",
             "hot" => "s.download_count DESC,s.title,s.id",
             "recommended" => "array_position($8::text[],s.id)",
             _ => "s.recommended DESC,s.sort_index,s.id",
         };
-        let count_sql = format!("SELECT count(*) FROM {} s {translated_join} WHERE {filter}", pg.t("square_items"));
+        let count_sql = format!("SELECT count(*) FROM {} s {translated_join} WHERE {filter}", pg.t("square_items")).replace("$9", "$6");
         // Never select content/members, or return the complete reference document.
         let page_sql = format!("SELECT jsonb_build_object('id',s.id,'title',left({title},160),'kind',s.kind,
             'excerpt',left({excerpt},240),'content_language',CASE WHEN tr.status='ready' THEN 'zh' ELSE 'original' END,'model',s.model,'category_id',s.category_id,'member_count',s.member_count,
@@ -70,18 +77,18 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
             sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY").execute(&mut *tx).await?;
             let snapshot = if sort == "recommended" {
                 if let Some(snapshot) = cached.clone() { Some(snapshot) } else {
-                    let sql = format!("SELECT s.id,s.recommended,s.download_count,EXTRACT(EPOCH FROM s.listed_at)::float8 AS listed FROM {} s {translated_join} WHERE {filter} LIMIT 100001",pg.t("square_items"));
-                    let rows = sqlx::query(&sql).bind(&pattern).bind(&model).bind(&ids).bind(&email).bind(false).fetch_all(&mut *tx).await?;
+                    let sql = format!("SELECT s.id,s.recommended,s.download_count,EXTRACT(EPOCH FROM s.listed_at)::float8 AS listed FROM {} s {translated_join} WHERE {filter} LIMIT 100001",pg.t("square_items")).replace("$9", "$6");
+                    let rows = sqlx::query(&sql).bind(&pattern).bind(&model).bind(&ids).bind(&email).bind(false).bind(&excluded).fetch_all(&mut *tx).await?;
                     let rows = rows.into_iter().map(|row|Candidate { id:row.get("id"),featured:row.get("recommended"),downloads:row.get("download_count"),listed:row.get("listed") }).collect();
                     Some(state.recommendations.insert(key.clone(),rows,&seed).map_err(|_|sqlx::Error::Protocol("recommendation capacity".into()))?)
                 }
             } else { None };
             let total = if let Some(snapshot) = &snapshot { snapshot.len() as i64 } else {
-                sqlx::query_scalar(&count_sql).bind(&pattern).bind(&model).bind(&ids).bind(&email).bind(sort == "favorites").fetch_one(&mut *tx).await?
+                sqlx::query_scalar(&count_sql).bind(&pattern).bind(&model).bind(&ids).bind(&email).bind(sort == "favorites").bind(&excluded).fetch_one(&mut *tx).await?
             };
             let page_ids = snapshot.as_ref().map(|rows|rows.iter().skip(offset as usize).take(limit as usize).cloned().collect::<Vec<_>>());
             if snapshot.is_some() && offset+limit < total { recommendation_next = Some(offset+limit); }
-            let items: Vec<Value> = sqlx::query_scalar(&page_sql).bind(&pattern).bind(&model).bind(&ids).bind(&email).bind(sort == "favorites").bind(if snapshot.is_some() {limit} else {limit+1}).bind(if snapshot.is_some() {0} else {offset}).bind(page_ids).fetch_all(&mut *tx).await?;
+            let items: Vec<Value> = sqlx::query_scalar(&page_sql).bind(&pattern).bind(&model).bind(&ids).bind(&email).bind(sort == "favorites").bind(if snapshot.is_some() {limit} else {limit+1}).bind(if snapshot.is_some() {0} else {offset}).bind(page_ids).bind(&excluded).fetch_all(&mut *tx).await?;
             let category_counts = if offset == 0 {
                 let counts: Vec<(String, i64)> = sqlx::query_as(&format!("SELECT COALESCE(category_id,''),count(*) FROM {} WHERE visibility='online' GROUP BY COALESCE(category_id,'')", pg.t("square_items"))).fetch_all(&mut *tx).await?;
                 Some(counts.into_iter().map(|(id,count)| (id,json!(count))).collect())
@@ -105,7 +112,7 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
                 || p.reference.as_ref().and_then(|r|r["author"].as_str()).unwrap_or("").to_lowercase().contains(&needle))
             && model.as_ref().is_none_or(|m|p.model.as_ref()==Some(m))
             && (ids.is_empty() || p.category_id.as_ref().is_some_and(|id|ids.contains(id)))
-            && (sort != "favorites" || favorites.contains(&p.id)));
+            && (sort != "favorites" || favorites.contains(&p.id)) && !excluded.contains(&p.id));
         let counts = state.download_counts().await?;
         let favorite_counts = state.memory_favorite_counts()?;
         rows.sort_by(|a,b| match sort {
@@ -160,6 +167,15 @@ mod tests {
         let path="/v1/square/browse?q=rank-fixture&recommendation=test-a";
         let (code, first)=request(&state,"GET",path,"",json!(null)).await;
         assert_eq!(code,StatusCode::OK);assert_eq!(first["recommendation"],"test-a");assert_eq!(first["total"],120);
+        let excluded_path="/v1/square/browse?q=rank-fixture&recommendation=exclude&exclude=%5B%22rank-000%22%2C%22rank-001%22%5D";
+        let (excluded_code, excluded)=request(&state,"GET",excluded_path,"",json!(null)).await;
+        assert_eq!(excluded_code,StatusCode::OK); assert_eq!(excluded["total"],118);
+        assert_eq!(excluded["category_counts"],first["category_counts"]);
+        for offset in [0,48,96] {
+            let (_, page)=request(&state,"GET",&format!("{excluded_path}&offset={offset}"),"",json!(null)).await;
+            assert!(page["items"].as_array().unwrap().iter().all(|item|item["id"]!="rank-000"&&item["id"]!="rank-001"));
+        }
+        assert_eq!(request(&state,"GET","/v1/square/browse?exclude=bad","",json!(null)).await.0,StatusCode::BAD_REQUEST);
         let (_, second)=request(&state,"GET",&format!("{path}&offset=48"),"",json!(null)).await;
         let ids=|value:&Value|value["items"].as_array().unwrap().iter().map(|i|i["id"].as_str().unwrap().to_string()).collect::<Vec<_>>();
         let first_ids=ids(&first);let second_ids=ids(&second);

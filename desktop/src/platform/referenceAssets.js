@@ -2,7 +2,24 @@ import { invokeCommand } from './tauri.js';
 import { validateAssets } from './assets.js';
 import { referenceImages } from '../lib/squareReference.js';
 
+// Public reference bytes only: short-lived memory cache, never account attachments.
+const imageCache = new Map();
+const CACHE_LIMIT = 32 * 1024 * 1024, CACHE_TTL = 5 * 60_000;
+export function clearReferenceImageCache() { imageCache.clear(); }
+function cachedImage(url) {
+  for (const [key, value] of imageCache) if (Date.now() - value.saved > CACHE_TTL) imageCache.delete(key);
+  return imageCache.get(url)?.asset;
+}
+function rememberImage(url, asset) {
+  imageCache.delete(url);
+  let size = asset.data.length * 2;
+  for (const value of imageCache.values()) size += value.asset.data.length * 2;
+  for (const [key, value] of imageCache) { if (size <= CACHE_LIMIT) break; size -= value.asset.data.length * 2; imageCache.delete(key); }
+  if (asset.data.length * 2 <= CACHE_LIMIT) imageCache.set(url, { asset, saved: Date.now() });
+}
 async function downloadBrowserImage(url, index, signal) {
+  const cached = cachedImage(url);
+  if (cached) return { ...cached, id: crypto.randomUUID(), name: `参考图-${index+1}.${cached.name.split('.').at(-1)}` };
   const response = await fetch(url, { credentials:'omit', referrerPolicy:'no-referrer', redirect:'error', signal });
   if (!response.ok) throw Error('图片连接失败');
   const reader = response.body.getReader(), chunks = []; let size = 0;
@@ -16,7 +33,10 @@ async function downloadBrowserImage(url, index, signal) {
   let raw = ''; for (const bytes of chunks) for (let i=0;i<bytes.length;i+=8192) raw += String.fromCharCode(...bytes.subarray(i,i+8192));
   const type = raw.startsWith('\x89PNG\r\n\x1a\n') ? ['png','image/png'] : raw.startsWith('\xff\xd8\xff') ? ['jpg','image/jpeg'] : /^GIF8[79]a/.test(raw) ? ['gif','image/gif'] : raw.startsWith('RIFF') && raw.slice(8,12)==='WEBP' ? ['webp','image/webp'] : null;
   if (!type) throw Error('不支持的图片内容');
-  return {id:crypto.randomUUID(),name:`参考图-${index+1}.${type[0]}`,mime:type[1],data:btoa(raw)};
+  const asset = {id:crypto.randomUUID(),name:`参考图-${index+1}.${type[0]}`,mime:type[1],data:btoa(raw)};
+  validateAssets([asset]);
+  rememberImage(url, asset);
+  return asset;
 }
 
 export async function downloadReferenceImages(item, onProgress) {

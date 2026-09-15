@@ -80,7 +80,30 @@ pub async fn download_reference_image(url: String, index: usize) -> Result<Asset
     fetch_reference_image(client()?, reference_url(&url)?, index).await
 }
 
+struct CachedImage { url: String, bytes: Vec<u8>, saved: std::time::Instant }
+#[derive(Default)]
+struct ReferenceCache { entries: std::collections::VecDeque<CachedImage> }
+impl ReferenceCache {
+    fn get(&mut self, url: &str) -> Option<Vec<u8>> {
+        self.entries.retain(|entry| entry.saved.elapsed() < Duration::from_secs(300));
+        self.entries.iter().find(|entry|entry.url==url).map(|entry|entry.bytes.clone())
+    }
+    fn insert(&mut self, url: String, bytes: Vec<u8>) {
+        self.entries.retain(|entry|entry.url!=url && entry.saved.elapsed()<Duration::from_secs(300));
+        let mut size: usize = self.entries.iter().map(|entry|entry.bytes.len()).sum();
+        while size + bytes.len() > 32*1024*1024 {
+            if let Some(entry) = self.entries.pop_front() { size-=entry.bytes.len(); } else { return; }
+        }
+        self.entries.push_back(CachedImage { url, bytes, saved:std::time::Instant::now() });
+    }
+}
+fn reference_cache() -> &'static std::sync::Mutex<ReferenceCache> {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<ReferenceCache>> = std::sync::OnceLock::new();
+    CACHE.get_or_init(||std::sync::Mutex::new(ReferenceCache::default()))
+}
 async fn fetch_reference_image(client: reqwest::Client, url: reqwest::Url, index: usize) -> Result<Asset, String> {
+    let key=url.to_string();
+    if let Some(bytes)=reference_cache().lock().map_err(|_|"图片缓存不可用")?.get(&key) { return reference_asset(&bytes,index); }
     // No session headers or redirects to other origins.
     let mut response = client.get(url).send().await.map_err(|_| "参考图连接失败")?;
     status(response.status())?;
@@ -90,7 +113,9 @@ async fn fetch_reference_image(client: reqwest::Client, url: reqwest::Url, index
         if bytes.len() + chunk.len() > 5 * 1024 * 1024 { return Err("图片超过 5 MiB".into()); }
         bytes.extend_from_slice(&chunk);
     }
-    reference_asset(&bytes,index)
+    let asset=reference_asset(&bytes,index)?;
+    reference_cache().lock().map_err(|_|"图片缓存不可用")?.insert(key,bytes);
+    Ok(asset)
 }
 
 #[derive(Clone, Serialize)]
@@ -145,6 +170,25 @@ async fn fetch_reference_batch(
 #[cfg(test)]
 mod reference_tests {
     use super::*;
+    #[test]
+    fn cache_expires_evicts_and_returns_fresh_ids() {
+        let mut cache=ReferenceCache::default();
+        cache.insert("first".into(), b"\x89PNG\r\n\x1a\n".to_vec());
+        let bytes=cache.get("first").unwrap();
+        assert_ne!(reference_asset(&bytes,0).unwrap().id,reference_asset(&bytes,1).unwrap().id);
+        cache.entries[0].saved=std::time::Instant::now()-Duration::from_secs(301);
+        assert!(cache.get("first").is_none());
+        for i in 0..10 { cache.insert(i.to_string(),vec![0;5*1024*1024]); }
+        assert!(cache.get("0").is_none()); assert!(cache.get("9").is_some());
+        assert!(cache.entries.iter().map(|e|e.bytes.len()).sum::<usize>()<=32*1024*1024);
+    }
+    #[tokio::test]
+    async fn cached_image_requires_no_connection() {
+        let url=reqwest::Url::parse("http://127.0.0.1:1/cached-test").unwrap();
+        reference_cache().lock().unwrap().insert(url.to_string(),b"\x89PNG\r\n\x1a\n".to_vec());
+        let asset=fetch_reference_image(reqwest::Client::new(),url,2).await.unwrap();
+        assert_eq!(asset.name,"参考图-3.png");
+    }
     #[tokio::test]
     #[ignore = "requires an explicitly selected public reference URL"]
     async fn downloads_real_reference_to_isolated_offline_library() {
