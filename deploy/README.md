@@ -34,7 +34,7 @@ TLS 证书含两个域名，ACME 数据在 `/opt/promptark/letsencrypt`，宿主
 
 执行 `python3 scripts/build-website-preview.py`，构建白名单包括 HTML/CSS/JS、数据模块、品牌图标与真实桌面截图，并从客户端生成来源目录、分类模块和变量解析模块；不上传整个 `output/`。独立 Compose 模板在 `deploy/website-preview/`，部署目录 `/opt/cuetuck-website-preview/current`，只映射 `127.0.0.1:15175`。宿主 API vhost 通过可选 include 精确接管根地址和静态资源路径；既有 API catch-all、`/v1/` 和管理端路由保持原配置。CSP 只允许同源、GitHub API/原文和审核过的参考图域名；ES 模块 `.mjs` 显式返回 JavaScript MIME。
 
-当前官网版本目录为 `/opt/cuetuck-website-preview/releases/20260915-launcher-1`，上一版 `20260915-live-2` 保留。根路由切换前的配置备份在 `/opt/promptark/backups/website-root-20260915`。回退静态版本时，对旧目录的 `compose.yml` 执行 `docker compose -f … up -d --wait`，健康检查后调整 `current` 链接。若同时撤回根路由，恢复该备份中的 `host-location.conf` 并检查、reload Nginx；数据库无需变更。首次路由配置备份为 `/opt/promptark/backups/website-preview-20260915/promptark.conf`，只有完全撤销预览时才核对后续配置后恢复、检查并 reload Nginx，再停止预览 Compose。不要停止 `promptark` 主业务项目或删除持久卷。
+当前官网版本目录为 `/opt/cuetuck-website-preview/releases/20260915-beta16-1`（beta.16 下载入口），上一版 `20260915-launcher-1` 保留。根路由切换前的配置备份在 `/opt/promptark/backups/website-root-20260915`。回退静态版本时，对旧目录的 `compose.yml` 执行 `docker compose -f … up -d --wait`，健康检查后调整 `current` 链接。若同时撤回根路由，恢复该备份中的 `host-location.conf` 并检查、reload Nginx；数据库无需变更。首次路由配置备份为 `/opt/promptark/backups/website-preview-20260915/promptark.conf`，只有完全撤销预览时才核对后续配置后恢复、检查并 reload Nginx，再停止预览 Compose。不要停止 `promptark` 主业务项目或删除持久卷。
 
 ## 无外部凭据的集中验收
 
