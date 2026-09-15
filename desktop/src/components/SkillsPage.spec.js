@@ -4,7 +4,8 @@ import SkillsPage from './SkillsPage.vue';
 import WorkbenchShell from './WorkbenchShell.vue';
 import {setSkillsTransportForTests,groupSkills} from '../platform/skills.js';
 import * as library from '../platform/library.js';
-import {resetMemorySession} from '../platform/session.js';
+import {setSkillMarketTransport} from '../platform/skillMarket.js';
+import {resetMemorySession,setSessionTransport,loginSession} from '../platform/session.js';
 import {resetSquare,setCatalogTransport,setSquareTransport} from '../platform/square.js';
 let w,transport,snapshot,prepared;
 const root=(id,scope='global',readonly=false)=>({id,name:id,scope,agent:'custom',path:`/isolated/${id}`,readonly,custom:true,shared_with:[],status:'目录已发现'});
@@ -12,8 +13,9 @@ const skill=(key,path,root_id='alpha')=>({key,path,physical_path:path,root_id,na
 const packageData={name:'Example',description:'完整 Skill',body:'---\nname: Example\n---\n# Safe <script>bad()</script>',license:'未知',bytes:20,digest:'new',warnings:[],files:[{path:'SKILL.md',size:20,digest:'new',executable:false}]};
 const button=(text,scope=w)=>scope.findAll('button').find(b=>b.text()===text);
 async function click(text,scope=w){await button(text,scope).trigger('click');await flushPromises();}
-async function mountPage(props={}){w=mount(SkillsPage,{props,attachTo:document.body});await flushPromises();}
+async function mountPage(props={}){w=mount(SkillsPage,{props,attachTo:document.body});await flushPromises();if(props.mode==='square')await click('GitHub 来源');}
 beforeEach(()=>{
+  setSkillMarketTransport(async()=>({items:[],total:0,category_counts:{}}));
   snapshot={roots:[root('alpha'),root('beta'),root('project','project'),root('cache','global',true)],skills:[skill('one','/isolated/alpha/one'),skill('two','/isolated/beta/two','beta')],warnings:[],backups:[],operations:[],sources:[]};
   prepared={id:'preview',folder_name:'example',package:packageData,source:null,local_path:'/isolated/source'};
   transport=vi.fn(async request=>{
@@ -95,10 +97,21 @@ it('keeps independent sidebar category choices and blocks them during installati
   w=mount(WorkbenchShell,{attachTo:document.body});await flushPromises();
   await w.get('[data-space="skills-local"]').trigger('click');await flushPromises();
   await w.get('[data-skill-category="office"]').trigger('click');await flushPromises();
-  await w.get('[data-space="skills-square"]').trigger('click');await flushPromises();expect(w.get('[data-skill-category="all"]').attributes('aria-pressed')).toBe('true');
+  await w.get('[data-space="skills-square"]').trigger('click');await flushPromises();await click('GitHub 来源');expect(w.get('[data-skill-category="all"]').attributes('aria-pressed')).toBe('true');
   await w.get('[data-skill-category="ai"]').trigger('click');await flushPromises();
   await w.get('[data-space="skills-local"]').trigger('click');await flushPromises();expect(w.get('[data-skill-category="office"]').attributes('aria-pressed')).toBe('true');
   await click('从文件夹安装');await click('安装到…');expect(w.get('[data-skill-category="all"]').attributes('disabled')).toBeDefined();
   await click('取消',w.get('[role="dialog"]'));await w.get('.skills-back').trigger('click');await flushPromises();
   await w.get('[data-space="local"]').trigger('click');await flushPromises();expect(w.get('[aria-label="提示词分类"]').isVisible()).toBe(true);expect(w.get('[aria-label="Skill 分类"]').isVisible()).toBe(false);
+});
+it('shows publishing actions in the square and keeps directory tools in local Skills',async()=>{w=mount(SkillsPage,{props:{mode:'square'},attachTo:document.body});await flushPromises();expect(button('创建 Skill')).toBeTruthy();expect(button('发布 Skill')).toBeTruthy();expect(button('从文件夹安装')).toBeUndefined();expect(button('备份与记录')).toBeUndefined();expect(button('管理目录')).toBeUndefined();});
+it('creates a durable native draft and preserves form input on failure',async()=>{const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='create'?Promise.reject(new Error('同名 Skill 已存在')):base(r));await mountPage();await click('创建 Skill');const form=w.get('.skill-authoring');await form.findAll('input')[0].setValue('my-skill');await form.findAll('textarea')[0].setValue('审查代码');await form.findAll('textarea')[1].setValue('# Steps\n检查变更');await click('保存到本机');expect(w.text()).toContain('同名 Skill 已存在');expect(form.findAll('input')[0].element.value).toBe('my-skill');const create=transport.mock.calls.find(([r])=>r.action==='create')[0];expect(create.body).toContain('name: "my-skill"');expect(create.body).toContain('# Steps');});
+
+it('publishes the full selected package only after consent and reuses an unchanged retry id',async()=>{setSessionTransport(async()=>({access_token:'test',email:'author@test'}));await loginSession({email:'author@test',password:'test'});const bundle={name:'example',files:[{path:'SKILL.md',content:'dGVzdA==',executable:false},{path:'scripts/run.sh',content:'ZWNobyB0ZXN0',executable:true}]};const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='export_bundle'?bundle:base(r));const submit=vi.fn().mockRejectedValueOnce(new Error('网络中断')).mockResolvedValue({id:'one',status:'pending'});setSkillMarketTransport(async(action,args)=>action==='submit'?submit(args.body):{items:[],total:0,category_counts:{}});w=mount(SkillsPage,{props:{mode:'square'},attachTo:document.body});await flushPromises();await click('发布 Skill');await click('从文件夹选择');expect(w.text()).toContain('scripts/run.sh');expect(button('提交审核').attributes('disabled')).toBeDefined();const form=w.get('.skill-authoring');await form.findAll('input').find(i=>i.attributes('placeholder')==='例如 MIT、CC BY 4.0').setValue('MIT');await form.get('input[type=checkbox]').setValue(true);await click('提交审核');expect(w.text()).toContain('网络中断');await click('提交审核');expect(submit.mock.calls[0][0].bundle.files).toHaveLength(2);expect(submit.mock.calls[1][0].request_id).toBe(submit.mock.calls[0][0].request_id);expect(w.text()).toContain('已提交人工审核');resetMemorySession();});
+
+it('clears the previous publish package when the replacement folder cannot be prepared',async()=>{
+ setSessionTransport(async()=>({access_token:'test',email:'author@test'}));await loginSession({email:'author@test',password:'test'});
+ const base=transport.getMockImplementation();let fail=false;transport.mockImplementation(r=>r.action==='export_bundle'?{name:'first',files:[{path:'SKILL.md',content:'dGVzdA=='}]}:r.action==='prepare_local'&&fail?Promise.reject(new Error('文件夹无法读取')):base(r));
+ w=mount(SkillsPage,{props:{mode:'square'},attachTo:document.body});await flushPromises();await click('发布 Skill');await click('从文件夹选择');await w.get('.skill-authoring input[type=checkbox]').setValue(true);expect(button('提交审核').attributes('disabled')).toBeUndefined();
+ fail=true;await click('从文件夹选择');expect(w.text()).toContain('文件夹无法读取');expect(button('提交审核').attributes('disabled')).toBeDefined();expect(w.find('.skill-authoring details').exists()).toBe(false);resetMemorySession();
 });

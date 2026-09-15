@@ -98,7 +98,7 @@ it('distinguishes forbidden access from an expired session and explains throttli
   await expect(getAccountSecurity()).rejects.toThrow('一分钟后重试');
 });
 it('covers every implemented page with the fixed role navigation matrix',()=>{
-  const staff=['review','security'];
+  const staff=['review','skill-review','security'];
   const operations=[...staff,'overview','users','content','billing','categories','models','reports','rules'];
   expect(adminPages.filter(p=>permittedPage(p,{users:false,configuration:false}))).toEqual(adminPages.filter(p=>staff.includes(p)));
   expect(adminPages.filter(p=>permittedPage(p,{users:true,configuration:false}))).toEqual(adminPages.filter(p=>operations.includes(p)));

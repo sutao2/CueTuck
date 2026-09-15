@@ -116,7 +116,7 @@
 
         <div v-show="contentKind === 'skills'" class="sidebar-toolbar"><span>Skill 分类</span><span>自动分类</span></div>
         <nav v-show="contentKind === 'skills'" class="category-tree skills-category-tree" aria-label="Skill 分类">
-          <p class="skills-category-scope">{{ skillsMode === 'square' ? '数量仅含当前已加载来源' : '数量按 Skill 计，合并同源安装' }}</p>
+          <p class="skills-category-scope">{{ skillsMode === 'square' ? `数量范围：${skillsCategorySummary.square?.scope || '正在加载'}` : '数量按 Skill 计，合并同源安装' }}</p>
           <button v-for="category in skillCategories" :key="category.id" type="button" class="tree-row"
             :data-skill-category="category.id || 'all'" :class="{active:skillsCategories[skillsMode] === category.id}"
             :aria-pressed="skillsCategories[skillsMode] === category.id" :disabled="skillsBusy" @click="selectSkillCategory(category.id)">

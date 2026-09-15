@@ -197,3 +197,5 @@ export const discoverAiModels = config => request('aiDiscover',{riskPath:'ai/mod
 export const getTranslation = () => request('translation',{riskPath:'translation'});
 export const saveTranslation = config => request('translationSave',{riskPath:'translation',method:'PUT',config});
 export const translationAction = action => request('translationAction',{riskPath:'translation/actions',method:'POST',config:{action}});
+
+export const skillReviewRequest = (suffix='', method='GET', config) => request('skillReview',{riskPath:'skills'+suffix,method,config});

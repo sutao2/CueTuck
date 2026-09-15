@@ -2,11 +2,18 @@
   <main ref="page" class="content-area skills-page" data-testid="skills-page">
     <section v-if="!supported" class="skills-empty"><AppIcon name="skills"/><h1>{{ mode === 'local' ? '本机 Skills' : 'Skill 广场' }}</h1><p>请在 CueTuck 桌面客户端查看与管理 Skills。</p><p class="muted">浏览器无法扫描本机目录或安装文件。</p></section>
     <template v-else>
-      <header class="skills-header"><div><button v-if="detail || directories || maintenance" class="skills-back" @click="back">← 返回{{ mode === 'local' ? '本机 Skills' : 'Skill 广场' }}</button><p class="skills-eyebrow">SKILLS</p><h1>{{ maintenance ? '备份与操作记录' : directories ? '管理目录' : detail ? detail.package.name : category ? skillCategoryName(category) : mode === 'local' ? '本机 Skills' : 'Skill 广场' }}</h1><p class="muted">{{ maintenance ? '备份保存在本机，恢复前会检查原位置是否空闲。' : directories ? '仅扫描登记的位置，取消登记不会删除任何文件。' : detail ? detail.package.description : mode === 'local' ? `已发现 ${grouped.length} 个 Skill · ${snapshot.skills.length} 处安装` : '从公开仓库发现 Skill，查看内容后安装到指定位置。' }}</p></div><div class="skills-actions" v-if="!detail && !directories && !maintenance"><button class="button primary-button" :disabled="busy" @click="importLocal">从文件夹安装</button><button class="button" :disabled="busy" @click="maintenance=true">备份与记录</button><button class="button" :disabled="busy" @click="directories=true">管理目录</button><button class="button" :disabled="busy" @click="refresh">刷新</button></div></header>
+      <header class="skills-header"><div><button v-if="detail || directories || maintenance || authoring" class="skills-back" @click="back">← 返回{{ mode === 'local' ? '本机 Skills' : 'Skill 广场' }}</button><p class="skills-eyebrow">SKILLS</p><h1>{{ authoring ? (authoring==='create'?'创建 Skill':'发布 Skill') : maintenance ? '备份与操作记录' : directories ? '管理目录' : detail ? detail.package.name : category ? skillCategoryName(category) : mode === 'local' ? '本机 Skills' : 'Skill 广场' }}</h1><p class="muted">{{ maintenance ? '备份保存在本机，恢复前会检查原位置是否空闲。' : directories ? '仅扫描登记的位置，取消登记不会删除任何文件。' : detail ? detail.package.description : mode === 'local' ? `已发现 ${grouped.length} 个 Skill · ${snapshot.skills.length} 处安装` : squareTab==='community'?'发现、发布和安装社区 Skill，让工作方法随时可用。':'从公开 GitHub 仓库发现 Skill，查看内容后安装到指定位置。' }}</p></div><div class="skills-actions" v-if="!detail && !directories && !maintenance && !authoring"><button class="button primary-button" :disabled="busy || communityBusy" @click="startCreate">创建 Skill</button><button v-if="mode==='square'" class="button" :disabled="busy || communityBusy" @click="startPublish">发布 Skill</button><template v-if="mode==='local'"><button class="button" :disabled="busy" @click="importLocal">从文件夹安装</button><button class="button" :disabled="busy" @click="maintenance=true">备份与记录</button><button class="button" :disabled="busy" @click="directories=true">管理目录</button><button class="button" :disabled="busy" @click="refresh">刷新</button></template></div></header>
       <p v-if="error" class="skills-alert" role="alert">{{ error }}<button v-if="!busy" @click="retryRequest">重试</button></p>
       <p v-if="notice" class="skills-notice" role="status">{{ notice }}<button @click="notice=''" aria-label="关闭提示">×</button></p>
       <p v-if="busy" class="skills-loading" role="status">{{ loadingText }}<span v-if="progress"> · {{ progress.completed }} / {{ progress.total }} 文件 · {{ progress.file }}</span><button v-if="networkBusy" class="skills-inline-button" @click="cancel">取消</button></p>
-      <template v-if="maintenance">
+      <section v-if="authoring" class="skills-panel skill-authoring"><h2>{{ authoring==='create'?'创建 Skill':'发布到社区广场' }}</h2>
+        <p class="muted">{{ authoring==='create'?'填写使用场景和操作说明，保存为本机 SKILL.md；之后可安装或发布。':'选择本机 Skill 或文件夹，发布经过校验的完整快照。人工审核通过后公开。' }}</p>
+        <template v-if="authoring==='publish'"><div class="skills-actions"><SearchableSelect v-model="publishPath" :options="publishOptions" placeholder="搜索并选择本机 Skill" :disabled="busy"/><button class="button" :disabled="busy||!publishPath" @click="preparePublication(publishPath)">选择此 Skill</button><button class="button" :disabled="busy" @click="pickPublication">从文件夹选择</button></div><p v-if="publishBundle" class="muted">已选择 {{ publishBundle.name }} · {{ publishBundle.files.length }} 个文件，全部文件将公开。</p><details v-if="publishBundle"><summary>查看将公开的全部文件</summary><ul><li v-for="file in publishBundle.files" :key="file.path">{{ file.path }}</li></ul></details></template>
+        <div class="skills-form"><label v-if="authoring==='create'">目录名称<input v-model="authorDraft.name" maxlength="64" placeholder="例如 code-review（小写英文、数字、短横线）"/></label><label v-else>显示名称<input v-model="authorDraft.title" maxlength="120"/></label><label class="wide">使用场景 / 简介<textarea v-model="authorDraft.description" maxlength="2000" rows="3" placeholder="什么时候应该使用这个 Skill"/></label><label>许可<input v-model="authorDraft.license" maxlength="120" placeholder="例如 MIT、CC BY 4.0"/></label><label v-if="authoring==='publish'">社区分类<SearchableSelect v-model="authorDraft.category" :options="skillCategories.filter(c=>c.id).map(c=>({value:c.id,label:c.name}))"/></label><label v-if="authoring==='create'" class="wide">操作说明<textarea v-model="authorDraft.body" rows="14" placeholder="说明目标、步骤、输入输出及依赖。MCP 工具需要用户单独配置。"/></label></div>
+        <label v-if="authoring==='publish'" class="skills-warning"><input v-model="publishConsent" type="checkbox"/>我有权公开全部文件，已移除密钥、隐私与不应公开的资料，并确认上述许可。</label>
+        <div class="skills-actions"><button class="button primary-button" :disabled="busy || (authoring==='publish' && (!publishBundle || !publishConsent))" @click="authoring==='create'?createSkill():publishSkill()">{{ busy?'正在处理…':authoring==='create'?'保存到本机':'提交审核' }}</button><button class="button" :disabled="busy" @click="back">取消</button></div>
+      </section>
+      <template v-else-if="maintenance">
         <section class="skills-panel"><h2>可恢复备份 <small>{{ snapshot.backups.length }} 份 · {{ formatBytes(snapshot.backups.reduce((n,b)=>n+b.bytes,0)) }}</small></h2><p class="muted">替换和移除前的完整文件包。恢复不会覆盖原位置的新文件，也不会自动删除备份。</p><p v-if="!snapshot.backups.length" class="muted">暂无备份</p><article v-for="backup in [...snapshot.backups].reverse()" :key="backup.id" class="skills-root"><div><strong>{{ backup.reason }}</strong><span class="skills-badge">{{ backup.restored ? '曾恢复' : '可恢复' }}</span><p class="skills-path">{{ backup.original }}</p><p class="muted">{{ date(backup.created_at) }} · {{ formatBytes(backup.bytes) }}</p></div><div class="skills-actions"><button :disabled="busy" @click="openFolder(backup.path)">查看备份</button><button :disabled="busy" @click="confirmation={kind:'restore',backup}">恢复到原位置</button></div></article></section>
         <section class="skills-panel"><h2>最近操作</h2><p v-if="!snapshot.operations.length" class="muted">暂无操作记录</p><article v-for="(operation,index) in snapshot.operations" :key="index" class="skills-root"><div><strong>{{ operation.status === 'success' ? '已完成' : '失败' }}</strong><p class="skills-path">{{ operation.target }}</p><p class="muted">{{ operation.message }} · {{ date(operation.at) }}</p></div></article></section>
       </template>
@@ -15,7 +22,7 @@
         <section class="skills-panel"><h2>扫描位置 <small>{{ snapshot.roots.length }}</small></h2><article v-for="root in snapshot.roots" :key="root.id" class="skills-root"><div><strong>{{ root.name }}</strong><span class="skills-badge">{{ scopeName(root.scope) }}</span><p class="skills-path">{{ root.path }}</p><p class="muted">{{ root.status }}</p><p v-if="root.shared_with.length > 1" class="muted">此目录可能被 {{ root.shared_with.join('、') }} 共同读取</p></div><div class="skills-actions"><button :disabled="busy" @click="openFolder(root.path)">打开文件夹</button><button v-if="root.custom" :disabled="busy" @click="editRoot(root)">编辑</button><button v-if="root.custom" :disabled="busy" @click="forgetRoot(root)">取消登记</button></div></article></section>
       </template>
       <template v-else-if="detail">
-        <div class="skills-detail-grid"><section class="skills-panel"><div class="skills-section-heading"><h2>{{ selectedFileName || 'SKILL.md' }}</h2><span class="skills-badge">只读预览</span></div><p class="skills-path">{{ prepared?.source ? `${prepared.source.repo} / ${prepared.source.directory}` : selected.path }}</p><p v-if="prepared?.source" class="muted">已固定提交 {{ prepared.source.commit.slice(0,12) }} · {{ prepared.source.reference }}</p><p v-if="detail.modified" class="skills-alert">此安装存在本地修改，替换前需要比较并备份。</p><p v-for="warning in detail.package.warnings" :key="warning" class="skills-warning">{{ warning }}</p><pre class="skills-document">{{ selectedFileText ?? detail.package.body }}</pre></section><aside><section class="skills-panel"><h2>文件 <small>{{ detail.package.files.length }}</small></h2><button class="skills-file" v-for="file in detail.package.files" :key="file.path" :disabled="busy" @click="readFile(file.path)"><span>{{ file.path }}</span><small>{{ formatBytes(file.size) }}</small></button></section><section class="skills-panel"><h2>信息</h2><button class="button primary-button" :disabled="busy" @click="beginInstall">安装到…</button><p>许可：{{ detail.package.license }}<span v-if="detail.package.license === '未知' && prepared?.source?.license !== '未知' && prepared?.source?.license">（仓库声明 {{ prepared.source.license }}，请核实目录许可）</span></p><p>大小：{{ formatBytes(detail.package.bytes) }}</p><p class="muted">文件就绪不代表目标客户端已加载；专有工具和运行时需要另行配置。</p></section></aside></div>
+        <div class="skills-detail-grid"><section class="skills-panel"><div class="skills-section-heading"><h2>{{ selectedFileName || 'SKILL.md' }}</h2><span class="skills-badge">只读预览</span></div><p class="skills-path">{{ prepared?.source ? `${prepared.source.repo} / ${prepared.source.directory}` : selected.path }}</p><p v-if="prepared?.source" class="muted">已固定提交 {{ prepared.source.commit.slice(0,12) }} · {{ prepared.source.reference }}</p><p v-if="detail.modified" class="skills-alert">此安装存在本地修改，替换前需要比较并备份。</p><p v-for="warning in detail.package.warnings" :key="warning" class="skills-warning">{{ warning }}</p><pre class="skills-document">{{ selectedFileText ?? detail.package.body }}</pre></section><aside><section class="skills-panel"><h2>文件 <small>{{ detail.package.files.length }}</small></h2><button class="skills-file" v-for="file in detail.package.files" :key="file.path" :disabled="busy" @click="readFile(file.path)"><span>{{ file.path }}</span><small>{{ formatBytes(file.size) }}</small></button></section><section class="skills-panel"><h2>信息</h2><p v-if="communityOrigin" class="muted">社区发布者：{{ communityOrigin.publisher?.display_name }} · {{ communityOrigin.license }}</p><button class="button primary-button" :disabled="busy" @click="beginInstall">安装到…</button><button class="button" :disabled="busy" @click="publishCurrent">发布此 Skill</button><p>许可：{{ detail.package.license }}<span v-if="detail.package.license === '未知' && prepared?.source?.license !== '未知' && prepared?.source?.license">（仓库声明 {{ prepared.source.license }}，请核实目录许可）</span></p><p>大小：{{ formatBytes(detail.package.bytes) }}</p><p class="muted">文件就绪不代表目标客户端已加载；专有工具和运行时需要另行配置。</p></section></aside></div>
         <section v-if="selected.installations?.length" class="skills-panel"><h2>安装位置</h2><article v-for="item in selected.installations" :key="item.root_id+item.path" class="skills-root"><div><strong>{{ rootName(item.root_id) }}</strong><span class="skills-badge">{{ item.status }}</span><p class="skills-path">{{ item.path }}</p><p v-if="item.source" class="muted">{{ item.source.repo }} / {{ item.source.directory }} · 当前 {{ item.source.commit.slice(0,12) }}</p><p v-if="item.checked_at" class="muted">上次检查 {{ date(item.checked_at) }} · 上游 {{ item.upstream_commit?.slice(0,12) }}</p></div><div class="skills-actions"><button :disabled="busy" @click="openFolder(item.path)">打开文件夹</button><button :disabled="busy" @click="viewInstallation(item)">查看此副本</button><button v-if="item.source && !item.readonly" :disabled="busy" @click="checkUpdate(item)">检查更新</button><button v-if="!item.readonly" :disabled="busy" @click="askRemove(item)">移除</button></div></article></section>
       </template>
       <template v-else-if="mode === 'local'">
@@ -27,15 +34,19 @@
         <section v-if="!filtered.length && !busy" class="skills-empty"><AppIcon name="skills"/><h2>{{ category || query || agentFilter || scopeFilter || statusFilter || sourceFilter ? '没有匹配的 Skill' : '尚未发现本机 Skill' }}</h2><p>可以切换分类、调整筛选，或从公开来源安装。</p><button class="button" @click="directories=true">管理目录</button></section>
       </template>
       <template v-else>
+        <div class="skills-actions skills-market-tabs"><button class="button" :disabled="busy||communityBusy" :class="{ 'primary-button':squareTab==='community' }" @click="setSquareTab('community')">社区广场</button><button class="button" :disabled="busy||communityBusy" :class="{ 'primary-button':squareTab==='github' }" @click="setSquareTab('github')">GitHub 来源</button></div>
+        <SkillCommunity v-if="squareTab==='community'" ref="communityPage" :category="category" @install="openCommunity" @busy="communityBusy=$event" @categories="communityCategories=$event"/>
+        <template v-else>
         <section class="skills-panel skills-source-panel"><div class="skills-section-heading"><h2>公开来源 <small>{{ sourceOptions.length }} 个</small></h2><span class="skills-badge">GitHub · 无需登录</span></div><div class="skills-source-controls"><SearchableSelect v-model="sourceInput" :options="sourceOptions" :disabled="busy" aria-label="选择 Skill 来源"/><button class="button" :disabled="busy" @click="loadCatalog">加载来源</button><button class="button" :disabled="busy" @click="sourceForm=!sourceForm">添加来源 / 链接</button></div><div v-if="sourceForm" class="skills-source-controls"><input v-model="sourceDraft" aria-label="GitHub 仓库或目录地址" placeholder="owner/repo 或 GitHub tree / SKILL.md 地址" @keydown.enter="addSource"/><button class="button" :disabled="busy || !sourceDraft.trim()" @click="addSource">保存并浏览</button></div><p class="muted">{{ catalog ? `${catalog.repo} · ${catalog.reference} · ${catalog.commit.slice(0,12)} · ${catalog.entries.length} 个 Skill` : '选择来源后加载真实目录列表。' }}</p><p class="muted">切换上方来源可发现更多 Skill，支持按用途或仓库名搜索来源。下方列表只搜索当前来源的名称、路径及已加载简介；打开后查看说明、依赖和许可。</p><button v-if="snapshot.sources?.includes(sourceInput)" class="skills-inline-button" :disabled="busy" @click="forgetSource">移除此来源</button></section>
         <p class="skills-category-caption muted">{{ skillCategoryName(category) }} · {{ catalog ? `${remoteFiltered.length} 个匹配 · 仅当前来源` : '来源尚未加载' }} · 根据名称、目录和来源自动分类</p>
         <label class="skills-search skills-remote-search"><AppIcon name="search"/><input v-model="remoteQuery" placeholder="搜索当前来源的 Skill 名称或路径…" aria-label="搜索当前来源"/></label>
         <section class="skills-list"><button v-for="entry in visibleRemote" :key="entry.directory" class="skills-list-row" :disabled="busy" @click="openRemote(entry)"><span class="skills-list-icon"><AppIcon name="skills"/></span><span class="skills-row-main"><strong>{{ entry.name }}</strong><small class="skills-category-label">{{ skillCategoryName(entry.category) }}</small><span>{{ entry.description || (entry.error ? `简介读取失败：${entry.error}` : '打开查看完整说明') }}</span><small class="skills-path">{{ entry.directory || '仓库根目录' }}</small></span><span class="skills-badge">{{ snapshot.skills.some(s=>s.source?.repo.toLowerCase()===catalog.repo.toLowerCase()&&s.source?.directory===entry.directory)?'已安装':'查看并安装' }}</span><span aria-hidden="true">›</span></button></section>
         <div v-if="remoteFiltered.length>pageSize" class="skills-pagination"><button :disabled="remotePage===0" @click="remotePage--">上一页</button><span>{{ remotePage+1 }} / {{ Math.ceil(remoteFiltered.length/pageSize) }}</span><button :disabled="(remotePage+1)*pageSize>=remoteFiltered.length" @click="remotePage++">下一页</button></div><section v-if="catalog && !remoteFiltered.length && !busy" class="skills-empty"><h2>没有匹配的 Skill</h2><p>当前来源没有匹配此分类或搜索条件的 Skill，可以切换分类或来源。</p></section>
       </template>
+      </template>
       <div v-if="installOpen" class="skills-overlay" @keydown.esc.stop="closeInstall" @click.self="closeInstall">
         <section ref="installDialog" class="skills-modal" role="dialog" aria-modal="true" aria-labelledby="skills-install-title" tabindex="-1" @keydown.tab="trapFocus">
-          <header class="skills-section-heading"><div><h2 id="skills-install-title">安装 {{ prepared.package.name }}</h2><p class="muted">创建独立副本；{{ formatBytes(prepared.package.bytes) }} · {{ prepared.package.files.length }} 个文件</p><p class="skills-path">{{ prepared.source ? `${prepared.source.repo} / ${prepared.source.directory} · ${prepared.source.commit.slice(0,12)}` : `本地来源 · ${prepared.local_path}` }}</p></div><button :disabled="busy" aria-label="关闭安装预览" @click="closeInstall">×</button></header>
+          <header class="skills-section-heading"><div><h2 id="skills-install-title">安装 {{ prepared.package.name }}</h2><p class="muted">创建独立副本；{{ formatBytes(prepared.package.bytes) }} · {{ prepared.package.files.length }} 个文件</p><p class="skills-path">{{ communityOrigin ? `社区 · ${communityOrigin.title} · ${communityOrigin.publisher?.display_name}` : prepared.source ? `${prepared.source.repo} / ${prepared.source.directory} · ${prepared.source.commit.slice(0,12)}` : `本地来源 · ${prepared.local_path}` }}</p></div><button :disabled="busy" aria-label="关闭安装预览" @click="closeInstall">×</button></header>
           <p v-if="error" class="skills-alert" role="alert">{{ error }}</p><p v-if="busy" role="status" class="muted">{{ loadingText }}</p>
           <template v-if="!results.length">
             <label class="skills-confirm-check" v-if="prepared.package.warnings.length"><input type="checkbox" v-model="dependenciesAccepted" :disabled="busy"/>我已阅读说明中的外部依赖提示；依赖需在目标客户端单独配置。</label>
@@ -54,6 +65,10 @@
   </main>
 </template>
 <script setup>
+import SkillCommunity from './SkillCommunity.vue';
+import {skillMarket} from '../platform/skillMarket.js';
+import {getSession} from '../platform/session.js';
+import {skillCategories} from '../platform/skillCategories.js';
 import {computed,nextTick,onMounted,onUnmounted,ref,watch} from 'vue';
 import AppIcon from './AppIcon.vue';
 import SearchableSelect from './SearchableSelect.vue';
@@ -68,6 +83,10 @@ const query=ref(''),agentFilter=ref(''),scopeFilter=ref(''),statusFilter=ref('')
 const rootDraft=ref(emptyRoot()),prepared=ref(null),installOpen=ref(false),installDialog=ref(null),confirmDialog=ref(null),confirmation=ref(null);
 const targetIds=ref([]),targetScope=ref('global'),plans=ref([]),replaceIds=ref([]),results=ref([]),comparison=ref({}),dependenciesAccepted=ref(false);
 const sourceInput=ref('anthropics/skills'),sourceDraft=ref(''),sourceForm=ref(false),catalog=ref(null),remoteQuery=ref(''),remotePage=ref(0),localPage=ref(0),pageSize=50;
+const squareTab=ref('community'),communityPage=ref(null),communityBusy=ref(false),communityCategories=ref({ready:false,counts:{},scope:'社区 Skills'}),communityOrigin=ref(null);
+const authoring=ref(''),publishPath=ref(''),publishBundle=ref(null),publishConsent=ref(false),publishRequestId=ref('');
+const authorDraft=ref({name:'',title:'',description:'',body:'',license:'MIT',category:'uncategorized'});
+const publishOptions=computed(()=>grouped.value.flatMap(s=>s.installations.map(i=>({value:i.path,label:`${s.name} · ${rootName(i.root_id)}`}))));
 const agents=[{value:'shared',label:'Codex / 标准共享'},{value:'codex',label:'Codex'},{value:'claude',label:'Claude Code'},{value:'cursor',label:'Cursor'},{value:'pi',label:'Pi'},{value:'opencode',label:'OpenCode'},{value:'custom',label:'自定义'}];
 const sourceOptions=computed(()=>{
   const options=new Map(builtInSources.map(s=>[s.value.toLowerCase(),s]));
@@ -76,7 +95,7 @@ const sourceOptions=computed(()=>{
 });
 const grouped=computed(()=>groupSkills(snapshot.value.skills).map(s=>({...s,category:classifySkill(s)})));
 const categorizedRemote=computed(()=>(catalog.value?.entries||[]).map(s=>({...s,category:classifySkill(s,catalog.value.repo)})));
-const categorySummary=computed(()=>({mode:props.mode,ready:props.mode==='local'?snapshotLoaded.value:Boolean(catalog.value),counts:skillCategoryCounts(props.mode==='local'?grouped.value:categorizedRemote.value),scope:props.mode==='local'?'本机已发现的 Skill':catalog.value?.repo||'当前来源'}));
+const categorySummary=computed(()=>props.mode==='square'&&squareTab.value==='community'?{mode:props.mode,...communityCategories.value}:({mode:props.mode,ready:props.mode==='local'?snapshotLoaded.value:Boolean(catalog.value),counts:skillCategoryCounts(props.mode==='local'?grouped.value:categorizedRemote.value),scope:props.mode==='local'?'本机已发现的 Skill':catalog.value?.repo||'当前来源'}));
 watch(categorySummary,value=>emit('categories',value),{immediate:true});
 const filtered=computed(()=>grouped.value.map(s=>({...s,installations:s.installations.filter(i=>{
   const root=snapshot.value.roots.find(r=>r.id===i.root_id);
@@ -97,7 +116,7 @@ async function run(request,apply,message='正在读取…'){
   catch(e){if(!disposed&&id===requestId)error.value=String(e.message||e);}
   finally{if(id===requestId){busy.value=false;networkBusy.value=false;}}
 }
-async function retryRequest(){if(lastRequest)await run(lastRequest,lastApply);}
+async function retryRequest(){if(authoring.value==='publish'&&publishBundle.value&&publishConsent.value){await publishSkill();return;}if(lastRequest)await run(lastRequest,lastApply);}
 async function cancel(){try{await cancelSkillsRequest(requestId);}catch(e){error.value=String(e.message||e);}}
 async function refresh(){if(!supported)return;await run({action:'snapshot'},data=>{snapshot.value=data;snapshotLoaded.value=true;localPage.value=Math.min(localPage.value,Math.max(0,Math.ceil(filtered.value.length/pageSize)-1));},'正在扫描已登记目录…');}
 function rootName(id){return snapshot.value.roots.find(r=>r.id===id)?.name||id;}
@@ -108,7 +127,7 @@ function showPrepared(p){prepared.value=p;selected.value={path:p.local_path||'',
 async function releasePrepared(){const old=prepared.value;prepared.value=null;if(old){try{await skillsRequest({action:'discard',id:old.id});}catch{/* A temporary preview can be removed on a later cleanup. */}}}
 async function openDetail(skill){scrollTop=page.value?.scrollTop||0;await releasePrepared();const path=skill.installations[0].path;await run({action:'detail',path},data=>{selected.value={...skill,path};detail.value=data;selectedFileText.value=null;selectedFileName.value='';page.value?.scrollTo?.(0,0);});}
 async function viewInstallation(item){await releasePrepared();await run({action:'detail',path:item.path},data=>{selected.value={...selected.value,path:item.path};detail.value=data;selectedFileText.value=null;selectedFileName.value='';});}
-async function back(){if(busy.value)return;await releasePrepared();directories.value=false;maintenance.value=false;detail.value=null;selected.value=null;selectedFileText.value=null;await nextTick();if(page.value)page.value.scrollTop=scrollTop;}
+async function back(){if(busy.value)return;if(authoring.value){authoring.value='';publishBundle.value=null;publishConsent.value=false;}await releasePrepared();communityOrigin.value=null;directories.value=false;maintenance.value=false;detail.value=null;selected.value=null;selectedFileText.value=null;await nextTick();if(page.value)page.value.scrollTop=scrollTop;}
 async function readFile(file){await run(prepared.value?{action:'read_prepared',id:prepared.value.id,file}:{action:'read_file',path:selected.value.path,file},text=>{selectedFileText.value=text;selectedFileName.value=file;});}
 async function openFolder(path){await run({action:'open_directory',path});}
 async function pickRoot(){try{const path=await chooseSkillsDirectory();if(path)rootDraft.value.path=path;}catch(e){error.value=String(e.message||e);}}
@@ -132,106 +151,32 @@ async function closeInstall(){if(busy.value)return;installOpen.value=false;await
 async function askRemove(item){const data=await run({action:'detail',path:item.path});if(data){returnFocus=document.activeElement;confirmation.value={kind:'remove',item,digest:data.package.digest};}}
 async function confirmMaintenance(){const pending=confirmation.value;const request=pending.kind==='remove'?{action:'remove',path:pending.item.path,root_id:pending.item.root_id,expected_digest:pending.digest}:{action:'restore',id:pending.backup.id};const result=await run(request,null,pending.kind==='remove'?'正在备份并移除…':'正在校验并恢复…');if(result!==undefined){confirmation.value=null;notice.value=pending.kind==='remove'?'已移除此位置，完整备份可在“备份与记录”恢复。':'已恢复到原位置。';await back();maintenance.value=true;await refresh();}}
 async function checkUpdate(item){await releasePrepared();const p=await run({action:'check_update',path:item.path},null,'正在检查上游并下载用于比较的版本…');if(!p)return;const unchanged=p.package.digest===item.installed_digest;showPrepared(p);notice.value=unchanged?'上游与安装时内容一致；仍可比较本地修改。':`已获取上游 ${p.source.commit.slice(0,12)}，请比较后确认更新。`;await beginInstall();targetScope.value=snapshot.value.roots.find(r=>r.id===item.root_id)?.scope||'global';targetIds.value=[item.root_id];await preflight();}
+async function setSquareTab(value){squareTab.value=value;if(value==='github'&&!catalog.value)await loadCatalog();}
+function startCreate(){authoring.value='create';error.value='';}
+function startPublish(){if(!getSession().loggedIn){notice.value='请先登录并设置昵称，再发布 Skill';return;}authoring.value='publish';error.value='';}
+async function createSkill(){const d=authorDraft.value;if(!d.name.trim()||!d.description.trim()||!d.body.trim()||!d.license.trim()){error.value='请填写名称、使用场景、许可和操作说明';return;}
+ const body=`---\nname: ${JSON.stringify(d.name.trim())}\ndescription: ${JSON.stringify(d.description.trim())}\nlicense: ${JSON.stringify(d.license.trim())}\n---\n\n${d.body.trim()}\n`;
+ const path=await run({action:'create',name:d.name.trim(),body},null,'正在保存 Skill…');if(!path)return;authoring.value='';notice.value='Skill 已保存到本机，可以安装到智能体或发布到社区。';await refresh();const skill=grouped.value.find(s=>s.installations.some(i=>i.path===path));if(skill)await openDetail(skill);
+}
+async function preparePublication(path){publishBundle.value=null;publishConsent.value=false;await releasePrepared();const p=await run({action:'prepare_local',path},null,'正在校验发布文件包…');if(!p)return;prepared.value=p;const bundle=await run({action:'export_bundle',id:p.id});if(!bundle)return;publishBundle.value=bundle;publishRequestId.value=crypto.randomUUID();publishConsent.value=false;authorDraft.value={...authorDraft.value,title:p.package.name,description:p.package.description,license:p.package.license==='未知'?'':p.package.license,category:classifySkill({name:p.package.name,directory:p.folder_name})};}
+async function pickPublication(){try{const path=await chooseSkillsDirectory();if(path)await preparePublication(path);}catch(e){error.value=String(e.message||e);}}
+async function publishCurrent(){if(!getSession().loggedIn){notice.value='请先登录并设置昵称，再发布 Skill';return;}authoring.value='publish';if(!prepared.value)await preparePublication(selected.value.path);else{publishBundle.value=await run({action:'export_bundle',id:prepared.value.id});publishRequestId.value=crypto.randomUUID();publishConsent.value=false;authorDraft.value={...authorDraft.value,title:detail.value.package.name,description:detail.value.package.description,license:detail.value.package.license==='未知'?'':detail.value.package.license};}}
+async function publishSkill(){if(busy.value||!publishConsent.value||!publishBundle.value)return;const d=authorDraft.value;if(!d.title.trim()||!d.description.trim()||!d.license.trim()){error.value='请填写显示名称、简介和公开许可';return;}busy.value=true;error.value='';loadingText.value='正在提交完整文件包，请保持窗口打开…';try{await skillMarket('submit',{body:{request_id:publishRequestId.value,title:d.title,description:d.description,category:d.category,license:d.license,confirm_public:true,bundle:publishBundle.value}});authoring.value='';publishBundle.value=null;notice.value='已提交人工审核，通过后将在社区广场展示。可在“社区广场 → 我的发布”查看状态。';}catch(e){error.value=String(e.message||e);}finally{busy.value=false;}}
+async function openCommunity(result){await releasePrepared();const p=await run({action:'prepare_bundle',bundle:result.bundle,digest:result.digest},showPrepared,'正在校验社区 Skill 完整文件包…');if(p){communityOrigin.value=result.item;await beginInstall();}}
 function trapFocus(event){const elements=[...event.currentTarget.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter(e=>e.getClientRects().length);const first=elements[0],last=elements.at(-1);if(!first){event.preventDefault();return;}if(event.shiftKey&&(document.activeElement===first||document.activeElement===event.currentTarget)){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
+watch(authorDraft,()=>{if(!busy.value)publishRequestId.value=crypto.randomUUID();},{deep:true});
 watch([query,agentFilter,scopeFilter,statusFilter,sourceFilter],()=>localPage.value=0);
 watch(remoteQuery,()=>{remotePage.value=0;});
-watch(()=>props.category,async()=>{localPage.value=0;remotePage.value=0;await back();if(page.value)page.value.scrollTop=0;if(props.mode==='square')await loadDescriptions();});
+watch(()=>props.category,async()=>{localPage.value=0;remotePage.value=0;await back();if(page.value)page.value.scrollTop=0;if(props.mode==='square'&&squareTab.value==='github')await loadDescriptions();});
 watch(remotePage,()=>loadDescriptions());
 watch(targetIds,()=>{plans.value=[];replaceIds.value=[];},{deep:true});
-watch([busy,installOpen,confirmation],()=>emit('busy',busy.value||installOpen.value||Boolean(confirmation.value)),{flush:'sync'});
+watch([busy,installOpen,confirmation,communityBusy,authoring],()=>emit('busy',busy.value||communityBusy.value||Boolean(authoring.value)||installOpen.value||Boolean(confirmation.value)),{flush:'sync'});
 watch(confirmation,async value=>{if(value){returnFocus=document.activeElement;await nextTick();confirmDialog.value?.focus();}else{await nextTick();returnFocus?.focus?.();}});
-watch(()=>props.mode,async()=>{if(!busy.value){await back();error.value='';if(props.mode==='square'&&!catalog.value)await loadCatalog();}});
-onMounted(async()=>{unlisten=await listenSkillsProgress(p=>{if(p.request_id===requestId)progress.value=p;});if(disposed){unlisten();return;}await refresh();if(props.mode==='square')await loadCatalog();});
+watch(()=>props.mode,async()=>{if(!busy.value){await back();error.value='';if(props.mode==='square'&&squareTab.value==='github'&&!catalog.value)await loadCatalog();}});
+onMounted(async()=>{unlisten=await listenSkillsProgress(p=>{if(p.request_id===requestId)progress.value=p;});if(disposed){unlisten();return;}await refresh();if(props.mode==='square'&&squareTab.value==='github')await loadCatalog();});
 onUnmounted(()=>{disposed=true;unlisten();cancelSkillsRequest(requestId).catch(()=>{});if(prepared.value)skillsRequest({action:'discard',id:prepared.value.id}).catch(()=>{});});
 function focusSearch(){page.value?.querySelector('.skills-search input')?.focus();}
 defineExpose({busy,focusSearch,showList:back});
 </script>
 
-<style scoped>
-.skills-page { padding:28px 32px 48px; overflow:auto; background:var(--surface); }
-.skills-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:24px; }
-.skills-header h1 { margin:0 0 8px; font-size:26px; letter-spacing:-.5px; }
-.skills-header p { margin:0; font-size:13px; line-height:1.7; }
-.skills-header .skills-eyebrow { font-size:10px; letter-spacing:1.6px; margin-bottom:6px; color:var(--muted); }
-.muted { color:var(--muted); font-size:12px; line-height:1.65; }
-.skills-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
-.skills-page button { cursor:pointer; }
-.skills-page button:disabled { opacity:.5; cursor:default; }
-.skills-page button:focus-visible { outline:2px solid var(--text); outline-offset:2px; }
-.skills-back { border:0; background:transparent; color:var(--muted); padding:0; margin-bottom:20px; }
-.skills-panel { padding:20px; border:1px solid var(--line); border-radius:12px; margin-bottom:20px; min-width:0; }
-.skills-panel h2 { font-size:15px; margin:0 0 18px; }
-.skills-panel h2 small { color:var(--muted); font-weight:400; margin-left:6px; }
-.skills-form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:16px; }
-.skills-form label { display:flex; flex-direction:column; gap:7px; color:var(--muted); font-size:12px; }
-.skills-form .wide { grid-column:1/-1; }
-.skills-form input,.skills-search input { color:var(--text); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font:inherit; min-width:0; }
-.skills-path-input { display:flex; gap:8px; }
-.skills-path-input input { flex:1; }
-.skills-root { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0; border-top:1px solid var(--line); }
-.skills-root>div:first-child { min-width:0; }
-.skills-root p { margin:6px 0 0; }
-.skills-root strong { font-size:13px; }
-.skills-root button,.skills-path-input button { color:var(--text); background:transparent; border:1px solid var(--line); border-radius:7px; padding:7px 10px; white-space:nowrap; font-size:12px; }
-.skills-path { font:11px/1.7 var(--font-code); overflow-wrap:anywhere; color:var(--muted); }
-.skills-badge { display:inline-block; font-size:10px; color:var(--muted); background:var(--sidebar); border-radius:5px; padding:4px 7px; margin-left:8px; white-space:nowrap; }
-.skills-filters { display:grid; grid-template-columns:minmax(200px,1fr) 150px 110px 140px 120px; gap:10px; margin-bottom:20px; }
-.skills-search { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:8px; padding:0 12px; color:var(--muted); }
-.skills-search input { width:100%; border:0; padding:10px 0; outline:none; }
-.skills-list { border:1px solid var(--line); border-radius:12px; overflow:hidden; }
-.skills-list:empty { display:none; }
-.skills-list-row { width:100%; display:flex; align-items:center; gap:16px; text-align:left; padding:18px; border:0; border-bottom:1px solid var(--line); color:var(--text); background:transparent; }
-.skills-list-row:last-child { border-bottom:0; }
-.skills-list-row:hover { background:var(--sidebar); }
-.skills-list-icon { width:38px; height:38px; display:grid; place-items:center; background:var(--sidebar); border-radius:10px; flex-shrink:0; }
-.skills-row-main { flex:1; min-width:0; display:grid; gap:5px; }
-.skills-row-main strong { font-size:14px; overflow-wrap:anywhere; }
-.skills-row-main>span { color:var(--muted); font-size:12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.skills-row-locations { max-width:220px; font-size:11px; color:var(--muted); }
-.skills-row-locations small { display:block; margin-top:5px; }
-.skills-empty { text-align:center; padding:72px 24px; color:var(--muted); }
-.skills-empty>.app-icon { width:36px; height:36px; margin-bottom:12px; }
-.skills-empty h1,.skills-empty h2 { color:var(--text); font-size:20px; }
-.skills-alert,.skills-notice,.skills-warnings,.skills-warning { padding:12px 14px; border-radius:8px; font-size:12px; line-height:1.7; overflow-wrap:anywhere; background:var(--sidebar); }
-.skills-alert { border:1px solid var(--danger,#ad5555); }
-.skills-alert button,.skills-notice button { float:right; background:transparent; color:inherit; border:0; }
-.skills-loading { font-size:12px; color:var(--muted); }
-.skills-detail-grid { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:20px; }
-.skills-section-heading { display:flex; justify-content:space-between; align-items:baseline; }
-.skills-document { white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.85 var(--font-code); max-height:60vh; overflow:auto; margin-bottom:0; }
-.skills-file { display:flex; align-items:baseline; gap:8px; width:100%; text-align:left; color:var(--text); background:transparent; border:0; border-radius:5px; padding:8px 4px; font-size:11px; }
-.skills-file:hover { background:var(--sidebar); }
-.skills-file span { flex:1; overflow-wrap:anywhere; }
-.skills-file small { white-space:nowrap; color:var(--muted); }
-@media(max-width:1100px){.skills-filters{grid-template-columns:1fr 1fr}.skills-search{grid-column:1/-1}.skills-detail-grid{grid-template-columns:1fr}.skills-row-locations{max-width:150px}}
-@media(max-width:700px){.skills-page{padding:24px 18px}.skills-header,.skills-root{flex-direction:column}.skills-form{grid-template-columns:1fr}.skills-list-row{flex-wrap:wrap;gap:10px}.skills-row-main{min-width:65%}.skills-row-locations{margin-left:48px}}
-.skills-source-controls { display:flex; gap:10px; align-items:center; margin:12px 0; }
-.skills-source-controls>:first-child { flex:1; min-width:0; }
-.skills-source-controls input { padding:11px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); font:inherit; }
-.skills-remote-search { margin-bottom:18px; }
-.skills-inline-button { border:0; background:transparent; color:var(--text); text-decoration:underline; margin-left:10px; font:inherit; }
-.skills-pagination { display:flex; justify-content:center; align-items:center; gap:18px; padding:20px; color:var(--muted); font-size:12px; }
-.skills-pagination button { border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:7px; padding:7px 12px; }
-.skills-overlay { position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,.36); display:flex; align-items:center; justify-content:center; padding:24px; }
-.skills-modal { width:min(760px,100%); max-height:calc(100dvh - 48px); overflow:auto; background:var(--surface); color:var(--text); border:1px solid var(--line); border-radius:16px; padding:24px; box-shadow:0 24px 80px rgba(0,0,0,.2); }
-.skills-modal h2 { font-size:20px; margin:0 0 10px; }
-.skills-modal .skills-section-heading>button { border:0; background:transparent; color:var(--muted); font-size:24px; }
-.skills-modal-footer { display:flex; justify-content:flex-end; gap:10px; position:sticky; bottom:-24px; background:var(--surface); border-top:1px solid var(--line); margin:20px -24px -24px; padding:18px 24px; }
-.skills-target { display:flex; gap:12px; align-items:flex-start; padding:13px 0; border-bottom:1px solid var(--line); font-size:12px; }
-.skills-target>span { min-width:0; }
-.skills-target .skills-path { display:block; }
-.skills-target small { display:block; color:var(--muted); margin-top:4px; }
-.skills-target input,.skills-confirm-check input { accent-color:var(--text); margin-top:3px; flex-shrink:0; }
-.skills-plan { padding:16px 0; border-bottom:1px solid var(--line); font-size:12px; }
-.skills-plan p { margin:7px 0; }
-.skills-diff { white-space:pre-wrap; overflow-wrap:anywhere; max-height:200px; overflow:auto; font:11px/1.7 var(--font-code); }
-.skills-confirm-check { display:flex; gap:8px; align-items:flex-start; font-size:12px; line-height:1.7; padding:12px; margin:10px 0; background:var(--sidebar); border-radius:8px; }
-.skills-body-compare { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.skills-body-compare>section { min-width:0; }
-.skills-body-compare h3 { font-size:12px; }
-.skills-confirm-modal { max-width:520px; }
-.skills-detail-grid aside .skills-panel:first-child { max-height:65vh; overflow:auto; }
-@media(max-width:700px){.skills-source-controls{flex-wrap:wrap}.skills-source-controls>:first-child{flex-basis:100%}.skills-overlay{padding:12px}.skills-modal{max-height:calc(100dvh - 24px);padding:18px}.skills-modal-footer{margin:18px -18px -18px;padding:16px 18px;bottom:-18px}}
-.skills-category-label{color:var(--muted);font-size:11px;}
-.skills-category-caption{margin:0 0 12px;}
-</style>
+<style scoped src="./skills.css"></style>

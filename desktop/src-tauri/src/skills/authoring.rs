@@ -94,6 +94,9 @@ pub fn prepare(data: &Path, bundle: Bundle, expected_digest: &str) -> Result<Pre
                 .map_err(|e| e.to_string())?;
             }
         }
+        if files::package(&stage)?.files.len() != bundle.files.len() {
+            return Err("目标文件系统存在重名路径，不能完整安装此包".into());
+        }
         install::store_prepared(data, bundle.name, &stage, None, None)
     })();
     let _ = fs::remove_dir_all(stage);

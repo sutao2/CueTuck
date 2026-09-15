@@ -44,6 +44,7 @@
         <IdentitySettings v-if="page === 'identity'" ref="riskForm" @busy-change="securityBusy = $event" />
         <AccountSecurity v-if="page === 'security'" ref="securityForm" @signed-out="securitySignedOut" @busy-change="securityBusy = $event" />
         <UserManagement v-if="page === 'users'" ref="usersForm" @busy-change="securityBusy = $event" />
+        <SkillReview v-if="page === 'skill-review'" @busy-change="securityBusy = $event" />
         <ReviewManagement v-if="page === 'review'" ref="reviewForm" @busy-change="securityBusy = $event" />
         <ContentManagement v-if="page === 'content'" ref="contentForm" @busy-change="securityBusy = $event" />
         <CatalogManagement v-if="page === 'categories' || page === 'models'" :key="page" :kind="page" ref="catalogForm" @busy-change="securityBusy = $event" />
@@ -64,6 +65,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import OAuthSettings from './OAuthSettings.vue';
 import AccountSecurity from './AccountSecurity.vue';
 import UserManagement from './UserManagement.vue';
+import SkillReview from './SkillReview.vue';
 import ReviewManagement from './ReviewManagement.vue';
 import ContentManagement from './ContentManagement.vue';
 import CatalogManagement from './CatalogManagement.vue';
@@ -83,8 +85,8 @@ import { adminIdentityRequest } from './identity.js';
 import { clearAdminSession, getAdminSession, listOAuthProviders, loginAdmin, loginAdminOAuth, logoutAdmin } from './session.js';
 import { permittedPage, requestedPage } from './navigation.js';
 import './admin.css';
-const titles = { review: '内容审核', content: '广场内容', users: '用户', categories: '分类管理', models: '模型管理', oauth: '第三方登录', settings: '站点设置', security: '账号安全' };
-const descriptions = { review: '检查社区投稿，维护广场内容质量。', content: '管理公开展示、推荐排序与上下架，保留作者原始内容。', users: '检索账号、查看公开资料，安全地管理状态与权限。', oauth: '连接登录提供商，让用户使用已有账号登录唤词。', settings: '管理社区的访问方式与公开范围。', security: '管理本人的登录密码与所有设备的会话。' };
+const titles = { 'skill-review':'Skill 社区审核', review: '内容审核', content: '广场内容', users: '用户', categories: '分类管理', models: '模型管理', oauth: '第三方登录', settings: '站点设置', security: '账号安全' };
+const descriptions = { 'skill-review':'审阅用户提交的完整 Skill 文件包，审核通过后在社区广场展示。', review: '检查社区投稿，维护广场内容质量。', content: '管理公开展示、推荐排序与上下架，保留作者原始内容。', users: '检索账号、查看公开资料，安全地管理状态与权限。', oauth: '连接登录提供商，让用户使用已有账号登录唤词。', settings: '管理社区的访问方式与公开范围。', security: '管理本人的登录密码与所有设备的会话。' };
 const permissions = ref({}), accountRole = ref(''), workspace = ref(null);
 const visibleGroups = computed(() => adminNavGroups.map(group => ({ ...group, items: group.items.filter(item => permittedPage(item.page, permissions.value)) })).filter(group => group.items.length));
 const pageIcon = computed(() => adminNavGroups.flatMap(group => group.items).find(item => item.page === page.value)?.icon || 'settings');

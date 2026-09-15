@@ -24,6 +24,10 @@ TLS 证书含两个域名，ACME 数据在 `/opt/promptark/letsencrypt`，宿主
 
 此实例首次以空业务库上线，后按用户指定范围完成广场、图片引用、站点、Google/GitHub 和 SMTP 配置迁移，核验与图片网络边界见[数据同步记录](../docs/plans/2026-09-13-production-data-sync.md)。线上 owner 和加密密钥保留，本机账号、会话、收藏、历史邮件队列不迁移。OAuth 提供商还需登记正式 API 回调 `https://prompt.likh.cn/v1/session/oauth/callback` 并验证真实授权；SMTP 未做实发测试，AI 服务未在本次配置。支付保持 mock。备份须同时覆盖数据库、对象、固定加密密钥及秘密部署配置，详见[恢复说明](../docs/how-to/backend-recovery.md)。
 
+## Skill 社区发布
+
+客户端现在支持本机创建、完整包投稿及社区安装。管理端“Skill 社区审核”支持逐文件审阅、通过、退回和下架，投稿经人工审核后公开。当前镜像、请求体边界、数据库备份和平台验收范围见 [Skills 创建与发布记录](../docs/plans/2026-09-15-skill-publishing.md)。
+
 ## 官网与 Web 设计预览
 
 `https://prompt.likh.cn/preview/` 为官网与网页工作台预览。提示词读取同源公开 `/v1/square/` API，24 条分页，计数来自服务端；Skills 使用与客户端相同的 15 个来源和分类规则，通过公开 GitHub API 固定提交并读取真实 SKILL.md。账号登录、云端收藏和私有数据尚未接入，暂存和草稿仅当前标签页有效。正式 `web/` 业务应用未被替换；现行范围与验收见[真实广场与重设计](../docs/plans/2026-09-15-website-live-data.md)。
