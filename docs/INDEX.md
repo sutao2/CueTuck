@@ -6,11 +6,11 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-15-completion.md](plans/2026-09-15-completion.md) | 功能验收，部署发行中 | 剩余优化与发行闭环 | 五项补齐通过全端回归，准备 beta.17 |
-| [plans/2026-09-15-browse-layout.md](plans/2026-09-15-browse-layout.md) | 已验收，未发版 | 广场布局、正文优先与窄窗 | 统一密度、双栏阅读与侧栏偏好隔离 |
-| [plans/2026-09-15-launcher-ranking.md](plans/2026-09-15-launcher-ranking.md) | 已验收，未发版 | 启动器相关性与使用偏好排序 | 精确匹配优先、近期/常用/收藏加权及核心回归入口 |
-| [plans/2026-09-15-recommendation-ranking.md](plans/2026-09-15-recommendation-ranking.md) | 已验收，未部署发版 | 推荐不变化与分页排序 | 每小时推荐、换一批、稳定快照分页与排序说明 |
-| [plans/2026-09-15-direct-prompt-use.md](plans/2026-09-15-direct-prompt-use.md) | 已验收，未发版 | 广场与启动器直接使用 | 618 项测试、浏览器真实复制与窄窗布局通过 |
+| [plans/2026-09-15-completion.md](plans/2026-09-15-completion.md) | 已部署发布 | 剩余优化与发行闭环 | 五项补齐、全端回归、官网和 beta.17 双平台交付 |
+| [plans/2026-09-15-browse-layout.md](plans/2026-09-15-browse-layout.md) | 已随 beta.17 发布 | 广场布局、正文优先与窄窗 | 统一密度、双栏阅读与侧栏偏好隔离 |
+| [plans/2026-09-15-launcher-ranking.md](plans/2026-09-15-launcher-ranking.md) | 已随 beta.17 发布 | 启动器相关性与使用偏好排序 | 精确匹配优先、近期/常用/收藏加权及核心回归入口 |
+| [plans/2026-09-15-recommendation-ranking.md](plans/2026-09-15-recommendation-ranking.md) | 已随 beta.17 发布 | 推荐不变化与分页排序 | 每小时推荐、换一批、稳定快照分页与排序说明 |
+| [plans/2026-09-15-direct-prompt-use.md](plans/2026-09-15-direct-prompt-use.md) | 已随 beta.17 发布 | 广场与启动器直接使用 | 618 项测试、浏览器真实复制与窄窗布局通过 |
 | [plans/2026-09-15-beta16-release.md](plans/2026-09-15-beta16-release.md) | 已发布部署 | 部署昵称弹窗修复 | beta.16 双平台、CI、签名更新与官网入口已验 |
 | [plans/2026-09-15-nickname-startup.md](plans/2026-09-15-nickname-startup.md) | 已随 beta.16 发布 | 启动重复要求填写个人信息 | 延迟读取不闪现弹窗；602 项回归与 Mac 构建通过 |
 | [plans/2026-09-15-launcher-website.md](plans/2026-09-15-launcher-website.md) | 已上线验收 | 官网主线与根域名入口 | 根域名官网、启动器首屏与七语言 README；公网与多尺寸验证 |
