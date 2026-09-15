@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#17695b">
+  <title>CueTuck · 唤词 — 好提示词，随时拿来用</title>
+  <link rel="icon" href="assets/icon.png"><link rel="stylesheet" href="site.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到内容</a>
+<header class="site-header">
+  <a class="brand" href="#home" aria-label="CueTuck 官网"><img src="assets/icon.png" alt=""><strong>CueTuck<span>唤词</span></strong></a>
+  <nav aria-label="主导航"><a href="#home" data-nav="home">概览</a><a href="#app" data-nav="app">提示词广场</a><a href="#skills" data-nav="skills">Skills</a><a href="#download" data-nav="download">下载</a></nav>
+  <div class="nav-end"><span class="preview-tag">设计预览</span><a class="button small dark" href="#app">进入工作台 <span aria-hidden="true">↗</span></a></div>
+</header>
+<main id="main" tabindex="-1"></main>
+<footer id="footer"><a class="brand" href="#home"><img src="assets/icon.png" alt=""><strong>CueTuck<span>唤词</span></strong></a><p>Your prompts, a shortcut away.</p><a href="https://github.com/sutao2/CueTuck" target="_blank" rel="noopener">GitHub ↗</a><span>官网与 Web 交互设计 · 示例数据</span></footer>
+<dialog id="detail" aria-labelledby="dialog-title"><div class="dialog-top"><span class="eyebrow">CUETUCK / PROMPT</span><button class="icon-button" data-close aria-label="关闭详情">×</button></div><div id="detail-body"></div></dialog>
+<dialog id="create" aria-labelledby="create-title"><div class="dialog-top"><span class="eyebrow">YOUR NEXT GOOD IDEA</span><button class="icon-button" data-close aria-label="关闭新建">×</button></div><h2 id="create-title">收好一个新灵感</h2><p class="muted">预览草稿仅保留在当前标签页，刷新后清空。</p><form id="create-form"><label>标题<input name="title" required maxlength="100" placeholder="例如：把会议纪要变成行动清单"></label><label>提示词<textarea name="content" required maxlength="20000" rows="7" placeholder="写下你的提示词，用 {{主题}} 添加可填写的变量。"></textarea></label><button class="button dark" type="submit">保存到预览草稿 <span>↗</span></button></form></dialog>
+<dialog id="account" aria-labelledby="account-title"><div class="dialog-top"><span class="eyebrow">WEB WORKSPACE</span><button class="icon-button" data-close aria-label="关闭账号说明">×</button></div><h2 id="account-title">你的提示词，集中收好。</h2><p>正式网页版将在这里接入邮箱、Google 和 GitHub 登录，提供账号提示词库与收藏。</p><div class="info-note">当前是交互设计预览，不收集账号或密码。可以先体验示例内容；本机 Skills 安装和全局启动器请使用桌面版。</div><a class="button dark" href="#download" data-close>了解桌面版 ↗</a></dialog>
+<div class="toast" role="status" aria-live="polite" hidden></div>
+</body></html>

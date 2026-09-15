@@ -6,6 +6,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-15-website-design.md](plans/2026-09-15-website-design.md) | 已部署原型 | 官网和 Web 一体设计 | 同域预览、独立 Compose、搜索填写与线上布局验收 |
+| [designs/website/index.html](designs/website/index.html) | 原型 | 预览官网与在线工作台 | 青绿品牌、官网/工作台导航、示例搜索与填写 |
 | [plans/2026-09-15-remove-context-menu.md](plans/2026-09-15-remove-context-menu.md) | 已验收 | 精简重复右键入口 | 保留可见更多操作与系统编辑菜单；115 项测试和构建通过，未发版 |
 | [plans/2026-09-15-beta14-release.md](plans/2026-09-15-beta14-release.md) | 已发布 | 核对最新客户端发行 | beta.14 双平台构建、CI、签名与公开更新验收 |
 | [i18n/README.en.md](i18n/README.en.md) | 现行 | 阅读 English 项目介绍 | README 译本，共享真实截图与语言导航 |

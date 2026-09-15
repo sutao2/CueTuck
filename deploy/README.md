@@ -24,6 +24,14 @@ TLS 证书含两个域名，ACME 数据在 `/opt/promptark/letsencrypt`，宿主
 
 此实例首次以空业务库上线，后按用户指定范围完成广场、图片引用、站点、Google/GitHub 和 SMTP 配置迁移，核验与图片网络边界见[数据同步记录](../docs/plans/2026-09-13-production-data-sync.md)。线上 owner 和加密密钥保留，本机账号、会话、收藏、历史邮件队列不迁移。OAuth 提供商还需登记正式 API 回调 `https://prompt.likh.cn/v1/session/oauth/callback` 并验证真实授权；SMTP 未做实发测试，AI 服务未在本次配置。支付保持 mock。备份须同时覆盖数据库、对象、固定加密密钥及秘密部署配置，详见[恢复说明](../docs/how-to/backend-recovery.md)。
 
+## 官网与 Web 设计预览
+
+`https://prompt.likh.cn/preview/` 为官网与网页工作台的静态交互原型，使用示例内容，不连接账号或线上私有数据。正式 `web/` 业务应用尚未被本原型替换；范围与验收见[设计计划](../docs/plans/2026-09-15-website-design.md)。
+
+执行 `python3 scripts/build-website-preview.py`，仅将三份设计源码、品牌图标与桌面截图复制到 `output/website-preview/`；不上传整个 `output/`。独立 Compose 模板在 `deploy/website-preview/`，部署目录 `/opt/cuetuck-website-preview/current`，只映射 `127.0.0.1:15175`。宿主 API vhost 通过可选 include 添加 `/preview/`，既有 API 和管理端路由保持原配置。
+
+首次配置备份为 `/opt/promptark/backups/website-preview-20260915/promptark.conf`。回滚本次部署时，先确认没有后续站点配置变更，再恢复该文件并执行 Nginx 语法检查及 reload；最后只停止 `cuetuck-website-preview` Compose 项目。不要停止 `promptark` 主业务项目或删除持久卷。预览静态文件可按发布目录回退；部署仅修改静态服务和路由，没有数据库迁移。
+
 ## 无外部凭据的集中验收
 
 先安装 Node 22+、Rust、Python 3，分别在 `desktop`、`admin-web`、`web` 运行 `npm ci`。本机后端测试默认使用开发 PostgreSQL；连接与隔离恢复边界见 [本地开发](../docs/how-to/local-dev.md) 和 [恢复说明](../docs/how-to/backend-recovery.md)。
