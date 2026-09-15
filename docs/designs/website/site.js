@@ -1,39 +1,189 @@
+import { PAGE_SIZE, requestJson, browsePrompts, categoryCount, safeImage, safeLink, skillCatalog, readSkill, skillDescription } from './live-data.mjs';
+import { classifySkill, skillCategories } from './shared/skillCategories.mjs';
+import { extractVariables, variableDefaults, renderPrompt } from './shared/renderPrompt.mjs';
 const $ = (s, root=document) => root.querySelector(s);
-const esc = v => String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = value => Number(value || 0).toLocaleString('zh-CN');
+const API = ''; // Public browsing uses the existing same-origin API.
 const paths={search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',grid:'<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="14" y="3" width="6" height="6" rx="1"/><rect x="3" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',list:'<path d="M8 5h13M8 12h13M8 19h13M3 5h.1M3 12h.1M3 19h.1"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/>',arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',code:'<path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18"/>',write:'<path d="m4 16-1 5 5-1L21 7l-4-4Zm10-10 4 4"/>',image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="8" r="2"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',brief:'<rect x="3" y="6" width="18" height="15" rx="2"/><path d="M8 6V3h8v3M3 12h18m-11 0v3h4v-3"/>',folder:'<path d="M3 7V4h6l3 3h9v13H3Z"/>',spark:'<path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z"/>',plus:'<path d="M12 5v14M5 12h14"/>',copy:'<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>'};
 const icon = n => `<svg aria-hidden="true" viewBox="0 0 24 24">${paths[n]||paths.folder}</svg>`;
-const prompts=[
-{id:'p1',title:'把灵感，写成一篇好文章',category:'内容写作',model:'通用',symbol:'write',tone:'rose',tags:['结构化写作','3 个变量'],content:'你是一位善于讲故事的编辑。请围绕「{{主题}}」，为「{{读者}}」写一篇{{字数}}字的文章。\n\n先用一个具体场景开篇，再用三个清晰的小节展开。给出真实可执行的建议，避免空泛形容词。结尾留一个值得思考的问题。',description:'从零散想法到清晰表达，用一个好结构，让读者愿意一直读下去。'},
-{id:'p2',title:'一份真正可执行的会议纪要',category:'办公效率',model:'通用',symbol:'brief',tone:'',tags:['会议纪要','行动清单'],content:'请将以下会议记录整理为一页行动清单：\n{{会议记录}}\n\n分别列出：核心结论、待办事项（负责人 / 截止时间 / 验收标准）、待确认问题。未给出的负责人或日期标记为待确认，不要编造。',description:'提炼结论、明确负责人和截止时间，把讨论转化成下一步行动。'},
-{id:'p3',title:'像资深工程师一样审查代码',category:'软件开发',model:'Claude',symbol:'code',tone:'blue',tags:['Code Review','质量检查'],content:'请审查以下{{语言}}代码：\n{{代码}}\n\n按严重程度列出正确性、安全性和性能问题。每项说明触发条件、实际影响与最小修复建议。对不确定的判断明确注明，不要只做风格评价。',description:'从正确性、边界条件到可维护性，找到真正值得修复的问题。'},
-{id:'p4',title:'为产品找到一句恰好的文案',category:'产品设计',model:'通用',symbol:'spark',tone:'gold',tags:['产品文案','用户体验'],content:'产品是「{{产品}}」，目标用户是「{{用户}}」。请为首页写出 5 组标题与副标题。\n\n标题不超过 16 字，副标题不超过 45 字。优先说明具体用途和收益，避免夸张承诺。为每组说明适合的使用场景。',description:'用简单的语言说清价值，让用户第一眼就知道产品能帮什么忙。'},
-{id:'p5',title:'自然光下的静物摄影',category:'图片生成',model:'图像模型',symbol:'image',tone:'rose',tags:['产品摄影','自然光'],content:'为{{产品}}创作一张自然光静物摄影：浅色亚麻布背景，窗边柔和侧光，保留真实材质与微小纹理，构图简洁，色彩温暖克制。画面比例 4:5。不要添加文字或水印。',description:'保留材质、光影与呼吸感，为一件普通物品拍出细腻的质感。'},
-{id:'p6',title:'把陌生知识讲明白',category:'学习研究',model:'通用',symbol:'folder',tone:'',tags:['费曼学习法','知识整理'],content:'请向一位初学者解释「{{概念}}」。\n\n先用一句话定义，再用一个日常类比解释，给出一个简单例子。指出类比的局限，以及最容易产生的两个误解。最后给我三道自测题，答案单独列出。',description:'从一句话解释到具体例子，再用自测题检验自己是否真正理解。'},
-{id:'p7',title:'把需求拆成可交付的任务',category:'软件开发',model:'Claude',symbol:'code',tone:'blue',tags:['任务拆解','验收标准'],content:'下面是需求：{{需求}}\n请拆成可独立验收的小任务。每项包含目标、依赖、风险和可观察的验收结果。先列出需要确认的条件，不要假设未提出的功能。',description:'从模糊需求到明确的实现步骤，给每个任务一个可以检查的结果。'},
-{id:'p8',title:'写一封有温度的工作邮件',category:'办公效率',model:'通用',symbol:'brief',tone:'gold',tags:['沟通','邮件'],content:'请帮我写一封给{{收件人}}的工作邮件，目的是{{目的}}。\n语气礼貌、直接，开头说明来意，正文给出必要背景，结尾明确需要对方做什么。避免模板式寒暄。',description:'把想说的事情说清楚，礼貌而不冗长，让沟通更轻松。'},
-{id:'p9',title:'把调研访谈变成产品洞察',category:'产品设计',model:'通用',symbol:'spark',tone:'',tags:['用户研究','洞察'],content:'分析以下用户访谈：{{访谈}}\n区分用户原话、观察到的行为和你的推断。汇总高频痛点、当前替代方案和待验证假设。对每项洞察保留支撑证据，避免把单个样本概括为所有用户。',description:'从用户原话中找到线索，区分事实与推断，整理下一步验证方向。'}
-];
-const skills=[
-{id:'s1',title:'代码审查工作流',category:'软件开发',symbol:'code',tone:'blue',model:'Skill',tags:['检查清单','分步执行'],description:'先建立上下文，再检查风险，让每次代码审查都有清晰的依据。',content:'这是 Skill 页面设计示例。\n\n正式详情将展示：用途、来源仓库、许可证、版本、SKILL.md 内容、文件清单与所需 MCP 服务。\n\n网页端负责发现和阅读；安装到本机智能体由桌面版完成。'},
-{id:'s2',title:'从资料到研究报告',category:'学习研究',symbol:'folder',tone:'',model:'Skill',tags:['资料整理','来源核查'],description:'把问题拆开、收集证据、交叉验证，最后形成可追溯的报告。',content:'设计示例：研究工作流。\n\n步骤：明确问题 → 搜集资料 → 核查来源 → 比较结论 → 生成报告。\n\n正式实现须呈现实际 Skill 来源和执行边界，不直接从网页运行本机命令。'},
-{id:'s3',title:'产品界面设计检查',category:'产品设计',symbol:'spark',tone:'gold',model:'Skill',tags:['可访问性','一致性'],description:'从信息层级、状态反馈到键盘可达，检查一个页面是否真正好用。',content:'设计示例：界面检查清单。\n\n关注内容层级、输入标签、键盘导航、错误提示、窄屏布局和对比度。\n\nMCP 依赖将在正式详情中按真实声明展示，不把 Skill 与 MCP 服务混为一谈。'}
-];
-const categories=['全部','内容写作','办公效率','软件开发','产品设计','图片生成','学习研究'];
-const saved=new Set(),drafts=[]; let route='',category='全部',query='',model='',view='grid',sort='recommended',toastTimer,activeItem=null;
-function notify(message){const el=$('.toast');el.textContent=message;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,3500);}
-function home(){return `<section class="hero"><div><span class="eyebrow">YOUR PROMPTS, A SHORTCUT AWAY.</span><h1>好提示词，<br><em>收好，随时唤起。</em></h1><p class="intro">把灵感变成可复用的提示词。发现、整理、填写，在浏览器里开始，在桌面上随时拿来用。</p><div class="hero-actions"><a class="button dark" href="#app">在线体验 ${icon('arrow')}</a><a class="button" href="#download">下载桌面版 ↗</a></div><div class="hero-note">开源项目 <b>·</b> macOS & Windows <b>·</b> 中文优先</div></div><div class="hero-art"><div class="art-grid"></div><span class="label">A LITTLE ORDER FOR YOUR IDEAS</span><div class="demo-window"><div class="window-bar"><i></i><i></i><i></i><span>CueTuck · 提示词工作台</span></div><div class="demo-content"><span class="tag">内容写作 / 常用模板</span><h3>让一个想法，长成一篇文章。</h3><div class="demo-copy">围绕 <mark>{{主题}}</mark>，为 <mark>{{读者}}</mark><br>写一篇条理清晰、有具体例子的文章。</div><div class="mini-field"><span>主题</span>一场说走就走的周末旅行</div><div class="demo-bottom"><span>填写变量，直接使用</span><button class="button small dark" data-demo>试着填一下 ↗</button></div></div></div><div class="shortcut-label">${icon('search')} 一个快捷键，找到好灵感。<kbd>⌃ Space</kbd></div></div></section><div class="quiet-strip"><span>让熟悉的 AI，更懂你的工作。</span><strong>ChatGPT</strong><strong>Claude</strong><strong>Gemini</strong><strong>通义千问</strong><strong>你使用的其他模型</strong></div><section class="section"><div class="section-heading"><div><span class="eyebrow">LESS REPEATING. MORE CREATING.</span><h2>不用每次，都从头说起。</h2></div><a class="text-link" href="#app">看看能用在哪些地方 ↗</a></div><div class="feature-grid"><article class="feature"><span class="feature-number">01 / Collect</span><h3>好用的，先收起来。</h3><p>给提示词一个有序的家。按用途分类、快速搜索，把散落各处的灵感变成自己的工具箱。</p></article><article class="feature"><span class="feature-number">02 / Make it yours</span><h3>换几个变量，就是你的。</h3><p>把主题、受众和语气留成可填写的变量。同一个模板，每次都能用在新的场景。</p></article><article class="feature"><span class="feature-number">03 / Keep moving</span><h3>需要时，随手唤起。</h3><p>桌面版用全局快捷键打开启动器。找到、填写、复制，让好提示词接上你的工作节奏。</p></article></div></section><section class="product-section"><div class="section"><div class="section-heading"><div><span class="eyebrow">A HOME FOR YOUR PROMPTS</span><h2>在浏览器里发现，在桌面上常用。</h2><p class="muted">网页轻松开始。桌面提供本机收藏、离线使用与独立启动器。</p></div><a class="text-link" href="#app">进入网页工作台 ↗</a></div><div class="product-shot"><img src="assets/library.png" alt="CueTuck 桌面端本地提示词库的真实截图" loading="lazy" width="1440" height="900"></div><p class="product-caption">桌面端实际界面 · 网页端账号库与桌面本机库的同步需要单独配置。</p></div></section><section class="section download-section"><span class="eyebrow">MAKE ROOM FOR YOUR NEXT IDEA</span><h2>下一个好想法，留给 CueTuck。</h2><p class="muted">先在线体验，或把它放在你的桌面上。</p><div class="hero-actions" style="justify-content:center"><a href="#app" class="button dark">打开网页工作台 ↗</a><a href="#download" class="button">选择桌面版本</a></div></section>`;}
-function downloads(){return `<section class="section download-section"><span class="eyebrow">CUETUCK FOR DESKTOP</span><h2>让好提示词，离你更近一点。</h2><p class="muted">本机提示词库、全局启动器、Skills 管理。<br>当前可下载版本：v0.1.0-beta.14 · 预览版</p><div class="download-grid"><article class="download-card"><span class="download-mark">⌘</span><h3>macOS</h3><p class="muted">Apple 芯片 · DMG 安装包</p><a class="button dark" href="https://github.com/sutao2/CueTuck/releases/download/v0.1.0-beta.14/CueTuck_0.1.0-beta.14_aarch64.dmg">下载 macOS 版 ↓</a></article><article class="download-card"><span class="download-mark">⊞</span><h3>Windows</h3><p class="muted">64 位 · EXE 安装程序</p><a class="button dark" href="https://github.com/sutao2/CueTuck/releases/download/v0.1.0-beta.14/CueTuck_0.1.0-beta.14_x64-setup.exe">下载 Windows 版 ↓</a></article></div><p class="download-note">预览版尚未完成 Apple 公证或 Windows 发布者签名，首次打开可能出现系统提示。安装说明与 SHA-256 校验文件见发行页面。</p><p><a class="text-link" href="https://github.com/sutao2/CueTuck/releases/tag/v0.1.0-beta.14" target="_blank" rel="noopener">更新说明与完整发行文件 ↗</a></p><p class="muted">暂时不想安装？<a class="text-link" href="#app">试试网页工作台 →</a></p></section>`;}
-function source(){if(route==='skills')return skills;if(route==='drafts')return drafts;if(route==='favorites')return [...prompts,...skills,...drafts].filter(p=>saved.has(p.id));return prompts;}
-function filtered(){let rows=source().filter(p=>(category==='全部'||p.category===category)&&(!model||p.model.toLowerCase().includes(model.toLowerCase()))&&`${p.title} ${p.description||''} ${p.content} ${p.category}`.toLowerCase().includes(query.toLowerCase()));return sort==='latest'?[...rows].reverse():rows;}
-function catButtons(mobile=false){return categories.map((c,i)=>`<button class="${mobile?'':'side-link '}${category===c?'active':''}" data-category="${c}">${mobile?'':icon(['grid','write','brief','code','spark','image','folder'][i])}${c}${mobile?'':`<span class="count">${source().filter(p=>c==='全部'||p.category===c).length}</span>`}</button>`).join('');}
-function workspace(){const titles={app:['提示词广场','找一个好起点，让下一次创作更轻松。'],skills:['Skill 广场','把常用工作流，变成智能体的拿手好戏。'],favorites:['我的收藏','值得反复用的灵感，都收在这里。'],drafts:['预览草稿','记下你的想法。此处内容仅保留在当前标签页。']};const [title,subtitle]=titles[route];return `<section class="workspace"><aside class="sidebar"><div class="sidebar-heading">WORKSPACE</div><a class="side-link ${route==='app'?'active':''}" href="#app">${icon('grid')}提示词广场</a><a class="side-link ${route==='skills'?'active':''}" href="#skills">${icon('brief')}Skill 广场</a><a class="side-link ${route==='favorites'?'active':''}" href="#favorites">${icon('star')}我的收藏<span class="count" data-saved-count>${saved.size}</span></a><a class="side-link ${route==='drafts'?'active':''}" href="#drafts">${icon('folder')}预览草稿<span class="count">${drafts.length}</span></a><div class="side-separator"></div><div class="sidebar-heading">按用途探索</div><div id="categories">${catButtons()}</div><div class="side-bottom"><div class="desktop-tip">随时唤起你的灵感。<br>桌面版，离工作更近一步。<a href="#download">下载 CueTuck ↗</a></div><div class="side-separator"></div><button class="side-link" data-account>${icon('folder')}账号与同步说明 ↗</button></div></aside><div class="work-content"><div class="breadcrumb">工作台 / ${title}</div><div class="work-heading"><div><h1>${title}</h1><p>${subtitle}</p></div><button class="button small dark" data-create>${icon('plus')}新建提示词</button></div><div class="work-banner"><div><h2>${route==='skills'?'让智能体，也有一套好方法。':'留一点时间，给真正的创造。'}</h2><p>交互设计预览 · 示例内容 · 收藏与草稿在刷新后清空</p></div><span class="banner-art" aria-hidden="true">${route==='skills'?'✳':'Aa'}</span></div><div class="mobile-categories"><a class="button small" href="#favorites">收藏</a><a class="button small" href="#drafts">草稿</a><button data-account>账号说明</button>${catButtons(true)}</div><div class="toolbar"><label class="search-field" style="margin:0;flex-direction:row;gap:0"><span class="sr-only" hidden>搜索示例提示词</span>${icon('search')}<input id="search" type="search" aria-label="搜索示例内容" placeholder="搜索标题、内容或关键词…" value="${esc(query)}"></label><input id="model" list="models" aria-label="搜索或选择模型" placeholder="全部模型" value="${esc(model)}" style="width:140px;font-size:12px;padding:11px"><datalist id="models"><option value="通用"><option value="Claude"><option value="图像模型"><option value="Skill"></datalist><div class="view-controls"><button class="${view==='grid'?'active':''}" data-view="grid" aria-label="网格视图" aria-pressed="${view==='grid'}">${icon('grid')}</button><button class="${view==='list'?'active':''}" data-view="list" aria-label="列表视图" aria-pressed="${view==='list'}">${icon('list')}</button></div></div><div class="results-heading"><div class="result-tabs"><button data-sort="recommended" class="${sort==='recommended'?'active':''}">精选示例</button><button data-sort="latest" class="${sort==='latest'?'active':''}">最近添加</button></div><span id="result-count"></span></div><div class="cards ${view==='list'?'list':''}" id="cards"></div><p class="end-note">示例内容用于体验设计 · 不代表线上广场数据</p></div></section>`;}
-function renderCards(){if(!$('#cards'))return;const rows=filtered();$('#result-count').textContent=`${rows.length} 个结果`;$('#cards').innerHTML=rows.length?rows.map(p=>`<article class="prompt-card"><div class="card-top"><span class="category-symbol ${p.tone||''}">${icon(p.symbol)}</span><span class="card-model">${esc(p.model)}</span></div><button class="card-title" data-open="${p.id}">${esc(p.title)}</button><p class="card-description">${esc(p.description||p.content)}</p><div class="card-tags"><span>${esc(p.category)}</span>${p.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div><div class="card-bottom"><span class="author"><span class="avatar">C</span>CueTuck 示例</span><div class="card-actions"><button class="icon-button ${saved.has(p.id)?'saved':''}" data-save="${p.id}" title="${saved.has(p.id)?'取消收藏':'收藏'}" aria-label="${saved.has(p.id)?'取消收藏':'收藏'} ${esc(p.title)}" aria-pressed="${saved.has(p.id)}">${icon('star')}</button><button class="icon-button" data-open="${p.id}" title="查看详情" aria-label="查看 ${esc(p.title)}">${icon('arrow')}</button></div></div></article>`).join(''):`<div class="empty"><h2>${route==='favorites'?'还没有收藏的内容':route==='drafts'?'给下一个灵感，留个位置。':'没有找到匹配的内容'}</h2><p>${route==='favorites'?'点击卡片上的星标，在这里找到它。':'试试其他关键词，或新建一个提示词。'}</p><button class="button small" data-clear>清除筛选</button> <a href="#app" class="button small">逛逛广场 ↗</a></div>`;document.querySelectorAll('[data-saved-count]').forEach(el=>el.textContent=saved.size);}
-function render(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());const next=location.hash.slice(1)||'home';const valid=['home','download','app','skills','favorites','drafts'];const nextRoute=valid.includes(next)?next:'home';if(route!==nextRoute){category='全部';query='';model='';}route=nextRoute;document.title=`${{home:'好提示词，随时拿来用',download:'下载',app:'提示词广场',skills:'Skill 广场',favorites:'我的收藏',drafts:'预览草稿'}[route]} · CueTuck 唤词`;$('#main').innerHTML=route==='home'?home():route==='download'?downloads():workspace();$('#footer').hidden=!['home','download'].includes(route);document.querySelectorAll('[data-nav]').forEach(a=>{a.classList.toggle('active',a.dataset.nav===route);if(a.dataset.nav===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});renderCards();window.scrollTo(0,0);}
-function showDialog(id){const dialog=$(id);dialog.showModal();}
-function openItem(id){activeItem=[...prompts,...skills,...drafts].find(p=>p.id===id);if(!activeItem)return;const p=activeItem,isSkill=p.model==='Skill';const variables=[...new Set([...p.content.matchAll(/\{\{([^{}]+)\}\}/g)].map(m=>m[1]))];$('#detail-body').innerHTML=`<h2 id="dialog-title">${esc(p.title)}</h2><div class="detail-meta"><span>${esc(p.category)}</span><span>·</span><span>CueTuck 设计示例</span></div>${isSkill?'<div class="info-note">此处演示 Skill 详情的信息结构，尚未连接真实来源或安装功能。</div>':''}<div class="variable-fields">${variables.map(v=>`<label>${esc(v)}<input data-variable="${esc(v)}" placeholder="填写${esc(v)}" maxlength="5000"></label>`).join('')}</div><div class="prompt-text" id="prompt-text"></div><div class="dialog-actions"><button class="button" data-save="${p.id}" data-detail-save>${saved.has(p.id)?'已收藏':'收藏到预览库'}</button>${isSkill?'<a class="button dark" href="#download" data-close>了解桌面版 ↗</a>':`<button class="button dark" data-copy>${icon('copy')}复制提示词</button>`}</div><p class="muted" style="font-size:11px;margin:16px 0 0">${isSkill?'本机安装与 MCP 配置由桌面端处理。':'填写只在当前页面处理，不会发送给 AI 服务。'}</p>`;updatePreview();showDialog('#detail');}
-function updatePreview(){if(!activeItem)return;const vals=new Map([...document.querySelectorAll('[data-variable]')].map(el=>[el.dataset.variable,el.value]));$('#prompt-text').textContent=activeItem.content.replace(/\{\{([^{}]+)\}\}/g,(whole,key)=>vals.get(key)||whole);}
-document.addEventListener('input',e=>{if(e.target.id==='search'){query=e.target.value;renderCards();}if(e.target.id==='model'){model=e.target.value;renderCards();}if(e.target.matches('[data-variable]'))updatePreview();});
-document.addEventListener('click',async e=>{const el=e.target.closest('button,a');if(!el)return;if(el.matches('.skip')){e.preventDefault();$('#main').focus();return;}if(el.matches('[data-close]'))el.closest('dialog')?.close();if(el.matches('[data-demo]'))openItem('p1');if(el.matches('[data-create]'))showDialog('#create');if(el.matches('[data-account]'))showDialog('#account');if(el.dataset.open)openItem(el.dataset.open);if(el.dataset.category){category=el.dataset.category;$('#categories').innerHTML=catButtons();document.querySelectorAll('[data-category]').forEach(b=>b.classList.toggle('active',b.dataset.category===category));renderCards();}if(el.dataset.view){view=el.dataset.view;$('#cards').classList.toggle('list',view==='list');document.querySelectorAll('[data-view]').forEach(b=>{b.classList.toggle('active',b.dataset.view===view);b.setAttribute('aria-pressed',b.dataset.view===view);});}if(el.dataset.sort){sort=el.dataset.sort;document.querySelectorAll('[data-sort]').forEach(b=>b.classList.toggle('active',b.dataset.sort===sort));renderCards();}if(el.matches('[data-clear]')){category='全部';query='';model='';$('#main').innerHTML=workspace();renderCards();}if(el.dataset.save){const id=el.dataset.save;saved.has(id)?saved.delete(id):saved.add(id);notify(saved.has(id)?'已收藏到预览库 · 刷新后清空':'已取消收藏');renderCards();if($('#categories'))$('#categories').innerHTML=catButtons();if($('[data-detail-save]'))$('[data-detail-save]').textContent=saved.has(id)?'已收藏':'收藏到预览库';}if(el.matches('[data-copy]')){el.disabled=true;try{if(!navigator.clipboard?.writeText)throw Error();await navigator.clipboard.writeText($('#prompt-text').textContent);notify('已复制，可以粘贴到你使用的 AI 中');}catch{notify('未能写入剪贴板，请选择上方正文手动复制。');}finally{el.disabled=false;}}});
-$('#create-form').addEventListener('submit',e=>{e.preventDefault();const data=new FormData(e.target),title=String(data.get('title')).trim(),content=String(data.get('content')).trim();if(!title||!content){notify('请填写标题和提示词正文');return;}drafts.unshift({id:`d${drafts.length+1}`,title,content,description:content,category:'内容写作',model:'通用',symbol:'write',tags:['我的草稿'],tone:'rose'});$('#create').close();e.target.reset();if(location.hash==='#drafts')render();else location.hash='drafts';notify('草稿已保存到当前标签页 · 刷新后清空');});
+const saved = new Map(), drafts = [], repoCache = new Map(), bodyCache = new Map();
+let route='', category='', query='', model='', sort='推荐', language='zh', view='grid', offset=0;
+let catalog=null, sources=null, repo='anthropics/skills', skillData=null, items=[], total=0, nextOffset=null, counts=null, allCount=null;
+let busy=false, listError='', generation=0, controller, searchTimer, toastTimer, detailController, detailGeneration=0, activeItem, activeBody='';
+function notify(message) { $('.toast').textContent=message; $('.toast').hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('.toast').hidden=true,3500); }
+function sourceURL(item) { return `https://github.com/${item.repo}/blob/${item.commit}/${item.path.split('/').map(encodeURIComponent).join('/')}`; }
+function home() { return `<section class="hero"><div class="hero-copy"><span class="eyebrow">CUETUCK · 唤词</span><h1>提示词与 Skills，<br>一个工作台管理。</h1><p class="intro">浏览社区提示词，查找开源 Skills。<br>把常用内容整理好，在需要的时候直接使用。</p><div class="hero-actions"><a class="button dark" href="#app">浏览提示词广场 ${icon('arrow')}</a><a class="button" href="#download">下载客户端</a></div><p class="hero-note">macOS / Windows · 开源 · 本机优先</p></div><div class="hero-product"><div class="window-bar"><span>CueTuck Desktop</span><span>实际客户端界面</span></div><img src="assets/square.png" alt="CueTuck 桌面端真实提示词广场" fetchpriority="high"></div></section><section class="section capabilities"><div class="section-heading"><div><span class="eyebrow">工作流</span><h2>从发现，到反复使用。</h2></div><p class="muted">清晰的内容结构，可复用的工作方式。</p></div><div class="feature-grid"><article class="feature">${icon('grid')}<h3>发现提示词</h3><p>连接真实社区广场。按分类、关键词和模型查找，查看正文、参考图片和来源。</p><a class="text-link" href="#app">打开提示词广场 →</a></article><article class="feature">${icon('code')}<h3>浏览开源 Skills</h3><p>与客户端共用公开来源目录，查看实际 SKILL.md 和固定提交，保留完整来源信息。</p><a class="text-link" href="#skills">打开 Skill 广场 →</a></article><article class="feature">${icon('copy')}<h3>填写，然后复制</h3><p>识别提示词变量，填写后预览完整结果。桌面客户端还提供本机库与全局启动器。</p><a class="text-link" href="#download">查看桌面版本 →</a></article></div></section><section class="product-section"><div class="section"><div class="section-heading"><div><span class="eyebrow">桌面客户端</span><h2>让常用内容留在手边。</h2><p class="muted">本机提示词库、分类整理、独立启动器和 Skills 安装管理。</p></div><a class="button" href="#download">下载 CueTuck ↗</a></div><div class="product-shot"><img src="assets/library.png" alt="CueTuck 本地提示词库实际截图" loading="lazy"></div></div></section><section class="section closing"><h2>先找到你需要的内容。</h2><p>无需登录即可浏览公开广场。网页暂存与账号云端收藏相互独立。</p><a class="button dark" href="#app">进入网页工作台 →</a></section>`; }
+function downloads() { return `<section class="section download-section"><span class="eyebrow">DOWNLOAD CUETUCK</span><h1>下载桌面客户端</h1><p class="muted">本机库、全局启动器与 Skills 管理。当前预览版 v0.1.0-beta.14。</p><div class="download-grid">${[['macOS','Apple 芯片 · DMG','aarch64.dmg'],['Windows','64 位 · EXE','x64-setup.exe']].map(([name,description,file])=>`<article class="download-card"><h2>${name}</h2><p>${description}</p><a class="button dark" href="https://github.com/sutao2/CueTuck/releases/download/v0.1.0-beta.14/CueTuck_0.1.0-beta.14_${file}">下载 ${name} 版 ↓</a></article>`).join('')}</div><p class="download-note">预览版未完成 Apple 公证或 Windows 发布者签名，首次打开可能出现系统提示。</p><a class="text-link" href="https://github.com/sutao2/CueTuck/releases/tag/v0.1.0-beta.14" target="_blank" rel="noopener">发行说明与 SHA-256 校验文件 ↗</a></section>`; }
+function nameOf(id) { return catalog?.categories.find(c=>c.id===id)?.name || skillCategories.find(c=>c.id===id)?.name || '未分类'; }
+function categoryRows() {
+  if (route==='skills') return skillCategories.map(c=>({...c,count:skillData ? (c.id ? skillData.entries.filter(e=>e.category_id===c.id).length : skillData.entries.length) : null}));
+  if (route!=='app') return [];
+  const ordered=(catalog?.categories || []).filter(c=>c.enabled).sort((a,b)=>a.sort_index-b.sort_index);
+  const selectedParent=ordered.find(c=>c.id===category)?.parent_id || category;
+  const roots=ordered.filter(c=>!c.parent_id);
+  return [{id:'',name:'全部提示词',count:allCount}, ...roots.flatMap(c=>[
+    {...c,count:categoryCount(c.id,ordered,counts)},
+    ...(selectedParent===c.id?ordered.filter(child=>child.parent_id===c.id).map(child=>({...child,child:true,count:counts?.[child.id] ?? (counts?0:null)})):[])
+  ])];
+}
+function renderCategories() {
+  const html=categoryRows().map(c=>`<button class="side-link ${c.id===category?'active':''} ${c.child?'child':''}" data-category="${esc(c.id)}" aria-pressed="${c.id===category}">${c.child?'':icon('folder')}<span>${esc(c.name)}</span><span class="count">${c.count===null?'—':fmt(c.count)}</span></button>`).join('');
+  if ($('#categories')) $('#categories').innerHTML=html;
+  if ($('#mobile-category')) $('#mobile-category').innerHTML=`<option value="">全部分类</option>${categoryRows().filter(c=>c.id).map(c=>`<option value="${esc(c.id)}" ${c.id===category?'selected':''}>${esc(c.name)}</option>`).join('')}`;
+}
+function workspace() {
+  const titles={app:['提示词广场','浏览社区发布的提示词，按用途与模型查找。'],skills:['Skill 广场','浏览与客户端相同的公开 GitHub 来源。'],favorites:['本页暂存','当前标签页暂存的内容，刷新或关闭后清空。'],drafts:['本页草稿','仅保留在当前标签页，不写入账号库或桌面本机库。']};
+  const [title,subtitle]=titles[route];
+  return `<section class="workspace"><aside class="sidebar"><span class="sidebar-heading">浏览</span><a class="side-link ${route==='app'?'active':''}" href="#app">${icon('grid')}提示词广场</a><a class="side-link ${route==='skills'?'active':''}" href="#skills">${icon('code')}Skill 广场</a><div class="side-separator"></div><span class="sidebar-heading">本页内容</span><a class="side-link ${route==='favorites'?'active':''}" href="#favorites">${icon('star')}本页暂存<span class="count" data-saved-count>${saved.size}</span></a><a class="side-link ${route==='drafts'?'active':''}" href="#drafts">${icon('write')}本页草稿<span class="count">${drafts.length}</span></a><div class="side-separator"></div><span class="sidebar-heading">分类</span><div id="categories"></div><div class="side-bottom"><a class="side-link" href="#download">${icon('folder')}下载桌面客户端 ↗</a><button class="side-link" data-account>${icon('brief')}账号与数据说明</button></div></aside><div class="work-content"><div class="breadcrumb">CueTuck / ${title}</div><div class="work-heading"><div><h1>${title}</h1><p>${subtitle}</p></div><button class="button" data-create>${icon('plus')}新建草稿</button></div>${route==='skills'?`<div class="source-panel"><label for="repo">公开来源</label><input id="repo" list="sources" value="${esc(repo)}" aria-label="搜索或选择 Skill 来源"><datalist id="sources"></datalist><button class="button small" data-refresh>刷新来源</button><p id="source-meta">正在读取公开目录…</p></div>`:''}<div class="mobile-navigation"><a href="#favorites">本页暂存</a><a href="#drafts">草稿</a><select id="mobile-category" aria-label="选择分类"></select></div><div class="toolbar"><label class="search-field">${icon('search')}<input type="search" id="search" aria-label="搜索内容" placeholder="${route==='skills'?'搜索当前来源的名称、路径或已加载说明':'搜索标题或正文…'}" value="${esc(query)}"></label>${route==='app'?`<input id="model" list="models" aria-label="搜索或选择模型" placeholder="全部模型" value="${esc(model)}"><datalist id="models"></datalist><select id="language" aria-label="正文语言"><option value="zh" ${language==='zh'?'selected':''}>中文优先</option><option value="original" ${language==='original'?'selected':''}>原文</option></select>`:''}<div class="view-controls"><button data-view="grid" class="${view==='grid'?'active':''}" aria-label="网格视图">${icon('grid')}</button><button data-view="list" class="${view==='list'?'active':''}" aria-label="列表视图">${icon('list')}</button></div></div><div class="results-heading"><div class="result-tabs">${route==='app'?['推荐','最新','热门'].map(s=>`<button data-sort="${s}" class="${sort===s?'active':''}">${s}</button>`).join(''):'<span>当前结果</span>'}</div><span id="result-count" aria-live="polite"></span></div><div id="cards" class="cards ${view==='list'?'list':''}"></div><div id="pagination"></div></div></section>`;
+}
+function fillDictionaries() {
+  renderCategories();
+  if ($('#models')) $('#models').innerHTML=(catalog?.models || []).filter(m=>m.enabled).map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
+  if ($('#sources')) $('#sources').innerHTML=(sources || []).map(s=>`<option value="${esc(s.value)}">${esc(s.label)}</option>`).join('');
+  if ($('#source-meta')) $('#source-meta').textContent=skillData ? `${skillData.repo} · 提交 ${skillData.commit.slice(0,12)} · ${fmt(skillData.entries.length)} 个 Skills · ${sources?.length || 0} 个可选来源` : '选择来源后读取真实目录。';
+}
+function renderCards() {
+  if (!$('#cards')) return;
+  $('#result-count').textContent=busy?'正在加载…':listError?'加载失败':`共 ${fmt(total)} 个结果`;
+  if (listError) $('#cards').innerHTML=`<div class="empty" role="alert"><h2>暂时无法加载内容</h2><p>${esc(listError)}</p><button class="button" data-refresh>重试</button></div>`;
+  else if (busy) $('#cards').innerHTML='<div class="loading" role="status">正在读取内容…</div>';
+  else if (!items.length) $('#cards').innerHTML=`<div class="empty"><h2>${route==='favorites'?'还没有暂存内容':route==='drafts'?'还没有本页草稿':'没有匹配的内容'}</h2><p>${route==='favorites'?'点击条目星标，暂存到当前标签页。':'可以清除筛选，或尝试其他关键词。'}</p><button class="button" data-clear>清除筛选</button></div>`;
+  else $('#cards').innerHTML=items.map(item=>{
+    const image=safeImage(item,API), isSkill=item.kind==='skill';
+    const subtitle=isSkill?item.repo:item.publisher?.display_name || item.reference?.author || (item.kind==='draft'?'本页草稿':'公开内容');
+    return `<article class="prompt-card ${image?'with-image':''} ${isSkill?'skill-card':''}">${image?`<button class="card-cover" data-open="${esc(item.id)}" tabindex="-1" aria-label="查看 ${esc(item.title)}"><img src="${esc(image)}" alt="${esc(item.title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer"></button>`:''}<div class="card-main"><div class="card-top"><span class="card-model">${esc(item.model || (isSkill?'Skill':'通用'))}</span><span>${esc(nameOf(item.category_id))}</span></div><button class="card-title" data-open="${esc(item.id)}">${esc(item.title)}</button><p class="card-description">${esc(item.excerpt || item.description || (isSkill?'打开查看 SKILL.md 内容与来源说明。':item.content || '打开查看正文'))}</p>${isSkill?`<code class="source-path">${esc(item.directory || '仓库根目录')}</code>`:''}<div class="card-bottom"><span class="author" title="${esc(subtitle)}">${esc(subtitle)}</span><div class="card-actions"><button class="icon-button ${saved.has(item.id)?'saved':''}" data-save="${esc(item.id)}" title="${saved.has(item.id)?'取消暂存':'暂存到本页，刷新后清空'}" aria-label="${saved.has(item.id)?'取消暂存':'暂存'} ${esc(item.title)}" aria-pressed="${saved.has(item.id)}">${icon('star')}</button><button class="icon-button" data-open="${esc(item.id)}" aria-label="查看 ${esc(item.title)}">${icon('arrow')}</button></div></div>${!isSkill && item.kind!=='draft'?`<div class="metrics"><span>${fmt(item.download_count)} 下载</span><span>${fmt(item.favorite_count)} 收藏</span></div>`:''}</div></article>`;
+  }).join('');
+  $('#pagination').innerHTML=`<span>${busy?'':items.length?`第 ${Math.floor(offset/PAGE_SIZE)+1} 页 · 本页 ${items.length} 条`:''}</span><div><button class="button small" data-page="prev" ${busy||offset===0?'disabled':''}>上一页</button><button class="button small" data-page="next" ${busy||nextOffset===null?'disabled':''}>下一页</button></div>`;
+  document.querySelectorAll('[data-saved-count]').forEach(el=>el.textContent=saved.size);
+}
+async function loadList() {
+  clearTimeout(searchTimer); controller?.abort(); controller=new AbortController(); const signal=controller.signal, current=++generation;
+  busy=true; listError=''; items=[]; renderCards();
+  try {
+    if (route==='app') {
+      if (!catalog) catalog=await requestJson(`${API}/v1/square/catalog`,{signal});
+      if (current!==generation) return;
+      fillDictionaries();
+      const page=await browsePrompts(API,{query,category,model,sort,language,offset},{signal});
+      if (current!==generation) return;
+      items=page.items; total=page.total; nextOffset=page.next_offset;
+      if (page.category_counts) { counts=page.category_counts; allCount=page.category_total; }
+    } else {
+      let rows;
+      if (route==='skills') {
+        if (!sources) sources=await requestJson('./data/skill-sources.json',{signal});
+        fillDictionaries();
+        if (!repoCache.has(repo)) repoCache.set(repo,await skillCatalog(repo,{signal}));
+        if (current!==generation) return;
+        skillData=repoCache.get(repo);
+        skillData.entries.forEach(e=>e.category_id=classifySkill({name:e.title,directory:e.directory},e.repo));
+        rows=skillData.entries;
+      } else rows=route==='favorites'?[...saved.values()]:drafts;
+      rows=rows.filter(e=>(!category||e.category_id===category)&&`${e.title} ${e.directory||''} ${e.description||''} ${e.content||''}`.toLowerCase().includes(query.toLowerCase()));
+      total=rows.length; items=rows.slice(offset,offset+PAGE_SIZE); nextOffset=offset+PAGE_SIZE<total?offset+PAGE_SIZE:null;
+    }
+  } catch(error) {
+    if (current!==generation) return;
+    listError=error.name==='TimeoutError'?'请求超时，请重试。':error.message || '加载失败，请重试。';
+  } finally {
+    if (current===generation) { busy=false; fillDictionaries(); renderCards(); if (route==='skills'&&!listError) loadDescriptions(current,signal); }
+  }
+}
+async function loadDescriptions(current,signal) {
+  const queue=items.filter(item=>!item.description && !item.descriptionTried);
+  await Promise.all(Array.from({length:Math.min(4,queue.length)},async()=>{
+    while(queue.length && !signal.aborted && current===generation) {
+      const item=queue.shift(); item.descriptionTried=true;
+      try { const text=bodyCache.get(item.id+item.commit) || await readSkill(item,{signal}); bodyCache.set(item.id+item.commit,text); item.description=skillDescription(text); }
+      catch { if(signal.aborted){item.descriptionTried=false;return;} item.description='说明未读取，可在详情中重试或访问来源。'; }
+      if (current===generation) {
+        const card=[...document.querySelectorAll('[data-open]')].find(el=>el.dataset.open===item.id)?.closest('.prompt-card');
+        if (card) $('.card-description',card).textContent=item.description || '打开查看 SKILL.md。';
+      }
+    }
+  }));
+}
+function resetFilters() { category=''; query=''; model=''; offset=0; }
+function render() {
+  clearTimeout(searchTimer);
+  controller?.abort(); generation++; detailController?.abort(); detailGeneration++;
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());
+  const next=location.hash.slice(1)||'home'; route=['home','app','skills','favorites','drafts','download'].includes(next)?next:'home';
+  resetFilters(); $('#main').innerHTML=route==='home'?home():route==='download'?downloads():workspace();
+  $('#footer').hidden=!['home','download'].includes(route);
+  document.querySelectorAll('[data-nav]').forEach(a=>{ a.classList.toggle('active',a.dataset.nav===route); if(a.dataset.nav===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current'); });
+  $('.nav-end .button').href=route==='home'?'#app':'#download'; $('.nav-end .button').textContent=route==='home'?'进入工作台 ↗':'下载客户端 ↗';
+  document.title=`${{home:'官网',app:'提示词广场',skills:'Skill 广场',favorites:'本页暂存',drafts:'本页草稿',download:'下载'}[route]} · CueTuck 唤词`;
+  if (!['home','download'].includes(route)) { fillDictionaries(); loadList(); }
+  window.scrollTo(0,0);
+}
+function currentItem(id) { return items.find(e=>e.id===id) || saved.get(id) || drafts.find(e=>e.id===id); }
+async function openItem(id) {
+  const item=currentItem(id); if (!item) return;
+  activeItem=item; detailController?.abort(); detailController=new AbortController();const signal=detailController.signal, current=++detailGeneration;
+  $('#detail-body').innerHTML=`<h2 id="dialog-title">${esc(item.title)}</h2><p role="status">正在加载完整内容…</p>`; if(!$('#detail').open)$('#detail').showModal();
+  try {
+    let result=item, body='';
+    if (item.kind==='skill') {
+      body=bodyCache.get(item.id+item.commit) || await readSkill(item,{signal}); bodyCache.set(item.id+item.commit,body);
+    } else if (item.kind==='draft') body=item.content;
+    else {
+      const data=await requestJson(`${API}/v1/square/items/${encodeURIComponent(item.id)}/content`,{signal});
+      if (current!==detailGeneration) return;
+      result={...item,...data};
+      const translated=data.translations?.[language]?.version;
+      body=translated?.content ?? data.content ?? '';
+      if (data.kind==='collection') body=(translated?.members || data.members || []).map(m=>`${m.title}\n${m.content || ''}`).join('\n\n');
+    }
+    if (current!==detailGeneration) return;
+    activeItem=result; activeBody=body; renderDetail();
+  } catch(error) {
+    if(current===detailGeneration && !signal.aborted)$('#detail-body').innerHTML=`<h2 id="dialog-title">${esc(item.title)}</h2><p role="alert">${esc(error.message)}</p><button class="button" data-retry-detail>重试</button>`;
+  }
+}
+function renderDetail() {
+  const p=activeItem, skill=p.kind==='skill', vars=skill?[]:extractVariables(activeBody), defaults=variableDefaults(activeBody), image=safeImage(p,API);
+  const url=skill?sourceURL(p):safeLink(p.reference?.url);
+  $('#detail-body').innerHTML=`<h2 id="dialog-title">${esc(p.title)}</h2><div class="detail-meta"><span>${esc(skill?p.repo:p.publisher?.display_name||p.reference?.author||'未提供作者信息')}</span><span>${esc(p.model || '')}</span>${url?`<a class="text-link" href="${esc(url)}" target="_blank" rel="noopener">查看来源 ↗</a>`:''}</div>${skill?`<p class="source-path">提交 ${p.commit.slice(0,12)} · ${esc(p.directory || '仓库根目录')}</p>`:''}${image?`<button class="detail-image" data-image="${esc(image)}" aria-label="放大参考图片"><img src="${esc(image)}" alt="${esc(p.title)}" referrerpolicy="no-referrer"></button>`:''}${p.reference?.license?`<p class="license">来源许可：${esc(p.reference.license)}</p>`:''}<div class="variable-fields">${vars.map(name=>`<label>${esc(name)}<input data-variable="${esc(name)}" value="${esc(defaults[name] || '')}" placeholder="填写${esc(name)}"></label>`).join('')}</div><div class="prompt-text ${skill?'code-document':''}" id="prompt-text"></div><div class="dialog-actions"><button class="button" data-save="${esc(p.id)}" data-detail-save>${saved.has(p.id)?'取消暂存':'暂存到本页'}</button>${skill?'<a class="button dark" href="#download" data-close>使用桌面版安装 ↗</a>':`<button class="button dark" data-copy>${icon('copy')}复制提示词</button>`}</div><p class="detail-note">${skill?'真实 SKILL.md 原文。网页只读展示，不执行文件中的指令；依赖与许可请核对来源。':'填写与复制在当前页面处理；暂存不等于账号收藏，刷新后清空。'}</p>`;
+  updatePreview();
+}
+function updatePreview() { if($('#prompt-text'))$('#prompt-text').textContent=activeItem?.kind==='skill'?activeBody:renderPrompt(activeBody,Object.fromEntries([...document.querySelectorAll('[data-variable]')].map(el=>[el.dataset.variable,el.value]))); }
+function scheduleSearch() { controller?.abort(); generation++; clearTimeout(searchTimer); busy=true; renderCards(); searchTimer=setTimeout(loadList,300); }
+document.addEventListener('input',e=>{
+  if (e.target.id==='search' && !e.isComposing) { query=e.target.value; offset=0; scheduleSearch(); }
+  if (e.target.id==='model') { model=e.target.value;offset=0;scheduleSearch(); }
+  if (e.target.matches('[data-variable]'))updatePreview();
+});
+document.addEventListener('compositionend',e=>{if(e.target.id==='search'){query=e.target.value;offset=0;scheduleSearch();}});
+document.addEventListener('change',e=>{
+  if(e.target.id==='language'){language=e.target.value;offset=0;loadList();}
+  if(e.target.id==='mobile-category'){category=e.target.value;offset=0;renderCategories();loadList();}
+  if(e.target.id==='repo') { if(!sources?.some(s=>s.value===e.target.value)){notify('请选择来源列表中的仓库');return;}repo=e.target.value;skillData=null;resetFilters();$('#search').value='';loadList(); }
+});
+document.addEventListener('click',async e=>{
+  const el=e.target.closest('button,a');if(!el)return;
+  if(el.matches('.skip')){e.preventDefault();$('#main').focus();return;}
+  if(el.matches('[data-close]'))el.closest('dialog')?.close();
+  if(el.matches('[data-create]'))$('#create').showModal();
+  if(el.matches('[data-account]'))$('#account').showModal();
+  if(el.hasAttribute('data-category')){category=el.dataset.category;offset=0;renderCategories();loadList();}
+  if(el.dataset.open)openItem(el.dataset.open);
+  if(el.hasAttribute('data-retry-detail'))openItem(activeItem.id);
+  if(el.dataset.image){$('#image-viewer img').src=el.dataset.image;$('#image-viewer').showModal();}
+  if(el.dataset.view){view=el.dataset.view;$('#cards').classList.toggle('list',view==='list');document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));}
+  if(el.dataset.sort){sort=el.dataset.sort;offset=0;document.querySelectorAll('[data-sort]').forEach(b=>b.classList.toggle('active',b.dataset.sort===sort));loadList();}
+  if(el.dataset.page){offset=el.dataset.page==='prev'?Math.max(0,offset-PAGE_SIZE):nextOffset;loadList();window.scrollTo(0,0);}
+  if(el.hasAttribute('data-refresh')){if(route==='skills')repoCache.delete(repo);loadList();}
+  if(el.hasAttribute('data-clear')){resetFilters();$('#main').innerHTML=workspace();fillDictionaries();loadList();}
+  if(el.dataset.save){const p=activeItem?.id===el.dataset.save?activeItem:currentItem(el.dataset.save);if(!p)return;saved.has(p.id)?saved.delete(p.id):saved.set(p.id,p);notify(saved.has(p.id)?'已暂存到本页，刷新后清空。':'已取消暂存');if(route==='favorites')loadList();else renderCards();if($('[data-detail-save]'))$('[data-detail-save]').textContent=saved.has(p.id)?'取消暂存':'暂存到本页';}
+  if(el.hasAttribute('data-copy')){el.disabled=true;try{await navigator.clipboard.writeText($('#prompt-text').textContent);notify('已复制提示词');}catch{notify('复制失败，请选择正文手动复制。');}finally{el.disabled=false;}}
+});
+document.addEventListener('error',e=>{if(e.target.matches?.('.card-cover img,.detail-image img')){e.target.closest('button').classList.add('image-failed');e.target.alt='图片暂时无法加载';}},true);
+$('#create-form').addEventListener('submit',e=>{
+  e.preventDefault();const data=new FormData(e.target), title=String(data.get('title')).trim(),content=String(data.get('content')).trim();if(!title||!content){notify('请填写标题和正文');return;}
+  drafts.unshift({id:`draft-${crypto.randomUUID()}`,kind:'draft',title,content,model:'通用'});$('#create').close();e.target.reset();if(location.hash==='#drafts')render();else location.hash='drafts';notify('草稿仅保存到当前标签页。');
+});
+$('#detail').addEventListener('close',()=>{detailController?.abort();detailGeneration++;});
 for(const dialog of document.querySelectorAll('dialog'))dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
 window.addEventListener('hashchange',render);render();

@@ -26,11 +26,11 @@ TLS 证书含两个域名，ACME 数据在 `/opt/promptark/letsencrypt`，宿主
 
 ## 官网与 Web 设计预览
 
-`https://prompt.likh.cn/preview/` 为官网与网页工作台的静态交互原型，使用示例内容，不连接账号或线上私有数据。正式 `web/` 业务应用尚未被本原型替换；范围与验收见[设计计划](../docs/plans/2026-09-15-website-design.md)。
+`https://prompt.likh.cn/preview/` 为官网与网页工作台预览。提示词读取同源公开 `/v1/square/` API，24 条分页，计数来自服务端；Skills 使用与客户端相同的 15 个来源和分类规则，通过公开 GitHub API 固定提交并读取真实 SKILL.md。账号登录、云端收藏和私有数据尚未接入，暂存和草稿仅当前标签页有效。正式 `web/` 业务应用未被替换；现行范围与验收见[真实广场与重设计](../docs/plans/2026-09-15-website-live-data.md)。
 
-执行 `python3 scripts/build-website-preview.py`，仅将三份设计源码、品牌图标与桌面截图复制到 `output/website-preview/`；不上传整个 `output/`。独立 Compose 模板在 `deploy/website-preview/`，部署目录 `/opt/cuetuck-website-preview/current`，只映射 `127.0.0.1:15175`。宿主 API vhost 通过可选 include 添加 `/preview/`，既有 API 和管理端路由保持原配置。
+执行 `python3 scripts/build-website-preview.py`，构建白名单包括 HTML/CSS/JS、数据模块、品牌图标与真实桌面截图，并从客户端生成来源目录、分类模块和变量解析模块；不上传整个 `output/`。独立 Compose 模板在 `deploy/website-preview/`，部署目录 `/opt/cuetuck-website-preview/current`，只映射 `127.0.0.1:15175`。宿主 API vhost 通过可选 include 添加 `/preview/`，既有 API 和管理端路由保持原配置。CSP 只允许同源、GitHub API/原文和审核过的参考图域名；ES 模块 `.mjs` 显式返回 JavaScript MIME。
 
-首次配置备份为 `/opt/promptark/backups/website-preview-20260915/promptark.conf`。回滚本次部署时，先确认没有后续站点配置变更，再恢复该文件并执行 Nginx 语法检查及 reload；最后只停止 `cuetuck-website-preview` Compose 项目。不要停止 `promptark` 主业务项目或删除持久卷。预览静态文件可按发布目录回退；部署仅修改静态服务和路由，没有数据库迁移。
+当前静态发布目录为 `/opt/cuetuck-website-preview/releases/20260915-live-2`，上一版 `20260915-design-1` 保留。回退静态版本时，对旧目录的 `compose.yml` 执行 `docker compose -f … up -d --wait`，健康检查后调整 `current` 链接；不需要修改宿主路由或数据库。首次路由配置备份为 `/opt/promptark/backups/website-preview-20260915/promptark.conf`，只有完全撤销预览时才核对后续配置后恢复、检查并 reload Nginx，再停止预览 Compose。不要停止 `promptark` 主业务项目或删除持久卷。
 
 ## 无外部凭据的集中验收
 
