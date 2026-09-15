@@ -2,6 +2,8 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import SettingsModal from './SettingsModal.vue';
 import MyPublications from './MyPublications.vue';
+import {setSkillMarketTransport} from '../platform/skillMarket.js';
+import {setSkillsTransportForTests} from '../platform/skills.js';
 import WorkbenchShell from './WorkbenchShell.vue';
 import { resetMemoryLibrary, listLocalPrompts } from '../platform/library.js';
 import { resetMemorySession, setSessionTransport, loginSession } from '../platform/session.js';
@@ -9,7 +11,7 @@ import * as square from '../platform/square.js';
 import * as tauri from '../platform/tauri.js';
 let w;
 beforeEach(() => { resetMemoryLibrary(); resetMemorySession(); square.resetSquare(); });
-afterEach(() => { w?.unmount(); vi.restoreAllMocks(); delete window.__TAURI_INTERNALS__; });
+afterEach(() => { w?.unmount();setSkillMarketTransport(null);setSkillsTransportForTests(null); vi.restoreAllMocks(); delete window.__TAURI_INTERNALS__; });
 it('previews a dropped file and writes only after confirmation; rejects invalid files', async () => {
   w = mount(SettingsModal, { props: { initialPage: 'data' } }); await flushPromises();
   const file = new File(['{"prompts":[{"title":"文件导入","content":"原文"}]}'], 'prompts.json', { type: 'application/json' });
@@ -103,4 +105,17 @@ it('shows server metrics on square cards and explains the hot ordering without r
   await w.get('[data-sort="热门"]').trigger('click'); await flushPromises();
   expect(w.get('[data-testid=square-sort-note]').text()).toContain('按已记录下载量从高到低');
   expect(stats).not.toHaveBeenCalled();
+});
+
+it('uses the sidebar publications entry for both prompts and Skills',async()=>{
+ setSessionTransport(async()=>({email:'author@test',access_token:'test'}));await loginSession({email:'author@test',password:'test'});square.setMineTransport(async()=>[]);square.setCatalogTransport(async()=>({categories:[],models:[]}));square.setSquareTransport(async()=>[]);
+ setSkillsTransportForTests(async()=>({roots:[],skills:[],backups:[],operations:[],warnings:[],sources:[]}));const market=vi.fn(async()=>({items:[],total:0,category_counts:{}}));setSkillMarketTransport(market);
+ w=mount(WorkbenchShell);await flushPromises();await w.get('[data-space="skills-square"]').trigger('click');await flushPromises();expect(w.findAll('[data-testid="open-publications"]')).toHaveLength(1);expect(w.get('.community-skills').findAll('button').some(b=>b.text()==='我的发布')).toBe(false);
+ await w.get('[data-testid="open-publications"]').trigger('click');await flushPromises();const nav=w.get('[aria-label="发布内容类型"]');expect(nav.findAll('button').find(b=>b.text()==='Skills').attributes('aria-current')).toBe('page');expect(market.mock.calls.some(([action])=>action==='mine')).toBe(true);
+ await nav.findAll('button').find(b=>b.text()==='提示词').trigger('click');await flushPromises();expect(w.get('[data-testid="publication-metrics"]').exists()).toBe(true);
+});
+it('isolates Skill publications across accounts and blocks leaving while a request is pending',async()=>{
+ let resolve;setSkillMarketTransport(vi.fn().mockImplementationOnce(()=>new Promise(r=>resolve=r)).mockResolvedValue({items:[],total:0,category_counts:{}}));
+ w=mount(MyPublications,{props:{session:{email:'a@test',loggedIn:true},initialKind:'skills'}});await flushPromises();expect(w.get('.page-back').attributes('disabled')).toBeDefined();
+ await w.setProps({session:{email:'b@test',loggedIn:true}});await flushPromises();resolve({items:[{id:'a',title:'A 的私有 Skill'}],total:1,category_counts:{}});await flushPromises();expect(w.text()).not.toContain('A 的私有 Skill');expect(w.text()).toContain('你还没有发布 Skill');expect(w.get('.page-back').attributes('disabled')).toBeUndefined();
 });

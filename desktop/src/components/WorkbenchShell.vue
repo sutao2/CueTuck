@@ -414,7 +414,7 @@
       @save="savePrompt"
       @remove="removePrompt"
     />
-    <MyPublications v-if="publicationsOpen" v-show="!loginReason" :session="session" @cancel="publicationsOpen = false" @login="openLogin('查看我的发布')" />
+    <MyPublications v-if="publicationsOpen" v-show="!loginReason" :session="session" :initial-kind="contentKind==='skills'?'skills':'prompts'" @busy="publicationsBusy=$event" @cancel="publicationsOpen = false" @login="openLogin('查看我的发布')" />
     <LocalPromptDetail v-if="reading" :key="reading.id" v-show="!editing && !using && !loginReason"
       :prompt="reading" @cancel="reading = null" @edit="editing = reading" @use="startUse(reading)" />
     <UsePromptModal
@@ -702,7 +702,7 @@ const searchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'm
 const searchInput = ref(null);
 const globalSearchOpen = ref(false);
 const globalSearchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'macos' ? 'Super+K' : 'Control+K', props.host));
-const globalSearchBlocked = computed(() => skillsBusy.value || batchBusy.value || editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length > 0 || favoriteBusy.value.length > 0 || Boolean(pendingDelete.value || deletingCategory.value || pendingNavigation.value));
+const globalSearchBlocked = computed(() => publicationsBusy.value || skillsBusy.value || batchBusy.value || editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length > 0 || favoriteBusy.value.length > 0 || Boolean(pendingDelete.value || deletingCategory.value || pendingNavigation.value));
 function openGlobalSearch() {
   if (globalSearchBlocked.value || document.querySelector('[aria-modal="true"]')) return;
   closeContextMenu();
@@ -791,7 +791,7 @@ onUnmounted(() => {
 
 function handleWorkbenchShortcut(event) {
   if (session.value.loggedIn && !profileReady.value) return;
-  if (batchBusy.value || skillsBusy.value) return;
+  if (batchBusy.value || skillsBusy.value || publicationsBusy.value) return;
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
   if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
   if (globalSearchOpen.value) return;
@@ -817,7 +817,7 @@ const contentLanguage = ref("zh");
 const creating = ref(false);
 const editing = ref(null);
 const reading = ref(null);
-const publicationsOpen = ref(false);
+const publicationsOpen = ref(false), publicationsBusy=ref(false);
 const selecting = ref(false), selectedPrompts = ref([]), batchBusy = ref(false);
 const selectedRows = computed(() => prompts.value.filter(p => selectedPrompts.value.includes(p.id)));
 function selectPrompt(id) {
@@ -1080,7 +1080,7 @@ const hasTaskPage = computed(() => Boolean(publicationsOpen.value || reading.val
 const taskTitle = computed(() => publicationsOpen.value ? '我的发布' : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
 
 function guardSidebarNavigation(event) {
-  if (batchBusy.value || skillsBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
+  if (batchBusy.value || skillsBusy.value || publicationsBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
   if (!hasTaskPage.value) return;
   const button = event.target.closest('button');
   if (!button || button.matches('.preference-toggle, .tree-expand, .category-collapse')) return;
@@ -1090,7 +1090,7 @@ function guardSidebarNavigation(event) {
 }
 
 function navigateTo(action) {
-  if (batchBusy.value || skillsBusy.value) return;
+  if (batchBusy.value || skillsBusy.value || publicationsBusy.value) return;
   if (!hasTaskPage.value) { action(); return; }
   if (editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length || favoriteBusy.value.length) return;
   pendingNavigation.value = action;
