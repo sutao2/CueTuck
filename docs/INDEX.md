@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-15-beta14-release.md](plans/2026-09-15-beta14-release.md) | 实施中 | 发布最新客户端修复 | beta.14 双平台构建、CI、签名与更新验收 |
 | [i18n/README.en.md](i18n/README.en.md) | 现行 | 阅读 English 项目介绍 | README 译本，共享真实截图与语言导航 |
 | [i18n/README.ja.md](i18n/README.ja.md) | 现行 | 阅读 日本語 项目介绍 | README 译本，共享真实截图与语言导航 |
 | [i18n/README.ko.md](i18n/README.ko.md) | 现行 | 阅读 한국어 项目介绍 | README 译本，共享真实截图与语言导航 |
