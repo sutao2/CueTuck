@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-15-beta15-release.md](plans/2026-09-15-beta15-release.md) | 发行准备 | 核对最新客户端发行 | beta.15 Skills 完整流程、入口精简与双平台发行 |
 | [plans/2026-09-15-skill-publishing.md](plans/2026-09-15-skill-publishing.md) | 已实施部署 | Skills 创建、社区发布与安装 | 持久草稿、完整包投稿、人工审核与安装闭环；来源操作边界与统一投稿管理 |
 | [plans/2026-09-15-website-live-data.md](plans/2026-09-15-website-live-data.md) | 已部署验收 | 网页数据与风格修正 | 真实提示词分页、15 个 Skill 来源与中性工作台；公网和多尺寸验收 |
 | [plans/2026-09-15-website-design.md](plans/2026-09-15-website-design.md) | 已被后续改版取代 | 追溯官网首版设计 | 首版示例数据与视觉历史；部署入口继续使用 |
