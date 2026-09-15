@@ -34,5 +34,5 @@
 - 线上 Playwright 复验 6 页 × 2 种宽度及桌面首屏，检查账号说明、列表视图、复制拒绝时保留输入；无 JavaScript 错误，控制台无错误/警告。真实页面截图保存于本机 `output/playwright/cuetuck-website-*.png`。
 - 独立容器 `cuetuck-website-preview-website-1` healthy；固定 Nginx 镜像，仅绑定 loopback 15175，静态目录只读。未修改业务数据库或账号配置。
 - HTTPS 预览返回 200；5 个公开静态资源的 SHA-256 均与本机产物匹配，未发布路径返回 404。现有 `/v1/health` 的 Postgres、Redis、MinIO 均为 true，管理端返回 200。
-- 初次 Nginx reload 后的即时请求曾返回旧路由 404；新 worker 生效后，本机 HTTPS 与公网、真实浏览器复验均通过。配置备份与回滚入口见 [部署说明](../../deploy/README.md#官网与-web-设计预览)。
+- 初次 Nginx reload 后的即时请求曾返回旧路由 404；新 worker 生效后，本机 HTTPS 与公网、真实浏览器复验均通过。配置备份与回滚入口见 [部署说明](../../deploy/README.md#官网与-web-公开浏览)。
 - 本轮没有将设计原型作为正式账号库或同步功能上线；这些功能仍需下一阶段实现与真实业务验收。

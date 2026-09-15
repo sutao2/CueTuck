@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-15-launcher-website.md](plans/2026-09-15-launcher-website.md) | 实施中 | 官网主线与根域名入口 | 启动器优先、真实截图、七语言 README 与生产路由 |
+| [plans/2026-09-15-launcher-website.md](plans/2026-09-15-launcher-website.md) | 已上线验收 | 官网主线与根域名入口 | 根域名官网、启动器首屏与七语言 README；公网与多尺寸验证 |
 | [plans/2026-09-15-beta15-release.md](plans/2026-09-15-beta15-release.md) | 已发布 | 核对最新客户端发行 | beta.15 双平台、全量 CI、签名与公开更新验收 |
 | [plans/2026-09-15-skill-publishing.md](plans/2026-09-15-skill-publishing.md) | 已实施部署 | Skills 创建、社区发布与安装 | 持久草稿、完整包投稿、人工审核与安装闭环；来源操作边界与统一投稿管理 |
 | [plans/2026-09-15-website-live-data.md](plans/2026-09-15-website-live-data.md) | 已部署验收 | 网页数据与风格修正 | 真实提示词分页、15 个 Skill 来源与中性工作台；公网和多尺寸验收 |
