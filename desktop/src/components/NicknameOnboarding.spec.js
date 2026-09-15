@@ -53,3 +53,22 @@ it('checks a restored session and allows logout without losing local access', as
   expect(wrapper.findComponent(NicknameSetup).exists()).toBe(false);
   expect(wrapper.attributes('inert')).toBeUndefined();
 });
+
+it('restores an existing nickname on repeated launches without displaying onboarding', async () => {
+  const put = vi.fn();
+  let resolve;
+  session.setMeTransport({ get: () => new Promise(r => { resolve = r; }), put });
+  vi.spyOn(session, 'restoreSession').mockImplementation(async () => {
+    await session.loginSession({ email: 'test@example.test', password: 'test-password' });
+    return session.getSession();
+  });
+  for (let launch = 0; launch < 2; launch++) {
+    await shell();
+    expect(wrapper.find('.nickname-backdrop').exists()).toBe(false);
+    resolve({ display_name: '已有昵称', bio: '已有简介' }); await flushPromises();
+    expect(wrapper.findComponent(NicknameSetup).exists()).toBe(false);
+    expect(wrapper.attributes('inert')).toBeUndefined();
+    wrapper.unmount(); wrapper = null;
+  }
+  expect(put).not.toHaveBeenCalled();
+});

@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-15-nickname-startup.md](plans/2026-09-15-nickname-startup.md) | 已修复未发版 | 启动重复要求填写个人信息 | 延迟读取不闪现弹窗；602 项回归与 Mac 构建通过 |
 | [plans/2026-09-15-launcher-website.md](plans/2026-09-15-launcher-website.md) | 已上线验收 | 官网主线与根域名入口 | 根域名官网、启动器首屏与七语言 README；公网与多尺寸验证 |
 | [plans/2026-09-15-beta15-release.md](plans/2026-09-15-beta15-release.md) | 已发布 | 核对最新客户端发行 | beta.15 双平台、全量 CI、签名与公开更新验收 |
 | [plans/2026-09-15-skill-publishing.md](plans/2026-09-15-skill-publishing.md) | 已实施部署 | Skills 创建、社区发布与安装 | 持久草稿、完整包投稿、人工审核与安装闭环；来源操作边界与统一投稿管理 |

@@ -61,3 +61,31 @@ it('ignores a profile response after the account view is unmounted', async () =>
   resolve({ display_name: '旧账号' }); await flushPromises();
   expect(wrapper.emitted('ready')).toBeUndefined();
 });
+
+it('does not show a nickname dialog while an existing profile is loading', async () => {
+  let resolve;
+  await setup(() => new Promise(r => { resolve = r; }));
+  expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+  expect(wrapper.find('input').exists()).toBe(false);
+  resolve({ display_name: '已有昵称' }); await flushPromises();
+  expect(wrapper.emitted('ready')).toHaveLength(1);
+  expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+});
+
+it('opens the form only after a missing nickname is confirmed', async () => {
+  let resolve;
+  await setup(() => new Promise(r => { resolve = r; }));
+  expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+  resolve({ display_name: '  ', bio: '保留简介' }); await flushPromises();
+  expect(wrapper.get('[role="dialog"]').text()).toContain('让大家认识你');
+  expect(wrapper.find('input').exists()).toBe(true);
+});
+
+it('distinguishes a read error from a missing nickname and retries an existing profile', async () => {
+  await setup(vi.fn().mockRejectedValueOnce(Error('离线')).mockResolvedValue({ display_name: '已有昵称' }));
+  expect(wrapper.text()).not.toContain('让大家认识你');
+  expect(wrapper.find('input').exists()).toBe(false);
+  await wrapper.findAll('button').find(b => b.text() === '重新读取').trigger('click'); await flushPromises();
+  expect(wrapper.emitted('ready')).toHaveLength(1);
+  expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+});

@@ -1,10 +1,10 @@
 <template>
   <Teleport to="body">
-    <div class="nickname-backdrop">
+    <div v-if="loaded || error" class="nickname-backdrop">
       <section v-dialog-focus="() => {}" class="nickname-dialog" role="dialog" aria-modal="true" aria-labelledby="nickname-title" :aria-busy="busy">
-        <div class="nickname-avatar" aria-hidden="true">{{ name.trim().slice(0, 1) || '你' }}</div>
-        <h2 id="nickname-title">让大家认识你</h2>
-        <p class="nickname-description">设置一个公开昵称，用于广场中的作者署名。之后可在「账号与广场」修改。</p>
+        <div v-if="loaded" class="nickname-avatar" aria-hidden="true">{{ name.trim().slice(0, 1) || '你' }}</div>
+        <h2 id="nickname-title">{{ loaded ? '让大家认识你' : '暂时无法读取账号资料' }}</h2>
+        <p v-if="loaded" class="nickname-description">设置一个公开昵称，用于广场中的作者署名。之后可在「账号与广场」修改。</p>
         <p v-if="loading" role="status">正在读取账号资料…</p>
         <form v-else-if="loaded" @submit.prevent="save">
           <label class="field">
