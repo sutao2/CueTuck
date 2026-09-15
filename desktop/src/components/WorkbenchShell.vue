@@ -961,9 +961,11 @@ const recommendationSeed = ref(null);
 const dismissedRecommendations = ref([]);
 let recommendationExclude = [], recentRecommendations = [];
 async function restoreRecommendations() {
-  dismissedRecommendations.value = [];
-  await setLocalSetting('recommendation_dismissed', '[]');
-  return loadSquare();
+  try {
+    await setLocalSetting('recommendation_dismissed', '[]');
+    dismissedRecommendations.value = [];
+    return loadSquare();
+  } catch { notifyOperation('推荐偏好恢复失败，请重试。', false, 'recommendation'); }
 }
 async function dismissRecommendation(item) {
   if (dismissedRecommendations.value.length >= 200) { notifyOperation('已保存 200 条不感兴趣，请先恢复推荐偏好。', false); return; }
@@ -972,7 +974,7 @@ async function dismissRecommendation(item) {
     await setLocalSetting('recommendation_dismissed', JSON.stringify(ids));
     dismissedRecommendations.value = ids;
     await loadSquare(false, crypto.randomUUID());
-    notifyOperation('已设为不感兴趣；可在推荐工具栏恢复。', true);
+    notifyOperation('已设为不感兴趣；可在推荐工具栏恢复。', true, 'recommendation');
   } catch { notifyOperation('推荐偏好保存失败，请重试。', false); }
 }
 const squareTotal = ref(0), squareNextOffset = ref(null), squareMoreLoading = ref(false), squareMoreError = ref(false);
