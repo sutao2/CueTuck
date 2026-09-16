@@ -41,6 +41,8 @@
 
 ## Mac 预览签名身份
 
-Mac 预览构建必须复用固定签名身份，禁止 `-` / ad-hoc 回退。`npm --prefix desktop run build:preview` 接受显式 `APPLE_SIGNING_IDENTITY` 及 Tauri 标准证书环境变量，或读取本机受限 `output/private/macos-signing/` 中的 identity.json、signing.p12 和 password。这些材料必须独立安全备份，构建不得自动重新生成证书；不得提交、上传为发行附件或打印密码。Windows 构建不要求 Apple 身份。
+Mac 预览构建必须复用固定签名身份，禁止 `-` / ad-hoc 回退。`npm --prefix desktop run build:preview` 接受显式 `APPLE_SIGNING_IDENTITY` 及 Tauri 标准证书环境变量，或读取本机受限 `output/private/macos-signing/` 中的 identity.json、专用 build.keychain-db 和 password（另保留 signing.p12 作为备份）。这些材料必须独立安全备份，构建不得自动重新生成证书；不得提交、上传为发行附件或打印密码。Windows 构建不要求 Apple 身份。
 
 固定自签名仅供明确标记的预览包保持跨版本身份，不能替代 Developer ID、公证或 Gatekeeper 认证。发布前验证新旧二进制 DR 一致、隔离钥匙串跨版本读取与不同签名拒绝；迁移自旧 ad-hoc 后可能需要用户首次授权。当前证据见 [重复授权修复](../plans/2026-09-16-macos-signing-identity.md)。
+
+自签名预览的完整性验收使用预先确认的证书指纹及 identifier，通过 `codesign --verify --deep --strict -R='identifier "app.promptark.desktop" and certificate leaf = H"固定证书指纹"'` 校验。隔离更新测试可显式设置同一 `CUETUCK_CODESIGN_REQUIREMENT`；不得从下载包读取一个任意 DR 后当作可信要求，也不得以此宣称 Apple 信任链验证通过。

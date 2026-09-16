@@ -8,12 +8,12 @@ test('Windows and explicit identities do not read local signing secrets', () => 
   assert.deepEqual(previewEnvironment({APPLE_SIGNING_IDENTITY:'Developer ID test'}, 'darwin', read), {APPLE_SIGNING_IDENTITY:'Developer ID test'});
 });
 test('Mac preview reuses existing identity and certificate without mutating caller environment', () => {
-  const read = path => path.endsWith('identity.json') ? JSON.stringify({identity:'A'.repeat(40)}) : path.endsWith('signing.p12') ? Buffer.from('synthetic-p12') : 'synthetic-password\n';
+  const read = path => path.endsWith('identity.json') ? JSON.stringify({identity:'A'.repeat(40),keychain:'/test/build.keychain-db'}) : path.endsWith('signing.p12') ? Buffer.from('synthetic-p12') : 'synthetic-password\n';
   const original = {TAURI_SIGNING_PRIVATE_KEY:'separate-update-key'};
   const result = previewEnvironment(original, 'darwin', read);
   assert.equal(result.APPLE_SIGNING_IDENTITY, 'A'.repeat(40));
-  assert.equal(result.APPLE_CERTIFICATE, Buffer.from('synthetic-p12').toString('base64'));
-  assert.equal(result.APPLE_CERTIFICATE_PASSWORD, 'synthetic-password');
+  assert.equal(result.CUETUCK_SIGNING_KEYCHAIN, '/test/build.keychain-db');
+  assert.equal(result.APPLE_CERTIFICATE_PASSWORD, undefined);
   assert.equal(original.APPLE_CERTIFICATE, undefined);
   assert.equal(result.TAURI_SIGNING_PRIVATE_KEY, original.TAURI_SIGNING_PRIVATE_KEY);
 });

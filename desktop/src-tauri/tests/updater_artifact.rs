@@ -42,6 +42,13 @@ async fn published_macos_update_installs_in_isolated_app() {
     assert!(std::fs::metadata(&executable).unwrap().len() > 1_000_000);
     let plist = std::fs::read_to_string(destination.join("Contents/Info.plist")).unwrap();
     assert!(plist.contains(&version));
-    assert!(std::process::Command::new("codesign").args(["--verify","--deep","--strict"]).arg(&destination).status().unwrap().success());
+    let mut verify = std::process::Command::new("codesign");
+    verify.args(["--verify", "--deep", "--strict"]);
+    // An explicitly pinned preview signer is not an Apple trust-chain assertion.
+    if let Ok(requirement) = std::env::var("CUETUCK_CODESIGN_REQUIREMENT") {
+        assert!(!requirement.trim().is_empty());
+        verify.arg(format!("-R={requirement}"));
+    }
+    assert!(verify.arg(&destination).status().unwrap().success());
     println!("Verified signed download progress and isolated app installation: {version}, {downloaded} bytes");
 }
