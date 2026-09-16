@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateRelease } from './release-check.mjs';
-const input = () => ({ version: '0.1.0', cargoVersion: '0.1.0', config: { version: '0.1.0', plugins: { updater: { endpoints: ['https://github.com/example/repo/releases/latest/download/latest.json'], pubkey: Buffer.from('untrusted comment: test\nRWTESTKEY\n').toString('base64') } } }, frontendUpdates: 'https://api.github.com/repos/example/repo/releases', nativeUpdates: 'https://api.github.com/repos/example/repo/releases https://github.com/example/repo/releases/download/' });
+const input = () => ({ platform: 'win32', version: '0.1.0', cargoVersion: '0.1.0', config: { version: '0.1.0', plugins: { updater: { endpoints: ['https://github.com/example/repo/releases/latest/download/latest.json'], pubkey: Buffer.from('untrusted comment: test\nRWTESTKEY\n').toString('base64') } } }, frontendUpdates: 'https://api.github.com/repos/example/repo/releases', nativeUpdates: 'https://api.github.com/repos/example/repo/releases https://github.com/example/repo/releases/download/' });
 test('local preflight does not require private material', () => assert.deepEqual(validateRelease(input()), []));
 test('production rejects absent origins and signing credentials', () => assert.equal(validateRelease({ ...input(), production: true }).length, 2));
 test('production rejects inconsistent origins, loopback and unsafe URLs', () => {
@@ -19,4 +19,12 @@ test('preview requires production origins, prerelease version and signed updater
   assert.ok(validateRelease({...data,preview:true,env}).length);
   data.config.bundle.createUpdaterArtifacts=true;data.version=data.cargoVersion=data.config.version='0.1.0';
   assert.ok(validateRelease({...data,preview:true,env}).length);
+});
+
+test('Mac previews reject missing or ad-hoc identities while Windows needs no Apple identity', () => {
+  const data=input();data.version=data.cargoVersion=data.config.version='0.1.0-beta.18';data.config.bundle={createUpdaterArtifacts:true};
+  const env={TAURI_SIGNING_PRIVATE_KEY:'synthetic',PROMPTARK_API_BASE:'https://api.example.com',VITE_API_BASE:'https://api.example.com'};
+  for(const identity of [undefined,'','-',' - ']) assert.ok(validateRelease({...data,preview:true,platform:'darwin',env:{...env,APPLE_SIGNING_IDENTITY:identity}}).some(e=>e.includes('persistent')));
+  assert.deepEqual(validateRelease({...data,preview:true,platform:'darwin',env:{...env,APPLE_SIGNING_IDENTITY:'fixed test identity'}}),[]);
+  assert.deepEqual(validateRelease({...data,preview:true,platform:'win32',env}),[]);
 });

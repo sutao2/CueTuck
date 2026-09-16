@@ -5,7 +5,7 @@ import { normalizeApiBase } from '../shared/apiBase.js';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 
-export function validateRelease({ config, version, cargoVersion, frontendUpdates, nativeUpdates, env = {}, production = false, preview = false }) {
+export function validateRelease({ config, version, cargoVersion, frontendUpdates, nativeUpdates, env = {}, production = false, preview = false, platform = process.platform }) {
   const errors = [];
   if (config.version !== version || cargoVersion !== version) errors.push('Desktop package/Cargo/Tauri versions differ');
   const endpoint = config.plugins?.updater?.endpoints?.[0] || '';
@@ -14,6 +14,7 @@ export function validateRelease({ config, version, cargoVersion, frontendUpdates
   const key = Buffer.from(config.plugins?.updater?.pubkey || '', 'base64').toString();
   if (!key.startsWith('untrusted comment:') || !/^RW[A-Za-z0-9+/=]+$/m.test(key)) errors.push('Updater public key is missing or invalid');
   if (preview && (!/^\d+\.\d+\.\d+-[\w.-]+$/.test(version) || config.bundle?.createUpdaterArtifacts !== true)) errors.push('Preview requires a prerelease version and signed updater artifacts');
+  if (preview && platform === 'darwin' && (!env.APPLE_SIGNING_IDENTITY?.trim() || env.APPLE_SIGNING_IDENTITY.trim() === '-')) errors.push('Mac preview requires a persistent APPLE_SIGNING_IDENTITY; ad-hoc signing loses Keychain authorization across updates');
   if (production || preview) {
     if (!env.PROMPTARK_API_BASE || !env.VITE_API_BASE) errors.push('Release requires PROMPTARK_API_BASE and VITE_API_BASE');
     else try {

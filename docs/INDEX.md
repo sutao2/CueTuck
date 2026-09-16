@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-16-macos-signing-identity.md](plans/2026-09-16-macos-signing-identity.md) | 隔离验证通过，构建中 | 更新后钥匙串重复授权 | 固定签名、跨版本授权与拒绝无关程序通过 |
 | [plans/2026-09-15-completion.md](plans/2026-09-15-completion.md) | 已部署发布 | 剩余优化与发行闭环 | 五项补齐、全端回归、官网和 beta.17 双平台交付 |
 | [plans/2026-09-15-browse-layout.md](plans/2026-09-15-browse-layout.md) | 已随 beta.17 发布 | 广场布局、正文优先与窄窗 | 统一密度、双栏阅读与侧栏偏好隔离 |
 | [plans/2026-09-15-launcher-ranking.md](plans/2026-09-15-launcher-ranking.md) | 已随 beta.17 发布 | 启动器相关性与使用偏好排序 | 精确匹配优先、近期/常用/收藏加权及核心回归入口 |

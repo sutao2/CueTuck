@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build:local": "node ../scripts/release-check.mjs && tauri build --debug --bundles app --config src-tauri/tauri.local.conf.json",
-    "build:preview": "node ../scripts/release-check.mjs --preview && tauri build --bundles app,dmg --config src-tauri/tauri.preview.conf.json",
+    "build:preview": "node ../scripts/build-preview.mjs",
     "build:release": "node ../scripts/release-check.mjs --production && tauri build",
     "test:browser": "node ../scripts/browser-smoke.mjs",
     "dev": "vite",
