@@ -87,7 +87,10 @@ onUnmounted(() => { clearCards(); root?.removeEventListener('scroll', schedule);
 .content-grid > .prompt-card { grid-row-end: span 400; min-height: 0; }
 .prompt-grid.content-grid > .prompt-card:not(.as-row) h3 { min-height: 0; }
 .grid-spacer { grid-column: 1 / -1; pointer-events: none; }
+.windowed-grid:not(.list-view) { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
 .windowed-grid > .prompt-card { box-sizing: border-box; overflow: hidden; }
+.windowed-grid > .prompt-card:not(.as-row) .card-footer { flex-wrap: wrap; align-items: center; }
+.windowed-grid .card-action { flex-shrink: 0; white-space: nowrap; }
 .windowed-grid > .prompt-card:not(.as-row) .prompt-excerpt { -webkit-line-clamp: 2; flex-shrink: 0; }
 .windowed-grid .prompt-author { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .windowed-grid .square-reference-cover { height: 150px; flex-shrink: 0; aspect-ratio: auto; }

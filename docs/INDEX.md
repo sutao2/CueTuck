@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-18-square-card-width.md](plans/2026-09-18-square-card-width.md) | 已验收，未发版 | Windows 广场卡片操作换行 | 列宽与底栏尺寸验收 |
 | [plans/2026-09-18-beta18-release.md](plans/2026-09-18-beta18-release.md) | 已发布部署 | beta.18 双平台及服务器部署 | 合集修复与固定签名预览发行 |
 | [plans/2026-09-18-collections.md](plans/2026-09-18-collections.md) | 已随 beta.18 发布部署 | 合集成员创建、封面发布及九宫格 | 专属成员、审核媒体封面与比例布局 |
 | [plans/2026-09-16-macos-signing-identity.md](plans/2026-09-16-macos-signing-identity.md) | 已安装，首次授权待确认 | 更新后钥匙串重复授权 | 固定签名与跨版本授权通过，更新包隔离安装通过 |
