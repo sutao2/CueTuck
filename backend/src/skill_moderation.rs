@@ -106,6 +106,15 @@ mod tests {
         b.files[1].content=STANDARD.encode([0,1,2]);assert!(input(&b,"Review","test").is_err());
         b.files[1].content=STANDARD.encode("x".repeat(128001));assert!(input(&b,"Review","test").is_err());
     }
+    #[test]
+    fn nested_skill_images_are_checked_and_image_limit_never_truncates() {
+        let mut b=Bundle{name:"review".into(),files:vec![crate::skill_bundle::BundleFile{path:"SKILL.md".into(),content:STANDARD.encode("# Review"),executable:false}]};
+        for i in 0..12 {b.files.push(crate::skill_bundle::BundleFile{path:format!("images/cover{i}.png"),content:STANDARD.encode(b"\x89PNG\r\n\x1a\nfixture"),executable:false});}
+        let (text,images)=input(&b,"Review","test").unwrap();assert_eq!(images.len(),12);assert!(text.contains("images/cover11.png"));
+        b.files.push(crate::skill_bundle::BundleFile{path:"images/extra.png".into(),content:STANDARD.encode(b"\x89PNG\r\n\x1a\nfixture"),executable:false});
+        assert!(input(&b,"Review","test").is_err());
+    }
+
     #[tokio::test]
     async fn skill_decisions_are_durable_atomic_and_never_overwrite_humans() {
         use crate::admin_security_tests::{state,request};
