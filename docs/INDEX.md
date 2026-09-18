@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-18-ai-decisions.md](plans/2026-09-18-ai-decisions.md) | 实施中 | 三类投稿 AI 直接通过或拒绝 | 宽松规则、完整检查与失败保留 |
 | [plans/2026-09-18-square-card-width.md](plans/2026-09-18-square-card-width.md) | 已验收，未发版 | Windows 广场卡片操作换行 | 列宽与底栏尺寸验收 |
 | [plans/2026-09-18-beta18-release.md](plans/2026-09-18-beta18-release.md) | 已发布部署 | beta.18 双平台及服务器部署 | 合集修复与固定签名预览发行 |
 | [plans/2026-09-18-collections.md](plans/2026-09-18-collections.md) | 已随 beta.18 发布部署 | 合集成员创建、封面发布及九宫格 | 专属成员、审核媒体封面与比例布局 |

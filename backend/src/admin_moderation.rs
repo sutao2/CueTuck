@@ -21,6 +21,7 @@ pub struct Policy {
     pub enabled: bool,
     pub daily_limit: i64,
     pub auto_approve: bool,
+    pub ai_decides: bool,
     pub approve_below: u8,
     pub manual_at: u8,
     pub check_duplicates: bool,
@@ -36,6 +37,7 @@ impl Default for Policy {
             enabled: false,
             daily_limit: 20,
             auto_approve: false,
+            ai_decides: false,
             approve_below: 30,
             manual_at: 70,
             check_duplicates: true,
@@ -48,7 +50,8 @@ impl Default for Policy {
 }
 impl Policy {
     fn valid(&self) -> bool {
-        self.revision >= 0
+        (!self.ai_decides || (self.require_ai && self.auto_approve && self.check_images))
+            && self.revision >= 0
             && (1..=1000).contains(&self.daily_limit)
             && self.approve_below > 0
             && self.approve_below < self.manual_at
@@ -197,7 +200,7 @@ fn screen(config: &Policy, rules: &Rules, publication: &Publication, duplicate: 
     }
     let text = parts.join("\n");
     let mut reasons = Vec::<String>::new();
-    if !publication.asset_refs.is_empty() { reasons.push("稿件含文件附件，必须人工查看，文本审核不能替代文件审核".into()); }
+    if !publication.asset_refs.is_empty() && !config.ai_decides { reasons.push("稿件含文件附件，必须人工查看，文本审核不能替代文件审核".into()); }
     let mut score = 0u64;
     let oversized = text.len() > 200_000;
     let usable = publication.square_item().is_some()
@@ -210,21 +213,21 @@ fn screen(config: &Policy, rules: &Rules, publication: &Publication, duplicate: 
                 .is_empty());
     let structure = usable && !oversized && parts.iter().all(|p| balanced_variables(p));
     // Missing usable content is always manual, even if the optional structure policy is disabled.
-    if !usable || oversized || (config.check_structure && !structure) {
+    if !usable || oversized || (!config.ai_decides && config.check_structure && !structure) {
         reasons.push("快照不完整、正文过长或变量标记不配对，需人工核查".into());
         score = 100;
     }
-    if config.check_duplicates && duplicate {
+    if !config.ai_decides && config.check_duplicates && duplicate {
         reasons.push("与已提交公开快照正文或合集成员完全重复".into());
         score = score.max(80);
     }
-    let local = if config.check_sensitive && !oversized {
+    let local = if !config.ai_decides && config.check_sensitive && !oversized {
         rules.evaluate(&text, None)
     } else {
         json!({"revision":rules.revision,"hits":[],"score":0,"source":"local_rules"})
     };
     score = score.max(local["score"].as_u64().unwrap_or(0));
-    if config.check_sensitive && local["hits"].as_array().is_some_and(|h| !h.is_empty()) {
+    if !config.ai_decides && config.check_sensitive && local["hits"].as_array().is_some_and(|h| !h.is_empty()) {
         reasons.push("命中已启用安全规则，需人工核查".into());
     }
     let image =
@@ -244,7 +247,7 @@ fn screen(config: &Policy, rules: &Rules, publication: &Publication, duplicate: 
     if !approved && reasons.is_empty() {
         reasons.push("按站点策略进入人工审核".into());
     }
-    json!({"source":"local_rules","policy_revision":config.revision,"rules_revision":rules.revision,"score":score,"decision":if approved{"approved"}else{"manual"},"reasons":reasons,"local_reasons":local_reasons,"rules":local,"checks":{"duplicates":config.check_duplicates,"structure":config.check_structure,"sensitive":config.check_sensitive,"images":config.check_images,"require_ai":config.require_ai},"notice":"本地规则初筛，不是 AI 安全保证"})
+    json!({"source":"local_rules","policy_revision":config.revision,"rules_revision":rules.revision,"score":score,"decision":if approved{"approved"}else{"manual"},"reasons":reasons,"local_reasons":local_reasons,"rules":local,"checks":{"duplicates":!config.ai_decides && config.check_duplicates,"structure":!config.ai_decides && config.check_structure,"sensitive":!config.ai_decides && config.check_sensitive,"images":config.check_images,"require_ai":config.require_ai},"notice":"本地规则初筛，不是 AI 安全保证"})
 }
 pub async fn get(
     State(state): State<AppState>,

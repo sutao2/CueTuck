@@ -287,3 +287,26 @@ async fn explicit_image_test_rejects_nonvision_route_and_records_scope() {
     assert_eq!(view["tests"][0]["image_sample"],true);
     assert_eq!(view["tests"][0]["success"],false);
 }
+
+#[tokio::test]
+async fn direct_ai_approves_or_rejects_with_reasons_and_keeps_failures_pending() {
+    use crate::{admin_ai::{Run,direct_decision},ai_transport::Verdict};
+    let state=state().await;let pg=state.db.as_ref().unwrap();
+    pg.upsert_account("direct@test.local",None,"owner").await.unwrap();
+    let token=state.issue_session("direct@test.local".into()).await.unwrap().access_token;
+    let policy=crate::admin_moderation::Policy{enabled:true,ai_decides:true,auto_approve:true,..Default::default()};
+    sqlx::query(&format!("UPDATE {} SET data=$1 WHERE id=1",pg.t("moderation_policy"))).bind(json!(policy)).execute(&pg.pool).await.unwrap();
+    for decision in ["approve","reject","manual","failed","empty-reason"] {
+        let p=Publication{cover:None,asset_refs:vec![],id:format!("direct-{decision}"),source_id:decision.into(),status:"pending".into(),title:Some("模板 {{不配对".into()),content:Some("普通游戏人物模板".into()),author_email:Some("direct@test.local".into()),category_id:None,model:None,kind:"prompt".into(),members:vec![]};
+        pg.moderate_publication(&p,&token).await.unwrap();
+        let local:Value=sqlx::query_scalar(&format!("SELECT moderation FROM {} WHERE id=$1",pg.t("publications"))).bind(&p.id).fetch_one(&pg.pool).await.unwrap();
+        assert_eq!(local["local_reasons"],json!([]),"format and duplicates do not block AI");
+        let run=Run{revision:0,skill_id:"general".into(),verdict:Some(Verdict{risk_score:90,decision:if decision=="empty-reason"{"reject".into()}else{decision.into()},reasons:if decision=="empty-reason"{vec![]}else{vec!["明确风险，请移除凭据信息".into()]},matched_rules:vec![]}),models:vec![],error:(decision=="failed").then(||"timeout".into())};
+        let expected=match decision{"approve"=>"approved","reject"=>"rejected",_=>"pending"};
+        let result=pg.finish_ai(&p,&local,0,&[run.clone()],None).await.unwrap();assert_eq!(result.status,expected);
+        if expected=="pending" {assert!(direct_decision(&[run],0).is_none());}
+        let events:Vec<String>=sqlx::query_scalar(&format!("SELECT reason FROM {} WHERE publication_id=$1",pg.t("review_events"))).bind(&p.id).fetch_all(&pg.pool).await.unwrap();
+        if decision=="reject" {assert!(events[0].contains("明确风险"));}
+        let listed:bool=sqlx::query_scalar(&format!("SELECT EXISTS(SELECT 1 FROM {} WHERE id=$1)",pg.t("square_items"))).bind(&p.id).fetch_one(&pg.pool).await.unwrap();assert_eq!(listed,expected=="approved");
+    }
+}

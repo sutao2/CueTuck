@@ -481,7 +481,7 @@ paths:
     put:
       operationId: saveModerationPolicy
       summary: owner 版本化保存初筛、投稿限额及自动上架策略
-      description: JSON revision、enabled、daily_limit（1–1000）、auto_approve、approve_below（1–99）、manual_at（大于 approve_below，不超过 100）、check_duplicates、check_structure、check_sensitive、check_images、require_ai。默认关闭自动初筛/通过，其余检查默认开启。版本冲突 409，非法字段 400/422，非 owner 403，无数据库 503。保存与前后版本审计同事务；只对后续投稿生效，不重审历史。要求 AI/图片检查而依赖不可用时转人工。
+      description: JSON revision、enabled、daily_limit（1–1000）、auto_approve、approve_below（1–99）、manual_at（大于 approve_below，不超过 100）、check_duplicates、check_structure、check_sensitive、check_images、require_ai、ai_decides（默认 false；true 时 require_ai/auto_approve/check_images 必须为 true，完整 AI 结果直接判定，不使用旧分数阈值）。默认关闭自动初筛/通过，其余检查默认开启。版本冲突 409，非法字段 400/422，非 owner 403，无数据库 503。保存与前后版本审计同事务；只对后续投稿生效，不重审历史。要求 AI/图片检查而依赖不可用时转人工。
   /v1/admin/ai/config:
     get:
       operationId: getAiConfiguration
@@ -489,8 +489,8 @@ paths:
     put:
       operationId: saveAiConfiguration
       summary: owner 验证当前密码后追加配置版本
-      x-vision: models 支持 vision 布尔值（默认 false），明确允许稿件图片发送；同时要求站点图片检查。最多 4 张 PNG/JPEG/WebP，总量 10 MiB；文本样本接口不验证图片，含附件仍需人工确认公开。
-      description: JSON revision、current_password、models、skills、secrets（模型 ID 到新密钥，留空保留）。models 最多 20 条，id/name/endpoint/model/enabled/json_mode/redact/timeout_seconds（1–15）；endpoint 为完整公网 HTTPS Chat Completions 地址。skills 最多 30 条，id/name/instruction/enabled/kinds（prompt/collection）/categories（空为全部，精确分类）/route（fallback/consensus/majority）/models（有序最多 3 ID）。密钥加密并绑定 ID；修改生成新版本，旧测试不沿用；旧 revision 409，非法输入 400/422，错误密码或非 owner 403，频率限制 429。历史快照不覆盖，审计不含凭据。
+      x-vision: models 支持 vision 布尔值（默认 false），明确允许稿件图片发送；同时要求站点图片检查。最多 12 张 PNG/JPEG/WebP，总量 20 MiB；文本样本接口不验证图片，ai_decides 开启后完整图文审核可直接公开。
+      description: JSON revision、current_password、models、skills、secrets（模型 ID 到新密钥，留空保留）。models 最多 20 条，id/name/endpoint/model/enabled/json_mode/redact/timeout_seconds（1–15）；endpoint 为完整公网 HTTPS Chat Completions 地址。skills 最多 30 条，id/name/instruction/enabled/kinds（prompt/collection/skill）/categories（空为全部，精确分类）/route（fallback/consensus/majority）/models（有序最多 3 ID）。密钥加密并绑定 ID；修改生成新版本，旧测试不沿用；旧 revision 409，非法输入 400/422，错误密码或非 owner 403，频率限制 429。历史快照不覆盖，审计不含凭据。
   /v1/admin/ai/history:
     get:
       operationId: getAiConfigurationHistory
@@ -499,12 +499,12 @@ paths:
     get:
       operationId: listAdminAiJobs
       summary: 配置管理员查看持久化审核任务
-      description: offset 默认为 0、上限 100000，每页 25。返回 items 和 total；items 包含 id（投稿 ID）、status（queued/running/failed/completed/cancelled）、attempts、error、updated_at，不含正文、认领令牌或密钥。
+      description: offset 默认为 0、上限 100000，每页 25。返回 items 和 total；items 包含 id（投稿 ID）、kind（publication 或 skill）、status（queued/running/failed/completed/cancelled）、attempts、error、updated_at，不含正文、认领令牌或密钥。
   /v1/admin/ai/jobs/{id}/retry:
     post:
       operationId: retryAdminAiJob
       summary: 配置管理员立即重新排队失败任务
-      description: 仅 failed、attempts 小于 3 且投稿仍 pending 可重试，事务复核权限并审计；返回 queued=true，不表示审核通过；否则 409。自动退避重试与手动请求共享总次数上限，不重审历史终态。
+      description: 可选 query kind=skill 指向 Skill 队列，缺省 publication；仅 failed、attempts 小于 3 且投稿仍 pending 可重试，事务复核权限并审计；返回 queued=true，不表示审核通过；否则 409。自动退避重试与手动请求共享总次数上限，不重审历史终态。
   /v1/admin/ai/test:
     post:
       operationId: testAiConfiguration

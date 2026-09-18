@@ -845,3 +845,23 @@ async fn collection_cover_is_validated_reviewed_and_public_only_after_approval()
     let pg=state.db.as_ref().unwrap();sqlx::query(&format!("UPDATE {} SET visibility='offline' WHERE id=$1",pg.t("square_items"))).bind(id).execute(&pg.pool).await.unwrap();
     assert!(media::public_cover(&state,id).await.unwrap().is_none());assert_eq!(get(&state,"",&path).await.status(),StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn direct_ai_can_publish_all_nine_reviewed_collection_cover_images() {
+    let (state,a,_b,_admin,_store,_server)=fixture().await;let pg=state.db.as_ref().unwrap();
+    let policy=crate::admin_moderation::Policy{enabled:true,auto_approve:true,ai_decides:true,..Default::default()};
+    sqlx::query(&format!("UPDATE {} SET data=$1 WHERE id=1",pg.t("moderation_policy"))).bind(json!(policy)).execute(&pg.pool).await.unwrap();
+    let mut refs=vec![];
+    for i in 0..9 {
+        let (_,f)=upload(&state,&a,&format!("cover{i}.png"),"image/png",b"\x89PNG\r\n\x1a\nfixture",false).await;
+        refs.push(json!({"id":Uuid::new_v4().to_string(),"media_id":f["id"],"name":f["name"],"mime":f["mime"],"size":f["size"],"sha256":f["sha256"]}));
+    }
+    let (status,p)=crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,json!({"source_id":"nine","title":"封面合集","kind":"collection","members":[{"title":"成员","content":"内容"}],"cover":{"layout":"grid","asset_ids":refs.iter().map(|f|f["id"].clone()).collect::<Vec<_>>()},"asset_refs":refs})).await;
+    assert_eq!(status,StatusCode::OK,"{p}");
+    let p:Publication=serde_json::from_value(p).unwrap();assert_eq!(p.status,"pending");
+    let images=media::moderation_images(&state,&p).await.unwrap();assert_eq!(images.len(),9);
+    let local:Value=sqlx::query_scalar(&format!("SELECT moderation FROM {} WHERE id=$1",pg.t("publications"))).bind(&p.id).fetch_one(&pg.pool).await.unwrap();assert_eq!(local["local_reasons"],json!([]));
+    let run=crate::admin_ai::Run{revision:0,skill_id:"general".into(),verdict:Some(crate::ai_transport::Verdict{risk_score:10,decision:"approve".into(),reasons:vec![],matched_rules:vec![]}),models:vec![],error:None};
+    assert_eq!(pg.finish_ai(&p,&local,0,&[run],None).await.unwrap().status,"approved");
+    assert_eq!(media::public_references(&state,&p.id).await.unwrap().len(),9);
+}

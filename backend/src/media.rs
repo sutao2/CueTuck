@@ -410,7 +410,7 @@ async fn verified_bytes(state: &AppState, row: &sqlx::postgres::PgRow) -> Result
 
 pub(crate) async fn moderation_images(state:&AppState,publication:&crate::Publication)->Result<Vec<String>,String>{
     use base64::Engine;
-    if publication.asset_refs.len()>4 {return Err("最多审核 4 张图片，超限转人工".into())}
+    if publication.asset_refs.len()>12 {return Err("最多审核 12 张图片，超限转人工".into())}
     let mut images=vec![];let mut total=0;
     for file in &publication.asset_refs {
         if !matches!(file.mime.as_str(),"image/png"|"image/jpeg"|"image/webp"){return Err("附件包含不支持的图片或文档，转人工".into())}
@@ -419,7 +419,7 @@ pub(crate) async fn moderation_images(state:&AppState,publication:&crate::Public
         let mime:String=row.get("content_type");
         if mime!=file.mime{return Err("图片元数据不一致，转人工".into())}
         let bytes=verified_bytes(state,&row).await.map_err(|_|"图片读取或哈希校验失败")?;
-        total+=bytes.len();if total>10*1024*1024{return Err("图片总量超过 10 MiB，转人工".into())}
+        total+=bytes.len();if total>20*1024*1024{return Err("图片总量超过 20 MiB，转人工".into())}
         images.push(format!("data:{mime};base64,{}",base64::engine::general_purpose::STANDARD.encode(bytes)));
     }
     Ok(images)

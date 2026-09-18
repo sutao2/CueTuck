@@ -39,6 +39,7 @@ impl Pg {
         ))
         .execute(&self.pool)
         .await?;
+        sqlx::query(&format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS moderation JSONB", self.t("skill_publications"))).execute(&self.pool).await?;
         Ok(())
     }
 }
@@ -119,6 +120,11 @@ pub async fn submit(
     let id = uuid::Uuid::new_v4().to_string();
     let digest = body.bundle.digest();
     sqlx::query(&format!("INSERT INTO {} (id,author_email,request_id,title,description,category,license,bundle,digest) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",pg.t("skill_publications"))).bind(&id).bind(&actor).bind(&body.request_id).bind(body.title.trim()).bind(body.description.trim()).bind(&body.category).bind(body.license.trim()).bind(json!(body.bundle)).bind(digest).execute(&mut *tx).await.map_err(db)?;
+    let policy: Value = sqlx::query_scalar(&format!("SELECT data FROM {} WHERE id=1 FOR SHARE", pg.t("moderation_policy"))).fetch_one(&mut *tx).await.map_err(db)?;
+    if policy["enabled"] == true && policy["ai_decides"] == true {
+        sqlx::query(&format!("UPDATE {} SET moderation=$2 WHERE id=$1",pg.t("skill_publications"))).bind(&id).bind(json!({"policy_revision":policy["revision"],"decision":"queued"})).execute(&mut *tx).await.map_err(db)?;
+        sqlx::query(&format!("INSERT INTO {} (publication_id) VALUES ($1)",pg.t("skill_ai_jobs"))).bind(&id).execute(&mut *tx).await.map_err(db)?;
+    }
     audit(pg, &mut tx, &actor, "skill_submitted", json!({"id":id})).await?;
     tx.commit().await.map_err(db)?;
     detail(State(state), headers, Path(id)).await

@@ -69,6 +69,8 @@ impl Pg {
                 "refresh_tokens",
                 "review_events",
                 "ai_jobs",
+                "skill_ai_jobs",
+                "skill_publications",
                 "publications",
                 "square_items",
                 "settings",
@@ -274,6 +276,7 @@ impl Pg {
         self.init_oauth_verification().await?;
         self.init_notifications().await?;
         self.init_skill_market().await?;
+        self.init_skill_ai_jobs().await?;
         Ok(())
     }
 

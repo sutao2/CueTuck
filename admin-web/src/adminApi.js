@@ -132,7 +132,7 @@ export const getSiteConfig = () => request('siteConfig', {riskPath:'site'});
 export const getOperations = (page,query={}) => request('operations', {riskPath:`${page}?${new URLSearchParams(query)}`});
 export const listOrphanMedia = () => request('mediaOrphans',{riskPath:'media/orphans'});
 export const listAiJobs = offset => request('aiJobs',{riskPath:`ai/jobs?offset=${offset}`});
-export const retryAiJob = id => request('aiJobRetry',{riskPath:`ai/jobs/${encodeURIComponent(id)}/retry`,method:'POST',config:{}});
+export const retryAiJob = (id,kind) => request('aiJobRetry',{riskPath:`ai/jobs/${encodeURIComponent(id)}/retry${kind === 'skill' ? '?kind=skill' : ''}`,method:'POST',config:{}});
 export const scanMedia = (side,cursor='') => request('mediaScan',{riskPath:`media/scan?side=${side}&cursor=${encodeURIComponent(cursor)}`});
 export const purgeOrphanMedia = id => request('mediaPurge',{riskPath:`media/orphans/${encodeURIComponent(id)}/purge`,method:'POST',config:{confirm:true}});
 export const listMockBilling = (kind,query) => request('mockList', {riskPath:`mock-billing/${kind}?${new URLSearchParams(query)}`});

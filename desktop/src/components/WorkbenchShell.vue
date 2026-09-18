@@ -485,12 +485,12 @@
           <fieldset v-if="publishCoverSource" class="publication-files" :disabled="publishBusy">
             <legend>合集封面</legend>
             <label><input v-model="publishCoverIncluded" type="checkbox" data-testid="publish-cover">同时发布合集封面</label>
-            <p class="use-hint">封面图片将上传并接受人工审核，通过后公开。取消勾选只发布合集内容。</p>
+            <p class="use-hint">封面图片将上传并接受审核，通过后公开。取消勾选只发布合集内容。</p>
             <CollectionCover :type="publishCoverSource.cover_type" :json="publishCoverSource.cover_json" />
           </fieldset>
           <fieldset class="publication-files" :disabled="publishBusy || publishAssetsLoading">
             <legend>公开附件 · 可选</legend>
-            <p class="use-hint">默认不公开任何附件。勾选的文件会上传并交由人工审核，通过后所有可访问广场的人都能下载；已下载副本无法撤回。</p>
+            <p class="use-hint">默认不公开任何附件。勾选的文件会上传并交由审核，通过后所有可访问广场的人都能下载；已下载副本无法撤回。</p>
             <p v-if="publishAssetsLoading" role="status">正在读取附件…</p>
             <p v-else-if="publishAssetsError" role="alert">{{ publishAssetsError }} <button type="button" @click="loadPublishAssets">重试</button></p>
             <p v-else-if="!publishAssets.length" class="use-hint">所选内容没有附件。</p>
