@@ -182,12 +182,12 @@ async function submitPreview(wrapper) {
  if(confirm.exists()){await confirm.trigger('click');await flushPromises();}
 }
 
-it('publishes ordered collection covers independently of private member attachments and restores them on download', async () => {
+it.each([['image/png', 'png', '\x89PNG\r\n\x1a\nfixture'], ['image/jpeg', 'jpg', '\xff\xd8\xfffixture']])('publishes ordered collection covers independently of private member attachments and restores them on download (%s)', async (mime, ext, bytes) => {
   const { collection } = await collectionSource();
   const { updateLocalCollection } = await import('./library.js');
-  const png = { id: crypto.randomUUID(), name: 'cover-1.png', mime: 'image/png', data: btoa('\x89PNG\r\n\x1a\nfixture') };
+  const png = { id: crypto.randomUUID(), name: `cover-1.${ext}`, mime, data: btoa(bytes) };
   const dataUrl = `data:${png.mime};base64,${png.data}`;
-  await updateLocalCollection({ id: collection.id, title: collection.title, coverType: 'grid', coverUrls: [dataUrl] });
+  await updateLocalCollection({ id: collection.id, title: collection.title, coverType: 'grid', coverUrls: [`data:image/png;base64,${png.data}`] });
   wrapper.unmount(); wrapper = mount(WorkbenchShell); await flushPromises();
   await wrapper.get('[data-space="square"]').trigger('click'); await flushPromises();
   await wrapper.get('[data-testid="publish-prompt"]').trigger('click'); await flushPromises();

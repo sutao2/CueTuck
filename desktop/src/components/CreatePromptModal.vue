@@ -55,7 +55,7 @@
         </div>
         <label v-else class="field">
           <span>封面</span>
-          <select v-model="coverType">
+          <select v-model="coverType" :disabled="assetBusy">
             <option value="none">无封面</option>
             <option value="single">单图</option>
             <option value="grid">九宫格</option>
@@ -65,12 +65,14 @@
           <span>{{ coverType === "single" ? "封面图" : "封面图（最多 9 张，缺图用占位）" }}</span>
           <input
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/gif,image/webp"
             data-testid="cover-files"
+            :disabled="busy || assetBusy"
             :multiple="coverType === 'grid'"
             @change="onCoverFiles"
           >
         </label>
+        <p v-if="coverError" role="alert" class="use-hint">{{ coverError }}</p>
         <template v-if="kind === 'prompt'">
           <p v-if="assetLoading" role="status">正在读取附件…</p>
           <p v-else-if="assetError" role="alert">{{ assetError }} <button type="button" class="button" @click="loadAssets">重试</button></p>
@@ -99,7 +101,7 @@ import PromptTrial from './PromptTrial.vue';
 import AttachmentPanel from './AttachmentPanel.vue';
 import { listPromptAssets } from '../platform/assets.js';
 import { vPageFocus } from "../lib/pageFocus.js";
-import { parseCoverUrls } from "../lib/cover.js";
+import { parseCoverUrls, normalizeCoverUrls } from "../lib/cover.js";
 
 const props = defineProps({
   prompt: { type: Object, default: null },
@@ -130,6 +132,7 @@ const categoryId = ref(props.prompt ? (props.prompt.category_id ?? "") : props.d
 const model = ref(props.prompt ? (props.prompt.model ?? "") : (props.defaultModel ?? ""));
 const coverType = ref(props.prompt?.cover_type ?? "none");
 const coverUrls = ref(parseCoverUrls(props.prompt?.cover_json));
+const coverError = ref('');
 const assets = ref([]), savedAssetIds = ref([]), assetPanel = ref(null), assetBusy = ref(false), assetError = ref('');
 const assetLoading = ref(Boolean(props.prompt?.asset_count));
 let initialAssets = '[]';
@@ -176,9 +179,16 @@ function readAsDataUrl(file) {
 }
 
 async function onCoverFiles(event) {
+  if (props.busy || assetBusy.value) return;
   const limit = coverType.value === "single" ? 1 : 9;
   const files = [...(event.target.files || [])].slice(0, limit);
-  coverUrls.value = (await Promise.all(files.map(readAsDataUrl))).filter(Boolean);
+  if (!files.length) return;
+  assetBusy.value = true; coverError.value = '';
+  try {
+    if (files.some(file => file.size > 5 * 1024 * 1024) || files.reduce((size, file) => size + file.size, 0) > 20 * 1024 * 1024) throw new Error('单文件上限 5 MiB，封面总量上限 20 MiB');
+    coverUrls.value = normalizeCoverUrls(await Promise.all(files.map(readAsDataUrl)));
+  } catch (err) { coverError.value = `封面未更改：${err?.message || '图片读取失败，请重新选择'}`; }
+  finally { assetBusy.value = false; event.target.value = ''; }
 }
 
 function submit() {

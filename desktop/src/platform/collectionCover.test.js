@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { collectionCoverAssets } from '../lib/cover.js';
+import { validateAssets } from './assets.js';
 import { validateCollectionAssets } from './privateMedia.js';
 it('retains all nine covers in order and rejects local paths without reading them', () => {
   const urls = Array.from({length:9}, (_,i) => `data:image/png;base64,${btoa('\x89PNG\r\n\x1a\n'+i)}`);
@@ -18,4 +19,18 @@ it('rejects unknown, duplicated, shared, non-image and invalid layout cover refe
   }
   expect(()=>validateCollectionAssets([{...members[0],asset_ids:[file.id]}],[file],{layout:'grid',asset_ids:[file.id]})).toThrow();
   expect(()=>validateCollectionAssets(members,[{...file,mime:'text/plain'}],{layout:'grid',asset_ids:[file.id]})).toThrow();
+});
+
+it('recognizes mislabeled saved covers by bytes and preserves nine mixed images', () => {
+  const formats = [ ['image/jpeg', 'jpg', '\xff\xd8\xffphoto'], ['image/webp', 'webp', 'RIFF1234WEBPphoto'], ['image/gif', 'gif', 'GIF89aphoto'], ['image/png', 'png', '\x89PNG\r\n\x1a\nphoto'] ];
+  const urls = Array.from({length:9}, (_,i) => `data:image/png;base64,${btoa(formats[i % 4][2])}`);
+  const assets = collectionCoverAssets({cover_type:'grid',cover_json:JSON.stringify(urls)});
+  expect(() => validateAssets(assets)).not.toThrow();
+  expect(assets.map(a => a.data)).toEqual(urls.map(u => u.split(',')[1]));
+  assets.forEach((a,i) => expect(a).toMatchObject({mime:formats[i % 4][0],name:`cover-${i+1}.${formats[i % 4][1]}`}));
+});
+it('rejects non-image bytes and invalid encoding before preparing publication', () => {
+  for (const data of [btoa('<svg></svg>'), 'bad===', btoa('not an image')]) {
+    expect(() => collectionCoverAssets({cover_type:'single',cover_json:JSON.stringify([`data:image/png;base64,${data}`])})).toThrow();
+  }
 });
