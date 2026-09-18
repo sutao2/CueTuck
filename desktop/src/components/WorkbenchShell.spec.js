@@ -355,7 +355,7 @@ describe("WorkbenchShell", () => {
     const dialog = w.get('[data-testid="collection-detail"]');
     expect(dialog.get(".member-choices").text()).toContain("编程");
     await dialog.get(`[data-member-choice="${prompt.id}"]`).setValue(true);
-    await dialog.get(".primary-button").trigger("click");
+    await dialog.get('[data-testid="add-collection-members"]').trigger("click");
     await flushPromises();
     expect(await listCollectionMembers(collection.id)).toHaveLength(1);
     await dialog.get('[data-testid="remove-member"]').trigger("click");

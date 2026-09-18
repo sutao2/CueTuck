@@ -280,9 +280,9 @@
               :inert="batchBusy ? '' : undefined"
             >
               <img decoding="async" v-if="space === 'square' && referenceImages(item).length && !failedReferenceImages[item.id]" class="square-reference-cover" :src="referenceImages(item)[0]" :alt="item.title" loading="lazy" referrerpolicy="no-referrer" @error="failedReferenceImages[item.id] = true">
-              <PublishedImage v-if="space === 'square' && item.preview_asset && !referenceImages(item).length" class="square-reference-cover" :item-id="item.id" :file="item.preview_asset" :title="item.title" />
+              <PublishedImage v-if="space === 'square' && item.preview_asset && !item.cover_assets?.length && !referenceImages(item).length" class="square-reference-cover" :item-id="item.id" :file="item.preview_asset" :title="item.title" />
               <LocalPromptCover v-if="space === 'local' && item.kind === 'prompt' && item.image_count" :prompt-id="item.id" :title="item.title" :revision="item.updated_at" />
-              <CollectionCover v-if="item.kind === 'collection' && coverPreview(item).length" :type="item.cover_type" :json="item.cover_json" variant="card" class="square-reference-cover" data-testid="collection-cover-preview" />
+              <CollectionCover v-if="item.kind === 'collection' && (coverPreview(item).length || item.cover_assets?.length)" :type="item.cover?.layout || item.cover_type" :json="item.cover_json" :item-id="item.id" :files="item.cover_assets || []" variant="card" class="square-reference-cover" data-testid="collection-cover-preview" />
               <label v-if="selecting && space === 'local' && item.kind === 'prompt'" class="card-selection" @click.stop>
                 <input type="checkbox" :checked="selectedPrompts.includes(item.id)" :aria-label="`选择 ${item.title}`" :data-select-prompt="item.id" @change="selectPrompt(item.id)" />选择
               </label>
@@ -467,7 +467,7 @@
           </div>
           <button type="button" class="page-back" aria-label="返回" :disabled="publishBusy" @click="publishResume = false">← 返回</button>
         </header>
-        <PublicationPreview v-if="publishPreview" :title="publishPreview.source.title" :content="publishPreview.source.content" :members="publishPreview.members" :assets="publishPreview.assets" :category="remoteCatalog?.categories.find(c => c.id === publishPreview.categoryId)?.name" :model="publishPreview.model" />
+        <PublicationPreview v-if="publishPreview" :title="publishPreview.source.title" :content="publishPreview.source.content" :members="publishPreview.members" :cover="publishPreview.coverAssets.length ? publishPreview.source : null" :assets="publishPreview.assets" :category="remoteCatalog?.categories.find(c => c.id === publishPreview.categoryId)?.name" :model="publishPreview.model" />
         <div v-show="!publishPreview" class="create-body">
           <p v-if="publishSourcesLoading" role="status">正在读取本地内容…</p>
           <p v-else-if="publishSourcesError" role="alert">{{ publishSourcesError }} <button type="button" data-testid="retry-publish-sources" @click="openPublish">重新读取</button></p>
@@ -482,6 +482,12 @@
           <p v-if="catalogError" class="use-hint" role="status">{{ catalogError }}；恢复连接后请重新进入发布页更新分类。</p>
           <p v-if="operationNote" role="status" class="use-hint">{{ operationNote }}</p>
           <p>提交后本地正文仍可编辑，审核状态不会覆盖本机内容。</p>
+          <fieldset v-if="publishCoverSource" class="publication-files" :disabled="publishBusy">
+            <legend>合集封面</legend>
+            <label><input v-model="publishCoverIncluded" type="checkbox" data-testid="publish-cover">同时发布合集封面</label>
+            <p class="use-hint">封面图片将上传并接受人工审核，通过后公开。取消勾选只发布合集内容。</p>
+            <CollectionCover :type="publishCoverSource.cover_type" :json="publishCoverSource.cover_json" />
+          </fieldset>
           <fieldset class="publication-files" :disabled="publishBusy || publishAssetsLoading">
             <legend>公开附件 · 可选</legend>
             <p class="use-hint">默认不公开任何附件。勾选的文件会上传并交由人工审核，通过后所有可访问广场的人都能下载；已下载副本无法撤回。</p>
@@ -621,7 +627,7 @@ import SearchableSelect from "./SearchableSelect.vue";
 import { formatMetric } from '../platform/contentMetrics.js';
 import AppIcon from "./AppIcon.vue";
 import GlobalSearch from "./GlobalSearch.vue";
-import { listPromptAssets, assetSize, formatBytes, assetUrl } from '../platform/assets.js';
+import { listPromptAssets, assetSize, formatBytes, assetUrl, validateAssets } from '../platform/assets.js';
 import { uploadPrivateAsset } from '../platform/privateMedia.js';
 import { vDialogFocus } from "../lib/dialogFocus.js";
 import { vPageFocus } from "../lib/pageFocus.js";
@@ -656,7 +662,7 @@ import {skillCategories} from '../platform/skillCategories.js';
 import SkillsPage from './SkillsPage.vue';
 import SiteNotice from '../../../shared/SiteNotice.vue';
 import { applyQueuedFavorites, favoriteWithQueue, publishWithQueue } from "../platform/syncQueue.js";
-import { parseCoverUrls } from "../lib/cover.js";
+import { parseCoverUrls, collectionCoverAssets } from "../lib/cover.js";
 import PublishedImage from "./PublishedImage.vue";
 import { referenceImages } from "../lib/squareReference.js";
 import LocalPromptCover from './LocalPromptCover.vue';
@@ -897,6 +903,8 @@ let publishSourcesRequest = 0;
 watch(publishResume, value => { if (!value) { ++publishSourcesRequest; publishPreview.value = null; } }, { flush: 'sync' });
 onUnmounted(() => { ++publishSourcesRequest; });
 const publishSourceId = ref("");
+const publishCoverIncluded = ref(true);
+const publishCoverSource = computed(() => publishSources.value.find(item => item.id === publishSourceId.value && item.kind === 'collection' && item.cover_type !== 'none' && parseCoverUrls(item.cover_json).length));
 const publishCategoryId = ref(null), publishModel = ref(null);
 const publishAssets = ref([]), publishAssetIds = ref([]), publishAssetsLoading = ref(false), publishAssetsError = ref('');
 let publishAssetsVersion = 0;
@@ -923,6 +931,7 @@ async function loadPublishAssets() {
 watch(() => session.value.email, () => { publishAssetIds.value = []; publishPreview.value = null; });
 onUnmounted(() => { ++publishAssetsVersion; });
 watch(publishSourceId, id => {
+  publishCoverIncluded.value = true;
   const source = publishSources.value.find(item => item.id === id);
   publishCategoryId.value = publicationCategory(source?.category_id);
   publishModel.value = source?.model || null;
@@ -1132,7 +1141,7 @@ function finishNavigation() {
   }
   pendingNavigation.value = null;
   pendingDelete.value = null;
-  creating.value = false; editing.value = null; using.value = null; reading.value = null; publicationsOpen.value = false;
+  creating.value = false; creatingInCollection.value = null; editing.value = null; using.value = null; reading.value = null; publicationsOpen.value = false;
   openedCollection.value = null; closeSquareDetail();
   loginReason.value = ''; publishResume.value = false; pendingPublish.value = false;
   closeCategoryDialog();
@@ -1508,7 +1517,7 @@ async function previewPublish() {
     if (members && !members.length) throw Error('合集至少需要一条提示词才能发布');
     if (members?.some(member => !member.title?.trim() || !member.content?.trim())) throw Error('合集成员标题和正文不能为空');
     if (request !== publishSourcesRequest || token !== getSession().accessToken || !publishResume.value) return;
-    publishPreview.value = JSON.parse(JSON.stringify({ source, members, assets: publishAssets.value.filter(asset => publishAssetIds.value.includes(asset.id)), categoryId: remoteCatalog.value ? publishCategoryId.value : publicationCategory(source.category_id), model: remoteCatalog.value ? publishModel.value : source.model, token }));
+    publishPreview.value = JSON.parse(JSON.stringify({ source, members, coverAssets: publishCoverIncluded.value && source.kind === 'collection' ? collectionCoverAssets(source) : [], assets: publishAssets.value.filter(asset => publishAssetIds.value.includes(asset.id)), categoryId: remoteCatalog.value ? publishCategoryId.value : publicationCategory(source.category_id), model: remoteCatalog.value ? publishModel.value : source.model, token }));
   } catch (error) { operationNote.value = `预览失败：${error.message || error}`; }
   finally { publishBusy.value = false; }
 }
@@ -1534,11 +1543,13 @@ async function submitPublish() {
       if (!members.length) throw new Error('合集至少需要一条提示词才能发布');
       if (members.some(member => !member.title?.trim() || !member.content?.trim())) throw new Error('合集成员标题和正文不能为空');
     }
-    if (selectedAssets.length > 12 || selectedAssets.reduce((total, asset) => total + assetSize(asset), 0) > 20 * 1024 * 1024) throw new Error('一份稿件最多选择 12 个附件、合计 20 MiB');
+    const allAssets = [...snapshot.coverAssets, ...selectedAssets];
+    if (allAssets.length > 12 || allAssets.reduce((total, asset) => total + assetSize(asset), 0) > 20 * 1024 * 1024) throw new Error('一份稿件最多选择 12 个附件、合计 20 MiB');
+    validateAssets(allAssets);
     const assetRefs = [];
-    for (const asset of selectedAssets) {
+    for (const asset of allAssets) {
       assertAccount();
-      operationNote.value = `正在上传 ${assetRefs.length + 1}/${selectedAssets.length}：${asset.name}`;
+      operationNote.value = `正在上传 ${assetRefs.length + 1}/${allAssets.length}：${asset.name}`;
       assetRefs.push(await uploadPrivateAsset(asset, account.accessToken));
     }
     assertAccount();
@@ -1548,7 +1559,7 @@ async function submitPublish() {
       content: source?.content ?? "",
       categoryId: snapshot.categoryId,
       model: snapshot.model,
-      ...(source.kind === "collection" ? { kind: "collection", members } : {}),
+      ...(source.kind === "collection" ? { kind: "collection", members, ...(snapshot.coverAssets.length ? { cover: { layout: source.cover_type, asset_ids: snapshot.coverAssets.map(asset => asset.id) } } : {}) } : {}),
       ...(assetRefs.length ? { assetRefs } : {}),
     });
     publishResume.value = false;

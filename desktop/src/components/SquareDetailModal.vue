@@ -26,6 +26,7 @@
           <button type="button" class="button ghost-button" data-testid="square-detail-retry" @click="$emit('retry')">重试</button>
         </div>
         <template v-else>
+          <CollectionCover v-if="item.cover" :type="item.cover.layout" :files="coverFiles" :item-id="item.id" />
           <div class="detail-reading-grid" :class="{ 'has-media': sourceImages.length || publishedImages.length }">
           <section class="detail-text" aria-label="提示词内容">
           <h3 class="detail-section-label">{{ item.kind === 'collection' ? '合集内容' : '提示词正文' }}</h3>
@@ -75,6 +76,7 @@
 
 <script setup>
 import { vPageFocus } from "../lib/pageFocus.js";
+import CollectionCover from './CollectionCover.vue';
 import ReportPanel from './ReportPanel.vue';
 import PublishedImage from "./PublishedImage.vue";
 import PublishedAttachments from './PublishedAttachments.vue';
@@ -99,7 +101,8 @@ const props = defineProps({
 defineEmits(['cancel', 'retry', 'download', 'favorite', 'complete-images', 'use']);
 const largeImage = ref(null), translated = ref(''), memberTranslations = ref({});
 const imageIndex = ref(0), imageFailed = ref(false), imageLoaded = ref(false), imageKey = ref(0);
-const publishedImages = computed(() => (props.item.asset_refs || []).filter(file => ['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime)));
+const coverFiles = computed(() => (props.item.cover?.asset_ids || []).map(id => props.item.asset_refs?.find(file => file.id === id)).filter(Boolean));
+const publishedImages = computed(() => (props.item.asset_refs || []).filter(file => !props.item.cover?.asset_ids.includes(file.id) && ['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime)));
 const publisherName = computed(() => props.item.publisher?.display_name || props.item.author || props.item.reference?.author || '');
 const sourceImages = computed(() => referenceImages(props.item));
 const galleryImages = computed(() => sourceImages.value.map(url => ({ url, alt: props.item.title, source: referenceLink(props.item.reference.url) })));

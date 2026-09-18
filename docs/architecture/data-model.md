@@ -20,7 +20,7 @@
 | category_id | 大分类或小分类，可空表示未分类 |
 | collection_id | 所属合集，可空 |
 | model | 适用模型标签，本地可空 |
-| source | `local` / `downloaded` |
+| source | `local` / `downloaded` / `collection`（合集内创作，展示与移出规则见合集规格） |
 | author | 展示用作者；下载时按 `keep_author_on_download` 写入，不改正文 |
 | remote_id | 广场来源 id；本机新建为空 |
 | version | 本地版本号 |

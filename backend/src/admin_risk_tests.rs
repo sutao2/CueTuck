@@ -116,7 +116,7 @@ async fn fixture() -> (AppState, String, String, String) {
         .unwrap()
         .access_token;
     state
-        .insert_publication(&Publication { asset_refs: vec![],
+        .insert_publication(&Publication { cover: None, asset_refs: vec![],
             id: "risk-item".into(),
             source_id: "local".into(),
             status: "pending".into(),

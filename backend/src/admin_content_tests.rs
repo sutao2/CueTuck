@@ -51,7 +51,7 @@ async fn fixture() -> (AppState, String, String, String) {
         .access_token;
     for id in ["a", "b"] {
         state
-            .insert_publication(&Publication { asset_refs: vec![],
+            .insert_publication(&Publication { cover: None, asset_refs: vec![],
                 id: id.into(),
                 source_id: id.into(),
                 status: "pending".into(),

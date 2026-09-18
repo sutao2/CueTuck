@@ -67,6 +67,7 @@ pub async fn browse(State(state): State<AppState>, headers: HeaderMap, Query(inp
         let page_sql = format!("SELECT jsonb_build_object('id',s.id,'title',left({title},160),'kind',s.kind,
             'excerpt',left({excerpt},240),'content_language',CASE WHEN tr.status='ready' THEN 'zh' ELSE 'original' END,'model',s.model,'category_id',s.category_id,'member_count',s.member_count,
             'is_favorite',{favorite},'download_count',s.download_count,
+            'cover',p.cover,'cover_assets',(SELECT COALESCE(jsonb_agg(a ORDER BY array_position(ARRAY(SELECT jsonb_array_elements_text(p.cover->'asset_ids')),a->>'id')),'[]'::jsonb) FROM jsonb_array_elements(COALESCE(p.asset_refs,'[]'::jsonb)) a WHERE p.cover->'asset_ids' ? (a->>'id')),
             'preview_asset',(SELECT a FROM jsonb_array_elements(COALESCE(p.asset_refs,'[]'::jsonb)) a WHERE a->>'mime' IN ('image/png','image/jpeg','image/gif','image/webp') LIMIT 1),
             'image_count',(SELECT count(*) FROM jsonb_array_elements(COALESCE(p.asset_refs,'[]'::jsonb)) a WHERE a->>'mime' IN ('image/png','image/jpeg','image/gif','image/webp')),
             'asset_count',jsonb_array_length(COALESCE(p.asset_refs,'[]'::jsonb)),

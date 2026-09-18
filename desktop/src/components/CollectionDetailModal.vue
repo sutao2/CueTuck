@@ -7,7 +7,7 @@
         </div>
         <button type="button" class="page-back" aria-label="返回" :disabled="busy" @click="$emit('cancel')">← 返回</button>
       </header>
-      <div class="create-body" :inert="busy ? '' : undefined">
+      <div class="create-body collection-body" :inert="busy ? '' : undefined">
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <p v-if="loading" role="status" class="use-hint">正在读取合集…</p>
         <button v-else-if="!ready" type="button" class="button ghost-button" data-testid="retry-collection-load" :disabled="busy" @click="$emit('retry')">重新读取</button>
@@ -41,7 +41,7 @@
         <button type="button" class="button ghost-button" data-testid="edit-collection" :disabled="busy || !ready" @click="$emit('edit')">编辑合集</button>
         <div class="modal-actions">
           <button type="button" class="button ghost-button" :disabled="busy" @click="$emit('cancel')">返回</button>
-          <button type="button" class="button primary-button" :disabled="busy || !ready || !selectedPromptIds.length" @click="add">
+          <button type="button" class="button primary-button" data-testid="add-collection-members" :disabled="busy || !ready || !selectedPromptIds.length" @click="add">
             加入合集
           </button>
         </div>
@@ -79,6 +79,8 @@ function add() {
 </script>
 
 <style scoped>
+.collection-body { display: block; }
+.collection-body > * + * { margin-top: 18px; }
 .collection-members-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 8px; }
 .member-picker { margin-top: 24px; }
 .member-choices { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }

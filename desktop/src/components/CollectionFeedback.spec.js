@@ -102,3 +102,17 @@ it('does not let a delayed metadata refresh replace a reopened collection', asyn
   expect(detail().get('h2').text()).toBe('A');
   expect(detail().get('.member-title').text()).toBe('member');
 });
+
+it('creates and edits a collection-only prompt without adding it to standalone results', async () => {
+  const { collection } = await setup(); await open();
+  await detail().get('[data-testid=create-collection-prompt]').trigger('click'); await flushPromises();
+  const editor = w.getComponent({ name: 'CreatePromptModal' });
+  expect(editor.text()).toContain('仅在此合集中显示');
+  expect(editor.find('.create-type-grid').exists()).toBe(false);
+  editor.vm.$emit('save', { kind: 'prompt', title: '专属成员', content: '内容', assets: [] }); await flushPromises();
+  expect(detail().text()).toContain('专属成员');
+  expect((await library.listLocalPrompts()).some(p => p.title === '专属成员')).toBe(false);
+  const member = (await library.listCollectionMembers(collection.id))[0];
+  await detail().get('.member-title').trigger('click'); await flushPromises();
+  expect(w.text()).toContain(member.content);
+});

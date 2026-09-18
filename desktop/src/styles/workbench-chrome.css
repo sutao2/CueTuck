@@ -944,3 +944,6 @@ body[data-density="compact"] .app-shell .prompt-card.as-row { min-height: 52px; 
 
 .prompt-card:not(.as-row) .collection-cover-grid { aspect-ratio: 1; }
 .prompt-card.as-row .collection-cover { display: grid; }
+/* Virtual cards reserve a fixed media height; keep the nine cells square within it. */
+.prompt-grid.windowed-grid .prompt-card:not(.as-row) .collection-cover-grid { width: 150px; height: 150px; align-self: center; }
+.prompt-card.as-row .collection-cover-grid { width: 64px; height: 64px; }

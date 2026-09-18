@@ -732,6 +732,13 @@ fn collection_only_creation_is_atomic_and_detaching_preserves_content() {
     let restored = tempfile::tempdir().unwrap(); initialize_in_dir(restored.path()).unwrap();
     super::apply_import_json_in_dir(restored.path(), &data).unwrap();
     assert!(list_prompts_in_dir(restored.path(), "", None).unwrap().is_empty());
+    let synced = tempfile::tempdir().unwrap(); initialize_in_dir(synced.path()).unwrap();
+    super::apply_sync_changes(synced.path(), &super::export_sync_changes(dir.path()).unwrap(), false).unwrap();
+    assert!(list_prompts_in_dir(synced.path(), "", None).unwrap().is_empty());
+    assert_eq!(list_collection_members_in_dir(synced.path(), &c.id).unwrap()[0].content, "正文");
+    // Older peers may delete a collection without normalizing the new source marker.
+    rusqlite::Connection::open(synced.path().join("promptark.sqlite")).unwrap().execute("UPDATE collections SET deleted_at='1' WHERE id=?1", [&c.id]).unwrap();
+    assert_eq!(list_prompts_in_dir(synced.path(), "", None).unwrap().len(), 1);
     super::collections::remove_prompt_from_collection_in_dir(dir.path(), &p.id, &c.id).unwrap();
     assert_eq!(list_prompts_in_dir(dir.path(), "", None).unwrap()[0].content, "正文");
     let second = super::collections::create_member_in_dir(dir.path(), &c.id, "第二条", "保留", None, None, &[]).unwrap();

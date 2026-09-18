@@ -27,7 +27,7 @@ export async function verifyAsset(asset, ref) {
   if (asset.id !== ref.id || asset.name !== ref.name || asset.mime !== ref.mime || assetSize(asset) !== ref.size || await assetHash(asset) !== ref.sha256) throw new Error('附件内容校验失败');
   return asset;
 }
-export function validateCollectionAssets(members, refs) {
+export function validateCollectionAssets(members, refs, cover) {
   validateReferences(refs);
   if (!Array.isArray(members) || !members.length) throw new Error('该合集缺少成员快照，暂时无法下载');
   const expected = new Set(refs.map(file => file.id)), assigned = new Set();
@@ -37,6 +37,14 @@ export function validateCollectionAssets(members, refs) {
     if (!Array.isArray(ids)) throw new Error('合集附件关联无效');
     for (const id of ids) {
       if (!expected.has(id) || assigned.has(id)) throw new Error('合集附件关联无效');
+      assigned.add(id);
+    }
+  }
+  if (cover) {
+    const limit = cover.layout === 'single' ? 1 : cover.layout === 'grid' ? 9 : 0;
+    if (!Array.isArray(cover.asset_ids) || !cover.asset_ids.length || cover.asset_ids.length > limit) throw new Error('合集封面布局无效');
+    for (const id of cover.asset_ids) {
+      if (assigned.has(id) || !refs.some(file => file.id === id && ['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime))) throw new Error('合集封面附件关联无效');
       assigned.add(id);
     }
   }

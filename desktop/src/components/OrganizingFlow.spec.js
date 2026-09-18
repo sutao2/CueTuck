@@ -41,7 +41,7 @@ it('searches and adds multiple collection members while preserving existing text
   await w.get('.member-picker input[type=search]').setValue('成员 B');
   expect(w.find(`[data-member-choice="${a.id}"]`).exists()).toBe(false);
   await w.get(`[data-member-choice="${b.id}"]`).setValue(true);
-  await w.get('[data-testid=collection-detail] .primary-button').trigger('click'); await flushPromises();
+  await w.get('[data-testid=add-collection-members]').trigger('click'); await flushPromises();
   const members = await library.listCollectionMembers(collection.id);
   expect(members).toHaveLength(2);
   expect(members.map(p => p.content)).toEqual(expect.arrayContaining(['正文 A', '正文 B']));

@@ -206,6 +206,8 @@ pub struct PublicPublisher {
 #[derive(Serialize, Deserialize)]
 pub struct SquareContentResponse {
     #[serde(default)]
+    pub cover: Option<CollectionCover>,
+    #[serde(default)]
     pub publisher: Option<PublicPublisher>,
     #[serde(default)]
     pub asset_refs: Vec<library::AssetReference>,
@@ -222,8 +224,28 @@ pub struct SquareContentResponse {
     translations: serde_json::Value,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CollectionCover {
+    pub layout: String,
+    pub asset_ids: Vec<String>,
+}
+
+impl CollectionCover {
+    fn validate(&self, kind: &str, refs: &[library::AssetReference]) -> Result<(), StatusCode> {
+        let limit = match self.layout.as_str() { "single" => 1, "grid" => 9, _ => return Err(StatusCode::BAD_REQUEST) };
+        if kind != "collection" || self.asset_ids.is_empty() || self.asset_ids.len() > limit { return Err(StatusCode::BAD_REQUEST); }
+        let mut seen = std::collections::HashSet::new();
+        for id in &self.asset_ids {
+            if !seen.insert(id) || !refs.iter().any(|r| &r.id == id && matches!(r.mime.as_str(), "image/png" | "image/jpeg" | "image/gif" | "image/webp")) { return Err(StatusCode::BAD_REQUEST); }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Deserialize)]
 pub struct PublicationRequest {
+    #[serde(default)]
+    pub cover: Option<CollectionCover>,
     #[serde(default)]
     pub asset_refs: Vec<library::AssetReference>,
     pub source_id: String,
@@ -239,6 +261,8 @@ pub struct PublicationRequest {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Publication {
+    #[serde(default)]
+    pub cover: Option<CollectionCover>,
     #[serde(default)]
     pub asset_refs: Vec<library::AssetReference>,
     pub id: String,
@@ -736,6 +760,7 @@ async fn create_publication(
         return Err(StatusCode::BAD_REQUEST);
     }
     let publication = Publication {
+        cover: body.cover,
         asset_refs: body.asset_refs,
         id: format!("pub.{}", Uuid::new_v4()),
         source_id,
@@ -748,10 +773,11 @@ async fn create_publication(
         kind: body.kind,
         members: body.members,
     };
+    if let Some(cover) = &publication.cover { cover.validate(&publication.kind, &publication.asset_refs)?; }
     if publication.kind == "collection" {
         let expected: std::collections::HashSet<_> = publication.asset_refs.iter().map(|file| &file.id).collect();
         let mut assigned = std::collections::HashSet::new();
-        for id in publication.members.iter().flat_map(|member| &member.asset_ids) {
+        for id in publication.members.iter().flat_map(|member| &member.asset_ids).chain(publication.cover.iter().flat_map(|cover| &cover.asset_ids)) {
             if !expected.contains(id) || !assigned.insert(id) { return Err(StatusCode::BAD_REQUEST); }
         }
         if assigned != expected { return Err(StatusCode::BAD_REQUEST); }
@@ -959,6 +985,7 @@ async fn get_square_item_content(
     if !state.square_public().await? { require_user(&state, &headers).await?; }
     let item = state.get_item(&id).await?.ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(SquareContentResponse {
+        cover: media::public_cover(&state, &id).await?,
         publisher: square_publisher(&state, &id).await?,
         translations: if let Some(pg)=&state.db {pg.translation_versions(&id).await?} else {serde_json::json!({})},
         asset_refs: media::public_references(&state, &id).await?,
@@ -1083,7 +1110,7 @@ mod tests {
     #[tokio::test]
     async fn repeated_reviews_are_idempotent_and_opposite_decisions_conflict() {
         let state = AppState::default();
-        let publication = Publication { asset_refs: vec![], id: "p".into(), source_id: "local".into(), status: "pending".into(), title: Some("原稿".into()),
+        let publication = Publication { cover: None, asset_refs: vec![], id: "p".into(), source_id: "local".into(), status: "pending".into(), title: Some("原稿".into()),
             content: Some("正文".into()), author_email: None, category_id: None, model: None, kind: "prompt".into(), members: vec![] };
         state.insert_publication(&publication).await.unwrap();
         let (first, second) = tokio::join!(state.set_publication_status("p", "approved"), state.set_publication_status("p", "approved"));

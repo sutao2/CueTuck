@@ -816,3 +816,32 @@ async fn approved_gif_appears_in_browse_without_exposing_unselected_assets() {
     let (_,after)=crate::admin_security_tests::request(&state,"GET","/v1/square/browse?q=GIF%20gallery%20QA&sort=latest","",json!({})).await;assert_eq!(after["total"],0);
     assert_eq!(get(&state,"",&path).await.status(),StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn collection_cover_is_validated_reviewed_and_public_only_after_approval() {
+    let (state,a,b,admin,_store,_server) = fixture().await;
+    let (_,file)=upload(&state,&a,"cover.png","image/png",b"\x89PNG\r\n\x1a\nfixture",false).await;
+    let reference=json!({"id":Uuid::new_v4().to_string(),"media_id":file["id"],"name":file["name"],"mime":file["mime"],"size":file["size"],"sha256":file["sha256"]});
+    let body=json!({"kind":"collection","source_id":"covered","title":"封面合集","cover":{"layout":"grid","asset_ids":[reference["id"]]},"asset_refs":[reference],"members":[{"title":"成员","content":"正文"}]});
+    for cover in [json!({"layout":"bad","asset_ids":[reference["id"]]}),json!({"layout":"grid","asset_ids":["missing"]}),json!({"layout":"grid","asset_ids":[reference["id"],reference["id"]]})] {
+        let mut bad=body.clone(); bad["cover"]=cover;
+        assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,bad).await.0,StatusCode::BAD_REQUEST);
+    }
+    let mut shared=body.clone();shared["members"][0]["asset_ids"]=json!([reference["id"]]);
+    assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,shared).await.0,StatusCode::BAD_REQUEST);
+    assert_eq!(crate::admin_security_tests::request(&state,"POST","/v1/publications",&b,body.clone()).await.0,StatusCode::NOT_FOUND);
+    let (status,p)=crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,body.clone()).await;
+    assert_eq!(status,StatusCode::OK,"{p}");assert_eq!(p["status"],"pending");assert_eq!(p["cover"],body["cover"]);
+    let id=p["id"].as_str().unwrap();let path=format!("/v1/square/items/{id}/assets/{}",reference["id"].as_str().unwrap());
+    assert_eq!(get(&state,"",&path).await.status(),StatusCode::NOT_FOUND);
+    assert!(media::public_cover(&state,id).await.unwrap().is_none());
+    assert_eq!(crate::admin_security_tests::request(&state,"POST",&format!("/v1/admin/publications/{id}/approve"),&admin,json!({})).await.0,StatusCode::OK);
+    let (_,content)=crate::admin_security_tests::request(&state,"GET",&format!("/v1/square/items/{id}/content"),"",json!(null)).await;
+    assert_eq!(content["cover"],body["cover"]);assert_eq!(get(&state,"",&path).await.status(),StatusCode::OK);
+    let (status,page)=crate::admin_security_tests::request(&state,"GET","/v1/square/browse?q=封面合集&sort=latest","",json!(null)).await;
+    assert_eq!(status,StatusCode::OK,"{page}");
+    let item=page["items"].as_array().unwrap().iter().find(|item|item["id"]==id).unwrap();
+    assert_eq!(item["cover"],body["cover"]);assert_eq!(item["cover_assets"],body["asset_refs"]);
+    let pg=state.db.as_ref().unwrap();sqlx::query(&format!("UPDATE {} SET visibility='offline' WHERE id=$1",pg.t("square_items"))).bind(id).execute(&pg.pool).await.unwrap();
+    assert!(media::public_cover(&state,id).await.unwrap().is_none());assert_eq!(get(&state,"",&path).await.status(),StatusCode::NOT_FOUND);
+}

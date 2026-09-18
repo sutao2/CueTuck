@@ -311,7 +311,7 @@ export async function listLocalPrompts({ query = "", categoryId = null } = {}) {
     });
   }
   return memoryPrompts.filter(
-    (row) => !row.deleted_at && row.source !== "collection" && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
+    (row) => !row.deleted_at && (row.source !== "collection" || !memoryCollections.some(c => c.id === row.collection_id && !c.deleted_at)) && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
   );
 }
 
@@ -398,7 +398,7 @@ export async function listLocalCollections({ query = "", categoryId = null } = {
     });
   }
   return memoryCollections.filter(
-    (row) => !row.deleted_at && row.source !== "collection" && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
+    (row) => !row.deleted_at && (row.source !== "collection" || !memoryCollections.some(c => c.id === row.collection_id && !c.deleted_at)) && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
   ).map((row) => ({ ...row, member_count: memoryPrompts.filter((prompt) => !prompt.deleted_at && prompt.collection_id === row.id).length }));
 }
 

@@ -181,3 +181,42 @@ async function submitPreview(wrapper) {
  const confirm=wrapper.find('[data-testid="publish-confirm"]');
  if(confirm.exists()){await confirm.trigger('click');await flushPromises();}
 }
+
+it('publishes ordered collection covers independently of private member attachments and restores them on download', async () => {
+  const { collection } = await collectionSource();
+  const { updateLocalCollection } = await import('./library.js');
+  const png = { id: crypto.randomUUID(), name: 'cover-1.png', mime: 'image/png', data: btoa('\x89PNG\r\n\x1a\nfixture') };
+  const dataUrl = `data:${png.mime};base64,${png.data}`;
+  await updateLocalCollection({ id: collection.id, title: collection.title, coverType: 'grid', coverUrls: [dataUrl] });
+  wrapper.unmount(); wrapper = mount(WorkbenchShell); await flushPromises();
+  await wrapper.get('[data-space="square"]').trigger('click'); await flushPromises();
+  await wrapper.get('[data-testid="publish-prompt"]').trigger('click'); await flushPromises();
+  await selectOption(wrapper, 'publish-source', collection.id); await flushPromises();
+  expect(wrapper.get('[data-testid="publish-cover"]').element.checked).toBe(true);
+  const pngRef = { ...reference, id: png.id, name: png.name, mime: png.mime, size: atob(png.data).length, sha256: await assetHash(png) };
+  const fetcher = vi.fn(async () => Response.json({ ...pngRef, id: pngRef.media_id })); vi.stubGlobal('fetch', fetcher);
+  const publish = vi.fn(async () => ({ id: 'covered', status: 'pending' })); setPublishTransport(publish);
+  await submitPreview(wrapper); await vi.waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
+  const sent = publish.mock.calls[0][0];
+  expect(sent.cover.layout).toBe('grid'); expect(sent.cover.asset_ids).toEqual(sent.assetRefs.map(a => a.id));
+  expect(sent.assetRefs).toHaveLength(1); expect(sent.members.every(m => !m.asset_ids)).toBe(true);
+  expect(JSON.stringify(sent)).not.toContain('private.txt'); expect(JSON.stringify(sent)).not.toContain('base64');
+  setSquareContentTransport(async id => ({ id, title: '下载封面', kind: 'collection', cover: sent.cover, asset_refs: sent.assetRefs, members: sent.members }));
+  fetcher.mockImplementation(async () => new Response(Uint8Array.from(atob(png.data), c => c.charCodeAt(0))));
+  await downloadSquareItem('covered');
+  const downloaded = (await listLocalCollections()).find(c => c.title === '下载封面');
+  expect(downloaded).toMatchObject({ cover_type: 'grid', cover_json: JSON.stringify([dataUrl]) });
+  expect((await listCollectionMembers(downloaded.id)).every(m => memoryAssets(m.id).length === 0)).toBe(true);
+});
+
+it('keeps the collection cover manifest when replaying a queued publication', async () => {
+  await login(); await setLocalSetting('auto_sync_queue', '1');
+  const ref = { ...reference, name:'cover.png', mime:'image/png' };
+  const cover = { layout:'single',asset_ids:[ref.id] };
+  setPublishTransport(async () => { throw Error('offline'); });
+  await publishWithQueue({sourceId:'covered-queue',title:'封面',kind:'collection',members:[{title:'成员',content:'正文'}],assetRefs:[ref],cover});
+  const sent=vi.fn(async()=>({id:'queued'}));setPublishTransport(sent);
+  await flushSyncQueue();
+  expect(sent.mock.calls[0][0].cover).toEqual(cover);
+  expect(await listSyncQueue()).toHaveLength(0);
+});

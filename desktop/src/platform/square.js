@@ -175,13 +175,13 @@ async function downloadNewSquareItem(id, onCountUpdated, onProgress) {
   const localCategory = id => localCategoryIds.has(id) ? id : null;
   let row;
   if (payload.kind === "collection") {
-    validateCollectionAssets(payload.members, refs);
+    validateCollectionAssets(payload.members, refs, payload.cover);
     const assets = new Map(), token = getSession().accessToken;
     for (const reference of refs) assets.set(reference.id, { ...await downloadPublishedAsset(id, reference, token), id: crypto.randomUUID() });
     const keepAuthor = (await getLocalSetting("keep_author_on_download")) === "1";
     row = await applyLocalImport(JSON.stringify({
       version: 2,
-      collections: [{ id: "download", title: payload.title, category_id: localCategory(payload.category_id) }],
+      collections: [{ id: "download", title: payload.title, category_id: localCategory(payload.category_id), cover_type: payload.cover?.layout || 'none', cover_json: JSON.stringify((payload.cover?.asset_ids || []).map(id => { const asset = assets.get(id); return `data:${asset.mime};base64,${asset.data}`; })) }],
       prompts: payload.members.map((member) => ({
         title: member.title, content: member.content, category_id: localCategory(member.category_id), model: member.model,
         collection_id: "download", source: "downloaded", remote_id: payload.id ?? id,
@@ -254,12 +254,12 @@ async function recordAnonymousDownload(id, onCountUpdated) {
   }
 }
 
-export async function createPublication({ sourceId, title, content, categoryId, model, kind, members, assetRefs } = {}) {
+export async function createPublication({ sourceId, title, content, categoryId, model, kind, members, assetRefs, cover } = {}) {
   const id = String(sourceId ?? "").trim();
   if (!id) throw new Error("未选择本地内容");
   if (assetRefs) validateReferences(assetRefs);
-  if (kind === 'collection') validateCollectionAssets(members, assetRefs ?? []);
-  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}), ...(kind ? { kind } : {}), ...(members ? { members } : {}), ...(assetRefs ? { assetRefs } : {}) });
+  if (kind === 'collection') validateCollectionAssets(members, assetRefs ?? [], cover);
+  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}), ...(kind ? { kind } : {}), ...(members ? { members } : {}), ...(cover ? { cover } : {}), ...(assetRefs ? { assetRefs } : {}) });
   if (isTauri()) {
     return tauriInvoke("create_publication", {
       source_id: id,
@@ -270,6 +270,7 @@ export async function createPublication({ sourceId, title, content, categoryId, 
       model: model ?? null,
       kind: kind ?? "prompt",
       members: members ?? [],
+      cover: cover ?? null,
       asset_refs: assetRefs ?? [],
     });
   }
@@ -282,7 +283,7 @@ export async function createPublication({ sourceId, title, content, categoryId, 
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ source_id: id, title, content, category_id: categoryId, model, kind, members, ...(assetRefs ? { asset_refs: assetRefs } : {}) }),
+      body: JSON.stringify({ source_id: id, title, content, category_id: categoryId, model, kind, members, cover, ...(assetRefs ? { asset_refs: assetRefs } : {}) }),
     });
     if (!response.ok) throw new Error("发布失败");
     return response.json();

@@ -134,6 +134,7 @@ pub async fn create_publication(
     model: Option<String>,
     kind: Option<String>,
     members: Option<Vec<serde_json::Value>>,
+    cover: Option<serde_json::Value>,
     asset_refs: Option<Vec<super::media::Reference>>,
 ) -> Result<serde_json::Value, String> {
     if source_id.trim().is_empty() {
@@ -151,6 +152,7 @@ pub async fn create_publication(
             "model": model,
             "kind": kind.unwrap_or_else(prompt_kind),
             "members": members.unwrap_or_default(),
+            "cover": cover,
             "asset_refs": asset_refs.unwrap_or_default(),
         }))
         .send()

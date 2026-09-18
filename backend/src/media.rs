@@ -459,3 +459,10 @@ pub async fn review_asset(State(state): State<AppState>, Path((id, asset_id)): P
     publication_asset_row(&state, &id, &asset_id, false).await?;
     Ok(response)
 }
+
+pub(crate) async fn public_cover(state: &AppState, id: &str) -> Result<Option<crate::CollectionCover>, StatusCode> {
+    let Some(pg) = &state.db else { return Ok(None) };
+    let value: Option<Option<sqlx::types::Json<crate::CollectionCover>>> = sqlx::query_scalar(&format!("SELECT p.cover FROM {} p JOIN {} s ON s.id=p.id WHERE p.id=$1 AND p.status='approved' AND s.visibility='online'", pg.t("publications"), pg.t("square_items")))
+        .bind(id).fetch_optional(&pg.pool).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    Ok(value.flatten().map(|v| v.0))
+}
