@@ -6,10 +6,10 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-18-beta19-release.md](plans/2026-09-18-beta19-release.md) | 准备发行 | beta.19 双平台修复发行 | 封面类型、窄卡片与审核文案；安装包和更新资产核验 |
-| [plans/2026-09-18-cover-file-type.md](plans/2026-09-18-cover-file-type.md) | 已验收，未发版 | 合集发布 cover-1.png 类型不匹配 | 按实际图片格式识别；654 项回归与构建通过 |
+| [plans/2026-09-18-beta19-release.md](plans/2026-09-18-beta19-release.md) | 已发布 | beta.19 双平台修复发行 | 封面类型、窄卡片与审核文案；安装包和更新资产核验 |
+| [plans/2026-09-18-cover-file-type.md](plans/2026-09-18-cover-file-type.md) | 已随 beta.19 发布 | 合集发布 cover-1.png 类型不匹配 | 按实际图片格式识别；654 项回归与构建通过 |
 | [plans/2026-09-18-ai-decisions.md](plans/2026-09-18-ai-decisions.md) | 已部署启用 | 三类投稿 AI 直接通过或拒绝 | 宽松规则、完整检查、失败保留与线上样本验收 |
-| [plans/2026-09-18-square-card-width.md](plans/2026-09-18-square-card-width.md) | 已验收，未发版 | Windows 广场卡片操作换行 | 列宽与底栏尺寸验收 |
+| [plans/2026-09-18-square-card-width.md](plans/2026-09-18-square-card-width.md) | 已随 beta.19 发布 | Windows 广场卡片操作换行 | 列宽与底栏尺寸验收 |
 | [plans/2026-09-18-beta18-release.md](plans/2026-09-18-beta18-release.md) | 已发布部署 | beta.18 双平台及服务器部署 | 合集修复与固定签名预览发行 |
 | [plans/2026-09-18-collections.md](plans/2026-09-18-collections.md) | 已随 beta.18 发布部署 | 合集成员创建、封面发布及九宫格 | 专属成员、审核媒体封面与比例布局 |
 | [plans/2026-09-16-macos-signing-identity.md](plans/2026-09-16-macos-signing-identity.md) | 已安装，首次授权待确认 | 更新后钥匙串重复授权 | 固定签名与跨版本授权通过，更新包隔离安装通过 |

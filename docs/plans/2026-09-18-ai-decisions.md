@@ -32,4 +32,4 @@
 - 线上审核策略与模型配置均为 revision 2；重新登录读取确认 `enabled`、`ai_decides`、`auto_approve` 开启，审核路由覆盖 `prompt`、`collection`、`skill`，复用原有两套视觉模型。
 - 实际模型测试接口验证：游戏角色创作（附固定图片样本）通过，代码审查 Skill 样本通过，明确窃取并外传 SSH 私钥的样本拒绝；均提供理由。没有向广场发布测试内容。
 - 服务端 PostgreSQL、Redis、MinIO 健康，管理端 HTTP 200；[远程全量回归](https://github.com/sutao2/CueTuck/actions/runs/35304585260)与 [Windows 构建](https://github.com/sutao2/CueTuck/actions/runs/35304585261)通过。
-- 自动判定对新投稿立即生效，无需升级客户端；旧待审投稿不自动重跑。发布端文案改动随后续客户端版本分发，本次未重发 beta.18。
+- 自动判定对新投稿立即生效，无需升级客户端；旧待审投稿不自动重跑。发布端文案改动已随 [beta.19](2026-09-18-beta19-release.md) 分发，未重发 beta.18。
