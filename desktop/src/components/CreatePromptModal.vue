@@ -15,8 +15,9 @@
         </div>
       </div>
       <div v-else class="create-body" :inert="busy ? '' : undefined">
+        <p v-if="collectionTitle" class="use-hint" data-testid="collection-only-note">保存到「{{ collectionTitle }}」，仅在此合集中显示。移出合集后会保留为独立提示词。</p>
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
-        <div v-if="!prompt" class="create-type-grid">
+        <div v-if="!prompt && !collectionTitle" class="create-type-grid">
           <button type="button" class="create-type" :disabled="assetBusy || assetLoading" :class="{ active: kind === 'prompt' }" :aria-pressed="kind === 'prompt'" @click="kind = 'prompt'">
             <strong>单个提示词</strong>
             <small>一条可直接使用的提示词。</small>
@@ -102,6 +103,7 @@ import { parseCoverUrls } from "../lib/cover.js";
 
 const props = defineProps({
   prompt: { type: Object, default: null },
+  collectionTitle: { type: String, default: "" },
   groups: { type: Array, default: () => [] },
   modelOptions: { type: Array, default: () => [] },
   defaultModel: { type: String, default: "" },

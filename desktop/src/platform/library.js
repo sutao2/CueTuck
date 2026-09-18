@@ -131,6 +131,16 @@ function isTauri() {
 
 import { invokeCommand as tauriInvoke } from "./tauri.js";
 
+export async function createCollectionPrompt({ collectionId, title, content, categoryId = null, model = null, assets = [] }) {
+  validateAssets(assets);
+  if (!title?.trim()) throw new Error('标题不能为空');
+  if (isTauri()) return tauriInvoke('create_collection_prompt', { collection_id: collectionId, title, content, category_id: categoryId, model, assets });
+  if (!memoryCollections.some(c => c.id === collectionId && !c.deleted_at)) throw new Error('合集不存在');
+  const row = await createLocalPrompt({ title, content, categoryId, model, assets, source: 'collection' });
+  row.collection_id = collectionId;
+  return row;
+}
+
 export async function createLocalPrompt({ title, content, categoryId = null, source = "local", model = null, assets } = {}) {
   if (assets !== undefined) validateAssets(assets);
   if (isTauri() && assets !== undefined) return tauriInvoke('save_local_prompt_with_assets', { id: null, title, content, category_id: categoryId, model, assets });
@@ -301,7 +311,7 @@ export async function listLocalPrompts({ query = "", categoryId = null } = {}) {
     });
   }
   return memoryPrompts.filter(
-    (row) => !row.deleted_at && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
+    (row) => !row.deleted_at && row.source !== "collection" && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
   );
 }
 
@@ -388,7 +398,7 @@ export async function listLocalCollections({ query = "", categoryId = null } = {
     });
   }
   return memoryCollections.filter(
-    (row) => !row.deleted_at && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
+    (row) => !row.deleted_at && row.source !== "collection" && matchesQuery(row, query, memoryCategories) && inCategory(row, categoryId, memoryCategories),
   ).map((row) => ({ ...row, member_count: memoryPrompts.filter((prompt) => !prompt.deleted_at && prompt.collection_id === row.id).length }));
 }
 
@@ -410,7 +420,7 @@ export async function addPromptToCollection(promptId, collectionId) {
 export async function removePromptFromCollection(promptId, collectionId) {
   if (isTauri()) return tauriInvoke("remove_prompt_from_local_collection", { prompt_id: promptId, collection_id: collectionId });
   const row = memoryPrompts.find((item) => item.id === promptId && item.collection_id === collectionId && !item.deleted_at);
-  if (row) { row.collection_id = null; row.updated_at = nextTimestamp(); }
+  if (row) { if (row.source === 'collection') row.source = 'local'; row.collection_id = null; row.updated_at = nextTimestamp(); }
 }
 
 export async function updateLocalCollection({ id, title, categoryId = null, coverType = "none", coverUrls = [] }) {
@@ -428,6 +438,7 @@ export async function deleteLocalCollection(id) {
   if (!row) return;
   row.deleted_at = row.updated_at = nextTimestamp();
   for (const prompt of memoryPrompts.filter((item) => item.collection_id === id)) {
+    if (prompt.source === 'collection') prompt.source = 'local';
     prompt.collection_id = null;
     prompt.updated_at = row.updated_at;
   }

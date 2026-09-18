@@ -138,7 +138,7 @@ pub fn add_prompt_to_collection_in_dir(
 }
 
 pub fn remove_prompt_from_collection_in_dir(dir: &Path, prompt_id: &str, collection_id: &str) -> Result<(), String> {
-    open_db(dir)?.execute("UPDATE prompts SET collection_id=NULL, updated_at=?1 WHERE id=?2 AND collection_id=?3 AND deleted_at IS NULL",
+    open_db(dir)?.execute("UPDATE prompts SET collection_id=NULL, source=CASE WHEN source='collection' THEN 'local' ELSE source END, updated_at=?1 WHERE id=?2 AND collection_id=?3 AND deleted_at IS NULL",
         rusqlite::params![now_iso(), prompt_id, collection_id]).map_err(|error| error.to_string())?;
     Ok(())
 }
@@ -158,7 +158,7 @@ pub fn delete_collection_in_dir(dir: &Path, id: &str) -> Result<(), String> {
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
     let now = now_iso();
     transaction.execute("UPDATE collections SET deleted_at=?1, updated_at=?1 WHERE id=?2 AND deleted_at IS NULL", rusqlite::params![now, id]).map_err(|error| error.to_string())?;
-    transaction.execute("UPDATE prompts SET collection_id=NULL, updated_at=?1 WHERE collection_id=?2", rusqlite::params![now, id]).map_err(|error| error.to_string())?;
+    transaction.execute("UPDATE prompts SET collection_id=NULL, source=CASE WHEN source='collection' THEN 'local' ELSE source END, updated_at=?1 WHERE collection_id=?2", rusqlite::params![now, id]).map_err(|error| error.to_string())?;
     transaction.commit().map_err(|error| error.to_string())
 }
 
@@ -195,4 +195,20 @@ pub fn list_collection_members_in_dir(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;
     Ok(rows)
+}
+
+/// Create a collection-only prompt and its attachments in one transaction.
+pub fn create_member_in_dir(dir: &Path, collection_id: &str, title: &str, content: &str, category_id: Option<&str>, model: Option<&str>, assets: &[super::assets::Asset]) -> Result<PromptRecord, String> {
+    if title.trim().is_empty() { return Err("标题不能为空".into()); }
+    super::assets::validate(assets)?;
+    let mut connection = open_db(dir)?;
+    let tx = connection.transaction().map_err(|e| e.to_string())?;
+    let exists: bool = tx.query_row("SELECT EXISTS(SELECT 1 FROM collections WHERE id=?1 AND deleted_at IS NULL)", [collection_id], |r| r.get(0)).map_err(|e| e.to_string())?;
+    if !exists { return Err("合集不存在".into()); }
+    let id = Uuid::new_v4().to_string();
+    tx.execute("INSERT INTO prompts(id,title,content,category_id,model,collection_id,source,created_at,updated_at) VALUES(?1,?2,?3,?4,?5,?6,'collection',?7,?7)", rusqlite::params![id,title.trim(),content,category_id,model,collection_id,now_iso()]).map_err(|e| e.to_string())?;
+    super::assets::replace(&tx, &id, assets)?;
+    let prompt = super::prompts::read_prompt(&tx, &id)?;
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(prompt)
 }

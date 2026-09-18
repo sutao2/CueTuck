@@ -49,6 +49,7 @@ pub fn run() {
             commands::database::get_local_database_status,
             commands::database::count_local_prompts,
             commands::database::create_local_prompt,
+            commands::database::create_collection_prompt,
             commands::database::save_local_prompt_with_assets,
             commands::database::list_local_prompt_assets,
             commands::database::get_local_prompt_image,

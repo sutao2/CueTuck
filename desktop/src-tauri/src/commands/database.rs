@@ -20,6 +20,11 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
+pub fn create_collection_prompt(app: AppHandle, collection_id: String, title: String, content: String, category_id: Option<String>, model: Option<String>, assets: Vec<crate::local_database::assets::Asset>) -> Result<PromptRecord, String> {
+    crate::local_database::collections::create_member_in_dir(&data_dir(&app)?, &collection_id, &title, &content, category_id.as_deref(), model.as_deref(), &assets)
+}
+
+#[tauri::command]
 pub fn save_local_prompt_with_assets(app: AppHandle, id: Option<String>, title: String, content: String, category_id: Option<String>, model: Option<String>, assets: Vec<crate::local_database::assets::Asset>) -> Result<PromptRecord, String> {
     crate::local_database::assets::save_prompt(&data_dir(&app)?, id.as_deref(), &title, &content, category_id.as_deref(), model.as_deref(), &assets)
 }

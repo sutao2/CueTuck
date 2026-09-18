@@ -282,13 +282,7 @@
               <img decoding="async" v-if="space === 'square' && referenceImages(item).length && !failedReferenceImages[item.id]" class="square-reference-cover" :src="referenceImages(item)[0]" :alt="item.title" loading="lazy" referrerpolicy="no-referrer" @error="failedReferenceImages[item.id] = true">
               <PublishedImage v-if="space === 'square' && item.preview_asset && !referenceImages(item).length" class="square-reference-cover" :item-id="item.id" :file="item.preview_asset" :title="item.title" />
               <LocalPromptCover v-if="space === 'local' && item.kind === 'prompt' && item.image_count" :prompt-id="item.id" :title="item.title" :revision="item.updated_at" />
-              <div
-                v-if="item.kind === 'collection' && coverPreview(item).length"
-                class="collection-card-preview"
-                data-testid="collection-cover-preview"
-              >
-                <img decoding="async" v-for="(src, index) in coverPreview(item)" :key="index" :src="src" alt="">
-              </div>
+              <CollectionCover v-if="item.kind === 'collection' && coverPreview(item).length" :type="item.cover_type" :json="item.cover_json" variant="card" class="square-reference-cover" data-testid="collection-cover-preview" />
               <label v-if="selecting && space === 'local' && item.kind === 'prompt'" class="card-selection" @click.stop>
                 <input type="checkbox" :checked="selectedPrompts.includes(item.id)" :aria-label="`选择 ${item.title}`" :data-select-prompt="item.id" @change="selectPrompt(item.id)" />选择
               </label>
@@ -392,6 +386,7 @@
       ref="editorPage"
       v-show="!loginReason"
       :prompt="editing"
+      :collection-title="creatingInCollection?.title || ''"
       :groups="categoryGroups"
       :model-options="modelOptions"
       :default-model="defaultModel"
@@ -430,6 +425,7 @@
       @retry="openCollection(openedCollection)"
       @cancel="openedCollection = null"
       @add="addToOpenedCollection"
+      @create="createInOpenedCollection"
       @remove-member="removeFromOpenedCollection"
       @open="openCollectionMember"
       @use="useCollectionMember"
@@ -633,6 +629,7 @@ import SearchHighlight from './SearchHighlight.vue';
 import ContentState from './ContentState.vue';
 import PublicationPreview from './PublicationPreview.vue';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import CollectionCover from "./CollectionCover.vue";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";
 import LoginModal from "./LoginModal.vue";
@@ -676,6 +673,7 @@ import {
   deleteLocalCategory,
   createLocalCollection,
   createLocalPrompt,
+  createCollectionPrompt,
   deleteLocalPrompt,
   getLocalSetting,
   listCollectionMembers,
@@ -817,6 +815,7 @@ const view = ref("grid");
 const sortTab = ref("全部");
 const contentLanguage = ref("zh");
 const creating = ref(false);
+const creatingInCollection = ref(null);
 const editing = ref(null);
 const reading = ref(null);
 const publicationsOpen = ref(false), publicationsBusy=ref(false);
@@ -1912,6 +1911,7 @@ let localRequest = 0;
 function closeEditor() {
   pendingDelete.value = null;
   creating.value = false;
+  creatingInCollection.value = null;
   editing.value = null;
   editorError.value = "";
   finishNavigation();
@@ -1939,13 +1939,14 @@ async function savePrompt({ id, kind, title, content, categoryId, model, coverTy
     } else if (kind === "collection") {
       await createLocalCollection({ title, categoryId, coverType, coverUrls });
     } else {
-      await createLocalPrompt({ title, content, categoryId, model, assets });
+      if (creatingInCollection.value) await createCollectionPrompt({ collectionId: creatingInCollection.value.id, title, content, categoryId, model, assets });
+      else await createLocalPrompt({ title, content, categoryId, model, assets });
     }
     saved = true;
     closeEditor();
     notifyOperation(`已保存「${title}」。`, true, 'save');
     await refreshOperationView();
-    if (reading.value?.id === id) reading.value = (await listLocalPrompts()).find(row => row.id === id) || null;
+    if (reading.value?.id === id) reading.value = collectionMembers.value.find(row => row.id === id) || (await listLocalPrompts()).find(row => row.id === id) || null;
   } catch (error) {
     if (saved) notifyOperation(`已保存，但刷新失败：${error.message || error}`, false, 'save', true);
     else editorError.value = `保存失败：${error.message || error}`;
@@ -2130,6 +2131,13 @@ async function startUse(member) {
   useError.value = "";
   using.value = member;
   if (!extractVariables(member.content).length) await finishUse(member.content);
+}
+
+function createInOpenedCollection() {
+  if (collectionBusy.value || !collectionReady.value) return;
+  creatingInCollection.value = openedCollection.value;
+  creating.value = true;
+  editorError.value = '';
 }
 
 function editOpenedCollection() {

@@ -12,16 +12,9 @@
         <p v-if="loading" role="status" class="use-hint">正在读取合集…</p>
         <button v-else-if="!ready" type="button" class="button ghost-button" data-testid="retry-collection-load" :disabled="busy" @click="$emit('retry')">重新读取</button>
         <template v-if="ready">
-        <div v-if="collection.cover_type === 'single' && singleCover" class="cover-single">
-          <img :src="singleCover" alt="">
-        </div>
-        <div v-else-if="collection.cover_type === 'grid'" class="cover-grid" data-testid="cover-grid">
-          <i v-for="(src, index) in coverCells" :key="index" :class="{ filled: Boolean(src) }">
-            <img v-if="src" :src="src" alt="">
-          </i>
-        </div>
-        <p class="use-hint">{{ members.length }} 个提示词</p>
-        <div v-if="!members.length" class="collection-empty"><strong>把相关提示词放在一起</strong><p>从下方选择本地提示词，开始整理这个合集。</p></div>
+        <CollectionCover :type="collection.cover_type" :json="collection.cover_json" />
+        <div class="collection-members-heading"><p class="use-hint">{{ members.length }} 个提示词</p><button type="button" class="button primary-button" data-testid="create-collection-prompt" :disabled="busy || loading" @click="$emit('create')">＋ 新建提示词</button></div>
+        <div v-if="!members.length" class="collection-empty"><strong>把相关提示词放在一起</strong><p>从下方选择本地提示词，或新建仅属于这个合集的提示词。</p></div>
         <ul class="member-list">
           <li v-for="member in members" :key="member.id">
             <button type="button" class="member-title" :title="member.title" @click="$emit('open', member)">{{ member.title }}</button>
@@ -33,7 +26,7 @@
         </ul>
         <div class="member-picker">
           <label class="field"><span>搜索并加入提示词</span><input v-model="memberQuery" type="search" placeholder="搜索本地提示词标题" /></label>
-          <p class="use-hint">可多选；已有合集的提示词会移动到本合集，正文保持不变。</p>
+          <p class="use-hint">可多选；已有合集的提示词会移动到本合集，正文保持不变。移出合集会保留为独立提示词。</p>
           <div class="member-choices">
             <label v-for="prompt in filteredAvailable" :key="prompt.id">
               <input v-model="selectedPromptIds" type="checkbox" :value="prompt.id" :data-member-choice="prompt.id" />
@@ -59,7 +52,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { vPageFocus } from "../lib/pageFocus.js";
-import { coverSlots, parseCoverUrls } from "../lib/cover.js";
+import CollectionCover from "./CollectionCover.vue";
 
 const props = defineProps({
   collection: { type: Object, required: true },
@@ -70,13 +63,11 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   ready: { type: Boolean, default: true },
 });
-const emit = defineEmits(["cancel", "add", "open", "use", "remove-member", "edit", "retry"]);
+const emit = defineEmits(["cancel", "add", "open", "use", "remove-member", "edit", "retry", "create"]);
 const selectedPromptIds = ref([]), memberQuery = ref('');
 const available = computed(() =>
   props.prompts.filter((prompt) => prompt.collection_id !== props.collection.id),
 );
-const coverCells = computed(() => coverSlots(props.collection.cover_json, 9));
-const singleCover = computed(() => parseCoverUrls(props.collection.cover_json)[0] || "");
 const filteredAvailable = computed(() => available.value.filter(p => p.title.toLowerCase().includes(memberQuery.value.trim().toLowerCase())));
 watch([() => props.ready, available], () => {
   if (props.ready) selectedPromptIds.value = selectedPromptIds.value.filter(id => available.value.some(p => p.id === id));
@@ -88,6 +79,7 @@ function add() {
 </script>
 
 <style scoped>
+.collection-members-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 8px; }
 .member-picker { margin-top: 24px; }
 .member-choices { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
 .member-choices label { display: flex; align-items: center; gap: 10px; padding: 9px; font-size: 13px; }

@@ -32,6 +32,14 @@ describe("CollectionDetailModal", () => {
     expect(w.emitted('remove-member')[0][0]).toBe('p');
     w.unmount();
   });
+  it('offers collection-only creation and blocks it during mutation', async () => {
+    const w = mount(CollectionDetailModal, { props: { collection: { id: 'c', title: '合集' } } });
+    await w.get('[data-testid="create-collection-prompt"]').trigger('click');
+    expect(w.emitted('create')).toHaveLength(1);
+    await w.setProps({ busy: true });
+    expect(w.get('[data-testid="create-collection-prompt"]').element.disabled).toBe(true);
+    w.unmount();
+  });
   it("opens a sparse grid with real images and placeholders", () => {
     const w = mount(CollectionDetailModal, {
       props: {

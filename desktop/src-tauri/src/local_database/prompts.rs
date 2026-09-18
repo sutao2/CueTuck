@@ -291,7 +291,7 @@ pub fn list_prompts_in_dir(
              FROM prompts p
              LEFT JOIN categories c ON c.id = p.category_id
              LEFT JOIN categories parent ON parent.id = c.parent_id
-             WHERE p.deleted_at IS NULL
+             WHERE p.deleted_at IS NULL AND COALESCE(p.source, 'local') != 'collection'
                AND (?1 = '' OR EXISTS(SELECT 1 FROM json_each(?2) term WHERE p.title LIKE term.value ESCAPE '\\' OR p.content LIKE term.value ESCAPE '\\' OR IFNULL(c.name, '') LIKE term.value ESCAPE '\\' OR IFNULL(parent.name, '') LIKE term.value ESCAPE '\\'))
                AND (
                     ?3 IS NULL

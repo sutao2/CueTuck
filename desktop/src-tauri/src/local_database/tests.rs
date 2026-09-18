@@ -718,3 +718,23 @@ fn moving_category_preserves_content_and_rejects_missing_targets() {
     super::delete_prompt_in_dir(dir.path(), &prompt.id).unwrap();
     assert!(super::move_prompt_category_in_dir(dir.path(), &prompt.id, None).is_err());
 }
+
+#[test]
+fn collection_only_creation_is_atomic_and_detaching_preserves_content() {
+    let dir = tempfile::tempdir().unwrap(); initialize_in_dir(dir.path()).unwrap();
+    let c = create_collection_in_dir(dir.path(), "合集", None, "none", None).unwrap();
+    let p = super::collections::create_member_in_dir(dir.path(), &c.id, "成员", "正文", None, None, &[]).unwrap();
+    assert_eq!(p.source, "collection");
+    assert!(list_prompts_in_dir(dir.path(), "", None).unwrap().is_empty());
+    assert_eq!(list_collection_members_in_dir(dir.path(), &c.id).unwrap().len(), 1);
+    assert!(super::collections::create_member_in_dir(dir.path(), "missing", "失败", "正文", None, None, &[]).is_err());
+    let data = super::export_library_json_in_dir(dir.path()).unwrap();
+    let restored = tempfile::tempdir().unwrap(); initialize_in_dir(restored.path()).unwrap();
+    super::apply_import_json_in_dir(restored.path(), &data).unwrap();
+    assert!(list_prompts_in_dir(restored.path(), "", None).unwrap().is_empty());
+    super::collections::remove_prompt_from_collection_in_dir(dir.path(), &p.id, &c.id).unwrap();
+    assert_eq!(list_prompts_in_dir(dir.path(), "", None).unwrap()[0].content, "正文");
+    let second = super::collections::create_member_in_dir(dir.path(), &c.id, "第二条", "保留", None, None, &[]).unwrap();
+    super::collections::delete_collection_in_dir(dir.path(), &c.id).unwrap();
+    assert!(list_prompts_in_dir(dir.path(), "", None).unwrap().iter().any(|p| p.id == second.id && p.source == "local"));
+}

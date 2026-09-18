@@ -103,3 +103,10 @@
 | 新建合集 | `desktop/src-tauri` `creates_empty_collection` |
 | 向合集添加 | `desktop/src-tauri` `adds_member_via_collection_id`；`library.test.js` adds a prompt to a collection |
 | 九宫格缺图 | `desktop/src-tauri` `persists_grid_cover_refs`；`library.test.js` stores cover refs；`cover.test.js` 缺项填占位；`CollectionDetailModal.spec.js` 3 图 + 6 占位；`WorkbenchShell.spec.js` 卡片预览前 3 张 |
+
+## 合集内创作与封面布局（2026-09-18）
+
+- 在合集详情可新建正文和附件，原生事务一次保存，`source=collection` 标识合集专属成员；独立提示词列表、候选列表不展示，已有提示词加入不改变来源。
+- GIVEN 合集专属成员；WHEN 移出或删除合集；THEN 保留正文及附件，来源转为 local，作为独立提示词出现；编辑器和成员选择区提前说明。
+- GIVEN 创建失败；WHEN 重试；THEN 不遗留半创建的独立提示词。
+- 封面由统一组件展示；九宫格固定三行三列、整体正方形，详情最大宽 480px，卡片正常文档流，列表显示缩略图，单图保留比例。缺失格子使用占位。

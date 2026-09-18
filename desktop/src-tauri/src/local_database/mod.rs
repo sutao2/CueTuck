@@ -2,7 +2,7 @@ mod backup;
 mod auto_backup;
 pub use auto_backup::{set_auto_backup_in_dir, start_auto_backup_worker};
 mod categories;
-mod collections;
+pub(crate) mod collections;
 mod prompts;
 pub mod assets;
 mod settings;
