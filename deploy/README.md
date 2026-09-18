@@ -77,7 +77,7 @@ npm run build:local
 TAURI_SIGNING_PRIVATE_KEY=/安全位置/cuetuck-updater.key PROMPTARK_API_BASE=https://prompt.likh.cn VITE_API_BASE=https://prompt.likh.cn npm run build:preview
 ```
 
-此入口要求预发行版本、相同的正式 HTTPS API 与更新签名密钥。输出 release 优化并以 ad-hoc 签名封装资源的 macOS app/dmg，同时生成更新归档和签名；发行时还需生成 `latest.json`，不代表 Apple 签名/公证通过。GitHub 必须标为 prerelease，说明已验平台及限制。正式签名发行仍使用原 `build:release` 门禁。
+此入口要求预发行版本、相同的正式 HTTPS API 与更新签名密钥；Mac 还需固定签名身份，准备及验收规则见[发行 QA](../docs/how-to/release-qa.md)。输出 release 优化并复用固定签名身份封装资源的 macOS app/dmg，同时生成更新归档和签名；发行时还需生成 `latest.json`，不代表 Apple 签名/公证通过。GitHub 必须标为 prerelease，说明已验平台及限制。正式签名发行仍使用原 `build:release` 门禁。
 
 ### macOS 首次打开提示「已损坏」或无法验证
 
