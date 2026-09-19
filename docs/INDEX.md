@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-19-usability-safety.md](plans/2026-09-19-usability-safety.md) | 实施中 | 改善搜索、同步反馈与数据恢复 | 五个兼容切片、失败保护和回归验收 |
 | [plans/2026-09-18-beta19-release.md](plans/2026-09-18-beta19-release.md) | 已发布 | beta.19 双平台修复发行 | 封面类型、窄卡片与审核文案；安装包和更新资产核验 |
 | [plans/2026-09-18-cover-file-type.md](plans/2026-09-18-cover-file-type.md) | 已随 beta.19 发布 | 合集发布 cover-1.png 类型不匹配 | 按实际图片格式识别；654 项回归与构建通过 |
 | [plans/2026-09-18-ai-decisions.md](plans/2026-09-18-ai-decisions.md) | 已部署启用 | 三类投稿 AI 直接通过或拒绝 | 宽松规则、完整检查、失败保留与线上样本验收 |
