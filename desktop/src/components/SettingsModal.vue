@@ -146,7 +146,8 @@
           </section>
           <section v-else-if="current === 'shortcuts'">
             <h3>快捷键</h3>
-            <p>登记全局组合以唤起独立启动器。与系统冲突时会提示，不会静默失效。</p>
+            <p>登记全局组合以唤起独立启动器。与系统冲突时可更换组合；底栏按钮仍可打开启动器。</p>
+            <p v-if="shortcutStatus.error" role="alert">快捷键注册未完成：{{ shortcutStatus.error }}。请重新录入并保存。</p>
             <div class="settings-group">
             <p class="save-mode-hint">点击后按组合键，完成后保存。支持 Ctrl / Alt / Command 组合或 F1–F24；Tab 切换，Esc 取消。系统保留组合可能被拦截。</p>
             <label class="field">
@@ -169,10 +170,11 @@
           </section>
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
             <h3>同步</h3>
+            <SyncStatus :session="session" expanded />
             <p>已登录可立即同步个人库。启动器始终只读本机；MCP 广场工具需在接入配置中另行启用。</p>
             <div class="settings-group">
             <label class="setting-row" data-testid="auto-sync-queue-row">
-              <span class="setting-copy"><strong>自动同步收藏与发布草稿</strong><small>打开后，收藏或发布在断网时写入本机队列，联网后随立即同步送出。不会假装已经到达服务器。</small></span>
+              <span class="setting-copy"><strong>离线操作排队</strong><small>收藏或发布失败时保存在本机。点击「立即同步」，或之后成功收藏/发布时重试发送；不会自动同步整个个人库。</small></span>
               <input
                 type="checkbox"
                 data-testid="auto-sync-queue"
@@ -432,6 +434,8 @@
 
 <script setup>
 import McpSettings from './McpSettings.vue';
+import SyncStatus from './SyncStatus.vue';
+import { saveSyncResult } from '../platform/syncStatus.js';
 import AppIcon from "./AppIcon.vue";
 import LauncherAiSettings from './LauncherAiSettings.vue';
 import { DEFAULT_LAUNCHER_PREFERENCES, LAUNCHER_PREFERENCES_KEY, readLauncherPreferences } from '../platform/launcherPreferences.js';
@@ -450,7 +454,7 @@ import {
   restoreLocalLibrary,
   setLocalSetting,
 } from "../platform/library.js";
-import { DEFAULT_LAUNCHER_SHORTCUT, DEFAULT_NEW_PROMPT_SHORTCUT, DEFAULT_PASTE_RECENT_SHORTCUT, registerLauncherShortcut } from "../platform/shortcut.js";
+import { DEFAULT_LAUNCHER_SHORTCUT, DEFAULT_NEW_PROMPT_SHORTCUT, DEFAULT_PASTE_RECENT_SHORTCUT, registerLauncherShortcut, shortcutStatus } from "../platform/shortcut.js";
 import ShortcutInput from "./ShortcutInput.vue";
 import { invokeCommand } from '../platform/tauri.js';
 import pkg from "../../package.json";
@@ -783,7 +787,13 @@ async function runSyncNow(queueOnly = false) {
       return;
     }
     syncNote.value = `${syncLibrarySummary ? `${syncLibrarySummary}；队列处理失败：` : '同步未完成：'}${message}`;
-  } finally { syncBusy.value = false; syncIncludeAssets.value = false; }
+  } finally {
+    if (sameAccount()) {
+      try { await saveSyncResult(account.email, syncNote.value); }
+      catch { syncNote.value += '；同步记录保存失败'; }
+    }
+    syncBusy.value = false; syncIncludeAssets.value = false;
+  }
 }
 
 async function toggleAutoDownload(event) {

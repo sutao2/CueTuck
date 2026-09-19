@@ -1,4 +1,7 @@
 import { setLocalSetting } from "./library.js";
+import { reactive } from 'vue';
+
+export const shortcutStatus = reactive({ error: '' });
 
 export const DEFAULT_LAUNCHER_SHORTCUT = "Control+Space";
 export const DEFAULT_NEW_PROMPT_SHORTCUT = "Control+Alt+N";
@@ -16,11 +19,11 @@ export async function registerLauncherShortcut(
     extras = [],
   } = {},
 ) {
-  const plugin = register && unregisterAll
-    ? { register, unregisterAll }
-    : await loadShortcutPlugin();
-  await plugin.unregisterAll();
   try {
+    const plugin = register && unregisterAll
+      ? { register, unregisterAll }
+      : await loadShortcutPlugin();
+    await plugin.unregisterAll();
     await plugin.register(combo, async (event) => {
       if (recording) return;
       if (event?.state && event.state !== "Pressed") return;
@@ -30,11 +33,13 @@ export async function registerLauncherShortcut(
     for (const extra of extras) {
       await plugin.register(extra.combo, (event) => { if (!recording) return extra.handler(event); });
     }
+    await persist(combo);
+    shortcutStatus.error = '';
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    shortcutStatus.error = message;
     throw new Error(message.includes("冲突") ? message : `快捷键冲突：${message}`);
   }
-  await persist(combo);
   return combo;
 }
 

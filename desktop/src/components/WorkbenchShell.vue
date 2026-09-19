@@ -613,9 +613,11 @@
       <span class="status-sep"></span>
       <span class="status-item">{{ databaseLabel }}</span>
       <span class="status-item">本地 <strong>{{ localCount }}</strong> 条</span>
+      <SyncStatus :session="session" @open="settingsPage = 'sync'; settingsOpen = true" />
       <span class="status-spacer"></span>
+      <button v-if="shortcutStatus.error" type="button" class="status-button" data-testid="shortcut-warning" :title="shortcutStatus.error" @click="settingsPage = 'shortcuts'; settingsOpen = true">快捷键异常 · 点击修复</button>
       <button type="button" class="status-button" @click="$emit('open-launcher')">
-        <AppIcon name="search" /> {{ t("launcher") }} <kbd>{{ shortcutLabel }}</kbd>
+        <AppIcon name="search" /> {{ t("launcher") }} <kbd v-if="!shortcutStatus.error">{{ shortcutLabel }}</kbd>
       </button>
     </footer>
     <NicknameSetup v-if="session.loggedIn && !profileReady" :key="session.email" @ready="finishProfile" @logout="cancelProfile" />
@@ -627,6 +629,8 @@ import SearchableSelect from "./SearchableSelect.vue";
 import { formatMetric } from '../platform/contentMetrics.js';
 import AppIcon from "./AppIcon.vue";
 import GlobalSearch from "./GlobalSearch.vue";
+import SyncStatus from './SyncStatus.vue';
+import { shortcutStatus } from '../platform/shortcut.js';
 import { listPromptAssets, assetSize, formatBytes, assetUrl, validateAssets } from '../platform/assets.js';
 import { uploadPrivateAsset } from '../platform/privateMedia.js';
 import { vDialogFocus } from "../lib/dialogFocus.js";

@@ -1,6 +1,7 @@
 import { getLocalSetting, setLocalSetting } from "./library.js";
 import { getSession } from "./session.js";
 import { createPublication, deleteFavorite, putFavorite } from "./square.js";
+import { notifySyncStatus } from './syncStatus.js';
 
 const QUEUE_KEY = "sync_queue";
 let operations = Promise.resolve();
@@ -24,6 +25,7 @@ async function readQueue() {
 
 async function writeQueue(jobs) {
   await setLocalSetting(QUEUE_KEY, JSON.stringify(jobs));
+  notifySyncStatus();
 }
 
 export async function listSyncQueue() {

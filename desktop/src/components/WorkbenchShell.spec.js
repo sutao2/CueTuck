@@ -1180,7 +1180,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-settings-page="sync"]').trigger("click");
     const panel = w.get('[data-testid="settings-unavailable"]');
     expect(panel.text()).not.toContain("尚未提供");
-    expect(panel.text()).toContain("自动同步收藏");
+    expect(panel.text()).toContain("离线操作排队");
     expect(w.get('[data-testid="auto-sync-queue"]').element.checked).toBe(false);
     expect(panel.text()).toContain("仅在 Wi-Fi");
     expect(panel.text()).toContain("冲突处理");

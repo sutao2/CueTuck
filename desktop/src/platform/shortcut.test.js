@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { registerLauncherShortcut, setShortcutRecording } from "./shortcut.js";
+import { registerLauncherShortcut, setShortcutRecording, shortcutStatus } from "./shortcut.js";
 
 describe("registerLauncherShortcut", () => {
+  it('reports startup failures and clears the warning only after registration succeeds', async () => {
+    const options = { register: vi.fn(), unregisterAll: vi.fn().mockRejectedValueOnce(Error('系统拒绝')), persist: vi.fn() };
+    await expect(registerLauncherShortcut('Control+Space', options)).rejects.toThrow('系统拒绝');
+    expect(shortcutStatus.error).toBe('系统拒绝');
+    expect(options.persist).not.toHaveBeenCalled();
+    await registerLauncherShortcut('Control+Space', options);
+    expect(shortcutStatus.error).toBe('');
+  });
   it("suppresses all application shortcuts during recording and restores callbacks afterward", async () => {
     const callbacks = [];
     const extra = vi.fn();
