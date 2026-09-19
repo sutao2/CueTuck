@@ -19,6 +19,7 @@ pub fn backup_library_in_dir(dir: &Path, dest: &Path) -> Result<String, String> 
     Ok(dest.to_string_lossy().into_owned())
 }
 
+#[cfg(test)]
 pub fn restore_library_in_dir(dir: &Path, src: &Path) -> Result<(), String> {
     restore_library_checked(dir, src, None).map(|_| ())
 }

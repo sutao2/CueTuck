@@ -32,6 +32,7 @@ const PRESET_CATEGORIES = [
 
 let memoryPrompts = [];
 let memoryCollections = [];
+let memoryVersions = [];
 let memorySettings = { theme: "light" };
 let memoryCategories = seedCategories();
 let memoryClock = 0;
@@ -66,6 +67,7 @@ export function resetMemoryLibrary() {
   clearThumbnailCache();
   memoryPrompts = [];
   memoryCollections = [];
+  memoryVersions = [];
   memorySettings = { theme: "light" };
   memoryCategories = seedCategories();
   memoryClock = 0;
@@ -466,6 +468,26 @@ export async function restoreDeletedLocalItem(id, kind) {
   }
 }
 
+export async function listLocalPromptVersions() {
+  if (isTauri()) return tauriInvoke('list_local_prompt_versions');
+  return memoryVersions.map(({ id, title, saved_at }) => ({ id, title, saved_at }));
+}
+
+export async function getLocalPromptVersion(id) {
+  if (isTauri()) return tauriInvoke('get_local_prompt_version', { id });
+  const version = memoryVersions.find(item => item.id === id);
+  if (!version) throw Error('版本不存在或已超出保留范围');
+  return structuredClone(version.payload);
+}
+
+export async function restoreLocalPromptVersion(id) {
+  if (isTauri()) return tauriInvoke('restore_local_prompt_version', { id });
+  const old = await getLocalPromptVersion(id);
+  const categoryId = memoryCategories.some(item => item.id === old.category_id && !item.deleted_at) ? old.category_id : null;
+  const copy = await createLocalPrompt({ title: `${old.title}（同步前版本）`, content: old.content, model: old.model, categoryId, assets: old.assets });
+  return copy.id;
+}
+
 export async function listCollectionMembers(collectionId) {
   if (isTauri()) {
     return tauriInvoke("list_local_collection_members", { collection_id: collectionId });
@@ -514,6 +536,7 @@ export async function applyLocalSyncChanges(items, { keepLocal = false, includeA
   const settings = { ...memorySettings };
   const stamps = { ...memorySettingStamps };
   const pendingAssets = new Map();
+  const versions = [...memoryVersions];
   for (const kind of ["category", "collection", "prompt", "setting"]) {
     const ordered = items.filter((row) => row.kind === kind);
     if (kind === 'category') ordered.sort((a, b) => Number(a.payload?.parent_id != null) - Number(b.payload?.parent_id != null));
@@ -553,6 +576,9 @@ export async function applyLocalSyncChanges(items, { keepLocal = false, includeA
       for (const [field, target] of [["category_id", "category"], ["collection_id", "collection"]]) {
         if (payload[field] != null && !tables[target].some((row) => row.id === payload[field])) throw new Error(`同步记录引用不存在的 ${field}`);
       }
+      if (kind === 'prompt' && existing && !existing.deleted_at && (item.deleted_at || ['title', 'content'].some(key => key in payload && payload[key] !== existing[key]))) {
+        versions.unshift({ id: crypto.randomUUID(), title: existing.title, saved_at: nextTimestamp(), payload: { title: existing.title, content: existing.content, model: existing.model, category_id: existing.category_id, assets: memoryAssets(existing.id) } });
+      }
       const row = { ...existing, ...payload, id: item.id, updated_at: String(timestampMillis(item.updated_at)) };
       if (kind === "category") { row.is_system = false; row.parent_id = payload.parent_id ?? null; }
       row.deleted_at = item.deleted_at ?? null;
@@ -569,6 +595,7 @@ export async function applyLocalSyncChanges(items, { keepLocal = false, includeA
   memoryCollections = tables.collection;
   memoryPrompts = tables.prompt;
   memorySettings = settings;
+  memoryVersions = versions.slice(0, 50);
   memorySettingStamps = stamps;
   for (const [id, assets] of pendingAssets) {
     storeMemoryAssets(id, assets);

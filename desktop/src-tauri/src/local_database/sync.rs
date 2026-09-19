@@ -284,6 +284,9 @@ pub fn apply_with_assets(dir: &Path, items: &[SyncChange], keep_local: bool, loc
                     }
                 }
             }
+            if kind == "prompt" && !local_import {
+                super::history::preserve(&transaction, id, &item.payload, item.deleted_at.is_some())?;
+            }
             let mut payload = item.payload.as_object().unwrap().clone();
             payload.insert(key.into(), json!(id));
             payload.insert(

@@ -30,6 +30,19 @@ pub fn restore_deleted_local_item(app: AppHandle, id: String, kind: String) -> R
 }
 
 #[tauri::command]
+pub fn list_local_prompt_versions(app: AppHandle) -> Result<Vec<crate::local_database::history::VersionSummary>, String> {
+    crate::local_database::history::list(&data_dir(&app)?)
+}
+#[tauri::command]
+pub fn get_local_prompt_version(app: AppHandle, id: String) -> Result<serde_json::Value, String> {
+    crate::local_database::history::detail(&data_dir(&app)?, &id)
+}
+#[tauri::command]
+pub fn restore_local_prompt_version(app: AppHandle, id: String) -> Result<String, String> {
+    crate::local_database::history::restore_copy(&data_dir(&app)?, &id)
+}
+
+#[tauri::command]
 pub fn create_collection_prompt(app: AppHandle, collection_id: String, title: String, content: String, category_id: Option<String>, model: Option<String>, assets: Vec<crate::local_database::assets::Asset>) -> Result<PromptRecord, String> {
     crate::local_database::collections::create_member_in_dir(&data_dir(&app)?, &collection_id, &title, &content, category_id.as_deref(), model.as_deref(), &assets)
 }

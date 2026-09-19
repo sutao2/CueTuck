@@ -170,6 +170,7 @@
           </section>
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
             <h3>同步</h3>
+            <LocalVersions :disabled="syncBusy || dataBusy" @busy="dataBusy = $event" @restored="emit('imported')" />
             <SyncStatus :session="session" expanded />
             <p>已登录可立即同步个人库。启动器始终只读本机；MCP 广场工具需在接入配置中另行启用。</p>
             <div class="settings-group">
@@ -437,6 +438,7 @@
 <script setup>
 import McpSettings from './McpSettings.vue';
 import LocalTrash from './LocalTrash.vue';
+import LocalVersions from './LocalVersions.vue';
 import SyncStatus from './SyncStatus.vue';
 import { saveSyncResult } from '../platform/syncStatus.js';
 import AppIcon from "./AppIcon.vue";
@@ -760,7 +762,7 @@ async function togglePref(key, event) {
 }
 
 async function runSyncNow(queueOnly = false) {
-  if (syncBusy.value) return;
+  if (syncBusy.value || dataBusy.value) return;
   syncNote.value = "";
   if (!props.session.loggedIn) {
     emit("login");

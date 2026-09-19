@@ -1,5 +1,6 @@
 mod backup;
 pub mod recovery;
+pub mod history;
 mod auto_backup;
 pub use auto_backup::{set_auto_backup_in_dir, start_auto_backup_worker};
 mod categories;
@@ -30,7 +31,9 @@ pub use prompts::{
     record_prompt_use_in_dir, update_prompt_in_dir, update_prompt_in_dir_with_model,
     upsert_synced_prompt_in_dir, PromptRecord,
 };
-pub use backup::{backup_library_in_dir, export_library_zip_in_dir, restore_library_in_dir};
+pub use backup::{backup_library_in_dir, export_library_zip_in_dir};
+#[cfg(test)]
+pub use backup::restore_library_in_dir;
 pub use backup::{preview_library_restore, restore_library_checked, RestorePreview};
 pub use settings::{
     apply_import_json_in_dir, export_library_json_in_dir, get_setting_in_dir, get_optional_setting_in_dir,
@@ -156,6 +159,9 @@ pub fn initialize_in_dir(dir: &Path) -> Result<String, String> {
                 name TEXT NOT NULL, mime TEXT NOT NULL, data BLOB NOT NULL,
                 position INTEGER NOT NULL,
                 PRIMARY KEY (prompt_id, id)
+            );
+            CREATE TABLE IF NOT EXISTS local_prompt_history (
+                id TEXT PRIMARY KEY, title TEXT NOT NULL, saved_at TEXT NOT NULL, payload_json TEXT NOT NULL
             );
             ",
         )
