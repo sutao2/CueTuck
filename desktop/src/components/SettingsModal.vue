@@ -170,7 +170,6 @@
           </section>
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
             <h3>同步</h3>
-            <LocalVersions :disabled="syncBusy || dataBusy" @busy="dataBusy = $event" @restored="emit('imported')" />
             <SyncStatus :session="session" expanded />
             <p>已登录可立即同步个人库。启动器始终只读本机；MCP 广场工具需在接入配置中另行启用。</p>
             <div class="settings-group">
@@ -205,11 +204,12 @@
             </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>立即同步</strong><small>已登录时推拉账号库。未登录打开登录，不会假装已同步。</small></span>
-              <button type="button" class="button ghost-button" data-testid="sync-now" :disabled="syncBusy" @click="runSyncNow()">{{ syncBusy ? '正在同步…' : '立即同步' }}</button>
+              <button type="button" class="button ghost-button" data-testid="sync-now" :disabled="syncBusy || dataBusy" @click="runSyncNow()">{{ syncBusy ? '正在同步…' : '立即同步' }}</button>
             </div>
             <p v-if="syncNote" role="status" data-testid="sync-note">{{ syncNote }}</p>
-            <button v-if="syncQueuePending" type="button" class="button ghost-button" data-testid="retry-sync-queue" :disabled="syncBusy" @click="runSyncNow(true)">重试发送队列</button>
+            <button v-if="syncQueuePending" type="button" class="button ghost-button" data-testid="retry-sync-queue" :disabled="syncBusy || dataBusy" @click="runSyncNow(true)">重试发送队列</button>
             </div>
+            <LocalVersions :disabled="syncBusy || dataBusy" @busy="dataBusy = $event" @restored="emit('imported')" />
           </section>
           <section v-else-if="current === 'models'">
             <h3>AI 与模型</h3>

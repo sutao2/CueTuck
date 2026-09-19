@@ -4,6 +4,9 @@ import WorkbenchShell from './WorkbenchShell.vue';
 import { createLocalCollection, createLocalPrompt, resetMemoryLibrary } from '../platform/library.js';
 import { resetSquare, setCatalogTransport, setSquarePageTransport, setSquareContentTransport } from '../platform/square.js';
 import { resetMemorySession } from '../platform/session.js';
+import { setSkillsTransportForTests } from '../platform/skills.js';
+import { setSkillMarketTransport } from '../platform/skillMarket.js';
+import { shortcutStatus } from '../platform/shortcut.js';
 
 let w;
 beforeEach(() => {
@@ -11,7 +14,7 @@ beforeEach(() => {
   setCatalogTransport(async () => ({ categories: [], models: [] }));
   setSquarePageTransport(async () => ({ items: [], total: 0, next_offset: null }));
 });
-afterEach(() => { w?.unmount(); vi.useRealTimers(); });
+afterEach(() => { w?.unmount(); vi.useRealTimers(); setSkillsTransportForTests(null); setSkillMarketTransport(null); shortcutStatus.error = ''; });
 async function start(host = 'macos') {
   w = mount(WorkbenchShell, { props: { host }, attachTo: document.body }); await flushPromises();
 }
@@ -20,6 +23,50 @@ async function search(text) {
   await w.get('[data-testid="global-search-input"]').setValue(text);
   await vi.advanceTimersByTimeAsync(250); await flushPromises();
 }
+it('protects an unsaved prompt before opening shortcut repair from the footer', async () => {
+  await start(); await w.get('.content-actions .primary-button').trigger('click');
+  await w.get('[data-testid="prompt-editor"] input[data-dialog-autofocus]').setValue('未保存内容');
+  shortcutStatus.error = '冲突'; await flushPromises();
+  await w.get('[data-testid="shortcut-warning"]').trigger('click'); await flushPromises();
+  expect(w.find('[data-testid="settings-page"]').exists()).toBe(false);
+  expect(w.get('[data-testid="discard-editor"]').text()).toContain('放弃未保存');
+  await w.get('[data-testid="discard-editor"] .primary-button').trigger('click');
+  expect(w.get('[data-testid="prompt-editor"] input[data-dialog-autofocus]').element.value).toBe('未保存内容');
+});
+it('opens a Skill search result with a single return action and restores prompt filters on Escape', async () => {
+  const skill = { key: 'qa', path: '/qa/skill', name: 'QA Skill', description: '说明', root_id: 'qa' };
+  const native = vi.fn(async request => request.action === 'snapshot'
+    ? { skills: [skill], roots: [], backups: [], operations: [], sources: [], warnings: [] }
+    : { package: { name: 'QA Skill', body: '# 正文', files: [], warnings: [], bytes: 10 }, modified: false });
+  setSkillsTransportForTests(native);
+  await start(); await w.get('.inline-search input').setValue('保留筛选');
+  await search('QA'); await w.get('[data-search-scope="skills-local"]').trigger('click');
+  await vi.advanceTimersByTimeAsync(250); await flushPromises();
+  await w.get('[role="option"]').trigger('click'); await flushPromises();
+  const detail = w.get('[data-testid="skill-search-detail"]');
+  expect(detail.text()).toContain('# 正文');
+  expect(detail.findAll('button').filter(button => button.text().includes('返回'))).toHaveLength(1);
+  expect(detail.get('.skills-back').element.disabled).toBe(false);
+  await detail.trigger('keydown', { key: 'Escape', isComposing: true });
+  expect(w.find('[data-testid="skill-search-detail"]').exists()).toBe(true);
+  await detail.trigger('keydown', { key: 'Escape' }); await flushPromises();
+  expect(w.find('[data-testid="skill-search-detail"]').exists()).toBe(false);
+  expect(w.get('.inline-search input').element.value).toBe('保留筛选');
+  expect(native.mock.calls.some(([request]) => request.action === 'install')).toBe(false);
+});
+
+it('opens a community Skill result as a detail without downloading a package', async () => {
+  setSkillsTransportForTests(async () => ({ skills: [], roots: [], backups: [], operations: [], sources: [], warnings: [] }));
+  const market = vi.fn(async action => action === 'browse'
+    ? { items: [{ id: 'community', title: '社区目标', description: '用途' }], total: 1 }
+    : { id: 'community', title: '社区目标', body: '社区完整正文', files: [], status: 'approved', license: 'MIT' });
+  setSkillMarketTransport(market);
+  await start(); await search('社区'); await w.get('[data-search-scope="skills-square"]').trigger('click');
+  await vi.advanceTimersByTimeAsync(250); await flushPromises();
+  await w.get('[role="option"]').trigger('click'); await flushPromises();
+  expect(w.get('[data-testid="skill-search-detail"]').text()).toContain('社区完整正文');
+  expect(market.mock.calls.map(([action]) => action)).toEqual(['browse', 'detail']);
+});
 it.each([['macos', 'metaKey', '⌘K'], ['windows', 'ctrlKey', 'Ctrl K']])('opens global search on %s and restores focus and page query on Escape', async (host, modifier, label) => {
   await start(host); const input = w.get('.inline-search input'); await input.setValue('页面查询'); input.element.focus();
   await input.trigger('keydown', { key: 'k', [modifier]: true, isComposing: true });

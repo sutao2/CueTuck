@@ -382,9 +382,8 @@
       </div>
       <footer class="modal-footer"><button type="button" class="button ghost-button" :disabled="categoryBusy" @click="closeCategoryDialog">取消</button><button type="button" class="button primary-button" data-testid="confirm-category" :disabled="categoryBusy || !newCategoryName.trim()" @click="confirmAddCategory">{{ categoryBusy ? '正在创建…' : '创建分类' }}</button></footer>
     </section>
-    <section v-if="globalSkillResult" class="workspace-page" data-testid="skill-search-detail">
-      <button type="button" class="page-back" :disabled="skillsBusy" @click="globalSkillResult = null">← 返回搜索前页面</button>
-      <SkillsPage :key="globalSkillResult.item.id" :entry="globalSkillResult" :mode="globalSkillResult.scope === 'skills-local' ? 'local' : 'square'" @busy="skillsBusy = $event" />
+    <section v-if="globalSkillResult" v-page-focus="() => { if (!skillsBusy) globalSkillResult = null; }" class="workspace-page" data-testid="skill-search-detail">
+      <SkillsPage :key="globalSkillResult.item.id" :entry="globalSkillResult" @close-entry="globalSkillResult = null" :mode="globalSkillResult.scope === 'skills-local' ? 'local' : 'square'" @busy="skillsBusy = $event" />
     </section>
     <CreatePromptModal
       v-if="creating || editing"
@@ -620,9 +619,9 @@
       <span class="status-sep"></span>
       <span class="status-item">{{ databaseLabel }}</span>
       <span class="status-item">本地 <strong>{{ localCount }}</strong> 条</span>
-      <SyncStatus :session="session" @open="settingsPage = 'sync'; settingsOpen = true" />
+      <SyncStatus :session="session" @open="openStatusSettings('sync')" />
       <span class="status-spacer"></span>
-      <button v-if="shortcutStatus.error" type="button" class="status-button" data-testid="shortcut-warning" :title="shortcutStatus.error" @click="settingsPage = 'shortcuts'; settingsOpen = true">快捷键异常 · 点击修复</button>
+      <button v-if="shortcutStatus.error" type="button" class="status-button" data-testid="shortcut-warning" :title="shortcutStatus.error" @click="openStatusSettings('shortcuts')">快捷键异常 · 点击修复</button>
       <button type="button" class="status-button" @click="$emit('open-launcher')">
         <AppIcon name="search" /> {{ t("launcher") }} <kbd v-if="!shortcutStatus.error">{{ shortcutLabel }}</kbd>
       </button>
@@ -817,7 +816,7 @@ function handleWorkbenchShortcut(event) {
   if (globalSearchOpen.value) return;
   if (event.key.toLowerCase() === 'k') { event.preventDefault(); openGlobalSearch(); return; }
   if (addingCategory.value || deletingCategory.value) return;
-  if (publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
+  if (globalSkillResult.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
   if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
   if (event.key.toLowerCase() === 'f' && !settingsOpen.value && !publishResume.value) {
     event.preventDefault(); if (contentKind.value === 'skills') { skillsPage.value?.focusSearch?.(); } else { focusSearch(); } return;
@@ -1125,7 +1124,7 @@ const emptyCopy = computed(() => {
 });
 const locationLabel = computed(() => contentKind.value === "skills" ? (skillsMode.value === "local" ? "本机 Skills" : "Skill 广场") : (space.value === "square" ? t("square") : t("local")));
 const hasTaskPage = computed(() => Boolean(globalSkillResult.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
-const taskTitle = computed(() => publicationsOpen.value ? '我的发布' : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
+const taskTitle = computed(() => globalSkillResult.value ? globalSkillResult.value.item.title : publicationsOpen.value ? '我的发布' : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
 
 function guardSidebarNavigation(event) {
   if (batchBusy.value || skillsBusy.value || publicationsBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
@@ -1145,6 +1144,10 @@ function navigateTo(action) {
   if (loginReason.value) loginPage.value?.close();
   else if (creating.value || editing.value) editorPage.value?.requestClose();
   else finishNavigation();
+}
+
+function openStatusSettings(page) {
+  navigateTo(() => { settingsPage.value = page; settingsOpen.value = true; });
 }
 
 function finishNavigation() {
