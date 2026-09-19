@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-19-doc-code-alignment.md](plans/2026-09-19-doc-code-alignment.md) | 实施中 | 核对文档与代码或修复合同漏项 | 状态/架构更新、真实路由对照与覆盖率门禁边界 |
 | [plans/2026-09-19-beta20-release.md](plans/2026-09-19-beta20-release.md) | 已发布部署 | beta.20 使用体验与数据恢复发行 | 双平台包、完整远程回归、签名更新与官网切换已验 |
 | [plans/2026-09-19-usability-safety.md](plans/2026-09-19-usability-safety.md) | 已随 beta.20 发布 | 改善搜索、同步反馈与数据恢复 | 五个兼容切片完成；全端回归与隔离浏览器验收通过，平台边界见记录 |
 | [plans/2026-09-18-beta19-release.md](plans/2026-09-18-beta19-release.md) | 已发布 | beta.19 双平台修复发行 | 封面类型、窄卡片与审核文案；安装包和更新资产核验 |
@@ -153,7 +154,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [product/prd.md](product/prd.md) | 现行 | 问范围、做什么、不做什么 | 完整产品需求 |
 | [product/roadmap.md](product/roadmap.md) | 现行 | 问进度或下一步里程碑 | 里程碑与完成标准 |
 | [product/glossary.md](product/glossary.md) | 现行 | 用词含糊时 | 术语唯一定义 |
-| [architecture/overview.md](architecture/overview.md) | 现行 | 问系统怎么拆 | 容器与窗口 |
+| [architecture/overview.md](architecture/overview.md) | 现行 | 问系统怎么拆 | 双窗口、显式联网、页面流与部署边界 |
 | [architecture/data-model.md](architecture/data-model.md) | 现行 | 改表或字段 | 本地 SQLite 目标模型 |
 | [architecture/decisions/0001-greenfield-sibling-repo.md](architecture/decisions/0001-greenfield-sibling-repo.md) | 现行 | 问为什么不在旧仓库改 | 独立仓库 |
 | [architecture/decisions/0002-preserve-current-launcher.md](architecture/decisions/0002-preserve-current-launcher.md) | 现行 | 动启动器前 | 保留旧启动器 |
@@ -226,7 +227,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-09-07-admin-catalog.md](plans/2026-09-07-admin-catalog.md) | 现行 | 复验远端分类与模型管理 | 两级字典、版本审计、引用保护和公共消费端；引用迁移未实现 |
 | [plans/README.md](plans/README.md) | 现行 | 准备写或找计划 | 计划目录规则 |
 | [plans/program.md](plans/program.md) | 现行 | 问总顺序和依赖 | 程序计划 |
-| [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | 只写今天为真的状态 |
+| [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | beta.20 交付与部署入口；专项验证边界 |
 | [plans/2026-09-05-functional-repair.md](plans/2026-09-05-functional-repair.md) | 现行 | 修复分类与跨端功能缺口 | 功能复审队首；旧计划关闭不等于验收完成 |
 | [plans/2026-09-07-launcher-audit.md](plans/2026-09-07-launcher-audit.md) | 现行 | 修复或复验启动器 | 核心修复与逐项验收；辅助功能成功路径待授权复验 |
 | [plans/2026-09-07-app-icon.md](plans/2026-09-07-app-icon.md) | 现行 | 更换应用图标 | 方舟品牌源图、桌面打包资源与小尺寸验收 |
