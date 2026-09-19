@@ -5,7 +5,7 @@ use crate::local_database::{
     import_downloaded_prompt_with_metadata, export_library_json_in_dir, export_library_zip_in_dir,
     get_setting_in_dir, list_categories_in_dir, list_collection_members_in_dir,
     list_collections_in_dir, list_prompts_in_dir, preview_import_json_in_dir,
-    record_prompt_use_in_dir, restore_library_in_dir, set_setting_in_dir,
+    record_prompt_use_in_dir, set_setting_in_dir,
     update_prompt_in_dir_with_model,
     upsert_synced_prompt_in_dir, CategoryRecord, CollectionRecord, ImportPreview, LocalDatabase,
     PromptRecord,
@@ -339,8 +339,13 @@ pub fn set_auto_backup(app: AppHandle, enabled: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn restore_local_library(app: AppHandle, src: String) -> Result<(), String> {
-    restore_library_in_dir(&data_dir(&app)?, PathBuf::from(src).as_path())
+pub fn restore_local_library(app: AppHandle, src: String, expected_digest: Option<String>) -> Result<String, String> {
+    crate::local_database::restore_library_checked(&data_dir(&app)?, PathBuf::from(src).as_path(), expected_digest.as_deref())
+}
+
+#[tauri::command]
+pub fn preview_library_restore(app: AppHandle, src: String) -> Result<crate::local_database::RestorePreview, String> {
+    crate::local_database::preview_library_restore(&data_dir(&app)?, PathBuf::from(src).as_path())
 }
 
 #[tauri::command]

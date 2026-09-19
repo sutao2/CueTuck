@@ -187,16 +187,29 @@ it("requires confirmation before clearing history and never deletes prompts", as
 it("does not restore a database until the exact operation is confirmed", async () => {
   await settings("data");
   const restore = vi.spyOn(library, "restoreLocalLibrary").mockResolvedValue();
+  vi.spyOn(library, 'previewLibraryRestore').mockResolvedValue({ digest: 'reviewed', prompt_count: 2, collection_count: 1, asset_count: 3 });
   await w.get('input[placeholder="/path/to/promptark.sqlite"]').setValue("/tmp/example.sqlite");
   const action = () => w.findAll('button').find(button => button.text() === '恢复库文件');
   await action().trigger("click");
+  await flushPromises();
   expect(w.get('[role="alertdialog"]').text()).toContain("/tmp/example.sqlite");
   await w.get('[data-testid="cancel-settings-action"]').trigger("click");
   expect(restore).not.toHaveBeenCalled();
   await action().trigger("click");
+  await flushPromises();
   await w.get('[data-testid="confirm-settings-action"]').trigger("click");
   await flushPromises();
-  expect(restore).toHaveBeenCalledExactlyOnceWith("/tmp/example.sqlite");
+  expect(restore).toHaveBeenCalledExactlyOnceWith("/tmp/example.sqlite", 'reviewed');
+});
+
+it('refuses restore confirmation when the backup cannot be validated', async () => {
+  await settings('data');
+  vi.spyOn(library, 'previewLibraryRestore').mockRejectedValue(Error('文件损坏'));
+  const restore = vi.spyOn(library, 'restoreLocalLibrary');
+  await w.get('input[placeholder="/path/to/promptark.sqlite"]').setValue('/tmp/broken.sqlite');
+  await w.findAll('button').find(button => button.text() === '恢复库文件').trigger('click'); await flushPromises();
+  expect(w.find('[role="alertdialog"]').exists()).toBe(false);
+  expect(w.text()).toContain('文件损坏'); expect(restore).not.toHaveBeenCalled();
 });
 
 it("loads persisted density and supports sidebar and settings shortcuts", async () => {

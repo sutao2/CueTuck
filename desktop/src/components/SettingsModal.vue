@@ -250,7 +250,7 @@
               <button type="button" class="button ghost-button" data-testid="open-library-dir" @click="openDir">打开目录</button>
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>导出完整备份</strong><small>ZIP 含库文件与 JSON，保留封面引用；不包含外部图片文件。</small></span>
+              <span class="setting-copy"><strong>导出本地库备份</strong><small>ZIP 含数据库与 JSON，包括已存入库的图片和附件；外部图片链接不下载打包。恢复时请解压并选择其中的 promptark.sqlite。</small></span>
               <button type="button" class="button ghost-button" data-testid="export-zip" @click="doZip">导出 ZIP</button>
             </div>
             <label class="setting-row">
@@ -286,11 +286,11 @@
             <div class="restore-choice"><button type="button" class="button ghost-button" data-testid="choose-restore" :disabled="dataBusy || !usesSystemKeychain()" @click="chooseRestore">选择备份文件</button><small v-if="!usesSystemKeychain()">文件恢复需要桌面应用</small></div>
             <label class="field">
               <span>恢复库文件路径</span>
-              <input v-model="restorePath" placeholder="/path/to/promptark.sqlite">
+              <input v-model="restorePath" :disabled="dataBusy" placeholder="/path/to/promptark.sqlite">
             </label>
             <div class="modal-actions">
               <button type="button" class="button ghost-button" :disabled="dataBusy" @click="doBackup">备份库文件</button>
-              <button type="button" class="button danger-button" :disabled="dataBusy || !restorePath.trim()" @click="pendingAction = 'restore'">恢复库文件</button>
+              <button type="button" class="button danger-button" :disabled="dataBusy || !restorePath.trim()" @click="previewRestore">恢复库文件</button>
             </div>
             <p v-if="backupPath" data-testid="backup-path">已备份到 {{ backupPath }}</p>
             <p v-if="dataError" data-testid="backup-error">{{ dataError }}</p>
@@ -423,6 +423,7 @@
       <div v-if="pendingAction" class="settings-confirm-layer">
         <section class="settings-confirm" role="alertdialog" aria-modal="true" aria-labelledby="settings-confirm-title" aria-describedby="settings-confirm-copy" @keydown.tab="trapConfirmationFocus">
           <h3 id="settings-confirm-title">{{ pendingAction === 'discard' ? '放弃未保存的修改？' : pendingAction === 'restore' ? '恢复数据库？' : '清除使用历史？' }}</h3>
+          <p v-if="pendingAction === 'restore' && restorePreview" data-testid="restore-preview">备份已校验：{{ restorePreview.prompt_count }} 条提示词、{{ restorePreview.collection_count }} 个合集、{{ restorePreview.asset_count }} 个库内文件（含回收站文件）。恢复前会自动备份当前库；不会合并两份数据。</p>
           <p id="settings-confirm-copy">{{ pendingAction === 'discard' ? '尚未保存的表单和导入文本将被丢弃，已经保存的设置不受影响。' : pendingAction === 'restore' ? `将使用 ${restorePath} 替换当前库。请先备份当前数据，此操作不是合并导入。` : '将清除最近使用记录与使用次数，不删除提示词正文。' }}</p>
           <div class="modal-actions">
             <button ref="confirmCancel" type="button" class="button" data-testid="cancel-settings-action" @click="pendingAction = null; emit('stay')">{{ pendingAction === 'discard' ? '继续编辑' : '取消' }}</button>
@@ -453,6 +454,7 @@ import {
   getLocalSetting,
   openLibraryDir,
   previewLocalImport,
+  previewLibraryRestore,
   restoreLocalLibrary,
   setLocalSetting,
 } from "../platform/library.js";
@@ -531,6 +533,8 @@ const newPromptShortcut = ref(DEFAULT_NEW_PROMPT_SHORTCUT);
 const pasteRecentShortcut = ref(DEFAULT_PASTE_RECENT_SHORTCUT);
 const shortcutError = ref("");
 const restorePath = ref("");
+const restorePreview = ref(null);
+watch(restorePath, () => { restorePreview.value = null; });
 const backupPath = ref("");
 const dataBusy = ref(false);
 const autoBackupNote = ref("");
@@ -969,13 +973,27 @@ async function doBackup() {
   } finally { dataBusy.value = false; }
 }
 
+async function previewRestore() {
+  if (dataBusy.value || !restorePath.value.trim()) return;
+  dataBusy.value = true; dataError.value = ''; restorePreview.value = null;
+  const src = restorePath.value.trim();
+  try {
+    const result = await previewLibraryRestore(src);
+    if (restorePath.value.trim() !== src) return;
+    restorePreview.value = { ...result, src };
+    pendingAction.value = 'restore';
+  } catch (error) { dataError.value = `备份校验失败：${error.message || error}`; }
+  finally { dataBusy.value = false; }
+}
+
 async function doRestore() {
+  if (!restorePreview.value || restorePreview.value.src !== restorePath.value.trim()) return;
   if (dataBusy.value || !restorePath.value.trim()) return;
   dataBusy.value = true;
   dataError.value = "";
   try {
-    await restoreLocalLibrary(restorePath.value.trim());
-    dataError.value = "恢复完成。快捷键、代理和系统级偏好请重启应用后生效。";
+    const recovery = await restoreLocalLibrary(restorePreview.value.src, restorePreview.value.digest);
+    dataError.value = `恢复完成。恢复前的库已备份到 ${recovery}。快捷键、代理和系统级偏好请重启应用后生效。`;
     showFeedback(dataError.value);
     await loadSettings();
     emit("imported");

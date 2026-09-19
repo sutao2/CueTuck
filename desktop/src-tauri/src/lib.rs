@@ -91,6 +91,7 @@ pub fn run() {
             commands::database::backup_local_library,
             commands::database::set_auto_backup,
             commands::database::restore_local_library,
+            commands::database::preview_library_restore,
             commands::database::open_library_dir,
             commands::database::export_library_zip,
             commands::database::clear_local_prompt_use,

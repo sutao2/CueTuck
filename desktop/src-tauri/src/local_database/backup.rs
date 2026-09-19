@@ -2,6 +2,8 @@ use rusqlite::{backup::{Backup, StepResult}, Connection, OpenFlags};
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
+use sha2::{Digest, Sha256};
+use std::io::Read;
 
 const LIVE_NAME: &str = "promptark.sqlite";
 static FILE_OPERATIONS: Mutex<()> = Mutex::new(());
@@ -18,21 +20,78 @@ pub fn backup_library_in_dir(dir: &Path, dest: &Path) -> Result<String, String> 
 }
 
 pub fn restore_library_in_dir(dir: &Path, src: &Path) -> Result<(), String> {
+    restore_library_checked(dir, src, None).map(|_| ())
+}
+
+#[derive(serde::Serialize)]
+pub struct RestorePreview {
+    pub prompt_count: i64,
+    pub collection_count: i64,
+    pub asset_count: i64,
+    pub digest: String,
+}
+
+fn source_digest(src: &Path) -> Result<String, String> {
+    let mut hash = Sha256::new();
+    let mut buffer = [0u8; 65536];
+    for suffix in ["", "-wal"] {
+        let mut path = src.as_os_str().to_os_string(); path.push(suffix);
+        let mut file = match std::fs::File::open(&path) {
+            Ok(file) => file,
+            Err(error) if suffix == "-wal" && error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(error.to_string()),
+        };
+        loop {
+            let size = file.read(&mut buffer).map_err(|e| e.to_string())?;
+            if size == 0 { break; }
+            hash.update(&buffer[..size]);
+        }
+    }
+    Ok(format!("{:x}", hash.finalize()))
+}
+
+fn stage_restore(src: &Path, staged: &Path) -> Result<String, String> {
+    validate_library_file(src)?;
+    let digest = source_digest(src)?;
+    let candidate = staged.join(LIVE_NAME);
+    snapshot(src, &candidate)?;
+    if source_digest(src)? != digest { return Err("备份文件已变化，请重新预览".into()); }
+    super::initialize_in_dir(staged)?;
+    validate_library_file(&candidate)?;
+    super::export_sync_changes(staged)?;
+    validate_references(&candidate)?;
+    Ok(digest)
+}
+
+pub fn preview_library_restore(dir: &Path, src: &Path) -> Result<RestorePreview, String> {
+    let _guard = FILE_OPERATIONS.lock().map_err(|error| error.to_string())?;
+    reject_live_path(&dir.join(LIVE_NAME), src)?;
+    let staged = tempfile::tempdir().map_err(|e| e.to_string())?;
+    let digest = stage_restore(src, staged.path())?;
+    let connection = Connection::open(staged.path().join(LIVE_NAME)).map_err(|e| e.to_string())?;
+    let count = |sql| connection.query_row(sql, [], |row| row.get::<_, i64>(0)).map_err(|e| e.to_string());
+    Ok(RestorePreview {
+        prompt_count: count("SELECT COUNT(*) FROM prompts WHERE deleted_at IS NULL")?,
+        collection_count: count("SELECT COUNT(*) FROM collections WHERE deleted_at IS NULL")?,
+        asset_count: count("SELECT COUNT(*) FROM prompt_assets")?, digest,
+    })
+}
+
+pub fn restore_library_checked(dir: &Path, src: &Path, expected_digest: Option<&str>) -> Result<String, String> {
     let _guard = FILE_OPERATIONS.lock().map_err(|error| error.to_string())?;
     let live = dir.join(LIVE_NAME);
     reject_live_path(&live, src)?;
-    validate_library_file(src)?;
     std::fs::create_dir_all(dir).map_err(|error| error.to_string())?;
     let staged = tempfile::tempdir_in(dir).map_err(|error| error.to_string())?;
     let candidate = staged.path().join(LIVE_NAME);
-    snapshot(src, &candidate)?;
-    super::initialize_in_dir(staged.path())?;
-    validate_library_file(&candidate)?;
-    // Reading every supported table/column rejects incompatible schemas before touching live data.
-    super::export_sync_changes(staged.path())?;
-    validate_references(&candidate)?;
+    let digest = stage_restore(src, staged.path())?;
+    if expected_digest.is_some_and(|expected| expected != digest) { return Err("备份文件已变化，请重新预览".into()); }
+    let backups = dir.join("backups");
+    std::fs::create_dir_all(&backups).map_err(|e| e.to_string())?;
+    let recovery = backups.join(format!("before-restore-{}.sqlite", uuid::Uuid::new_v4()));
+    snapshot(&live, &recovery)?;
     snapshot(&candidate, &live)?;
-    Ok(())
+    Ok(recovery.to_string_lossy().into_owned())
 }
 
 pub fn export_library_zip_in_dir(dir: &Path, dest: &Path) -> Result<String, String> {
@@ -189,6 +248,28 @@ fn validate_library_file(path: &Path) -> Result<(), String> {
 mod tests {
     use super::*;
     use crate::local_database::{initialize_in_dir, create_prompt_in_dir, list_prompts_in_dir};
+
+    #[test]
+    fn preview_preserves_source_and_restore_backs_up_current_library_with_files() {
+        let dir = tempfile::tempdir().unwrap(); initialize_in_dir(dir.path()).unwrap();
+        let prompt = create_prompt_in_dir(dir.path(), "含附件", "原文", None).unwrap();
+        let connection = Connection::open(dir.path().join(LIVE_NAME)).unwrap();
+        let asset = crate::local_database::assets::Asset { id: uuid::Uuid::new_v4().to_string(), name: "a.txt".into(), mime: "text/plain".into(), data: "aGVsbG8=".into() };
+        crate::local_database::assets::replace(&connection, &prompt.id, &[asset]).unwrap();
+        let src = dir.path().join("saved.sqlite"); backup_library_in_dir(dir.path(), &src).unwrap();
+        let original = std::fs::read(&src).unwrap();
+        create_prompt_in_dir(dir.path(), "恢复前新增", "不能丢失", None).unwrap();
+        let preview = preview_library_restore(dir.path(), &src).unwrap();
+        assert_eq!((preview.prompt_count, preview.asset_count), (1, 1));
+        assert_eq!(std::fs::read(&src).unwrap(), original);
+        assert!(restore_library_checked(dir.path(), &src, Some("changed")).is_err());
+        assert_eq!(list_prompts_in_dir(dir.path(), "", None).unwrap().len(), 2);
+        let recovery = restore_library_checked(dir.path(), &src, Some(&preview.digest)).unwrap();
+        assert_eq!(list_prompts_in_dir(dir.path(), "", None).unwrap().len(), 1);
+        assert_eq!(crate::local_database::assets::list(dir.path(), &prompt.id).unwrap()[0].data, "aGVsbG8=");
+        let saved = Connection::open(recovery).unwrap();
+        assert_eq!(saved.query_row("SELECT COUNT(*) FROM prompts", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
+    }
 
     #[test]
     fn backup_and_restore_include_wal_and_work_with_an_open_connection() {

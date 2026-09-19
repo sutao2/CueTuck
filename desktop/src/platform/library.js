@@ -707,9 +707,14 @@ export async function setAutoBackup(enabled) {
   throw new Error(FILE_BACKUP_DESKTOP_ONLY);
 }
 
-export async function restoreLocalLibrary(src) {
+export async function previewLibraryRestore(src) {
+  if (isTauri()) return tauriInvoke('preview_library_restore', { src });
+  throw new Error(FILE_BACKUP_DESKTOP_ONLY);
+}
+
+export async function restoreLocalLibrary(src, expectedDigest) {
   if (isTauri()) {
-    const result = await tauriInvoke("restore_local_library", { src });
+    const result = await tauriInvoke("restore_local_library", { src, ...(expectedDigest ? { expected_digest: expectedDigest } : {}) });
     clearThumbnailCache();
     return result;
   }
