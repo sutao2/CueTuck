@@ -969,7 +969,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-space="square"]').trigger("click");
     await flushPromises();
     const card = w.get('.prompt-card');
-    expect(card.get('[data-testid="download-square"]').attributes('title')).toBe('下载');
+    expect(card.get('[data-testid="download-square"]').attributes('title')).toBe('保存到本地');
     await card.trigger('contextmenu');
     expect(w.find('[role="menu"]').exists()).toBe(false);
     expect(card.find('[data-testid="card-more"]').exists()).toBe(true);

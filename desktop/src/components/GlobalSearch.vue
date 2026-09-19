@@ -12,7 +12,7 @@
       </div>
       <div class="global-search-field">
         <AppIcon name="search" />
-        <input v-model="query" data-testid="global-search-input" data-dialog-autofocus type="search" role="combobox" aria-label="全局搜索关键词" aria-autocomplete="list" aria-controls="global-search-results" :aria-expanded="results.length > 0" :aria-activedescendant="results.length ? `global-result-${active}` : undefined" :placeholder="scope === 'local' ? '搜索全部本地提示词和合集…' : '搜索广场标题、标签或作者…'" @keydown="onKeydown" @compositionstart="composing = true; schedule()" @compositionend="composing = false; schedule()" />
+        <input v-model="query" data-testid="global-search-input" data-dialog-autofocus type="search" role="combobox" aria-label="全局搜索关键词" aria-autocomplete="list" aria-controls="global-search-results" :aria-expanded="results.length > 0" :aria-activedescendant="results.length ? `global-result-${active}` : undefined" :placeholder="scope === 'local' ? '搜索全部本地提示词和合集…' : scope.includes('skills') ? '搜索 Skill 名称或描述…' : '搜索广场标题、标签或作者…'" @keydown="onKeydown" @compositionstart="composing = true; schedule()" @compositionend="composing = false; schedule()" />
       </div>
       <p class="global-search-summary" role="status" aria-live="polite">{{ statusText }}</p>
       <div v-if="error" class="global-search-empty" role="alert">
@@ -27,10 +27,10 @@
         <button v-for="(row, index) in results" :id="`global-result-${index}`" :key="row.item.id" type="button" role="option" tabindex="-1" :aria-selected="active === index" class="global-search-result" @click="choose(row)">
           <span class="global-search-kind"><AppIcon :name="row.item.kind === 'collection' ? 'folder' : 'file'" /></span>
           <span class="global-search-result-copy"><strong><SearchHighlight :text="row.item.title" :query="query" /></strong><small><SearchHighlight :text="row.excerpt || '暂无摘要'" :query="query" /></small></span>
-          <span class="global-search-type">{{ row.item.kind === 'collection' ? '合集' : '提示词' }}</span>
+          <span class="global-search-type">{{ row.item.kind === 'skill' ? 'Skill' : row.item.kind === 'collection' ? '合集' : '提示词' }}</span>
         </button>
       </div>
-      <footer class="global-search-footer"><span><kbd>↑</kbd><kbd>↓</kbd> 选择 <kbd>Enter</kbd> 打开</span><span>{{ scope === 'local' ? '本地库 · 无需联网' : '提示词广场 · 联网搜索' }}</span></footer>
+      <footer class="global-search-footer"><span><kbd>↑</kbd><kbd>↓</kbd> 选择 <kbd>Enter</kbd> 打开</span><span>{{ scopes.find(option => option.id === scope)?.label + (scope === 'local' || scope === 'skills-local' ? ' · 无需联网' : ' · 联网搜索') }}</span></footer>
     </section>
   </div>
 </template>
@@ -39,13 +39,15 @@
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import SearchHighlight from './SearchHighlight.vue';
 import AppIcon from './AppIcon.vue';
+import { skillsSupported, skillsRequest, groupSkills } from '../platform/skills.js';
+import { skillMarket } from '../platform/skillMarket.js';
 import { vDialogFocus } from '../lib/dialogFocus.js';
 import { getLocalSetting, listLocalCollections, listLocalPrompts } from '../platform/library.js';
 import { listSquarePage } from '../platform/square.js';
 import { applyQueuedFavorites } from '../platform/syncQueue.js';
 
 const emit = defineEmits(['close', 'select']);
-const scopes = [{ id: 'local', label: '本地库' }, { id: 'square', label: '提示词广场' }];
+const scopes = [{ id: 'local', label: '本地库' }, { id: 'square', label: '提示词广场' }, ...(skillsSupported() ? [{ id: 'skills-local', label: '本机 Skills' }, { id: 'skills-square', label: '社区 Skills' }] : [])];
 const scope = ref('local'), query = ref(''), composing = ref(false);
 const results = ref([]), active = ref(0), total = ref(0), loading = ref(false), error = ref(''), blocked = ref(false);
 const resultList = ref(null);
@@ -79,14 +81,23 @@ async function search() {
     if (source === 'local') {
       const [prompts, collections] = await Promise.all([listLocalPrompts({ query: text, categoryId: null }), listLocalCollections({ query: text, categoryId: null })]);
       items = [...prompts.map(item => ({ ...item, kind: 'prompt' })), ...collections.map(item => ({ ...item, kind: 'collection' }))]; count = items.length;
+    } else if (source === 'skills-local') {
+      const snapshot = await skillsRequest({ action: 'snapshot' });
+      items = groupSkills(snapshot.skills).filter(item => `${item.name} ${item.description || ''}`.toLowerCase().includes(text.toLowerCase())).map(item => ({ ...item, id: item.key, title: item.name, kind: 'skill' }));
+      count = items.length;
     } else {
       const access = await getLocalSetting('square_access');
       if (token !== request) return;
       if (access === '0') { blocked.value = true; return; }
-      const page = await listSquarePage({ query: text, categoryId: null, model: '', sort: '推荐', offset: 0, signal });
-      const savedFavorites = page.items.filter(item => item.is_favorite).map(item => item.id);
-      const favorites = await applyQueuedFavorites(savedFavorites).catch(() => savedFavorites);
-      items = page.items.map(item => ({ ...item, is_favorite: favorites.includes(item.id) })); count = page.total;
+      if (source === 'skills-square') {
+        const page = await skillMarket('browse', { query: { q: text, offset: 0 } });
+        items = page.items.map(item => ({ ...item, kind: 'skill' })); count = page.total;
+      } else {
+        const page = await listSquarePage({ query: text, categoryId: null, model: '', sort: '推荐', offset: 0, signal });
+        const savedFavorites = page.items.filter(item => item.is_favorite).map(item => item.id);
+        const favorites = await applyQueuedFavorites(savedFavorites).catch(() => savedFavorites);
+        items = page.items.map(item => ({ ...item, is_favorite: favorites.includes(item.id) })); count = page.total;
+      }
     }
     if (token !== request) return;
     results.value = items.slice(0, 48).map(item => ({ item, excerpt: (item.excerpt || item.content || item.description || '').slice(0, 240).replace(/\s+/g, ' ') }));
@@ -121,7 +132,7 @@ onUnmounted(invalidate);
 .global-search-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 12px; }
 .global-search-header h2 { margin: 0; font-size: 16px; font-weight: 650; }
 .global-search-close { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 4px; }
-.global-search-scopes { display: flex; gap: 6px; padding: 0 22px 16px; }
+.global-search-scopes { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 22px 16px; }
 .global-search-scopes button { display: flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
 .global-search-scopes button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--line); color: var(--text); }
 .global-search-scopes .app-icon { width: 16px; height: 16px; }

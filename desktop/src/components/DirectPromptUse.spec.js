@@ -132,7 +132,7 @@ it('has one local use action, copies immediately and labels duplication clearly'
   const w = mount(Workbench, { attachTo: document.body }); await flushPromises();
   const card = w.get('.prompt-card');
   expect(card.findAll('button').filter(b => b.text() === '复制')).toHaveLength(0);
-  await click(card, '使用'); await flushPromises();
+  await click(card, '复制提示词'); await flushPromises();
   expect(writeText).toHaveBeenCalledExactlyOnceWith('纯文本');
   expect((await library.listLocalPrompts())[0].use_count).toBe(1);
   await card.get('[data-testid="card-more"]').trigger('click');

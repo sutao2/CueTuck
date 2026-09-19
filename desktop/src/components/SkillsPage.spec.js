@@ -8,6 +8,14 @@ import {setSkillMarketTransport} from '../platform/skillMarket.js';
 import {resetMemorySession,setSessionTransport,loginSession} from '../platform/session.js';
 import {resetSquare,setCatalogTransport,setSquareTransport} from '../platform/square.js';
 let w,transport,snapshot,prepared;
+it('opens a global-search local result directly without installing or losing the detail actions', async () => {
+  const item = { ...snapshot.skills[0], installations: [snapshot.skills[0]] };
+  w = mount(SkillsPage, { props: { mode: 'local', entry: { scope: 'skills-local', item } } });
+  await flushPromises();
+  expect(w.find('.skills-document').exists()).toBe(true);
+  expect(transport.mock.calls.some(([r]) => r.action === 'detail' && r.path === item.path)).toBe(true);
+  expect(transport.mock.calls.some(([r]) => r.action === 'install')).toBe(false);
+});
 const root=(id,scope='global',readonly=false)=>({id,name:id,scope,agent:'custom',path:`/isolated/${id}`,readonly,custom:true,shared_with:[],status:'目录已发现'});
 const skill=(key,path,root_id='alpha')=>({key,path,physical_path:path,root_id,name:'同名 Skill',description:'实际描述',readonly:false,status:'外部安装',source:null,installed_digest:null,warnings:[]});
 const packageData={name:'Example',description:'完整 Skill',body:'---\nname: Example\n---\n# Safe <script>bad()</script>',license:'未知',bytes:20,digest:'new',warnings:[],files:[{path:'SKILL.md',size:20,digest:'new',executable:false}]};

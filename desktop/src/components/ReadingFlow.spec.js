@@ -30,7 +30,7 @@ it('exposes the same actions from the visible more button and does not count fai
   await w.get('[data-testid=card-more]').trigger('click');
   expect(w.get('[data-action=edit]').text()).toBe('编辑');
   await w.get('[role=menu]').trigger('keydown', {key:'Escape'});
-  await w.findAll('.card-footer button').find(b=>b.text()==='使用').trigger('click'); await flushPromises();
+  await w.findAll('.card-footer button').find(b=>b.text()==='复制提示词').trigger('click'); await flushPromises();
   expect(w.get('[data-testid=use-modal]').text()).toContain('复制失败');
   expect((await library.listLocalPrompts())[0].use_count).toBe(0);
   await w.get('[data-testid=use-next]').trigger('click'); await flushPromises();

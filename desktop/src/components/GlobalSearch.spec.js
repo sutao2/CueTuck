@@ -3,14 +3,33 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import GlobalSearch from './GlobalSearch.vue';
 import { createLocalCollection, createLocalPrompt, resetMemoryLibrary, setLocalSetting } from '../platform/library.js';
 import { resetSquare, setSquarePageTransport } from '../platform/square.js';
+import { setSkillsTransportForTests } from '../platform/skills.js';
+import { setSkillMarketTransport } from '../platform/skillMarket.js';
 
 let w;
 beforeEach(() => { resetMemoryLibrary(); resetSquare(); vi.useFakeTimers(); });
-afterEach(() => { w?.unmount(); vi.useRealTimers(); });
+afterEach(() => { w?.unmount(); vi.useRealTimers(); setSkillsTransportForTests(null); setSkillMarketTransport(null); });
 async function query(value) {
   await w.get('input').setValue(value);
   await vi.advanceTimersByTimeAsync(250); await flushPromises();
 }
+it('searches local Skills without networking and community Skills only on explicit selection', async () => {
+  const native = vi.fn(async () => ({ skills: [{ key: 'pdf', name: 'pdf', description: '处理 PDF 文档', path: '/skills/pdf' }] }));
+  const market = vi.fn(async () => ({ items: [{ id: 'remote-pdf', title: 'PDF 助手', description: '处理文件' }], total: 1 }));
+  setSkillsTransportForTests(native); setSkillMarketTransport(market);
+  w = mount(GlobalSearch);
+  await w.get('[data-search-scope="skills-local"]').trigger('click'); await query('PDF');
+  expect(w.findAll('[role="option"]')).toHaveLength(1);
+  expect(market).not.toHaveBeenCalled();
+  await w.get('[role="option"]').trigger('click');
+  expect(w.emitted('select')[0][0]).toMatchObject({ scope: 'skills-local', item: { kind: 'skill', installations: [{ path: '/skills/pdf' }] } });
+  await w.get('[data-search-scope="skills-square"]').trigger('click'); await vi.advanceTimersByTimeAsync(250); await flushPromises();
+  expect(market).toHaveBeenCalledWith('browse', { query: { q: 'PDF', offset: 0 } });
+  expect(w.text()).toContain('PDF 助手');
+  await setLocalSetting('square_access', '0'); await query('其他');
+  expect(market).toHaveBeenCalledOnce(); expect(w.text()).toContain('广场访问已关闭');
+  expect(native.mock.calls.every(([request]) => request.action === 'snapshot')).toBe(true);
+});
 it('searches all local prompts and collections without contacting the square, bounds results and supports keyboard selection', async () => {
   const remote = vi.fn(); setSquarePageTransport(remote);
   await createLocalPrompt({ title: '目标提示词', content: '正文', categoryId: 'cat-software' });

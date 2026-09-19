@@ -15,6 +15,7 @@
         </div>
       </div>
       <div v-else class="create-body" :inert="busy ? '' : undefined">
+        <p v-if="example" class="use-hint">这是可编辑的示例，尚未保存。点击「试填预览」体验变量，保存后可用底栏启动器再次找到它。</p>
         <p v-if="collectionTitle" class="use-hint" data-testid="collection-only-note">保存到「{{ collectionTitle }}」，仅在此合集中显示。移出合集后会保留为独立提示词。</p>
         <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
         <div v-if="!prompt && !collectionTitle" class="create-type-grid">
@@ -105,6 +106,7 @@ import { parseCoverUrls, normalizeCoverUrls } from "../lib/cover.js";
 
 const props = defineProps({
   prompt: { type: Object, default: null },
+  example: Boolean,
   collectionTitle: { type: String, default: "" },
   groups: { type: Array, default: () => [] },
   modelOptions: { type: Array, default: () => [] },
@@ -116,8 +118,8 @@ const props = defineProps({
 
 const emit = defineEmits(["cancel", "save", "remove", "stay"]);
 const kind = ref(props.prompt?.kind ?? "prompt");
-const title = ref(props.prompt?.title ?? "");
-const content = ref(props.prompt?.content ?? "");
+const title = ref(props.prompt?.title ?? (props.example ? "示例：写一封简洁的邮件" : ""));
+const content = ref(props.prompt?.content ?? (props.example ? "请帮我写一封邮件，收件人是{{收件人}}，主题是{{主题}}。语气友好，表达简洁，结尾明确下一步。" : ""));
 const contentInput = ref(null), trialOpen = ref(false);
 async function insertVariable() {
   if (props.busy || assetBusy.value) return;

@@ -7,7 +7,7 @@
   <ContentState v-if="error" kind="error" compact title="内容加载失败" :description="error"><button class="button" :disabled="busy" @click="retry">重试</button></ContentState>
   <ContentState v-if="busy&&!items.length" kind="loading" title="正在加载 Skills…" />
   <template v-if="selected">
-   <button class="button" :disabled="busy" @click="selected=null">← 返回列表</button><h2>{{ selected.title }}</h2><p>{{ selected.description }}</p>
+   <button class="button" :disabled="busy" @click="selected=null;load()">← 返回列表</button><h2>{{ selected.title }}</h2><p>{{ selected.description }}</p>
    <p class="muted">发布者：{{ selected.publisher?.display_name }} · {{ skillStatus(selected.status) }} · 许可：{{ selected.license }}</p>
    <p v-if="selected.reason" class="skills-alert">{{ selected.reason }}</p><pre class="community-body">{{ selected.body }}</pre>
    <h3>完整文件包 · {{ selected.files.length }} 个文件</h3><ul><li v-for="file in selected.files" :key="file.path">{{ file.path }} · {{ file.size }} B{{ file.executable?' · 可执行文件':'' }}</li></ul>
@@ -32,7 +32,7 @@ import {computed,ref,watch,onMounted,onUnmounted} from 'vue';
 import {skillMarket,skillStatus} from '../platform/skillMarket.js';
 import {skillCategoryName,skillCategoryCounts} from '../platform/skillCategories.js';
 import AppIcon from './AppIcon.vue';
-const props=defineProps({category:{type:String,default:''},mine:{type:Boolean,default:false}}),emit=defineEmits(['install','busy','categories','browse-github']);
+const props=defineProps({category:{type:String,default:''},mine:{type:Boolean,default:false},initialId:{type:String,default:''}}),emit=defineEmits(['install','busy','categories','browse-github']);
 const mine=computed(()=>props.mine),items=ref([]),total=ref(0),offset=ref(0),query=ref(''),busy=ref(false),error=ref(''),selected=ref(null),withdrawing=ref(false);
 let generation=0,disposed=false,last=()=>load();
 async function run(task){if(busy.value)return;last=()=>run(task);const current=++generation;busy.value=true;error.value='';try{const result=await task();return result;}catch(e){if(!disposed&&current===generation)error.value=String(e.message||e);}finally{if(current===generation)busy.value=false;}}
@@ -42,7 +42,7 @@ async function install(){await run(async()=>{const result=await skillMarket('bun
 async function withdraw(){const id=selected.value.id;const result=await run(()=>skillMarket('withdraw',{id,body:{status:'withdrawn',expected_status:selected.value.status,reason:'作者撤回'}}));if(result){selected.value=null;withdrawing.value=false;await load();}}
 function search(){offset.value=0;load();}function retry(){last();}
 watch(()=>props.category,()=>{selected.value=null;offset.value=0;load();});watch(busy,v=>emit('busy',v),{flush:'sync'});
-onMounted(load);onUnmounted(()=>{disposed=true;generation++;emit('busy',false);});
+onMounted(()=>props.initialId?open(props.initialId):load());onUnmounted(()=>{disposed=true;generation++;emit('busy',false);});
 defineExpose({reload:load});
 </script>
 <style scoped src="./skills.css"></style>

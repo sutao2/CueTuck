@@ -321,8 +321,8 @@
                   <button
                     type="button"
                     class="card-action card-icon-action"
-                    :title="favoriteIds.includes(item.id) ? '取消收藏' : '收藏'"
-                    :aria-label="favoriteIds.includes(item.id) ? '取消收藏' : '收藏'"
+                    :title="favoriteIds.includes(item.id) ? '取消广场收藏' : '收藏到广场收藏夹'"
+                    :aria-label="favoriteIds.includes(item.id) ? '取消广场收藏' : '收藏到广场收藏夹'"
                     :aria-pressed="favoriteIds.includes(item.id)"
                     data-testid="favorite-square"
                     :disabled="favoriteBusy.includes(item.id)"
@@ -332,7 +332,7 @@
                   </button>
                 </template>
                 <template v-else-if="item.kind === 'prompt'">
-                  <button type="button" class="card-action card-primary" :disabled="useBusy" @click.stop="startUse(item)">使用</button>
+                  <button type="button" class="card-action card-primary" :disabled="useBusy" @click.stop="startUse(item)">{{ extractVariables(item.content).length ? '填写并复制' : '复制提示词' }}</button>
                 </template>
                 <button v-else type="button" class="card-action card-primary" @click.stop="openItem(item)">打开合集</button>
                 <button type="button" v-if="contextActions(item).length" class="card-action card-more" data-testid="card-more" :aria-label="`${item.title}的更多操作`" aria-haspopup="menu" @click.stop="openContextMenu($event, item)">···</button>
@@ -343,6 +343,7 @@
           <ContentState v-else class="empty-state" :title="emptyHeading" :description="emptyCopy" :icon="space === 'square' ? 'square' : 'library'">
             <button v-if="hasContentFilter" type="button" class="button" @click="clearFilters()">清除筛选</button>
             <div v-else-if="space === 'local' && sortTab === '全部'" class="empty-actions">
+              <button type="button" class="button" data-testid="try-example" @click="exampleDraft = true; creating = true">用示例试一遍</button>
               <button type="button" class="button primary-button" @click="creating = true">新建提示词</button>
               <button type="button" class="button" @click="settingsPage = 'data'; settingsOpen = true">导入文件</button>
               <button type="button" class="button" @click="openSquare">去广场挑选</button>
@@ -381,6 +382,10 @@
       </div>
       <footer class="modal-footer"><button type="button" class="button ghost-button" :disabled="categoryBusy" @click="closeCategoryDialog">取消</button><button type="button" class="button primary-button" data-testid="confirm-category" :disabled="categoryBusy || !newCategoryName.trim()" @click="confirmAddCategory">{{ categoryBusy ? '正在创建…' : '创建分类' }}</button></footer>
     </section>
+    <section v-if="globalSkillResult" class="workspace-page" data-testid="skill-search-detail">
+      <button type="button" class="page-back" :disabled="skillsBusy" @click="globalSkillResult = null">← 返回搜索前页面</button>
+      <SkillsPage :key="globalSkillResult.item.id" :entry="globalSkillResult" :mode="globalSkillResult.scope === 'skills-local' ? 'local' : 'square'" @busy="skillsBusy = $event" />
+    </section>
     <CreatePromptModal
       v-if="creating || editing"
       ref="editorPage"
@@ -390,6 +395,7 @@
       :groups="categoryGroups"
       :model-options="modelOptions"
       :default-model="defaultModel"
+      :example="exampleDraft"
       :default-category-id="selectedId === '__uncategorized__' ? '' : (selectedId || '')"
       :error="editorError"
       :busy="editorBusy"
@@ -707,6 +713,7 @@ const shortcutLabel = computed(() => formatShortcutLabel(launcherShortcut.value,
 const searchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'macos' ? 'Super+F' : 'Control+F', props.host));
 const searchInput = ref(null);
 const globalSearchOpen = ref(false);
+const globalSkillResult = ref(null);
 const globalSearchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'macos' ? 'Super+K' : 'Control+K', props.host));
 const globalSearchBlocked = computed(() => publicationsBusy.value || skillsBusy.value || batchBusy.value || editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length > 0 || favoriteBusy.value.length > 0 || Boolean(pendingDelete.value || deletingCategory.value || pendingNavigation.value));
 function openGlobalSearch() {
@@ -718,7 +725,8 @@ async function openGlobalResult({ item, scope }) {
   globalSearchOpen.value = false;
   await nextTick();
   const action = () => {
-    if (scope === 'square') {
+    if (item.kind === 'skill') globalSkillResult.value = { item, scope };
+    else if (scope === 'square') {
       favoriteIds.value = favoriteIds.value.filter(id => id !== item.id);
       if (item.is_favorite) favoriteIds.value.push(item.id);
       openSquareDetail(item);
@@ -825,6 +833,8 @@ const view = ref("grid");
 const sortTab = ref("全部");
 const contentLanguage = ref("zh");
 const creating = ref(false);
+const exampleDraft = ref(false);
+watch(creating, value => { if (!value) exampleDraft.value = false; });
 const creatingInCollection = ref(null);
 const editing = ref(null);
 const reading = ref(null);
@@ -1112,7 +1122,7 @@ const emptyCopy = computed(() => {
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
 const locationLabel = computed(() => contentKind.value === "skills" ? (skillsMode.value === "local" ? "本机 Skills" : "Skill 广场") : (space.value === "square" ? t("square") : t("local")));
-const hasTaskPage = computed(() => Boolean(publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
+const hasTaskPage = computed(() => Boolean(globalSkillResult.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
 const taskTitle = computed(() => publicationsOpen.value ? '我的发布' : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
 
 function guardSidebarNavigation(event) {
@@ -1145,6 +1155,7 @@ function finishNavigation() {
   }
   pendingNavigation.value = null;
   pendingDelete.value = null;
+  globalSkillResult.value = null;
   creating.value = false; creatingInCollection.value = null; editing.value = null; using.value = null; reading.value = null; publicationsOpen.value = false;
   openedCollection.value = null; closeSquareDetail();
   loginReason.value = ''; publishResume.value = false; pendingPublish.value = false;
@@ -1378,7 +1389,7 @@ onUnmounted(() => extraLauncherUnlisteners.forEach(stop => stop()));
 let downloadsDisposed = false;
 onUnmounted(() => { downloadsDisposed = true; detailRequest += 1; });
 
-function downloadActionLabel(id) { return downloadBusy.value.includes(id) ? downloadLabel(id) : downloadedIds.value.includes(id) ? '打开本地副本' : '下载'; }
+function downloadActionLabel(id) { return downloadBusy.value.includes(id) ? downloadLabel(id) : downloadedIds.value.includes(id) ? '打开本地副本' : '保存到本地'; }
 
 async function downloadSquare(item) {
   if (downloadBusy.value.includes(item.id)) return;
