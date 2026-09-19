@@ -42,6 +42,19 @@
 - WHEN 运行 docs-check
 - THEN 进程失败
 
+### Requirement: API 合同与真实路由一致
+
+`node scripts/api-contract-check.mjs` MUST 双向核对后端显式注册的路径/HTTP 方法与 `square.yaml`、`admin.yaml`，在集中 frontend 验证与 full-regression CI 中执行。路径参数名称可不同；未知路由注册形式 MUST 报错，不能默默跳过。请求/响应字段、认证和业务行为仍由处理器审阅及对应测试验证。
+
+#### Scenario: 新增或残留操作
+
+- GIVEN 后端新增未记入 OpenAPI 的路径或方法，或文档保留已移除的操作
+- WHEN 执行集中 frontend 验证
+- THEN API 合同检查失败并列出缺少的一侧及操作
+- AND 索引/断链检查通过不能抵消该失败
+
+`docs-check` 只检查索引、Markdown 相对链接和 ADR 结构，不证明内容与实现一致，也不验证 HTTP 合同。测试门禁的实际接入情况与未落实要求见[测试门禁](../../reference/test-gates.md)。
+
 ### Requirement: 先计划后代码
 
 每个应用模块 MUST 在 `docs/plans/` 有实现计划后才能开始写业务代码。M0 MUST NOT 包含应用源代码树。
@@ -94,6 +107,7 @@
 | docs-check 捕获孤儿 | `scripts/docs-check`（人工/CI） |
 | 坏链 | `scripts/docs-check` |
 | 缺段落 | `scripts/docs-check` |
+| 新增或残留操作 | `scripts/api-contract-check.test.mjs` 未记载路径/方法、错误方法、重复操作与未知注册形式；`scripts/api-contract-check.mjs` 实际仓库对照 |
 | 当前仓库 | 目录约定，M1 前目视 |
 | 工作流存在 | `.github/workflows/docs.yml` |
 | 规则文件 | `.cursor/rules/docs-first.mdc` |

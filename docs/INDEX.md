@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-19-doc-code-alignment.md](plans/2026-09-19-doc-code-alignment.md) | 实施中 | 核对文档与代码或修复合同漏项 | 状态/架构更新、真实路由对照与覆盖率门禁边界 |
+| [plans/2026-09-19-doc-code-alignment.md](plans/2026-09-19-doc-code-alignment.md) | 已验收 | 核对文档与代码或修复合同漏项 | 130 个显式操作对齐、三前端回归；覆盖率要求仍待落实 |
 | [plans/2026-09-19-beta20-release.md](plans/2026-09-19-beta20-release.md) | 已发布部署 | beta.20 使用体验与数据恢复发行 | 双平台包、完整远程回归、签名更新与官网切换已验 |
 | [plans/2026-09-19-usability-safety.md](plans/2026-09-19-usability-safety.md) | 已随 beta.20 发布 | 改善搜索、同步反馈与数据恢复 | 五个兼容切片完成；全端回归与隔离浏览器验收通过，平台边界见记录 |
 | [plans/2026-09-18-beta19-release.md](plans/2026-09-18-beta19-release.md) | 已发布 | beta.19 双平台修复发行 | 封面类型、窄卡片与审核文案；安装包和更新资产核验 |
@@ -189,10 +189,10 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/mcp/spec.md](specs/mcp/spec.md) | 现行 | 做 MCP | 本地内存索引、多词筛选分页、取消隔离；显式独立广场工具 |
 | [specs/sync/spec.md](specs/sync/spec.md) | 目标 | 做个人库云同步 | 完整分类/合集/成员/软删除往返与时间归一化 |
 | [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 独立持久化模拟订单/权益、测试码与真实权益隔离 |
-| [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check 或索引规则 | 文档门禁合同 |
-| [reference/test-gates.md](reference/test-gates.md) | 现行 | 加测试或 CI | 分阶段门禁 |
-| [reference/openapi/square.yaml](reference/openapi/square.yaml) | 现行 | 改广场 API 时 | M5 广场 / 登录 / 发布合同 |
-| [reference/openapi/admin.yaml](reference/openapi/admin.yaml) | 现行 | 改管理 API 时 | M6 管理合同；/v1/admin |
+| [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check、索引或合同检查 | 结构检查与真实路由对照边界 |
+| [reference/test-gates.md](reference/test-gates.md) | 现行 | 加测试或 CI | 已接入检查及覆盖率/Testcontainers 未落实要求 |
+| [reference/openapi/square.yaml](reference/openapi/square.yaml) | 现行 | 改广场 API 时 | 广场 / 登录 / 发布 / Skills / 翻译合同 |
+| [reference/openapi/admin.yaml](reference/openapi/admin.yaml) | 现行 | 改管理 API 时 | /v1/admin；含 Skill 审核、翻译与模型发现 |
 | [reference/quality.md](reference/quality.md) | 现行 | 评审标准含糊时 | 质量约定 |
 | [how-to/local-dev.md](how-to/local-dev.md) | 现行 | 想在本机验证 | npm test / npm run dev / tauri dev / 备份恢复 |
 | [how-to/mcp-clients.md](how-to/mcp-clients.md) | 现行 | 让其他智能体搜索提示词 | 独立 stdio、原生配置生成、本地三工具与可选广场三工具 |

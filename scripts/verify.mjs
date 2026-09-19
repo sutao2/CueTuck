@@ -9,7 +9,8 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const steps = {
   frontend: [
     ['docs', '.', 'python3', ['scripts/docs-check']],
-    ['tool-tests', '.', node, ['--test', 'scripts/release-check.test.mjs', 'scripts/import-community.test.mjs']],
+    ['api-contract', '.', node, ['scripts/api-contract-check.mjs']],
+    ['tool-tests', '.', node, ['--test', 'scripts/release-check.test.mjs', 'scripts/import-community.test.mjs', 'scripts/api-contract-check.test.mjs']],
     ...['desktop', 'web', 'admin-web'].flatMap(dir => [[`${dir}-tests`, dir, npm, ['test']], [`${dir}-build`, dir, npm, ['run', 'build']]]),
   ],
   backend: [['backend', 'backend', 'cargo', ['test', '--locked', '--', '--test-threads=4']]],

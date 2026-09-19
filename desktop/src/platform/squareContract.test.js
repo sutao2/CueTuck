@@ -10,6 +10,14 @@ const openapiPath = resolve(
 );
 
 const REQUIRED = [
+  { method: "GET", path: "/v1/skills", auth: "none" },
+  { method: "POST", path: "/v1/skills", auth: "user" },
+  { method: "GET", path: "/v1/skills/mine", auth: "user" },
+  { method: "GET", path: "/v1/skills/{id}", auth: "none" },
+  { method: "GET", path: "/v1/skills/{id}/bundle", auth: "none" },
+  { method: "POST", path: "/v1/skills/{id}/withdraw", auth: "user" },
+  { method: "GET", path: "/v1/square/items/{id}/translations", auth: "none" },
+  { method: "POST", path: "/v1/square/items/{id}/translations/{target}", auth: "user" },
   { method: "GET", path: "/v1/square/browse", auth: "none" },
   { method: "GET", path: "/v1/square/search", auth: "none" },
   { method: "GET", path: "/v1/square/items/{id}/assets/{asset_id}", auth: "none" },

@@ -2,8 +2,47 @@ openapi: 3.0.3
 info:
   title: PromptArk Admin
   version: 0.1.0
-  description: 管理合同。不把本路径写进 square.yaml。本仓库 backend 是预发，不声称生产。密码重新认证受 60 秒窗口限制（全实例 300、连接 IP 60、操作者 10 次），超限返回 429 和 Retry-After=60；限流存储故障返回 503。管理客户端 401 清空当前会话，403 保留登录并提示权限不足。
+  description: 管理合同。不把本路径写进 square.yaml。开发与线上实例分别配置，部署及验收状态见 deploy/README.md。密码重新认证受 60 秒窗口限制（全实例 300、连接 IP 60、操作者 10 次），超限返回 429 和 Retry-After=60；限流存储故障返回 503。管理客户端 401 清空当前会话，403 保留登录并提示权限不足。
 paths:
+  /v1/admin/skills:
+    get:
+      operationId: listAdminCommunitySkills
+      summary: 管理角色分页查询社区 Skill 投稿
+      description: 须 owner/admin/reviewer；查询参数 q/category/status/offset 与分页结构同公开 Skill 列表，但可见范围含所有作者和状态。每页 24 条，返回 items/total/offset/category_counts，不含包字节；参数无效 400、无会话 401、角色不足 403。
+  /v1/admin/skills/{id}:
+    get:
+      operationId: getAdminCommunitySkill
+      summary: 管理角色读取待审 Skill 正文和文件清单
+      description: 须 owner/admin/reviewer；返回 Skill 摘要、history、body、files（path/size/executable），与用户详情结构相同。可查看未公开稿件，不执行内容；不存在 404。
+  /v1/admin/skills/{id}/bundle:
+    get:
+      operationId: getAdminCommunitySkillBundle
+      summary: 管理角色读取完整 Skill 包
+      description: 须 owner/admin/reviewer；返回 bundle（name/files，文件含 path/Base64 content/executable）与 digest，供逐文件审核。未公开包仅授权管理角色可通过此入口读取。
+  /v1/admin/skills/{id}/review:
+    post:
+      operationId: reviewCommunitySkill
+      summary: 管理角色通过、退回或下架 Skill
+      description: 须 owner/admin/reviewer，并在事务内复核会话与角色。JSON 含 status（approved/rejected/withdrawn）、expected_status、可选 reason（最多 2000 字）；退回/下架必须非空理由。仅 pending 可通过/退回，withdrawn 不可再次操作；当前状态不符 expected_status 为 409。状态、history 与审计同事务，返回 id/status；参数无效 400、不存在 404。
+  /v1/admin/ai/models/discover:
+    post:
+      operationId: discoverAdminModels
+      summary: 配置管理员用草稿或同源已存密钥发现模型
+      description: JSON 含 endpoint、可选 key、model_id、translation（默认 false），拒绝未知字段。endpoint 须以 /chat/completions 结尾；草稿 key 只用于本次请求、不保存。无 key 时 translation=true 复用相同端点的翻译密钥，否则按 model_id 读取同源 AI 密钥；不匹配为 400。请求公网 HTTPS /models，15 秒有界且不重定向，目录最多 2000 项，模型 ID 最多 200 字节，排序去重；成功返回 models，外部调用失败或空目录返回 HTTP 200 的 error 字段，不能当作成功。须配置权限（owner，或尚无 owner 时的 legacy admin），受账号频控。
+  /v1/admin/translation:
+    get:
+      operationId: getAdminTranslation
+      summary: 配置管理员读取翻译配置和队列状态
+      description: 返回 config（revision/endpoint/model/enabled/daily_tokens/has_key）、counts（按任务状态计数）、used_tokens、zh_ready、total（online 条目数）、failures（最近 20 个失败的 id/title/target/error）；无密钥或加密密文。须配置权限，数据库未配置为 503。
+    put:
+      operationId: saveAdminTranslation
+      summary: owner 重认证后保存版本化翻译配置
+      description: JSON 含 revision、endpoint、model、enabled、daily_tokens、current_password，可选 key；拒绝未知字段。endpoint 为合法公网 HTTPS 且以 /chat/completions 结尾，model 非空最多 200 字节，daily_tokens 为 10000–100000000。空 key 只在端点不变时保留旧凭据；新端点必须提供 key。事务内要求当前 owner、有效会话及正确密码，revision 不符为 409；配置与审计同事务，返回脱敏配置并递增 revision。参数无效 400、密码或角色无效 403。
+  /v1/admin/translation/actions:
+    post:
+      operationId: controlAdminTranslation
+      summary: owner 管理持久翻译队列
+      description: JSON 仅 action，为 queue/retry/pause/resume。queue 为所有 online 条目补建缺失中文任务，已有不重复；retry 重启全部失败任务并清零尝试次数；pause/resume 更新 enabled 并递增配置 revision。事务内复核当前 owner 与会话并审计；返回 affected（变更行数），非法动作 400。批量任务不消耗个人手动请求次数；暂停阻止后续调用，不承诺取消已发出的外部请求。
   /v1/admin/publications/{id}/assets/{asset_id}:
     get:
       operationId: getReviewPublicationAsset

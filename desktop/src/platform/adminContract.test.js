@@ -10,6 +10,14 @@ const openapiPath = resolve(
 );
 
 const REQUIRED = [
+  { method: "GET", path: "/v1/admin/skills", auth: "admin" },
+  { method: "GET", path: "/v1/admin/skills/{id}", auth: "admin" },
+  { method: "GET", path: "/v1/admin/skills/{id}/bundle", auth: "admin" },
+  { method: "POST", path: "/v1/admin/skills/{id}/review", auth: "admin" },
+  { method: "POST", path: "/v1/admin/ai/models/discover", auth: "admin" },
+  { method: "GET", path: "/v1/admin/translation", auth: "admin" },
+  { method: "PUT", path: "/v1/admin/translation", auth: "admin" },
+  { method: "POST", path: "/v1/admin/translation/actions", auth: "admin" },
   { method: "GET", path: "/v1/admin/publications/{id}/assets/{asset_id}", auth: "admin" },
   { method: "GET", path: "/v1/admin/overview", auth: "admin" },
   { method: "POST", path: "/v1/admin/catalog/{kind}/{id}/migrate", auth: "admin" },

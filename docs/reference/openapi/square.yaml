@@ -4,6 +4,49 @@ info:
   version: 0.1.0
   description: M5 广场合同。旧 Spring 路径不是本合同。条目列表、详情和正文可含 reference（可空对象），字段 repository、url、author、license、license_url、images（HTTPS URL 数组）；历史记录为空，普通投稿不可自行写入此导入来源字段。
 paths:
+  /v1/skills:
+    get:
+      operationId: browseCommunitySkills
+      security: []
+      summary: 浏览已通过审核的社区 Skill
+      description: 仅返回 approved 且作者未停用的条目。关闭匿名浏览时须有效 Access。q 最多 500 字节，category 为 development/ai/cloud/security/office/design/marketing/science/tools/uncategorized，status 可为 pending/approved/rejected/withdrawn，空值不筛选；offset 为 0–100000。每页 24 条，按 created_at 倒序及 id 排序；返回 items、total、offset、category_counts（当前可见范围、筛选前的分类计数）。摘要含 id/title/description/category/license/name/digest/status/reason/created_at/publisher.display_name，不含包字节或作者邮箱。非法筛选 400、未登录 401、未配置数据库 503。
+    post:
+      operationId: submitCommunitySkill
+      summary: 登录用户提交完整 Skill 包
+      description: JSON 含 request_id（UUID）、title（非空最多 120 字）、description（非空最多 2000 字）、category、license（非空最多 120 字）、confirm_public=true、bundle；拒绝未知字段。bundle 为 name 和 files 数组，每文件含 path、Base64 content、executable；包路径及大小校验见 Skills 规格，整请求上限 36 MiB。须已设置公开昵称且站点允许投稿；普通账号受发布策略的 24 小时额度限制，admin/owner 豁免个人额度。同账号 request_id 与完全相同内容重试复用原稿，不同内容 409。新稿 pending，启用 AI 决策时入队；返回与详情相同的对象，不承诺立即公开。校验失败 400、关闭投稿 403、缺昵称 422、额度超限 429。
+  /v1/skills/mine:
+    get:
+      operationId: listMyCommunitySkills
+      summary: 登录用户分页查看本人 Skill 投稿
+      description: 查询参数、分页和摘要结构同 GET /v1/skills；可见范围为本人全部状态，分类计数也仅含本人。不返回其他作者的未公开稿件；未登录 401。
+  /v1/skills/{id}:
+    get:
+      operationId: getCommunitySkill
+      security: []
+      summary: 读取可见 Skill 的正文和文件清单
+      description: 已批准且作者未停用的稿件按广场匿名开关访问；未公开稿件仅本人或管理角色可读，非公开请求无会话为 401、无权查看为 404。返回摘要、history（status/reason/at）、body（SKILL.md 文本）、files（path/size/executable），不返回包字节。不存在 404、存量包校验失败 500。
+  /v1/skills/{id}/bundle:
+    get:
+      operationId: getCommunitySkillBundle
+      security: []
+      summary: 获取可见 Skill 的完整包与摘要
+      description: 权限同 Skill 详情；返回 bundle（name/files，文件含 path/Base64 content/executable）与 digest。仅交付数据，不执行脚本或安装到本机；不记录提示词下载计数。
+  /v1/skills/{id}/withdraw:
+    post:
+      operationId: withdrawMyCommunitySkill
+      summary: 作者撤回自己的 Skill 投稿
+      description: 须有效 Access。JSON 必须含 status、expected_status，可选 reason（最多 2000 字），拒绝未知字段；服务端将目标状态固定为 withdrawn，忽略 status 的值。仅作者可操作，非本人或不存在 404；当前状态与 expected_status 不同或已撤回为 409。状态、history 与审计同事务；返回 id/status。
+  /v1/square/items/{id}/translations:
+    get:
+      operationId: getSquareTranslations
+      security: []
+      summary: 读取公开提示词当前源文的语言版本
+      description: 沿用广场匿名开关；关闭时须有效 Access，不存在或非 online 为 404。返回按 zh/en 索引的对象，无版本时为空对象；各版本含 status、version、error。version 可含 title/content/members/excerpt/source/source_hash/model/rule；排队或失败时可为空。源文变化使旧版本失效，读取不创建任务、不增加下载/收藏计数。
+  /v1/square/items/{id}/translations/{target}:
+    post:
+      operationId: enqueueSquareTranslation
+      summary: 登录用户请求生成 zh 或 en 版本
+      description: 无请求体；target 仅 zh/en，否则 400，条目须 online。返回与 GET translations 相同的版本对象。ready/queued/running 复用，failed 可重新入队；服务未启用时未就绪请求为 503。普通账号、reviewer/support 每个数据库自然日最多 20 次新建或重启，admin/owner 按当前角色豁免个人次数；创建任务与计数同事务，超限 429 不遗留任务。保留账号频控、全站 token 预算与供应商速率约束；不改原稿、不执行同步或下载。
   /v1/square/browse:
     get:
       operationId: browseSquarePage
