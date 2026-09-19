@@ -243,6 +243,7 @@
           <section v-else-if="current === 'data'">
             <h3>数据与备份</h3>
             <p>管理本机资料、导入导出与数据恢复。</p>
+            <LocalTrash :disabled="dataBusy || importBusy" @busy="dataBusy = $event" @restored="emit('imported')" />
             <div class="settings-group">
             <div class="setting-row">
               <span class="setting-copy"><strong>SQLite 数据库</strong><small>打开库文件所在目录。</small></span>
@@ -434,6 +435,7 @@
 
 <script setup>
 import McpSettings from './McpSettings.vue';
+import LocalTrash from './LocalTrash.vue';
 import SyncStatus from './SyncStatus.vue';
 import { saveSyncResult } from '../platform/syncStatus.js';
 import AppIcon from "./AppIcon.vue";

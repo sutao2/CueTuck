@@ -444,6 +444,28 @@ export async function deleteLocalCollection(id) {
   }
 }
 
+export async function listDeletedLocalItems(query = '') {
+  if (isTauri()) return tauriInvoke('list_deleted_local_items', { query });
+  return [...memoryPrompts.map(row => ({ ...row, kind: 'prompt' })), ...memoryCollections.map(row => ({ ...row, kind: 'collection' }))]
+    .filter(row => row.deleted_at && row.title.toLowerCase().includes(query.trim().toLowerCase()))
+    .sort((a, b) => timestampMillis(b.deleted_at) - timestampMillis(a.deleted_at)).slice(0, 200)
+    .map(({ id, kind, title, deleted_at }) => ({ id, kind, title, deleted_at }));
+}
+
+export async function restoreDeletedLocalItem(id, kind) {
+  if (!['prompt', 'collection'].includes(kind)) throw Error('不支持的恢复类型');
+  if (isTauri()) return tauriInvoke('restore_deleted_local_item', { id, kind });
+  const row = (kind === 'prompt' ? memoryPrompts : memoryCollections).find(item => item.id === id && item.deleted_at);
+  if (!row) throw Error('条目已恢复或不存在');
+  row.deleted_at = null;
+  row.updated_at = String(Math.max(Number(nextTimestamp()), timestampMillis(row.updated_at) + 1));
+  if (!memoryCategories.some(item => item.id === row.category_id && !item.deleted_at)) row.category_id = null;
+  if (kind === 'prompt' && !memoryCollections.some(item => item.id === row.collection_id && !item.deleted_at)) {
+    row.collection_id = null;
+    if (row.source === 'collection') row.source = 'local';
+  }
+}
+
 export async function listCollectionMembers(collectionId) {
   if (isTauri()) {
     return tauriInvoke("list_local_collection_members", { collection_id: collectionId });

@@ -1,4 +1,5 @@
 mod backup;
+pub mod recovery;
 mod auto_backup;
 pub use auto_backup::{set_auto_backup_in_dir, start_auto_backup_worker};
 mod categories;

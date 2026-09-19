@@ -20,6 +20,16 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
+pub fn list_deleted_local_items(app: AppHandle, query: String) -> Result<Vec<crate::local_database::recovery::DeletedItem>, String> {
+    crate::local_database::recovery::list_deleted(&data_dir(&app)?, &query)
+}
+
+#[tauri::command]
+pub fn restore_deleted_local_item(app: AppHandle, id: String, kind: String) -> Result<(), String> {
+    crate::local_database::recovery::restore_deleted(&data_dir(&app)?, &id, &kind)
+}
+
+#[tauri::command]
 pub fn create_collection_prompt(app: AppHandle, collection_id: String, title: String, content: String, category_id: Option<String>, model: Option<String>, assets: Vec<crate::local_database::assets::Asset>) -> Result<PromptRecord, String> {
     crate::local_database::collections::create_member_in_dir(&data_dir(&app)?, &collection_id, &title, &content, category_id.as_deref(), model.as_deref(), &assets)
 }

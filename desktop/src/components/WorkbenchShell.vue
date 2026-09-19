@@ -551,6 +551,7 @@
     </div>
     <div v-if="operationNotice" class="download-notice" :class="{ 'notice-above-confirmation': pendingDelete }" :data-testid="operationNotice.kind + '-notice'" role="status" aria-live="polite">
       <span>{{ operationNotice.text }}</span>
+      <button v-if="operationNotice.undo" type="button" data-testid="undo-delete" :disabled="globalSearchBlocked" @click="undoDelete">撤销删除</button>
       <button v-if="operationNotice.retry" type="button" data-testid="retry-operation-refresh" :disabled="operationRefreshBusy || space !== 'local'" @click="retryOperationRefresh">{{ space !== 'local' ? '请回到本地刷新' : operationRefreshBusy ? '正在刷新…' : '重试刷新' }}</button>
       <button v-if="operationNotice.success && operationNotice.kind === 'download'" type="button" @click="closeSquareDetail(); openLocal(); operationNotice = null">前往本地</button>
       <button type="button" aria-label="关闭提示" @click="operationNotice = null">×</button>
@@ -691,6 +692,7 @@ import {
   createLocalPrompt,
   createCollectionPrompt,
   deleteLocalPrompt,
+  restoreDeletedLocalItem,
   getLocalSetting,
   listCollectionMembers,
   listLocalCategories,
@@ -1999,6 +2001,7 @@ async function confirmRemovePrompt() {
     deleted = true;
     pendingDelete.value = null;
     notifyOperation(`已删除「${title}」。${kind === 'collection' ? '合集内的提示词已保留。' : ''}`, true, 'delete');
+    operationNotice.value.undo = { id, kind, title };
     if (editing.value?.id === id) closeEditor();
     if (reading.value?.id === id) reading.value = null;
     if (openedCollection.value?.id === id) openedCollection.value = null;
@@ -2009,6 +2012,21 @@ async function confirmRemovePrompt() {
     notifyOperation(editorError.value, false, 'delete');
   }
   finally { editorBusy.value = false; }
+}
+
+async function undoDelete() {
+  if (globalSearchBlocked.value || !operationNotice.value?.undo) return;
+  const item = operationNotice.value.undo;
+  editorBusy.value = true;
+  let restored = false;
+  try {
+    await restoreDeletedLocalItem(item.id, item.kind);
+    restored = true;
+    notifyOperation(`已恢复「${item.title}」${item.kind === 'collection' ? '，原成员位置保持不变' : ''}。`, true, 'restore');
+    await reloadPrompts();
+  } catch (error) {
+    notifyOperation(`${restored ? '已恢复，但刷新失败' : '恢复失败，可在设置的本地回收站重试'}：${error.message || error}`, false, 'restore', restored);
+  } finally { editorBusy.value = false; }
 }
 
 async function finishUse(text) {

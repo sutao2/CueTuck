@@ -70,6 +70,8 @@ pub fn run() {
             commands::database::move_local_prompt_category,
             commands::database::choose_library_backup,
             commands::database::delete_local_prompt,
+            commands::database::list_deleted_local_items,
+            commands::database::restore_deleted_local_item,
             commands::database::list_local_categories,
             commands::database::create_local_category,
             commands::database::delete_local_category,
