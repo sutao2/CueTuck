@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-09-19-beta20-release.md](plans/2026-09-19-beta20-release.md) | 准备发行 | beta.20 使用体验与数据恢复发行 | 同源码双平台构建、签名更新与官网切换验收 |
 | [plans/2026-09-19-usability-safety.md](plans/2026-09-19-usability-safety.md) | 本地验收完成，未发布 | 改善搜索、同步反馈与数据恢复 | 五个兼容切片完成；全端回归与隔离浏览器验收通过，平台边界见记录 |
 | [plans/2026-09-18-beta19-release.md](plans/2026-09-18-beta19-release.md) | 已发布 | beta.19 双平台修复发行 | 封面类型、窄卡片与审核文案；安装包和更新资产核验 |
 | [plans/2026-09-18-cover-file-type.md](plans/2026-09-18-cover-file-type.md) | 已随 beta.19 发布 | 合集发布 cover-1.png 类型不匹配 | 按实际图片格式识别；654 项回归与构建通过 |
