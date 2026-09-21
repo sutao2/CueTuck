@@ -1,5 +1,6 @@
 <template>
   <div class="app-shell" :inert="session.loggedIn && !profileReady ? '' : undefined" :class="{ 'sidebar-collapsed': sidebarCollapsed, 'sidebar-resizing': sidebarDrag !== null }" :style="{ '--sidebar-width': `${sidebarWidth}px` }">
+    <Teleport to="body"><WindowsWindowControls v-if="host === 'windows'" /></Teleport>
     <header
       v-show="!settingsOpen || Boolean(loginReason)"
       :inert="globalSearchOpen ? '' : undefined"
@@ -634,6 +635,7 @@
 import SearchableSelect from "./SearchableSelect.vue";
 import { formatMetric } from '../platform/contentMetrics.js';
 import AppIcon from "./AppIcon.vue";
+import WindowsWindowControls from './WindowsWindowControls.vue';
 import GlobalSearch from "./GlobalSearch.vue";
 import SyncStatus from './SyncStatus.vue';
 import { shortcutStatus } from '../platform/shortcut.js';

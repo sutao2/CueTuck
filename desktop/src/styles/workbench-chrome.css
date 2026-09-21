@@ -74,6 +74,11 @@ body.theme-dark .app-shell {
   font-weight: 500;
 }
 .titlebar-center > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.host-windows .titlebar { background: var(--sidebar); }
+body.host-windows .titlebar-left { border-right: 0; background: var(--sidebar); box-shadow: none; }
+body.host-windows .titlebar-center, body.host-windows .titlebar-right { border-bottom: 0; }
+body.host-windows .titlebar-right { padding-right: 150px; }
+body.host-windows .settings-window-drag { background: var(--sidebar); }
 .brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
 .sidebar-brand-row { display: flex; align-items: center; justify-content: space-between; flex: 0 0 48px; padding: 0 14px 0 16px; gap: 12px; }
 .frame-icon-button { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); }

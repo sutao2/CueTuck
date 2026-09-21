@@ -13,6 +13,7 @@ on:
       - 'desktop/**'
       - 'shared/**'
       - 'scripts/release-check*'
+      - 'scripts/windows-chrome-smoke.ps1'
       - '.github/workflows/desktop-windows.yml'
 
 permissions:
@@ -68,11 +69,13 @@ jobs:
           if ($install.ExitCode -ne 0) { throw "Installer failed: $($install.ExitCode)" }
           $app = $null
           try {
+            $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--force-renderer-accessibility'
             $app = Start-Process (Join-Path $installDir 'cuetuck.exe') -PassThru
             Start-Sleep -Seconds 10
             $app.Refresh()
             if ($app.HasExited) { throw "Installed application exited early: $($app.ExitCode)" }
             Write-Host 'Installed x64 application remained running for 10 seconds.'
+            if (Test-Path '../scripts/windows-chrome-smoke.ps1') { & ../scripts/windows-chrome-smoke.ps1 -App $app }
           } finally {
             if ($app -and -not $app.HasExited) { Stop-Process -Id $app.Id -Force }
             $uninstaller = Join-Path $installDir 'uninstall.exe'
