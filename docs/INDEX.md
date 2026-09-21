@@ -6,8 +6,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-09-21-beta21-release.md](plans/2026-09-21-beta21-release.md) | 准备发行 | beta.21 Windows 一体式顶栏发行 | 同源码双平台包、原生窗口按钮及官网切换验收 |
-| [plans/2026-09-21-windows-titlebar.md](plans/2026-09-21-windows-titlebar.md) | 实施中 | 修改 Windows 主窗口顶部 | 一体式窗口栏、持续可用的窗口控制及跨平台隔离 |
+| [plans/2026-09-21-beta21-release.md](plans/2026-09-21-beta21-release.md) | 已发布部署 | beta.21 Windows 一体式顶栏发行 | 双平台签名包、完整回归、真实窗口按钮及官网切换已验 |
+| [plans/2026-09-21-windows-titlebar.md](plans/2026-09-21-windows-titlebar.md) | 已随 beta.21 发布 | 修改 Windows 主窗口顶部 | 一体式窗口栏、持续可用的窗口控制及跨平台隔离已验 |
 | [plans/2026-09-19-doc-code-alignment.md](plans/2026-09-19-doc-code-alignment.md) | 已验收 | 核对文档与代码或修复合同漏项 | 130 个显式操作对齐、三前端回归；覆盖率要求仍待落实 |
 | [plans/2026-09-19-beta20-release.md](plans/2026-09-19-beta20-release.md) | 已发布部署 | beta.20 使用体验与数据恢复发行 | 双平台包、完整远程回归、签名更新与官网切换已验 |
 | [plans/2026-09-19-usability-safety.md](plans/2026-09-19-usability-safety.md) | 已随 beta.20 发布 | 改善搜索、同步反馈与数据恢复 | 五个兼容切片完成；全端回归与隔离浏览器验收通过，平台边界见记录 |
