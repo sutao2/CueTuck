@@ -15,4 +15,4 @@
 - 组件新增 3 项回归；SkillsPage 共 26 项通过，覆盖维护导航、外部点击、焦点移出、Escape 回焦、刷新期间禁用。
 - 完整前端门禁通过：桌面 678、网页 33、管理台 106 项测试及三端构建；文档、API 合同和工具测试通过。日志：`output/verification/run-nExg1k/`。
 - Chromium 隔离数据验收：1600×1000 下四个按钮均为 34px 高，展开前后工具栏均为 59.789px；Enter 展开、两个维护页面进入和返回通过。800×900 深色主题浮层完整可见。截图：`output/playwright/skills-toolbar-wide.png`、`output/playwright/skills-toolbar-narrow-dark.png`。
-- 本次仅修复前端工具栏；未构建或发布新安装包，未操作用户真实 Skill 文件。
+- 本次仅修复前端工具栏，未操作用户真实 Skill 文件；已随 [beta.22](2026-09-21-beta22-release.md) 发布。
