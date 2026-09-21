@@ -6,6 +6,17 @@
 .skills-header .skills-eyebrow { font-size:10px; letter-spacing:1.6px; margin-bottom:6px; color:var(--muted); }
 .muted { color:var(--muted); font-size:12px; line-height:1.65; }
 .skills-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.skills-maintenance { position:relative; flex-shrink:0; }
+.skills-maintenance > summary { display:flex; align-items:center; gap:7px; list-style:none; cursor:pointer; }
+.skills-maintenance > summary::-webkit-details-marker { display:none; }
+.skills-maintenance > summary:focus-visible { outline:2px solid var(--text); outline-offset:2px; }
+.skills-maintenance > summary[aria-disabled="true"] { opacity:.5; cursor:default; }
+.skills-maintenance > summary .app-icon { width:14px; height:14px; }
+.skills-maintenance[open] > summary .app-icon { transform:rotate(180deg); }
+.skills-maintenance-menu { position:absolute; top:calc(100% + 6px); right:0; z-index:30; min-width:150px; padding:5px; border:1px solid var(--line); border-radius:9px; background:var(--surface); box-shadow:0 8px 24px rgba(0,0,0,.12); }
+.skills-maintenance-menu > .button { width:100%; display:block; text-align:left; border-color:transparent; }
+.skills-maintenance-menu > .button:hover { background:var(--sidebar); }
+@media(max-width:700px){.skills-maintenance-menu{left:0;right:auto}}
 .skills-page button { cursor:pointer; }
 .skills-page button:disabled { opacity:.5; cursor:default; }
 .skills-page button:focus-visible { outline:2px solid var(--text); outline-offset:2px; }

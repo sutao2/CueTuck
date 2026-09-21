@@ -9,6 +9,7 @@ defineProps({ name: { type: String, default: "library" } });
 const paths = {
   skills: "M8 3h8v4h5v14H3V7h5zM8 3v4h8M8 12h8M8 16h5",
   close: "M6 6l12 12M6 18L18 6",
+  "chevron-down": "M6 9l6 6 6-6",
   minus: "M5 12h14",
   fit: "M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5",
   star: "m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z",

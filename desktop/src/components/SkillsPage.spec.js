@@ -21,6 +21,36 @@ const skill=(key,path,root_id='alpha')=>({key,path,physical_path:path,root_id,na
 const packageData={name:'Example',description:'完整 Skill',body:'---\nname: Example\n---\n# Safe <script>bad()</script>',license:'未知',bytes:20,digest:'new',warnings:[],files:[{path:'SKILL.md',size:20,digest:'new',executable:false}]};
 const button=(text,scope=w)=>scope.findAll('button').find(b=>b.text()===text);
 async function click(text,scope=w){await button(text,scope).trigger('click');await flushPromises();}
+async function openMaintenance(){await w.get('.skills-maintenance summary').trigger('click');await flushPromises();}
+it('dismisses maintenance on outside pointer, focus leaving and Escape with focus returned',async()=>{
+  await mountPage();
+  const menu=w.get('.skills-maintenance'),trigger=menu.get('summary');
+  await openMaintenance();expect(menu.element.open).toBe(true);
+  document.body.dispatchEvent(new Event('pointerdown',{bubbles:true}));expect(menu.element.open).toBe(false);
+  await openMaintenance();button('备份与记录').element.focus();
+  await button('备份与记录').trigger('keydown',{key:'Escape'});
+  expect(menu.element.open).toBe(false);expect(document.activeElement).toBe(trigger.element);
+  await openMaintenance();button('刷新').element.focus();expect(menu.element.open).toBe(false);
+});
+it('opens both maintenance pages and returns to a closed toolbar',async()=>{
+  await mountPage();
+  for(const [action,title] of [['备份与记录','备份与操作记录'],['管理目录','管理目录']]){
+    await openMaintenance();await click(action);
+    expect(w.get('h1').text()).toBe(title);
+    await w.get('.skills-back').trigger('click');await flushPromises();
+    expect(w.get('.skills-maintenance').element.open).toBe(false);
+  }
+});
+it('closes maintenance and prevents reopening while a refresh is pending',async()=>{
+  await mountPage();await openMaintenance();let finish;
+  transport.mockImplementationOnce(()=>new Promise(resolve=>finish=resolve));
+  await button('刷新').trigger('click');
+  expect(w.get('.skills-maintenance').element.open).toBe(false);
+  expect(w.get('.skills-maintenance summary').attributes('aria-disabled')).toBe('true');
+  await openMaintenance();expect(w.get('.skills-maintenance').element.open).toBe(false);
+  finish(structuredClone(snapshot));await flushPromises();
+  await openMaintenance();expect(w.get('.skills-maintenance').element.open).toBe(true);
+});
 async function mountPage(props={}){w=mount(SkillsPage,{props,attachTo:document.body});await flushPromises();if(props.mode==='square')await click('GitHub 来源');}
 beforeEach(()=>{
   setSkillMarketTransport(async()=>({items:[],total:0,category_counts:{}}));
