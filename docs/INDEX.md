@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-10-09-beta23-release.md](plans/2026-10-09-beta23-release.md) | 已发布部署 | beta.23 双平台视觉发行 | 同源码构建、回归、签名与官网切换 |
+| [plans/2026-10-09-beta23-release.md](plans/2026-10-09-beta23-release.md) | 已发布部署 | beta.23 双平台视觉发行 | 同源码构建、回归、签名与官网切换；已纠正预发行标记导致的更新漏检 |
 | [plans/2026-10-09-image-viewer-refresh.md](plans/2026-10-09-image-viewer-refresh.md) | 已随 beta.23 发布；验收边界见记录 | 图片预览视觉优化 | 随主题的画布、清晰工具栏与原有看图操作回归 |
 | [plans/2026-10-09-chatgpt-visual-refresh.md](plans/2026-10-09-chatgpt-visual-refresh.md) | 已随 beta.23 发布；验收边界见记录 | 双平台整体视觉统一 | 主窗口、Skills、设置与独立启动器的浅深色和交互验收 |
 | [architecture/decisions/0026-chatgpt-visual-language.md](architecture/decisions/0026-chatgpt-visual-language.md) | 现行 | 修改桌面配色与控件样式 | ChatGPT 风格方向；保留信息架构与原生窗口差异 |
@@ -206,7 +206,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [reference/quality.md](reference/quality.md) | 现行 | 评审标准含糊时 | 质量约定 |
 | [how-to/local-dev.md](how-to/local-dev.md) | 现行 | 想在本机验证 | npm test / npm run dev / tauri dev / 备份恢复 |
 | [how-to/mcp-clients.md](how-to/mcp-clients.md) | 现行 | 让其他智能体搜索提示词 | 独立 stdio、原生配置生成、本地三工具与可选广场三工具 |
-| [how-to/release-qa.md](how-to/release-qa.md) | 现行 | 发行前手工 smoke | M4 QA 表；未验证平台不得勾选 |
+| [how-to/release-qa.md](how-to/release-qa.md) | 现行 | 发行前手工 smoke | M4 QA 表、更新通道发现与签名安装门禁；未验证平台不得勾选 |
 | [how-to/read-docs.md](how-to/read-docs.md) | 现行 | Agent 或人要省 token | 按问题打开哪份 |
 | [how-to/update-docs.md](how-to/update-docs.md) | 现行 | 要改规格或 ADR | 文档更新步骤 |
 | [reference/lifecycle.md](reference/lifecycle.md) | 现行 | 问文档怎么流转 | 从规格到归档 |

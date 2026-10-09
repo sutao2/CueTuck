@@ -46,3 +46,9 @@ Mac 预览构建必须复用固定签名身份，禁止 `-` / ad-hoc 回退。`n
 固定自签名仅供明确标记的预览包保持跨版本身份，不能替代 Developer ID、公证或 Gatekeeper 认证。发布前验证新旧二进制 DR 一致、隔离钥匙串跨版本读取与不同签名拒绝；迁移自旧 ad-hoc 后可能需要用户首次授权。当前证据见 [重复授权修复](../plans/2026-09-16-macos-signing-identity.md)。
 
 自签名预览的完整性验收使用预先确认的证书指纹及 identifier，通过 `codesign --verify --deep --strict -R='identifier "app.promptark.desktop" and certificate leaf = H"固定证书指纹"'` 校验。隔离更新测试可显式设置同一 `CUETUCK_CODESIGN_REQUIREMENT`；不得从下载包读取一个任意 DR 后当作可信要求，也不得以此宣称 Apple 信任链验证通过。
+
+## 更新发现与发行标记
+
+预览版必须同时满足语义版本带预发行后缀和 GitHub `prerelease=true`；正式版必须同时为稳定版本和 `prerelease=false`。不得为了让 GitHub `/releases/latest/` 可用而修改预览版标记：客户端从公开 releases 列表按通道筛选，安装使用 `/releases/download/{tag}/latest.json`。
+
+发布验收必须先使用公开 releases 列表与现行客户端选择逻辑验证：旧版发现新版、同版不提示、稳定通道不选 beta；再验证选中版本专属清单的签名下载和隔离安装。仅验证静态 latest 入口不代表用户能检查到更新。
