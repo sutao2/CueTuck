@@ -6,12 +6,12 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-10-09-beta23-release.md](plans/2026-10-09-beta23-release.md) | 进行中 | beta.23 双平台视觉发行 | 同源码构建、回归、签名与官网切换 |
-| [plans/2026-10-09-image-viewer-refresh.md](plans/2026-10-09-image-viewer-refresh.md) | 已验收，未发布 | 图片预览视觉优化 | 随主题的画布、清晰工具栏与原有看图操作回归 |
-| [plans/2026-10-09-chatgpt-visual-refresh.md](plans/2026-10-09-chatgpt-visual-refresh.md) | 已实现，原生验收待完成 | 双平台整体视觉统一 | 主窗口、Skills、设置与独立启动器的浅深色和交互验收 |
+| [plans/2026-10-09-beta23-release.md](plans/2026-10-09-beta23-release.md) | 已发布部署 | beta.23 双平台视觉发行 | 同源码构建、回归、签名与官网切换 |
+| [plans/2026-10-09-image-viewer-refresh.md](plans/2026-10-09-image-viewer-refresh.md) | 已随 beta.23 发布；验收边界见记录 | 图片预览视觉优化 | 随主题的画布、清晰工具栏与原有看图操作回归 |
+| [plans/2026-10-09-chatgpt-visual-refresh.md](plans/2026-10-09-chatgpt-visual-refresh.md) | 已随 beta.23 发布；验收边界见记录 | 双平台整体视觉统一 | 主窗口、Skills、设置与独立启动器的浅深色和交互验收 |
 | [architecture/decisions/0026-chatgpt-visual-language.md](architecture/decisions/0026-chatgpt-visual-language.md) | 现行 | 修改桌面配色与控件样式 | ChatGPT 风格方向；保留信息架构与原生窗口差异 |
-| [plans/2026-10-09-macos-traffic-lights.md](plans/2026-10-09-macos-traffic-lights.md) | 已验证，未发布 | Mac 红黄绿按钮偏上 | 下移 8px，原生几何验证与 110 项回归通过 |
-| [plans/2026-10-09-launcher-windows-style.md](plans/2026-10-09-launcher-windows-style.md) | 已实现，Windows 实机待验 | Windows 启动器方形边框和草稿布局 | 平台阴影隔离、正文滚动及底栏间距；前端与 Mac 回归通过 |
+| [plans/2026-10-09-macos-traffic-lights.md](plans/2026-10-09-macos-traffic-lights.md) | 已随 beta.23 发布；验收边界见记录 | Mac 红黄绿按钮偏上 | 下移 8px，原生几何验证与 110 项回归通过 |
+| [plans/2026-10-09-launcher-windows-style.md](plans/2026-10-09-launcher-windows-style.md) | 已随 beta.23 发布；验收边界见记录 | Windows 启动器方形边框和草稿布局 | 平台阴影隔离、正文滚动及底栏间距；前端与 Mac 回归通过 |
 | [plans/2026-09-21-beta22-release.md](plans/2026-09-21-beta22-release.md) | 已发布部署 | beta.22 Skills 工具栏修复发行 | 双平台构建、回归、签名与官网入口核验通过 |
 | [plans/2026-09-21-skills-toolbar.md](plans/2026-09-21-skills-toolbar.md) | 已随 beta.22 发布 | 修复本机 Skills 顶部按钮错位 | 等高维护入口、浮层与键盘交互回归通过 |
 | [plans/2026-09-21-beta21-release.md](plans/2026-09-21-beta21-release.md) | 已发布部署 | beta.21 Windows 一体式顶栏发行 | 双平台签名包、完整回归、真实窗口按钮及官网切换已验 |
