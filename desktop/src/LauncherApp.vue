@@ -98,7 +98,7 @@
           <details v-if="optimizedDraft"><summary>查看原始输入</summary><pre class="preview code">{{ query }}</pre></details>
           <p v-if="feedback" role="status">{{ feedback }}</p>
         </div>
-        <footer class="launcher-foot launcher-actions"><button type="button" class="ghost" :disabled="busy" @click="backToSearch">返回输入</button><button type="button" class="ghost" :disabled="busy || !draftContent.trim()" @click="activate({title:draftTitle,content:draftContent}, 'default')">{{ optimizedDraft ? '采用并使用' : '直接使用' }}</button><button type="button" class="primary" :disabled="busy || !draftTitle.trim() || !draftContent.trim()" @click="saveDraft">保存到本地</button></footer>
+        <footer class="launcher-foot launcher-actions quick-draft-foot"><button type="button" class="ghost" :disabled="busy" @click="backToSearch">返回输入</button><button type="button" class="ghost" :disabled="busy || !draftContent.trim()" @click="activate({title:draftTitle,content:draftContent}, 'default')">{{ optimizedDraft ? '采用并使用' : '直接使用' }}</button><button type="button" class="primary" :disabled="busy || !draftTitle.trim() || !draftContent.trim()" @click="saveDraft">保存到本地</button></footer>
       </template>
       <template v-else>
         <div class="launcher-search-wrap launcher-fill-head">
@@ -842,5 +842,5 @@ button:disabled { opacity: .5; cursor: wait; }
 </style>
 
 <style scoped>
-.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:38px;padding-top:8px;padding-bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:12px;padding:18px}.quick-content{flex:1;min-height:150px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:vertical;min-height:130px}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background:var(--surface,#fff);color:inherit;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px;font:inherit}.quick-draft .field{display:flex;flex-direction:column;gap:6px}.quick-draft p{font-size:12px}.quick-draft .preview{max-height:130px;overflow:auto}
+.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:38px;padding-top:8px;padding-bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:10px;padding:14px 16px}.quick-content{flex:1;min-height:110px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:none;min-height:80px;line-height:1.6;overflow:auto}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background:var(--surface,#fff);color:inherit;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px;font:inherit}.quick-draft .field{display:flex;flex-direction:column;gap:6px}.quick-draft p{font-size:12px;line-height:1.5;margin:0;color:var(--muted)}.quick-draft>.field:not(.quick-content),.quick-draft>details,.quick-draft>p{flex-shrink:0}.quick-draft summary{cursor:pointer}.quick-draft-foot{min-height:50px;padding:8px 14px;gap:8px}.quick-draft-foot>.ghost:first-child{margin-right:auto}.quick-draft .preview{max-height:130px;overflow:auto}
 </style>

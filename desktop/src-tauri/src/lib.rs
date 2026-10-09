@@ -30,6 +30,16 @@ pub fn run() {
         {
             main.decorations = false;
         }
+        if let Some(launcher) = context
+            .config_mut()
+            .app
+            .windows
+            .iter_mut()
+            .find(|window| window.label == "launcher")
+        {
+            // Windows adds a square 1px border when an undecorated window has a shadow.
+            launcher.shadow = false;
+        }
         context
     };
     let mut builder = tauri::Builder::default()
