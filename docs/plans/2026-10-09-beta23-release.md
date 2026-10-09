@@ -23,4 +23,3 @@
 - 官网切换到 `/opt/cuetuck-website-preview/releases/beta23-7f9080f5`，容器健康、公网 site.js 哈希一致。旧 `beta22-abdb091c` 保留；未部署后端或更改持久卷。
 - GitHub prerelease 标记会让现有客户端 `/releases/latest/download/latest.json` 返回 404，因此本次关闭该元数据标记并设为 Latest；版本号和说明仍明确为 beta 预览版。公开真实更新器验收通过后确认此兼容修复。
 - 发布资产：`output/releases/v0.1.0-beta.23/`。仍未完成 Apple 公证或 Windows Authenticode；浏览器视觉验收与真实系统原生窗口外观验收范围保持各专项记录所述，不将安装 smoke 等同全部视觉验收。
-
