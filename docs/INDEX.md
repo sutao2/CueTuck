@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-09-macos-traffic-lights.md](plans/2026-10-09-macos-traffic-lights.md) | 已验证，未发布 | Mac 红黄绿按钮偏上 | 下移 8px，原生几何验证与 110 项回归通过 |
 | [plans/2026-10-09-launcher-windows-style.md](plans/2026-10-09-launcher-windows-style.md) | 已实现，Windows 实机待验 | Windows 启动器方形边框和草稿布局 | 平台阴影隔离、正文滚动及底栏间距；前端与 Mac 回归通过 |
 | [plans/2026-09-21-beta22-release.md](plans/2026-09-21-beta22-release.md) | 已发布部署 | beta.22 Skills 工具栏修复发行 | 双平台构建、回归、签名与官网入口核验通过 |
 | [plans/2026-09-21-skills-toolbar.md](plans/2026-09-21-skills-toolbar.md) | 已随 beta.22 发布 | 修复本机 Skills 顶部按钮错位 | 等高维护入口、浮层与键盘交互回归通过 |
