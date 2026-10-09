@@ -10,6 +10,7 @@
       class="launcher-stage"
       :class="{
         'host-mac': host === 'macos',
+        'host-windows': host === 'windows',
         'is-collapsed': isCollapsed,
         'is-fill': step === 'fill',
       }"
@@ -573,6 +574,9 @@ onUnmounted(() => {
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent),
     inset 0 1px 0 color-mix(in srgb, var(--surface) 70%, transparent);
+}
+.launcher-stage.host-windows {
+  border-radius: 0;
 }
 .launcher-stage.is-collapsed {
   grid-template-rows: 1fr;

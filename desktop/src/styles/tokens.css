@@ -124,3 +124,11 @@ body.launcher-page {
 body.host-mac.launcher-page {
   background: transparent;
 }
+
+/* Windows WebView may render transparent rounded corners black. Paint the full window. */
+html.launcher-root:has(body.host-windows),
+html.launcher-root body.host-windows,
+body.host-windows.launcher-page #app,
+body.host-windows.launcher-page .launcher-canvas {
+  background: var(--surface);
+}

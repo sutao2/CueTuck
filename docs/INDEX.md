@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-09-launcher-windows-corners.md](plans/2026-10-09-launcher-windows-corners.md) | 已实现，Windows 实机待验 | Windows 启动器圆角黑块 | 实色矩形外框，保留 Mac 外观与业务交互 |
 | [plans/2026-10-09-beta23-release.md](plans/2026-10-09-beta23-release.md) | 已发布部署 | beta.23 双平台视觉发行 | 同源码构建、回归、签名与官网切换；已纠正预发行标记导致的更新漏检 |
 | [plans/2026-10-09-image-viewer-refresh.md](plans/2026-10-09-image-viewer-refresh.md) | 已随 beta.23 发布；验收边界见记录 | 图片预览视觉优化 | 随主题的画布、清晰工具栏与原有看图操作回归 |
 | [plans/2026-10-09-chatgpt-visual-refresh.md](plans/2026-10-09-chatgpt-visual-refresh.md) | 已随 beta.23 发布；验收边界见记录 | 双平台整体视觉统一 | 主窗口、Skills、设置与独立启动器的浅深色和交互验收 |
