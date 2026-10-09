@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-09-image-viewer-refresh.md](plans/2026-10-09-image-viewer-refresh.md) | 已验收，未发布 | 图片预览视觉优化 | 随主题的画布、清晰工具栏与原有看图操作回归 |
 | [plans/2026-10-09-chatgpt-visual-refresh.md](plans/2026-10-09-chatgpt-visual-refresh.md) | 已实现，原生验收待完成 | 双平台整体视觉统一 | 主窗口、Skills、设置与独立启动器的浅深色和交互验收 |
 | [architecture/decisions/0026-chatgpt-visual-language.md](architecture/decisions/0026-chatgpt-visual-language.md) | 现行 | 修改桌面配色与控件样式 | ChatGPT 风格方向；保留信息架构与原生窗口差异 |
 | [plans/2026-10-09-macos-traffic-lights.md](plans/2026-10-09-macos-traffic-lights.md) | 已验证，未发布 | Mac 红黄绿按钮偏上 | 下移 8px，原生几何验证与 110 项回归通过 |

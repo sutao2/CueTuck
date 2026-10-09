@@ -3,7 +3,7 @@
     <div class="image-backdrop" @click.self="$emit('close')">
       <section v-dialog-focus="() => $emit('close')" class="image-viewer" role="dialog" aria-modal="true" :aria-label="`图片预览：${title}`" @keydown="onKey">
         <header class="image-heading">
-          <div class="image-caption"><strong>{{ title }}</strong><span v-if="loaded">{{ naturalWidth }} × {{ naturalHeight }}</span></div>
+          <div class="image-caption"><strong :title="title">{{ title }}</strong><span v-if="loaded">{{ naturalWidth }} × {{ naturalHeight }}</span></div>
           <button type="button" data-dialog-autofocus aria-label="关闭图片预览" title="关闭 (Esc)" @click="$emit('close')"><AppIcon name="close" /></button>
         </header>
         <div ref="canvas" class="image-canvas" @click.self="$emit('close')" @wheel.prevent="onWheel">
@@ -11,6 +11,7 @@
           <p v-else-if="!loaded" class="image-message" role="status">正在加载图片…</p>
           <img v-if="!failed" :key="src" :src="src" :alt="title" referrerpolicy="no-referrer" :class="{ loaded, draggable: canPan, dragging }" :style="imageStyle" draggable="false" @load="onLoad" @error="failed = true; loaded = false" @dblclick.prevent="toggleSize" @pointerdown="startPan" @pointermove="movePan" @pointerup="endPan" @pointercancel="endPan" @lostpointercapture="endPan">
         </div>
+        <p class="image-hint">双击切换原尺寸 · 放大后拖动查看 · Esc 关闭</p>
         <footer class="image-toolbar" aria-label="图片工具栏">
           <button type="button" :disabled="!loaded || scale <= .1" aria-label="缩小图片" title="缩小 (−)" @click="resize(-.25)"><AppIcon name="minus" /></button>
           <span class="image-scale">{{ loaded ? Math.round(scale * 100) + '%' : '—' }}</span>
@@ -52,25 +53,28 @@ onMounted(() => { measure(); if (typeof ResizeObserver !== 'undefined') { observ
 onUnmounted(() => observer?.disconnect());
 </script>
 <style scoped>
-.image-backdrop { position: fixed; inset: 0; z-index: 2200; background: rgba(15, 17, 20, .96); }
-.image-viewer { position: absolute; inset: 0; display: flex; flex-direction: column; color: #f4f4f5; outline: none; }
-.image-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 24px 10px; flex-shrink: 0; }
-.image-caption { min-width: 0; display: flex; align-items: baseline; gap: 16px; }
-.image-caption strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; }
-.image-caption span { color: #9da1a8; font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.image-viewer button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 7px; min-width: 34px; height: 34px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: #e7e8eb; font: 12px var(--font-body, sans-serif); cursor: pointer; }
-.image-viewer button:hover, .image-viewer button[aria-pressed=true] { background: #ffffff18; }
-.image-viewer button:focus-visible { outline: 2px solid #adbfcf; outline-offset: 2px; }
-.image-viewer button:disabled { opacity: .3; cursor: default; }
+.image-backdrop { position: fixed; inset: 0; z-index: 2200; background: var(--surface); }
+.image-viewer { position: absolute; inset: 0; display: flex; flex-direction: column; color: var(--text); outline: none; }
+.image-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 24px; flex-shrink: 0; }
+.image-caption { min-width: 0; display: grid; gap: 4px; }
+.image-caption strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
+.image-caption span { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.image-viewer button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 7px; min-width: 40px; height: 40px; padding: 0 12px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text); font: 13px var(--font-ui); cursor: pointer; }
+.image-heading button { background: var(--surface-secondary); }
+.image-viewer button:hover, .image-viewer button[aria-pressed=true] { background: var(--accent-soft); }
+.image-viewer button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.image-viewer button:disabled { opacity: .35; cursor: default; }
 .image-viewer .app-icon { width: 18px; height: 18px; }
-.image-canvas { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 76px; }
-.image-canvas img { flex: none; max-width: none; max-height: none; object-fit: contain; opacity: 0; user-select: none; -webkit-user-select: none; touch-action: none; box-shadow: 0 4px 32px #0004; }
+.image-canvas { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0 24px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface-secondary); }
+.image-canvas img { flex: none; max-width: none; max-height: none; object-fit: contain; opacity: 0; user-select: none; -webkit-user-select: none; touch-action: none; box-shadow: 0 4px 24px #0002; }
 .image-canvas img.loaded { opacity: 1; }
 .image-canvas img.draggable { cursor: grab; }
 .image-canvas img.dragging { cursor: grabbing; }
-.image-message { position: absolute; display: flex; align-items: center; gap: 10px; color: #b6bac2; font-size: 13px; }
-.image-toolbar { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 5px 7px; border: 1px solid #ffffff1a; border-radius: 12px; background: #272a2f; box-shadow: 0 4px 18px #0003; }
-.image-toolbar i { width: 1px; height: 18px; margin: 0 6px; background: #ffffff24; }
-.image-scale { min-width: 46px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; color: #c8cbd1; }
-@media (max-width: 600px) { .image-heading { padding: 12px 14px 8px; } .image-caption { display: grid; gap: 3px; } }
+.image-message { position: absolute; display: flex; align-items: center; gap: 10px; padding: 16px; color: var(--muted); font-size: 13px; }
+.image-hint { flex-shrink: 0; margin: 12px 16px 8px; text-align: center; color: var(--muted); font-size: 12px; }
+.image-toolbar { flex-shrink: 0; align-self: center; display: flex; align-items: center; gap: 4px; margin: 0 12px 16px; padding: 5px 7px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--surface); box-shadow: 0 2px 8px #00000008; }
+.image-toolbar i { width: 1px; height: 20px; margin: 0 6px; background: var(--line-strong); }
+.image-scale { min-width: 46px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted); }
+:global(body.host-mac .image-viewer), :global(body.host-windows .image-viewer) { top: var(--titlebar-height); }
+@media (max-width: 600px), (max-height: 500px) { .image-heading { padding: 10px 14px; } .image-canvas { margin: 0 12px; } .image-hint { margin-top: 8px; font-size: 11px; } .image-toolbar { margin-bottom: 10px; gap: 2px; } }
 </style>
