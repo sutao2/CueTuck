@@ -567,7 +567,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   overflow: hidden;
   background: var(--surface);
   box-shadow:
@@ -588,7 +588,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-bottom: 1px solid var(--line);
 }
 .launcher-stage.is-collapsed .launcher-search-wrap {
   min-height: 64px;
@@ -662,7 +662,7 @@ onUnmounted(() => {
   margin: 0 0 4px;
   padding: 8px 12px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: transparent;
   text-align: left;
 }
@@ -714,7 +714,7 @@ onUnmounted(() => {
   padding: 0 12px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  background: var(--bg);
+  background: var(--surface);
   font-size: 12px;
 }
 .launcher-keys,
@@ -818,8 +818,8 @@ h3 {
 .ghost {
   border: 0;
   min-height: 32px;
-  border-radius: 7px;
-  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
   cursor: pointer;
   transition: background-color 120ms, color 120ms;
 }
@@ -842,5 +842,5 @@ button:disabled { opacity: .5; cursor: wait; }
 </style>
 
 <style scoped>
-.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:38px;padding-top:8px;padding-bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:10px;padding:14px 16px}.quick-content{flex:1;min-height:110px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:none;min-height:80px;line-height:1.6;overflow:auto}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background:var(--surface,#fff);color:inherit;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px;font:inherit}.quick-draft .field{display:flex;flex-direction:column;gap:6px}.quick-draft p{font-size:12px;line-height:1.5;margin:0;color:var(--muted)}.quick-draft>.field:not(.quick-content),.quick-draft>details,.quick-draft>p{flex-shrink:0}.quick-draft summary{cursor:pointer}.quick-draft-foot{min-height:50px;padding:8px 14px;gap:8px}.quick-draft-foot>.ghost:first-child{margin-right:auto}.quick-draft .preview{max-height:130px;overflow:auto}
+.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:38px;padding-top:8px;padding-bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:10px;padding:14px 16px}.quick-content{flex:1;min-height:110px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:none;min-height:80px;line-height:1.6;overflow:auto}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background: var(--surface-secondary,var(--surface));color:inherit;border: 1px solid transparent;border-radius: var(--radius-control);padding:10px;font:inherit}.quick-draft .field{display:flex;flex-direction:column;gap:6px}.quick-draft p{font-size:12px;line-height:1.5;margin:0;color:var(--muted)}.quick-draft>.field:not(.quick-content),.quick-draft>details,.quick-draft>p{flex-shrink:0}.quick-draft summary{cursor:pointer}.quick-draft-foot{min-height:50px;padding:8px 14px;gap:8px}.quick-draft-foot>.ghost:first-child{margin-right:auto}.quick-draft .preview{max-height:130px;overflow:auto}
 </style>

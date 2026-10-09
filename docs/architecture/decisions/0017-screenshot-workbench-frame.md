@@ -2,6 +2,7 @@
 
 - Status: superseded（仅搜索位置与用途，由 [ADR 0022](0022-global-search.md) 替代；其余框架决策继续适用）
 - Date: 2026-09-06
+- 2026-10-09：配色、分隔线和控件外观由 [ADR 0026](0026-chatgpt-visual-language.md) 取代，其余布局约束保留。
 - 关联：[ADR 0016](0016-workbench-frame-and-settings.md) · [工作台规格](../../specs/workbench/spec.md)
 
 ## Context

@@ -127,16 +127,16 @@ onUnmounted(invalidate);
 </script>
 
 <style scoped>
-.global-search-layer { position: fixed; inset: 0; z-index: 900; display: flex; align-items: flex-start; justify-content: center; padding: min(12vh, 96px) 24px 24px; background: #0005; }
-.global-search-panel { width: 640px; max-width: 100%; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: 0 16px 60px #0003; }
+.global-search-layer { position: fixed; inset: 0; z-index: 900; display: flex; align-items: flex-start; justify-content: center; padding: min(12vh, 96px) 24px 24px; background: #0004; }
+.global-search-panel { width: 640px; max-width: 100%; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-menu); }
 .global-search-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 12px; }
-.global-search-header h2 { margin: 0; font-size: 16px; font-weight: 650; }
+.global-search-header h2 { margin: 0; font-size: 18px; font-weight: 600; }
 .global-search-close { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 4px; }
 .global-search-scopes { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 22px 16px; }
-.global-search-scopes button { display: flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+.global-search-scopes button { display: flex; align-items: center; gap: 7px; padding: 7px 12px; border: 1px solid transparent; border-radius: var(--radius-pill); background: transparent; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
 .global-search-scopes button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--line); color: var(--text); }
 .global-search-scopes .app-icon { width: 16px; height: 16px; }
-.global-search-field { display: flex; align-items: center; gap: 12px; margin: 0 22px; padding: 11px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); }
+.global-search-field { display: flex; align-items: center; gap: 12px; margin: 0 22px; padding: 14px 16px; border: 1px solid transparent; border-radius: var(--radius-panel); background: var(--surface-secondary); }
 .global-search-field:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .global-search-field > .app-icon { width: 19px; height: 19px; color: var(--muted); flex-shrink: 0; }
 .global-search-field input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 15px; }
@@ -146,7 +146,7 @@ onUnmounted(invalidate);
 .global-search-empty p { font-size: 14px; }
 .global-search-empty small { font-size: 12px; }
 .global-search-results { overflow-y: auto; min-height: 0; padding: 0 10px 10px; overscroll-behavior: contain; }
-.global-search-result { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.global-search-result { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
 .global-search-result:hover { background: var(--hover); }
 .global-search-result[aria-selected="true"] { background: var(--accent-soft); }
 .global-search-kind { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 36px; color: var(--muted); }
