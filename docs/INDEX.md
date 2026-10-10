@@ -6,8 +6,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-10-10-beta28-release.md](plans/2026-10-10-beta28-release.md) | 准备中 | 发布空输入搜索栏修复 | 双平台同源构建、更新验证与官网入口 |
-| [plans/2026-10-10-launcher-empty-restore.md](plans/2026-10-10-launcher-empty-restore.md) | 已实现，未发布 | 恢复未输入时的小搜索栏 | 空输入 64，展开后保持固定尺寸 |
+| [plans/2026-10-10-beta28-release.md](plans/2026-10-10-beta28-release.md) | 已发布部署 | 发布空输入搜索栏修复 | 双平台同源构建、更新验证与官网入口 |
+| [plans/2026-10-10-launcher-empty-restore.md](plans/2026-10-10-launcher-empty-restore.md) | 已随 beta.28 发布 | 恢复未输入时的小搜索栏 | 空输入 64，展开后保持固定尺寸 |
 | [plans/2026-10-10-beta27-release.md](plans/2026-10-10-beta27-release.md) | 已发布部署 | 发布固定尺寸启动器 | 双平台同源构建、签名更新与官网下载入口 |
 | [plans/2026-10-10-launcher-fixed-size.md](plans/2026-10-10-launcher-fixed-size.md) | 已随 beta.27 发布 | 用户要求固定弹窗尺寸 | 所有状态统一所选大小，内部滚动 |
 | [plans/2026-10-10-launcher-raycast.md](plans/2026-10-10-launcher-raycast.md) | 已随 beta.27 发布 | 用户指定 Raycast 启动器风格 | 单行命令列表、语义图标与当前操作栏 |
