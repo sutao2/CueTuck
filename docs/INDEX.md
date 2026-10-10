@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-10-10-square-presentation.md](plans/2026-10-10-square-presentation.md) | 已实现验收，官网待部署 | 双端广场不好看、首屏加载慢 | 搜索与卡片层级、缩小批次和首屏并行加载 |
+| [plans/2026-10-10-square-presentation.md](plans/2026-10-10-square-presentation.md) | 官网已上线，客户端已验收未发版 | 双端广场不好看、首屏加载慢 | 搜索与卡片层级、缩小批次和首屏并行加载 |
 | [plans/2026-10-10-website-polish.md](plans/2026-10-10-website-polish.md) | 已上线 | 官网不够专业、参考 ChatGPT 官网 | 首屏与产品叙事、统一下载页；12 组本地布局及公网回归通过 |
 | [specs/website/spec.md](specs/website/spec.md) | 现行 | 修改官网视觉与入口 | 产品表达、真实预览及响应式操作边界 |
 | [plans/2026-10-10-beta25-release.md](plans/2026-10-10-beta25-release.md) | 已发布部署 | beta.25 边界与阴影发行 | 双平台回归、签名更新、公开附件与官网入口已验 |
