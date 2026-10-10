@@ -6,7 +6,7 @@ import shutil
 root = Path(__file__).resolve().parents[1]
 out = root / 'output' / 'website-preview'
 out.mkdir(parents=True, exist_ok=True)
-for name in ('index.html', 'site.css', 'landing.css', 'browse.css', 'site.js', 'live-data.mjs', 'robots.txt', 'sitemap.xml'):
+for name in ('index.html', 'site.css', 'landing.css', 'site.js', 'live-data.mjs', 'robots.txt', 'sitemap.xml'):
     shutil.copy2(root / 'docs' / 'designs' / 'website' / name, out / name)
 (out / 'assets').mkdir(exist_ok=True)
 for source, name in (
