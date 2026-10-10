@@ -60,11 +60,11 @@ describe("LauncherApp", () => {
     const w = mount(LauncherApp);
     await flushPromises();
     await w.get('input').setValue('卡通');
-    expect(resize).toHaveBeenLastCalledWith('expanded', 302);
+    expect(resize).toHaveBeenLastCalledWith('expanded', 324);
     expect(w.text()).toContain('正在搜索');
     resolveSearch([{ id: 'one', title: '卡通', content: '[System / Prompt] 绘制 {{主题}}，解释 {{主题}}' }]);
     await flushPromises();
-    expect(resize).toHaveBeenLastCalledWith('expanded', 342);
+    expect(resize).toHaveBeenLastCalledWith('expanded', 344);
     expect(w.get('.row-desc').text()).toBe('绘制 {{主题}}，解释 {{主题}}');
     expect(w.get('.result-row .pill').text()).toBe('1 个变量');
     expect(w.get('.result-icon').text()).toBe('');
@@ -73,7 +73,7 @@ describe("LauncherApp", () => {
     expect(resize).toHaveBeenLastCalledWith('fill', 420);
     await w.findAll('button').find(button => button.text() === '返回').trigger('click');
     await flushPromises();
-    expect(resize).toHaveBeenLastCalledWith('expanded', 342);
+    expect(resize).toHaveBeenLastCalledWith('expanded', 344);
     const calls = resize.mock.calls.length;
     await w.get('input').setValue('更多');
     await flushPromises();
@@ -84,8 +84,34 @@ describe("LauncherApp", () => {
     await w.get('input').setValue('不存在');
     resolveSearch([]);
     await flushPromises();
-    expect(resize).toHaveBeenLastCalledWith('expanded', 302);
+    expect(resize).toHaveBeenLastCalledWith('expanded', 324);
     expect(w.findAll('[role="option"]')).toHaveLength(3);
+  });
+
+  it("runs the selected result or quick action from the footer and copies with the existing flow", async () => {
+    await createLocalPrompt({ title: '卡通', content: '绘制 {{主题}}' });
+    const writeText = vi.fn().mockResolvedValue();
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    await library.setLocalSetting('close_after_use', '0');
+    const w = mount(LauncherApp);
+    await flushPromises();
+    await w.get('input').setValue('卡通');
+    await flushPromises();
+    await w.get('.default-action').trigger('click');
+    expect(w.find('textarea').exists()).toBe(true);
+    await w.findAll('button').find(button => button.text() === '返回').trigger('click');
+    await flushPromises();
+    await w.get('input').trigger('keydown', { key: 'ArrowDown' });
+    expect(w.findAll('.search-action')).toHaveLength(1);
+    expect(w.get('.default-action').text()).toContain('执行');
+    await w.get('.default-action').trigger('click');
+    expect(w.find('[data-testid="quick-title"]').exists()).toBe(true);
+    await w.findAll('button').find(button => button.text() === '返回输入').trigger('click');
+    await flushPromises();
+    await w.get('input').trigger('keydown', { key: 'ArrowUp' });
+    await w.findAll('.search-action').find(button => button.text().startsWith('复制')).trigger('click');
+    await flushPromises();
+    expect(writeText).toHaveBeenCalledExactlyOnceWith('绘制 {{主题}}');
   });
 
   it("does not request admin APIs while searching locally", async () => {

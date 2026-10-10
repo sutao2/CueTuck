@@ -13,13 +13,14 @@
         'host-windows': host === 'windows',
         'is-collapsed': isCollapsed,
         'is-fill': step === 'fill',
+        'is-search': step === 'search',
       }"
       data-testid="launcher-chrome"
       @mousedown="startDragFromChrome"
     >
       <template v-if="step === 'search'">
         <div class="launcher-search-wrap">
-          <img class="brand-mark" :src="appIcon" alt="" aria-hidden="true" draggable="false" />
+          <AppIcon class="search-symbol" name="search" />
           <input
             ref="inputEl"
             v-model="query"
@@ -47,7 +48,7 @@
           <p v-if="feedback" role="status" data-testid="launcher-feedback" class="launcher-empty">{{ tr(feedback) }}</p>
           <p v-if="searching" role="status" class="launcher-empty">{{ tr('正在搜索…') }}</p>
           <div v-if="results.length">
-            <p class="group-title"><span>{{ scope === 'square' ? tr('广场搜索') : tr('本地提示词') }}</span><span>{{ results.length }}</span></p>
+            <p class="group-title"><span>{{ scope === 'square' ? tr('广场搜索') : tr('本地提示词') }}</span></p>
             <button
               v-for="(row, index) in results"
               :key="row.id"
@@ -65,8 +66,8 @@
             >
               <span class="result-icon"><AppIcon :name="row.kind === 'collection' ? 'folder' : 'file'" /></span>
               <span class="result-copy">
-                <span class="row-title"><SearchHighlight :text="row.title" :query="query" /></span>
-                <span class="row-desc">{{ rowDesc(row) }}</span>
+                <span class="row-title" :title="row.title"><SearchHighlight :text="row.title" :query="query" /></span>
+                <span class="row-desc" :title="rowDesc(row)">{{ rowDesc(row) }}</span>
               </span>
               <span class="pill">{{ rowLabel(row) }}</span>
             </button>
@@ -74,19 +75,22 @@
           <p v-else-if="!searching && !feedback" class="launcher-empty">{{ tr('没有找到相关提示词') }}</p>
           <div v-if="query.trim()" class="quick-actions" :aria-label="tr('输入快捷操作')">
             <p class="group-title">{{ tr('使用当前输入') }}</p>
-            <button v-for="(action, index) in quickActions" :key="action.action" :aria-selected="selectedIndex === results.length + index" :id="`launcher-result-${results.length + index}`" type="button" role="option" tabindex="-1" class="result-row" :class="{active: selectedIndex === results.length + index}" :disabled="busy" @mousedown.prevent @click="runQuickAction(action.action)" @mousemove="selectWithPointer($event, results.length + index)">
+            <button v-for="(action, index) in quickActions" :key="action.action" :aria-selected="selectedIndex === results.length + index" :id="`launcher-result-${results.length + index}`" type="button" role="option" tabindex="-1" class="result-row" :class="[action.action, {active: selectedIndex === results.length + index}]" :disabled="busy" @mousedown.prevent @click="runQuickAction(action.action)" @mousemove="selectWithPointer($event, results.length + index)">
               <span class="result-icon"><AppIcon :name="action.icon" /></span><span class="row-title">{{ tr(action.title) }}</span>
             </button>
           </div>
         </div>
 
-        <footer v-if="!isCollapsed" class="launcher-foot">
-          <div class="launcher-keys">
-            <span><kbd>↑↓</kbd> {{ tr('选择') }}</span>
-            <span class="primary-key"><kbd>Enter</kbd> {{ searchRows[selectedIndex]?.action ? tr('执行') : tr('使用') }}</span>
-            <span v-if="results[selectedIndex]"><kbd>{{ copyChord }}</kbd> {{ tr('复制') }}</span>
+        <footer v-if="!isCollapsed" class="launcher-foot search-foot">
+          <div class="footer-identity"><img :src="appIcon" alt="" /><span>CueTuck</span></div>
+          <span class="navigation-hint"><kbd>↑</kbd><kbd>↓</kbd><span>{{ tr('选择') }}</span></span>
+          <div class="search-actions">
+            <button class="search-action default-action" type="button" :disabled="busy || !searchRows.length" @click="activate(searchRows[selectedIndex], 'default')">
+              {{ searchRows[selectedIndex]?.action ? tr('执行') : tr('使用') }}<kbd>↵</kbd>
+            </button>
+            <button v-if="results[selectedIndex]" class="search-action" type="button" :disabled="busy" @click="activate(searchRows[selectedIndex], 'copy')">{{ tr('复制') }}<kbd>{{ copyChord }}</kbd></button>
+            <button v-if="scope === 'square' && searchRows[selectedIndex]?.remote" type="button" class="search-action" :disabled="busy" @click="viewSquareDetail(searchRows[selectedIndex])">{{ tr('查看详情') }}</button>
           </div>
-          <button v-if="scope === 'square' && searchRows[selectedIndex]?.remote" type="button" class="ghost" :disabled="busy" @click="viewSquareDetail(searchRows[selectedIndex])">{{ tr('查看详情') }}</button>
         </footer>
       </template>
 
@@ -216,14 +220,14 @@ const isCollapsed = computed(() => step.value === "search" && !query.value.trim(
 const launcherLayout = computed(() =>
   step.value === "fill" ? "fill" : isCollapsed.value ? "collapsed" : "expanded",
 );
-const searchHeight = ref(302);
+const searchHeight = ref(324);
 const panelHeight = computed(() => isCollapsed.value ? 64 : step.value === 'search'
   ? Math.min(searchHeight.value, LAUNCHER_SIZES[launcherPreferences.value.size].height)
   : LAUNCHER_SIZES[launcherPreferences.value.size].height);
 watch([results, searching, feedback], () => {
   if (searching.value) return;
-  // Search bar 60 + footer 42 + list padding 16 + compact actions 136.
-  searchHeight.value = 254 + (results.value.length ? 24 + results.value.length * 64 : 48)
+  // Search bar 64 + footer 44 + list padding 16 + compact actions 152.
+  searchHeight.value = 276 + (results.value.length ? 24 + results.value.length * 44 : 48)
     + (feedback.value ? 64 : 0);
 });
 const copyChord = computed(() => formatShortcutLabel("Control+Enter", props.host));
@@ -622,7 +626,7 @@ body.theme-dark .launcher-stage.host-windows {
   position: relative;
 }
 .launcher-search-wrap {
-  min-height: 60px;
+  min-height: 64px;
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
@@ -700,37 +704,35 @@ body.theme-dark .launcher-stage.host-windows {
 .result-row {
   width: 100%;
   position: relative;
-  min-height: 60px;
+  min-height: 42px;
+  height: 42px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  margin: 0 0 4px;
-  padding: 8px 12px;
+  margin: 0 0 2px;
+  padding: 0 12px;
   border: 0;
-  border-radius: var(--radius-control);
+  border-radius: 7px;
   background: transparent;
   text-align: left;
 }
 .result-row:hover { background: var(--hover); }
-.result-row.active { background: var(--accent-soft); }
-.result-row.active::before { content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 3px; border-radius: 2px; background: var(--accent); }
+.result-row.active { background: var(--launcher-selection); box-shadow: inset 0 0 0 1px var(--launcher-selection-line); }
+
 .result-icon {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  border-radius: 6px;
+  background: #258786;
+  color: white;
+  box-shadow: inset 0 1px 0 #ffffff30;
   font-size: 10px;
   font-weight: 700;
 }
-.result-row.active .result-icon {
-  background: var(--surface);
-  color: var(--text);
-}
-.result-icon :deep(svg) { width: 19px; height: 19px; }
+.result-icon :deep(svg) { width: 16px; height: 16px; }
 .result-copy {
   display: grid;
   min-width: 0;
@@ -770,7 +772,6 @@ body.theme-dark .launcher-stage.host-windows {
   background: var(--surface);
   font-size: 12px;
 }
-.launcher-keys,
 .launcher-actions {
   display: flex;
   flex-wrap: wrap;
@@ -781,13 +782,40 @@ body.theme-dark .launcher-stage.host-windows {
   width: 100%;
   justify-content: flex-end;
 }
-.launcher-keys { width: 100%; font-size: 11px; }
-.launcher-keys .primary-key { margin-left: auto; color: var(--text); }
-.launcher-keys span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.launcher-stage {
+  --launcher-selection: #e9e9ec;
+  --launcher-selection-line: #00000004;
+  --launcher-footer: #f3f3f5;
 }
+body.theme-dark .launcher-stage {
+  --launcher-selection: #363638;
+  --launcher-selection-line: #ffffff06;
+  --launcher-footer: #252527;
+}
+.launcher-stage.is-search { background: #fafafa; }
+body.theme-dark .launcher-stage.is-search { background: #202022; }
+.is-search .launcher-search-wrap { grid-template-columns: 20px minmax(0, 1fr) auto; gap: 12px; padding: 0 20px; }
+.search-symbol { width: 19px; height: 19px; color: var(--muted); opacity: .8; }
+.is-search .launcher-search { font-size: 18px; font-weight: 400; }
+.search-scope { color: var(--muted); font-size: 12px; padding-right: 6px; }
+.is-search .result-copy { display: flex; align-items: baseline; gap: 12px; }
+.is-search .row-title { flex: 0 1 auto; max-width: 65%; font-weight: 500; }
+.is-search .row-desc { flex: 1; min-width: 0; font-size: 12px; }
+.is-search .row-title :deep(mark) { background: transparent; color: inherit; font-weight: 650; }
+.is-search .result-row > .pill { background: transparent; padding: 0; font-size: 11px; opacity: .85; }
+.search-foot { min-height: 44px; gap: 16px; background: var(--launcher-footer); padding: 0 12px; }
+.launcher-stage.host-windows .search-foot { background: var(--launcher-footer); }
+.footer-identity { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; }
+.footer-identity img { width: 17px; height: 17px; opacity: .85; }
+.navigation-hint { display: flex; align-items: center; gap: 3px; font-size: 11px; }
+.navigation-hint > span { margin-left: 3px; }
+.search-actions { display: flex; align-items: center; margin-left: auto; gap: 6px; }
+.search-action { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 7px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.search-action:hover { background: var(--launcher-selection); color: var(--text); }
+.default-action { color: var(--text); }
+.search-action + .search-action { border-left: 1px solid var(--line); border-radius: 0; padding-left: 12px; }
+.search-foot kbd { min-width: 18px; height: 18px; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 4px; background: color-mix(in srgb, var(--text) 4%, transparent); font: 10px var(--font-ui); padding: 0 3px; }
+@media (max-width: 560px) { .navigation-hint { display: none; } .footer-identity > span { display: none; } }
 .launcher-fill-head {
   position: absolute;
   inset: 0 0 auto;
@@ -897,5 +925,12 @@ button:disabled { opacity: .5; cursor: wait; }
 </style>
 
 <style scoped>
-.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:32px;height:32px;padding:0 12px;gap:12px;margin-bottom:2px}.quick-actions .result-icon{width:32px;height:24px;background:transparent;color:var(--muted)}.quick-actions .result-icon :deep(svg){width:16px;height:16px}.quick-actions .row-title{font-size:13px;font-weight:400}.quick-actions .result-row.active::before{top:8px;bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:10px;padding:14px 16px}.quick-content{flex:1;min-height:110px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:none;min-height:80px;line-height:1.6;overflow:auto}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background: var(--surface-secondary,var(--surface));color:inherit;border: 1px solid transparent;border-radius: var(--radius-control);padding:10px;font:inherit}.quick-draft .field{display:flex;flex-direction:column;gap:6px}.quick-draft p{font-size:12px;line-height:1.5;margin:0;color:var(--muted)}.quick-draft>.field:not(.quick-content),.quick-draft>details,.quick-draft>p{flex-shrink:0}.quick-draft summary{cursor:pointer}.quick-draft-foot{min-height:50px;padding:8px 14px;gap:8px}.quick-draft-foot>.ghost:first-child{margin-right:auto}.quick-draft .preview{max-height:130px;overflow:auto}
+.quick-actions { margin-top: 8px; }
+.quick-actions .result-row { min-height: 38px; height: 38px; padding: 0 12px; gap: 12px; margin-bottom: 2px; }
+.quick-actions .result-icon { width: 24px; height: 24px; }
+.quick-actions .create .result-icon { background: #477cce; }
+.quick-actions .optimize .result-icon { background: #9061c8; }
+.quick-actions .square .result-icon { background: #b77935; }
+.quick-actions .row-title { max-width: none; font-size: 13px; font-weight: 400; }
+.quick-draft{display:flex;flex-direction:column;gap:10px;padding:14px 16px}.quick-content{flex:1;min-height:110px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:none;min-height:80px;line-height:1.6;overflow:auto}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background: var(--surface-secondary,var(--surface));color:inherit;border: 1px solid transparent;border-radius: var(--radius-control);padding:10px;font:inherit}.quick-draft .field{display:flex;flex-direction:column;gap:6px}.quick-draft p{font-size:12px;line-height:1.5;margin:0;color:var(--muted)}.quick-draft>.field:not(.quick-content),.quick-draft>details,.quick-draft>p{flex-shrink:0}.quick-draft summary{cursor:pointer}.quick-draft-foot{min-height:50px;padding:8px 14px;gap:8px}.quick-draft-foot>.ghost:first-child{margin-right:auto}.quick-draft .preview{max-height:130px;overflow:auto}
 </style>
