@@ -168,6 +168,7 @@ fn resize_launcher_window(app: &AppHandle, layout: &str) -> Result<(), String> {
     let position = window.outer_position().map_err(|error| error.to_string())?;
     let preferences = read_launcher_preferences(app)?;
     let (mut width, mut height) = launcher_size(preferences["size"].as_str().unwrap_or("compact"));
+    if layout == "collapsed" { height = 64.0; }
     if let Some(monitor) = window.current_monitor().map_err(|error| error.to_string())? {
         (width, height) = fit_launcher_size((width, height), monitor.work_area(), monitor.scale_factor());
     }

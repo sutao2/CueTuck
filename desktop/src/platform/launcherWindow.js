@@ -3,7 +3,7 @@ import { readLauncherPreferences, LAUNCHER_SIZES } from './launcherPreferences.j
 export const LAUNCHER_LABEL = "launcher";
 export const LAUNCHER_WIDTH = 620;
 export const LAUNCHER_HEIGHTS = {
-  collapsed: 420,
+  collapsed: 64,
   expanded: 420,
   fill: 420,
 };

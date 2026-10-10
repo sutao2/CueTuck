@@ -33,7 +33,7 @@
         "title": "唤词启动器",
         "url": "launcher.html",
         "width": 620,
-        "height": 420,
+        "height": 64,
         "decorations": false,
         "transparent": true,
         "backgroundColor": "#00000000",

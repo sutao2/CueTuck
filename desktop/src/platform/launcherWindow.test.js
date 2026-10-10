@@ -11,7 +11,7 @@ describe("launcher window", () => {
 
   it("keeps search and fill equally compact", () => {
     expect(LAUNCHER_WIDTH).toBe(620);
-    expect(launcherHeightFor("collapsed")).toBe(420);
+    expect(launcherHeightFor("collapsed")).toBe(64);
     expect(launcherHeightFor("expanded")).toBe(420);
     expect(launcherHeightFor("fill")).toBe(420);
     expect(launcherHeightFor("fill")).toBe(launcherHeightFor("expanded"));
@@ -35,7 +35,7 @@ describe("launcher window", () => {
     const show = source.split("fn show_launcher_window(")[1].split("#[tauri::command]")[0];
     expect(resize).not.toContain(".center()");
     expect(resize).toContain('launcher_size(preferences["size"]');
-    expect(resize).not.toContain('layout ==');
+    expect(resize).toContain('if layout == "collapsed" { height = 64.0; }');
     expect(resize).not.toContain('requested_height');
     expect(resize).not.toContain(".set_position(launcher_show_position(");
     expect(resize).toMatch(/let position = window\.outer_position\(\)/);

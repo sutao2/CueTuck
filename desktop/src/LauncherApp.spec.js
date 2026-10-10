@@ -25,8 +25,8 @@ describe("LauncherApp", () => {
     const w = mount(LauncherApp);
     await flushPromises();
     expect(w.find('[role="listbox"]').exists()).toBe(false);
-    expect(w.get("main").element.style.height).toBe("420px");
-    expect(w.get(".launcher-idle").text()).toContain("输入关键词");
+    expect(w.get("main").element.style.height).toBe("64px");
+    expect(w.find(".launcher-foot").exists()).toBe(false);
   });
 
   it("only resizes when repeatedly typing, clearing and entering or leaving fill", async () => {
@@ -48,13 +48,13 @@ describe("LauncherApp", () => {
     await w.findAll("button").find((button) => button.text() === "返回").trigger("click");
     await flushPromises();
     expect(resize.mock.calls.map(([layout]) => layout).filter((layout, index, layouts) => index === 0 || layout !== layouts[index - 1])).toEqual([
-      "expanded", "fill", "expanded",
+      "collapsed", "expanded", "collapsed", "expanded", "collapsed", "expanded", "collapsed", "expanded", "fill", "expanded",
     ]);
     expect(show).not.toHaveBeenCalled();
     w.unmount();
   });
 
-  it("keeps fixed height across empty, pending, sparse, long and no results and fill", async () => {
+  it("collapses only empty input and keeps fixed height for pending, sparse, long and no results and fill", async () => {
     const resize = vi.spyOn(launcherWindow, 'resizeLauncherWindow').mockResolvedValue();
     let resolveSearch;
     vi.spyOn(library, 'listLocalPrompts').mockImplementation(() => new Promise(resolve => { resolveSearch = resolve; }));
@@ -93,6 +93,10 @@ describe("LauncherApp", () => {
     expect(resize).toHaveBeenLastCalledWith('expanded');
     expect(w.get('main').element.style.height).toBe('420px');
     expect(w.findAll('[role="option"]')).toHaveLength(3);
+    await w.get('input').setValue('');
+    await flushPromises();
+    expect(w.get('main').element.style.height).toBe('64px');
+    expect(resize).toHaveBeenLastCalledWith('collapsed');
   });
 
   it("runs the selected result or quick action from the footer and copies with the existing flow", async () => {

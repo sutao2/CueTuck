@@ -11,6 +11,7 @@
       :class="{
         'host-mac': host === 'macos',
         'host-windows': host === 'windows',
+        'is-collapsed': isEmptySearch,
         'is-fill': step === 'fill',
         'is-search': step === 'search',
       }"
@@ -80,8 +81,7 @@
           </div>
         </div>
 
-        <div v-else class="launcher-idle"><AppIcon name="search" /><p>{{ tr('输入关键词，查找提示词') }}</p></div>
-        <footer class="launcher-foot search-foot">
+        <footer v-if="!isEmptySearch" class="launcher-foot search-foot">
           <div class="footer-identity"><img :src="appIcon" alt="" /><span>CueTuck</span></div>
           <span class="navigation-hint"><kbd>↑</kbd><kbd>↓</kbd><span>{{ tr('选择') }}</span></span>
           <div class="search-actions">
@@ -217,8 +217,8 @@ const canReadSelected = !!window.__TAURI_INTERNALS__ && supportsSelectedText();
 const variableNames = computed(() => extractVariables(active.value?.content ?? ""));
 const preview = computed(() => renderPrompt(active.value?.content ?? "", Object.fromEntries(values)));
 const isEmptySearch = computed(() => step.value === "search" && !query.value.trim() && !feedback.value);
-const launcherLayout = computed(() => step.value === 'fill' ? 'fill' : 'expanded');
-const panelHeight = computed(() => LAUNCHER_SIZES[launcherPreferences.value.size].height);
+const launcherLayout = computed(() => step.value === 'fill' ? 'fill' : isEmptySearch.value ? 'collapsed' : 'expanded');
+const panelHeight = computed(() => isEmptySearch.value ? 64 : LAUNCHER_SIZES[launcherPreferences.value.size].height);
 const copyChord = computed(() => formatShortcutLabel("Control+Enter", props.host));
 
 async function searchCurrent(request) {
@@ -604,6 +604,8 @@ body.theme-dark .launcher-stage.host-windows {
 .launcher-stage.host-windows .launcher-foot {
   background: transparent;
 }
+.launcher-stage.is-collapsed { grid-template-rows: 1fr; }
+.launcher-stage.is-collapsed .launcher-search-wrap { border-bottom: 0; }
 .launcher-stage.is-fill {
   display: block;
   position: relative;
@@ -665,9 +667,6 @@ body.theme-dark .launcher-stage.host-windows {
   color: var(--muted);
   font-size: 11px;
 }
-.launcher-idle { display: grid; align-content: center; justify-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
-.launcher-idle :deep(svg) { width: 26px; height: 26px; opacity: .4; }
-.launcher-idle p { margin: 0; }
 .launcher-list {
   min-height: 0;
   overflow: auto;
