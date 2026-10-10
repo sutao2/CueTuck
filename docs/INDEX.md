@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-10-beta27-release.md](plans/2026-10-10-beta27-release.md) | 准备中 | 发布固定尺寸启动器 | 双平台同源构建、签名更新与官网下载入口 |
 | [plans/2026-10-10-launcher-fixed-size.md](plans/2026-10-10-launcher-fixed-size.md) | 已实现，未发布 | 用户要求固定弹窗尺寸 | 所有状态统一所选大小，内部滚动 |
 | [plans/2026-10-10-launcher-raycast.md](plans/2026-10-10-launcher-raycast.md) | 已实现，未发布 | 用户指定 Raycast 启动器风格 | 单行命令列表、语义图标与当前操作栏 |
 | [plans/2026-10-10-launcher-search-polish.md](plans/2026-10-10-launcher-search-polish.md) | 已实现，未发布 | 启动器空散、结果层级不足 | 内容高度、紧凑操作与 Windows 边框精修 |
