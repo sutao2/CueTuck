@@ -25,7 +25,8 @@ describe("LauncherApp", () => {
     const w = mount(LauncherApp);
     await flushPromises();
     expect(w.find('[role="listbox"]').exists()).toBe(false);
-    expect(w.get('[data-testid="launcher-chrome"]').classes()).toContain("is-collapsed");
+    expect(w.get("main").element.style.height).toBe("420px");
+    expect(w.get(".launcher-idle").text()).toContain("输入关键词");
   });
 
   it("only resizes when repeatedly typing, clearing and entering or leaving fill", async () => {
@@ -47,44 +48,50 @@ describe("LauncherApp", () => {
     await w.findAll("button").find((button) => button.text() === "返回").trigger("click");
     await flushPromises();
     expect(resize.mock.calls.map(([layout]) => layout).filter((layout, index, layouts) => index === 0 || layout !== layouts[index - 1])).toEqual([
-      "collapsed", "expanded", "collapsed", "expanded", "collapsed", "expanded", "collapsed", "expanded", "fill", "expanded",
+      "expanded", "fill", "expanded",
     ]);
     expect(show).not.toHaveBeenCalled();
     w.unmount();
   });
 
-  it("sizes sparse results, keeps height while searching, caps long lists and restores search from fill", async () => {
+  it("keeps fixed height across empty, pending, sparse, long and no results and fill", async () => {
     const resize = vi.spyOn(launcherWindow, 'resizeLauncherWindow').mockResolvedValue();
     let resolveSearch;
     vi.spyOn(library, 'listLocalPrompts').mockImplementation(() => new Promise(resolve => { resolveSearch = resolve; }));
     const w = mount(LauncherApp);
     await flushPromises();
     await w.get('input').setValue('卡通');
-    expect(resize).toHaveBeenLastCalledWith('expanded', 324);
+    expect(resize).toHaveBeenLastCalledWith('expanded');
+    expect(w.get('main').element.style.height).toBe('420px');
     expect(w.text()).toContain('正在搜索');
     resolveSearch([{ id: 'one', title: '卡通', content: '[System / Prompt] 绘制 {{主题}}，解释 {{主题}}' }]);
     await flushPromises();
-    expect(resize).toHaveBeenLastCalledWith('expanded', 344);
+    expect(resize).toHaveBeenLastCalledWith('expanded');
+    expect(w.get('main').element.style.height).toBe('420px');
     expect(w.get('.row-desc').text()).toBe('绘制 {{主题}}，解释 {{主题}}');
     expect(w.get('.result-row .pill').text()).toBe('1 个变量');
     expect(w.get('.result-icon').text()).toBe('');
     await w.get('input').trigger('keydown', { key: 'Enter' });
     await flushPromises();
-    expect(resize).toHaveBeenLastCalledWith('fill', 420);
+    expect(resize).toHaveBeenLastCalledWith('fill');
+    expect(w.get('main').element.style.height).toBe('420px');
     await w.findAll('button').find(button => button.text() === '返回').trigger('click');
     await flushPromises();
-    expect(resize).toHaveBeenLastCalledWith('expanded', 344);
+    expect(resize).toHaveBeenLastCalledWith('expanded');
+    expect(w.get('main').element.style.height).toBe('420px');
     const calls = resize.mock.calls.length;
     await w.get('input').setValue('更多');
     await flushPromises();
     expect(resize.mock.calls.length).toBe(calls);
     resolveSearch(Array.from({ length: 20 }, (_, id) => ({ id, title: '更多', content: '正文' })));
     await flushPromises();
-    expect(resize).toHaveBeenLastCalledWith('expanded', 420);
+    expect(resize).toHaveBeenLastCalledWith('expanded');
+    expect(w.get('main').element.style.height).toBe('420px');
     await w.get('input').setValue('不存在');
     resolveSearch([]);
     await flushPromises();
-    expect(resize).toHaveBeenLastCalledWith('expanded', 324);
+    expect(resize).toHaveBeenLastCalledWith('expanded');
+    expect(w.get('main').element.style.height).toBe('420px');
     expect(w.findAll('[role="option"]')).toHaveLength(3);
   });
 

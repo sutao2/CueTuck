@@ -161,31 +161,13 @@ fn read_launcher_preferences_in_dir(dir: &std::path::Path) -> Result<serde_json:
     Ok(serde_json::from_str(&raw).unwrap_or(serde_json::Value::Null))
 }
 
-pub fn launcher_logical_height(layout: &str) -> f64 {
-    match layout {
-        "collapsed" => 64.0,
-        _ => 420.0,
-    }
-}
-
-fn launcher_content_height(layout: &str, preferred: f64, requested: Option<f64>) -> f64 {
-    if layout == "collapsed" { return launcher_logical_height(layout); }
-    if layout == "expanded" {
-        if let Some(height) = requested.filter(|value| value.is_finite()) {
-            return height.clamp(244.0, preferred);
-        }
-    }
-    preferred
-}
-
-fn resize_launcher_window(app: &AppHandle, layout: &str, requested_height: Option<f64>) -> Result<(), String> {
+fn resize_launcher_window(app: &AppHandle, layout: &str) -> Result<(), String> {
     let window = app
         .get_webview_window(LAUNCHER_LABEL)
         .ok_or_else(|| "启动器窗口不存在".to_string())?;
     let position = window.outer_position().map_err(|error| error.to_string())?;
     let preferences = read_launcher_preferences(app)?;
     let (mut width, mut height) = launcher_size(preferences["size"].as_str().unwrap_or("compact"));
-    height = launcher_content_height(layout, height, requested_height);
     if let Some(monitor) = window.current_monitor().map_err(|error| error.to_string())? {
         (width, height) = fit_launcher_size((width, height), monitor.work_area(), monitor.scale_factor());
     }
@@ -238,7 +220,7 @@ fn show_launcher_window(app: &AppHandle) -> Result<(), String> {
         guard.mark_shown();
     }
     let layout = app.try_state::<LauncherFocusGuard>().map(|guard| guard.current_layout()).unwrap_or("collapsed");
-    resize_launcher_window(app, layout, None)?;
+    resize_launcher_window(app, layout)?;
     let preferences = read_launcher_preferences(app)?;
     if let Some(monitor) = window.current_monitor().map_err(|error| error.to_string())? {
         window
@@ -295,8 +277,8 @@ pub async fn hide_launcher_if_idle(app: AppHandle) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub fn resize_launcher(app: AppHandle, layout: String, height: Option<f64>) -> Result<(), String> {
-    resize_launcher_window(&app, &layout, height)
+pub fn resize_launcher(app: AppHandle, layout: String) -> Result<(), String> {
+    resize_launcher_window(&app, &layout)
 }
 
 #[tauri::command]
@@ -455,25 +437,6 @@ mod tests {
     #[test]
     fn launcher_label_is_stable() {
         assert_eq!(LAUNCHER_LABEL, "launcher");
-    }
-
-    #[test]
-    fn palette_heights_keep_search_and_fill_compact() {
-        assert_eq!(super::launcher_logical_height("collapsed"), 64.0);
-        assert_eq!(super::launcher_logical_height("expanded"), 420.0);
-        assert_eq!(super::launcher_logical_height("fill"), 420.0);
-        assert_eq!(super::launcher_logical_height("fill"), super::launcher_logical_height("expanded"));
-    }
-
-    #[test]
-    fn search_content_height_is_bounded_without_shrinking_fill() {
-        assert_eq!(super::launcher_content_height("expanded", 420.0, Some(342.0)), 342.0);
-        assert_eq!(super::launcher_content_height("expanded", 500.0, Some(900.0)), 500.0);
-        assert_eq!(super::launcher_content_height("expanded", 420.0, Some(-1.0)), 244.0);
-        assert_eq!(super::launcher_content_height("expanded", 560.0, Some(f64::NAN)), 560.0);
-        assert_eq!(super::launcher_content_height("expanded", 420.0, None), 420.0);
-        assert_eq!(super::launcher_content_height("fill", 500.0, Some(342.0)), 500.0);
-        assert_eq!(super::launcher_content_height("collapsed", 500.0, Some(342.0)), 64.0);
     }
 
     #[test]

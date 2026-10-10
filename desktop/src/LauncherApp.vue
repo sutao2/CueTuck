@@ -11,7 +11,6 @@
       :class="{
         'host-mac': host === 'macos',
         'host-windows': host === 'windows',
-        'is-collapsed': isCollapsed,
         'is-fill': step === 'fill',
         'is-search': step === 'search',
       }"
@@ -29,7 +28,7 @@
             :placeholder="tr('搜索提示词，或输入一个任务…')"
             role="combobox"
             aria-autocomplete="list"
-            :aria-expanded="!isCollapsed"
+            :aria-expanded="!isEmptySearch"
             aria-controls="launcher-results"
             autocomplete="off"
             :disabled="busy"
@@ -44,7 +43,7 @@
           </span>
         </div>
 
-        <div v-if="!isCollapsed" id="launcher-results" class="launcher-list" role="listbox" :aria-label="tr('搜索与快捷操作')">
+        <div v-if="!isEmptySearch" id="launcher-results" class="launcher-list" role="listbox" :aria-label="tr('搜索与快捷操作')">
           <p v-if="feedback" role="status" data-testid="launcher-feedback" class="launcher-empty">{{ tr(feedback) }}</p>
           <p v-if="searching" role="status" class="launcher-empty">{{ tr('正在搜索…') }}</p>
           <div v-if="results.length">
@@ -81,7 +80,8 @@
           </div>
         </div>
 
-        <footer v-if="!isCollapsed" class="launcher-foot search-foot">
+        <div v-else class="launcher-idle"><AppIcon name="search" /><p>{{ tr('输入关键词，查找提示词') }}</p></div>
+        <footer class="launcher-foot search-foot">
           <div class="footer-identity"><img :src="appIcon" alt="" /><span>CueTuck</span></div>
           <span class="navigation-hint"><kbd>↑</kbd><kbd>↓</kbd><span>{{ tr('选择') }}</span></span>
           <div class="search-actions">
@@ -216,20 +216,9 @@ const canReadSelected = !!window.__TAURI_INTERNALS__ && supportsSelectedText();
 
 const variableNames = computed(() => extractVariables(active.value?.content ?? ""));
 const preview = computed(() => renderPrompt(active.value?.content ?? "", Object.fromEntries(values)));
-const isCollapsed = computed(() => step.value === "search" && !query.value.trim() && !feedback.value);
-const launcherLayout = computed(() =>
-  step.value === "fill" ? "fill" : isCollapsed.value ? "collapsed" : "expanded",
-);
-const searchHeight = ref(324);
-const panelHeight = computed(() => isCollapsed.value ? 64 : step.value === 'search'
-  ? Math.min(searchHeight.value, LAUNCHER_SIZES[launcherPreferences.value.size].height)
-  : LAUNCHER_SIZES[launcherPreferences.value.size].height);
-watch([results, searching, feedback], () => {
-  if (searching.value) return;
-  // Search bar 64 + footer 44 + list padding 16 + compact actions 152.
-  searchHeight.value = 276 + (results.value.length ? 24 + results.value.length * 44 : 48)
-    + (feedback.value ? 64 : 0);
-});
+const isEmptySearch = computed(() => step.value === "search" && !query.value.trim() && !feedback.value);
+const launcherLayout = computed(() => step.value === 'fill' ? 'fill' : 'expanded');
+const panelHeight = computed(() => LAUNCHER_SIZES[launcherPreferences.value.size].height);
 const copyChord = computed(() => formatShortcutLabel("Control+Enter", props.host));
 
 async function searchCurrent(request) {
@@ -291,11 +280,8 @@ async function saveDraft() {
   finally{actionBusy.value=false;}
 }
 
-let lastRequestedLayout;
-watch([launcherLayout, panelHeight, searching], ([layout, height, pending]) => {
-  if (layout === 'expanded' && step.value === 'search' && pending && lastRequestedLayout === 'expanded') return;
-  lastRequestedLayout = layout;
-  resizeLauncherWindow(layout, height).catch((error) => { feedback.value = `窗口调整失败：${error}`; });
+watch([launcherLayout, panelHeight], ([layout]) => {
+  resizeLauncherWindow(layout).catch((error) => { feedback.value = `窗口调整失败：${error}`; });
 }, { immediate: true, flush: 'post' });
 watch(selectedIndex, async () => {
   await nextTick();
@@ -536,7 +522,7 @@ async function onShown() {
   if (step.value === 'search') resetState();
   try { launcherPreferences.value = await readLauncherPreferences(); }
   catch (error) { feedback.value = `读取启动器设置失败：${error}`; }
-  try { await resizeLauncherWindow(launcherLayout.value, panelHeight.value); }
+  try { await resizeLauncherWindow(launcherLayout.value); }
   catch (error) { feedback.value = `窗口调整失败：${error}`; }
   await focusCurrent();
   try { await refreshTheme(); } catch (error) { feedback.value = `读取主题失败：${error}`; }
@@ -618,9 +604,6 @@ body.theme-dark .launcher-stage.host-windows {
 .launcher-stage.host-windows .launcher-foot {
   background: transparent;
 }
-.launcher-stage.is-collapsed {
-  grid-template-rows: 1fr;
-}
 .launcher-stage.is-fill {
   display: block;
   position: relative;
@@ -633,10 +616,6 @@ body.theme-dark .launcher-stage.host-windows {
   gap: 10px;
   padding: 0 14px;
   border-bottom: 1px solid var(--line);
-}
-.launcher-stage.is-collapsed .launcher-search-wrap {
-  min-height: 64px;
-  border-bottom: 0;
 }
 .brand-mark {
   width: 28px;
@@ -686,6 +665,9 @@ body.theme-dark .launcher-stage.host-windows {
   color: var(--muted);
   font-size: 11px;
 }
+.launcher-idle { display: grid; align-content: center; justify-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
+.launcher-idle :deep(svg) { width: 26px; height: 26px; opacity: .4; }
+.launcher-idle p { margin: 0; }
 .launcher-list {
   min-height: 0;
   overflow: auto;

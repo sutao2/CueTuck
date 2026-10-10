@@ -1426,5 +1426,6 @@
   "JSON 导入示例": "{\"prompts\":[{\"title\":\"Example\",\"content\":\"a\"}]}",
   "广场搜索": "Explore prompts",
   "执行": "Run",
-  "直接复制": "Copy directly"
+  "直接复制": "Copy directly",
+  "输入关键词，查找提示词": "Type a keyword to find a prompt"
 }

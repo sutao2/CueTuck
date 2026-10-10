@@ -26,7 +26,7 @@
 
 ### Requirement: 本机启动器偏好
 
-`launcher_preferences` JSON 单键保存四项：`size` 为 compact（默认 620×420）、standard（680×500）、large（760×560）；`position` 为 upper（默认）或 center；`fontSize` 为 12（默认）、14、16；`resultLimit` 为 10、20（默认）、50。损坏 JSON 和非法字段逐项回退默认，启动器初始化和显式重新唤起时读取，进行中不切换填写偏好。字号仅影响变量输入和正文预览，不改变主窗口；空搜索高度仍为 64。原生尺寸不超过显示器工作区。
+`launcher_preferences` JSON 单键保存四项：`size` 为 compact（默认 620×420）、standard（680×500）、large（760×560）；`position` 为 upper（默认）或 center；`fontSize` 为 12（默认）、14、16；`resultLimit` 为 10、20（默认）、50。损坏 JSON 和非法字段逐项回退默认，启动器初始化和显式重新唤起时读取，进行中不切换填写偏好。字号仅影响变量输入和正文预览，不改变主窗口；空搜索同样使用所选固定尺寸。原生尺寸不超过显示器工作区。
 
 #### Scenario: 未设置偏好
 
@@ -40,7 +40,7 @@
 - GIVEN 已保存大小、位置、字号与结果数量
 - WHEN 下次唤起启动器
 - THEN 窗口大小和定位、输入/预览字号、搜索结果上限使用已保存值
-- AND 搜索按内容高度展开，以所选高度为上限；填写和草稿使用完整所选尺寸，切换不重新定位，浏览器入口采用所选大小但不保证系统窗口位置
+- AND 空输入、搜索、填写和草稿均使用完整所选固定尺寸，切换不重新定位，浏览器入口采用所选大小但不保证系统窗口位置
 
 #### Scenario: 快捷键唤起
 
@@ -61,7 +61,7 @@
 
 - GIVEN 用户在 macOS 唤起启动器
 - WHEN 独立窗口显示
-- THEN 它是旧产品那种无框透明调色板：空查询收成一条搜索栏，有结果后窗口增高
+- THEN 它是旧产品那种无框透明调色板：空查询和结果页始终使用同样的所选固定尺寸
 - AND 快捷键记号用 Mac 符号，不写 `Ctrl Space`
 - AND 仍是 label `launcher` 的独立窗口，不是主窗口覆盖层，也不画主窗口那种 Overlay 红绿灯
 
@@ -69,7 +69,7 @@
 
 - GIVEN 启动器已唤起，用户可能已拖动窗口
 - WHEN 用户反复输入、清空查询，或进入和退出变量填写
-- THEN 只调整窗口高度，窗口左上角及搜索栏位置不随布局切换移动
+- THEN 窗口宽高、左上角及搜索栏位置不随布局切换变化
 - AND 仅重新唤起窗口时恢复默认偏上位置，不在内容尺寸变化时重新定位
 
 ### Requirement: 附加全局快捷键
@@ -108,7 +108,7 @@ M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新�
 
 - GIVEN 启动器在搜索态且查询为空
 - WHEN 窗口显示
-- THEN 不展示结果列表或仅保持收起布局
+- THEN 不展示结果列表，保留固定尺寸及输入引导
 - AND 不发起广场请求
 
 ### Requirement: 键盘选择
@@ -151,7 +151,7 @@ M3 已交付的唤起快捷键 MUST 保留。M8 起系统 MUST 另支持：新�
 
 - GIVEN 用户从其他应用唤起启动器并进入填写
 - WHEN 展示 0、3 或超过一屏的变量
-- THEN 填写窗使用完整所选尺寸（默认紧凑），搜索结果窗按内容收缩至所选高度以内，空查询沿用宽度并收为 64 高，紧凑双栏中字段和预览可独立滚动，底部操作始终可见；无变量时正文通栏。浏览器预览入口使用相同展开尺寸
+- THEN 填写、搜索和空查询使用相同的完整所选尺寸（默认紧凑），紧凑双栏中字段和预览可独立滚动，底部操作始终可见；无变量时正文通栏。浏览器预览入口使用相同展开尺寸
 - WHEN 回车复制成功且使用后关闭开启
 - THEN 隐藏窗口后不再给内部 DOM 聚焦，迟到的 focus 事件不得唤回窗口；下次显式唤起才恢复聚焦
 - AND macOS 在主动关闭且启动器仍聚焦时归还原应用，不主动展示无关主窗口；失焦关闭不抢回用户刚切换的应用，原目标退出也不重新弹出启动器
@@ -237,7 +237,7 @@ macOS 剪贴板子进程 MUST 显式使用 UTF-8，不依赖 GUI 启动时的 lo
 | 多变量回车/多行/输入法/重复按键/特殊名称/焦点恢复/空复制 | `LauncherInteraction.spec.js` |
 | 使用中保护/关闭偏好/原生生命周期/读取当前变量/失败保留 | `LauncherInteraction.spec.js`（原生接口替身） |
 | 粘贴前稳定焦点与超时 | `focus_must_be_stable_before_pasting`；`unready_target_times_out_without_proceeding` |
-| macOS 启动器窗口 | `LauncherApp.spec.js` uses mac chrome on macos；空查询 `is-collapsed`；`launcherWindow.test.js` keeps search and fill equally compact、配置/浏览器入口一致；`palette_heights_keep_search_and_fill_compact`；本轮验收见 `plans/2026-09-08-launcher-refinement.md` |
+| macOS 启动器窗口 | `LauncherApp.spec.js` uses mac chrome on macos；空查询固定尺寸；`launcherWindow.test.js` keeps search and fill equally compact、配置/浏览器入口一致；原生所选尺寸与工作区约束由 `preferences_select_sizes_centering_and_fit_work_area` 覆盖；本轮验收见 `plans/2026-09-08-launcher-refinement.md` |
 | 跟随系统主题 | `LauncherInteraction.spec.js` system 实时切换、显式偏好优先与监听释放 |
 | 1 万条查询预算 | `./scripts/launcher-search-bench`（`search_ten_thousand_prompts_bench`，release，不作为 CI 红灯） |
 
@@ -247,6 +247,8 @@ macOS 剪贴板子进程 MUST 显式使用 UTF-8，不依赖 GUI 启动时的 lo
 
 ### Requirement: 搜索面板层级
 
-搜索采用结果优先、紧凑辅助操作和统一线性图标；本地变量标签显示唯一变量数。摘要优先使用已有简介，否则清理正文开头的角色标记用于展示，不修改正文或生成简介。搜索等待期间保留上次高度，结果就绪后调整，窗口顶部始终固定。具体 Given/When/Then 见[搜索精修计划](../../plans/2026-10-10-launcher-search-polish.md)。
+搜索采用结果优先、紧凑辅助操作和统一线性图标；本地变量标签显示唯一变量数。摘要优先使用已有简介，否则清理正文开头的角色标记用于展示，不修改正文或生成简介。搜索等待和结果就绪均保持所选固定尺寸，窗口顶部始终固定。具体 Given/When/Then 见[搜索精修计划](../../plans/2026-10-10-launcher-search-polish.md)。
 
 用户指定的启动器视觉采用 Raycast 命令列表方向：搜索态标题/摘要同行，紧凑语义图标与柔和整行高亮，底栏的使用和复制按钮复用现有激活流程。主窗口的中性视觉规则不变；场景见 [Raycast 调整计划](../../plans/2026-10-10-launcher-raycast.md)。
+
+固定尺寸取代此前的内容高度方案，Given/When/Then 见[固定尺寸计划](../../plans/2026-10-10-launcher-fixed-size.md)。

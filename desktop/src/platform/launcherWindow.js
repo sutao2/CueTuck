@@ -3,7 +3,7 @@ import { readLauncherPreferences, LAUNCHER_SIZES } from './launcherPreferences.j
 export const LAUNCHER_LABEL = "launcher";
 export const LAUNCHER_WIDTH = 620;
 export const LAUNCHER_HEIGHTS = {
-  collapsed: 64,
+  collapsed: 420,
   expanded: 420,
   fill: 420,
 };
@@ -12,10 +12,10 @@ export function launcherHeightFor(layout) {
   return LAUNCHER_HEIGHTS[layout] ?? LAUNCHER_HEIGHTS.expanded;
 }
 
-export async function resizeLauncherWindow(layout, height) {
+export async function resizeLauncherWindow(layout) {
   if (typeof window === "undefined" || !window.__TAURI_INTERNALS__) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("resize_launcher", { layout, height });
+  await invoke("resize_launcher", { layout });
 }
 
 export async function startDraggingLauncher() {

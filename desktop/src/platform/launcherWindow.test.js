@@ -11,7 +11,7 @@ describe("launcher window", () => {
 
   it("keeps search and fill equally compact", () => {
     expect(LAUNCHER_WIDTH).toBe(620);
-    expect(launcherHeightFor("collapsed")).toBe(64);
+    expect(launcherHeightFor("collapsed")).toBe(420);
     expect(launcherHeightFor("expanded")).toBe(420);
     expect(launcherHeightFor("fill")).toBe(420);
     expect(launcherHeightFor("fill")).toBe(launcherHeightFor("expanded"));
@@ -34,6 +34,9 @@ describe("launcher window", () => {
     const resize = source.split("fn resize_launcher_window(")[1].split("fn show_launcher_window(")[0];
     const show = source.split("fn show_launcher_window(")[1].split("#[tauri::command]")[0];
     expect(resize).not.toContain(".center()");
+    expect(resize).toContain('launcher_size(preferences["size"]');
+    expect(resize).not.toContain('layout ==');
+    expect(resize).not.toContain('requested_height');
     expect(resize).not.toContain(".set_position(launcher_show_position(");
     expect(resize).toMatch(/let position = window\.outer_position\(\)/);
     expect(resize.indexOf(".outer_position()")).toBeLessThan(resize.indexOf(".set_size("));
@@ -41,7 +44,7 @@ describe("launcher window", () => {
     expect(resize).toContain(".set_position(position)");
     expect(show).toContain(".set_position(launcher_show_position(monitor.work_area(), monitor.scale_factor(), &preferences))");
     expect(show).toContain('guard.current_layout()');
-    expect(show.indexOf("resize_launcher_window(app, layout, None)")).toBeLessThan(show.indexOf(".set_position("));
+    expect(show.indexOf("resize_launcher_window(app, layout)")).toBeLessThan(show.indexOf(".set_position("));
     expect(show.indexOf(".set_position(")).toBeLessThan(show.indexOf(".show()"));
   });
 });
