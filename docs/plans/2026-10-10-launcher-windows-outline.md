@@ -22,4 +22,4 @@
 - 本机 `cargo check --offline --lib` 通过，保留既有未使用项警告；使用 Command Line Tools 避开当前 Xcode 许可未确认的问题。此检查为 Mac 目标，不代表 Windows 编译或实机验收。
 - Playwright 隔离页面同时模拟 Windows platform/userAgent：620×420 浅深色列表、变量填写与创建草稿，620×64 收起状态均已截图检查。外框为完整 1px、无横向溢出，底栏止于 420px；边框不拦截点击。深色保留原面板底色以维持选中行对比。Mac 分支仍为 18px 圆角、透明画布且无新增边框。
 - 截图位于 `output/playwright/windows-outline-{light,dark,fill-dark,draft-dark,collapsed}.png`。浏览器截图只覆盖客户区，不能显示或证明 Windows 系统阴影/圆角；原生能力依据已安装 Tauri 2.11.5 的 shadow API 文档，Windows 10/11 最终效果待安装包实机复验。
-- `scripts/docs-check` 与 `git diff --check` 通过。本轮不发布安装包。
+- `scripts/docs-check` 与 `git diff --check` 通过。后续发行见 [beta.25 发布记录](2026-10-10-beta25-release.md)。
