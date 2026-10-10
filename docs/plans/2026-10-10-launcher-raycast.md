@@ -15,10 +15,12 @@
 
 ## 验证记录
 
-已实现，未发布。
+已随 beta.27 发布。
 
 - 54 项启动器前端回归通过，包括新增底栏使用、快捷创建与直接复制流程。
 - 生产构建、文档门禁通过；没有改动原生窗口代码。
 - Playwright 检查 Windows 样式：620 宽单条搜索 344 高，浅色/深色截图位于 `output/playwright/launcher-raycast-light.png` 与 `launcher-raycast-dark.png`。
 - 540 宽英文长标题/多结果：无横向和底栏溢出，达到 420 高后滚动；无结果 324 高、三项操作完整可见。
-- 原生 Windows 圆角、阴影和 DPI 外观仍需实机验收；本轮不发版。
+- 原生 Windows 圆角、阴影和 DPI 外观仍需实机验收；已随 beta.27 发布。
+
+发布结果见 [beta.27 发行记录](2026-10-10-beta27-release.md)。

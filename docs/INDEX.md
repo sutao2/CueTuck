@@ -6,10 +6,10 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-10-10-beta27-release.md](plans/2026-10-10-beta27-release.md) | 准备中 | 发布固定尺寸启动器 | 双平台同源构建、签名更新与官网下载入口 |
-| [plans/2026-10-10-launcher-fixed-size.md](plans/2026-10-10-launcher-fixed-size.md) | 已实现，未发布 | 用户要求固定弹窗尺寸 | 所有状态统一所选大小，内部滚动 |
-| [plans/2026-10-10-launcher-raycast.md](plans/2026-10-10-launcher-raycast.md) | 已实现，未发布 | 用户指定 Raycast 启动器风格 | 单行命令列表、语义图标与当前操作栏 |
-| [plans/2026-10-10-launcher-search-polish.md](plans/2026-10-10-launcher-search-polish.md) | 已实现，未发布 | 启动器空散、结果层级不足 | 内容高度、紧凑操作与 Windows 边框精修 |
+| [plans/2026-10-10-beta27-release.md](plans/2026-10-10-beta27-release.md) | 已发布部署 | 发布固定尺寸启动器 | 双平台同源构建、签名更新与官网下载入口 |
+| [plans/2026-10-10-launcher-fixed-size.md](plans/2026-10-10-launcher-fixed-size.md) | 已随 beta.27 发布 | 用户要求固定弹窗尺寸 | 所有状态统一所选大小，内部滚动 |
+| [plans/2026-10-10-launcher-raycast.md](plans/2026-10-10-launcher-raycast.md) | 已随 beta.27 发布 | 用户指定 Raycast 启动器风格 | 单行命令列表、语义图标与当前操作栏 |
+| [plans/2026-10-10-launcher-search-polish.md](plans/2026-10-10-launcher-search-polish.md) | 视觉随 beta.27 发布，高度方案被固定尺寸取代 | 启动器空散、结果层级不足 | 内容高度、紧凑操作与 Windows 边框精修 |
 | [plans/2026-10-10-beta26-release.md](plans/2026-10-10-beta26-release.md) | 已发布部署 | 发布界面与语言优化 | 同源双平台构建、签名更新及官网下载入口 |
 | [plans/2026-10-10-interface-language.md](plans/2026-10-10-interface-language.md) | 已随 beta.26 发布 | 中英文只切换部分菜单 | 全客户端界面文案与内容语言隔离 |
 | [plans/2026-10-10-component-polish.md](plans/2026-10-10-component-polish.md) | 已随 beta.26 发布 | 设置控件粗糙、广场九宫格未铺满 | 共用控件与短选项菜单精修、九宫格铺满卡片媒体框 |
