@@ -37,8 +37,10 @@ pub fn run() {
             .iter_mut()
             .find(|window| window.label == "launcher")
         {
-            // Windows adds a square 1px border when an undecorated window has a shadow.
-            launcher.shadow = false;
+            // Let Windows draw the shadow/corners around an opaque client area.
+            launcher.transparent = false;
+            launcher.background_color = Some(tauri::utils::config::Color(255, 255, 255, 255));
+            launcher.shadow = true;
         }
         context
     };

@@ -2,7 +2,7 @@
 
 ## Windows 外观与草稿布局
 
-- Given Windows 独立启动器 When 创建原生窗口 Then 禁用会附加系统白边的原生 shadow，内容铺满实色背景并采用与原生矩形边界一致的直角外框，避免透明圆角外露黑块；内部控件及其他平台不改变。验收见[黑角修复计划](../../plans/2026-10-09-launcher-windows-corners.md)。
+- Given Windows 独立启动器 When 创建原生窗口 Then 使用不透明背景并开启系统 shadow，圆角由系统按平台能力绘制（Windows 10 可为直角）；客户区铺满实色，主题灰底与完整细边框区分背后页面，避免 CSS 透明圆角外露黑块。验收见[边界与阴影计划](../../plans/2026-10-10-launcher-windows-outline.md)。
 - Given 默认 620×420 窗口和普通字号 When 显示短 AI 结果且原文折叠 Then 草稿无需整体滚动、底栏按钮完整可见；长正文在编辑框内滚动，展开长原文允许中部滚动。
 - Given 创建或 AI 优化结果 When 调整样式后编辑、返回、保存或使用 Then 保持原有业务语义和原文保留规则。
 

@@ -576,7 +576,24 @@ onUnmounted(() => {
     inset 0 1px 0 color-mix(in srgb, var(--surface) 70%, transparent);
 }
 .launcher-stage.host-windows {
+  position: relative;
   border-radius: 0;
+  background: var(--surface-secondary);
+  box-shadow: none;
+}
+body.theme-dark .launcher-stage.host-windows {
+  background: var(--surface);
+}
+.launcher-stage.host-windows::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 1px solid color-mix(in srgb, var(--text) 32%, var(--surface-secondary));
+  pointer-events: none;
+}
+.launcher-stage.host-windows .launcher-foot {
+  background: transparent;
 }
 .launcher-stage.is-collapsed {
   grid-template-rows: 1fr;
