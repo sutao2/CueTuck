@@ -6,6 +6,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-10-website-polish.md](plans/2026-10-10-website-polish.md) | 已实现，待部署 | 官网不够专业、参考 ChatGPT 官网 | 首屏与产品叙事、统一下载页；12 组布局和真实数据回归通过 |
+| [specs/website/spec.md](specs/website/spec.md) | 现行 | 修改官网视觉与入口 | 产品表达、真实预览及响应式操作边界 |
 | [plans/2026-10-10-beta25-release.md](plans/2026-10-10-beta25-release.md) | 已发布部署 | beta.25 边界与阴影发行 | 双平台回归、签名更新、公开附件与官网入口已验 |
 | [plans/2026-10-10-launcher-windows-outline.md](plans/2026-10-10-launcher-windows-outline.md) | 已随 beta.25 发布，Windows 实机外观待复验 | Windows 启动器边界不清晰 | 灰底细边框、系统阴影；52 项回归与浏览器布局通过 |
 | [plans/2026-10-09-beta24-release.md](plans/2026-10-09-beta24-release.md) | 已发布部署 | beta.24 边角修复发行 | 双平台构建、更新发现与官网切换 |
