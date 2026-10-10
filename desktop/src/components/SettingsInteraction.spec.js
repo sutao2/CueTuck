@@ -1,3 +1,4 @@
+import SearchableSelect from "./SearchableSelect.vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import SettingsModal from "./SettingsModal.vue";
@@ -133,7 +134,7 @@ it("keeps model drafts when cancelling exit and closes after a successful save",
 it("restores failed appearance choices without applying them", async () => {
   await settings("appearance");
   vi.spyOn(library, "setLocalSetting").mockRejectedValue(new Error("locked"));
-  await w.get('[data-testid="density"]').setValue("compact");
+  await w.findAllComponents(SearchableSelect).find(c => c.vm.$attrs['data-testid'] === 'density').vm.$emit('change', {target:{value:"compact"}});
   await flushPromises();
   expect(w.get('[data-testid="density"]').element.value).toBe("comfortable");
   expect(document.body.dataset.density).not.toBe("compact");

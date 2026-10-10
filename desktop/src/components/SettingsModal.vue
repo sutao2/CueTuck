@@ -59,9 +59,7 @@
             <div class="settings-group">
               <label v-for="option in launcherSettingRows" :key="option.key" class="setting-row">
                 <span class="setting-copy"><strong>{{ option.label }}</strong><small>{{ option.description }}</small></span>
-                <select :data-testid="`launcher-${option.key}`" :value="launcherPreferences[option.key]" @change="changeLauncherPreference(option.key, $event)">
-                  <option v-for="choice in option.choices" :key="choice.value" :value="choice.value">{{ choice.label }}</option>
-                </select>
+                <SearchableSelect :data-testid="`launcher-${option.key}`" :aria-label="option.label" :searchable="false" :disabled="saving || loading" :model-value="launcherPreferences[option.key]" :options="option.choices" @change="changeLauncherPreference(option.key, $event)" />
               </label>
               <div class="setting-row">
                 <span class="setting-copy"><strong>恢复启动器默认设置</strong><small>仅恢复上面四项，不修改快捷键或使用后关闭。</small></span>
@@ -193,10 +191,7 @@
             </label>
             <div class="setting-row" data-testid="sync-conflict">
               <span class="setting-copy"><strong>冲突处理</strong><small>默认采用较新正文，附件仅补齐合并。保留本地时跳过已有提示词的正文与附件下载，远端独有条目仍写入。</small></span>
-              <select data-testid="sync-conflict-strategy" :value="syncConflict" @change="saveSyncConflict">
-                <option value="newer">较新者胜</option>
-                <option value="keep_local">保留本地</option>
-              </select>
+              <SearchableSelect data-testid="sync-conflict-strategy" aria-label="冲突处理" :searchable="false" :disabled="saving || loading" :model-value="syncConflict" :options="[{value:'newer',label:'较新者胜'},{value:'keep_local',label:'保留本地'}]" @change="saveSyncConflict" />
             </div>
             <div class="setting-row">
               <label class="setting-copy" for="include-sync-assets"><strong>本次包含私有附件</strong><small>将本机库附件上传到 {{ session.email || '当前账号' }}，并补齐账号库文件，不公开。合并保留两端已有附件，不同步附件删除；每次需重新勾选。</small></label>
@@ -334,10 +329,7 @@
             <div class="settings-group">
             <label class="field">
               <span>界面语言</span>
-              <select data-testid="ui-language" :value="uiLanguage" @change="saveUiLanguage($event.target.value, $event)">
-                <option value="zh">中文</option>
-                <option value="en">English</option>
-              </select>
+              <SearchableSelect data-testid="ui-language" aria-label="界面语言" :searchable="false" :disabled="saving || loading" :model-value="uiLanguage" :options="[{value:'zh',label:'中文'},{value:'en',label:'English'}]" @change="saveUiLanguage($event.target.value, $event)" />
             </label>
             <label class="setting-row">
               <span class="setting-copy"><strong>提示词双语版本</strong><small>关闭不删除已有中英正文。</small></span>
@@ -345,10 +337,7 @@
             </label>
             <label class="field">
               <span>内容密度</span>
-              <select data-testid="density" :value="density" @change="saveDensity($event.target.value, $event)">
-                <option value="comfortable">舒适</option>
-                <option value="compact">紧凑</option>
-              </select>
+              <SearchableSelect data-testid="density" aria-label="内容密度" :searchable="false" :disabled="saving || loading" :model-value="density" :options="[{value:'comfortable',label:'舒适'},{value:'compact',label:'紧凑'}]" @change="saveDensity($event.target.value, $event)" />
             </label>
             </div>
           </section>
@@ -402,10 +391,7 @@
             </label>
             <label class="setting-row">
               <span class="setting-copy"><strong>更新通道</strong><small>稳定版只用正式发行，预览版只用预发行。</small></span>
-              <select data-testid="update-channel" :disabled="['checking','downloading','verifying','ready','installing'].includes(updateState.phase)" :value="updateChannel" @change="saveUpdateChannel">
-                <option value="stable">稳定版</option>
-                <option value="preview">预览版</option>
-              </select>
+              <SearchableSelect data-testid="update-channel" aria-label="更新通道" :searchable="false" :disabled="saving || loading || ['checking','downloading','verifying','ready','installing'].includes(updateState.phase)" :model-value="updateChannel" :options="[{value:'stable',label:'稳定版'},{value:'preview',label:'预览版'}]" @change="saveUpdateChannel" />
             </label>
             <div class="setting-row">
               <span class="setting-copy"><strong>发行说明</strong><small>随检查更新展示，不来自应用商店。</small></span>
@@ -441,6 +427,7 @@ import LocalTrash from './LocalTrash.vue';
 import LocalVersions from './LocalVersions.vue';
 import SyncStatus from './SyncStatus.vue';
 import { saveSyncResult } from '../platform/syncStatus.js';
+import SearchableSelect from "./SearchableSelect.vue";
 import AppIcon from "./AppIcon.vue";
 import LauncherAiSettings from './LauncherAiSettings.vue';
 import { DEFAULT_LAUNCHER_PREFERENCES, LAUNCHER_PREFERENCES_KEY, readLauncherPreferences } from '../platform/launcherPreferences.js';

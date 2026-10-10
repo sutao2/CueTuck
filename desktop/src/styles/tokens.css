@@ -9,6 +9,8 @@
   --faint: #767676;
   --line: #e8e8e8;
   --line-strong: #d7d7d7;
+  --control-border: #e1e1e1;
+  --popover: #ffffff;
   --focus: #3478f6;
   --hover: rgba(0, 0, 0, .035);
   --scrollbar-thumb: rgba(100, 108, 112, .36);
@@ -22,7 +24,7 @@
   --radius-pill: 999px;
   --blue: #0067c0;
   --danger: #c33d34;
-  --shadow-menu: 0 8px 32px rgba(0, 0, 0, .12);
+  --shadow-menu: 0 8px 28px rgba(0, 0, 0, .09), 0 2px 6px rgba(0, 0, 0, .04);
   --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-code: ui-monospace, "SFMono-Regular", Consolas, monospace;
   --traffic-light-inset: 0px;
@@ -43,6 +45,8 @@ body.theme-dark {
   --faint: #949494;
   --line: #383838;
   --line-strong: #484848;
+  --control-border: #424242;
+  --popover: #2b2b2b;
   --focus: #82adff;
   --hover: rgba(255, 255, 255, .055);
   --scrollbar-thumb: rgba(181, 188, 192, .34);

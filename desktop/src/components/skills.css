@@ -27,14 +27,14 @@
 .skills-form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:16px; }
 .skills-form label { display:flex; flex-direction:column; gap:7px; color:var(--muted); font-size:12px; }
 .skills-form .wide { grid-column:1/-1; }
-.skills-form textarea,.skills-form input,.skills-search input { color:var(--text); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font:inherit; min-width:0; }
+.skills-form textarea,.skills-form input,.skills-search input { color:var(--text); background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font:inherit; min-width:0; }
 .skills-path-input { display:flex; gap:8px; }
 .skills-path-input input { flex:1; }
 .skills-root { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0; border-top:1px solid var(--line); }
 .skills-root>div:first-child { min-width:0; }
 .skills-root p { margin:6px 0 0; }
 .skills-root strong { font-size:13px; }
-.skills-root button,.skills-path-input button { color:var(--text); background:transparent; border:1px solid var(--line); border-radius:7px; padding:7px 10px; white-space:nowrap; font-size:12px; }
+.skills-root button,.skills-path-input button { color:var(--text); background:transparent; border:1px solid var(--line); border-radius:10px; padding:8px 12px; white-space:nowrap; font-size:12px; }
 .skills-path { font:11px/1.7 var(--font-code); overflow-wrap:anywhere; color:var(--muted); }
 .skills-badge { display:inline-block; font-size:10px; color:var(--muted); background:var(--sidebar); border-radius:5px; padding:4px 7px; margin-left:8px; white-space:nowrap; }
 .skills-filters { display:grid; grid-template-columns:minmax(200px,1fr) 150px 110px 140px 120px; gap:10px; margin-bottom:20px; }
@@ -73,7 +73,7 @@
 .skills-remote-search { margin-bottom:18px; }
 .skills-inline-button { border:0; background:transparent; color:var(--text); text-decoration:underline; margin-left:10px; font:inherit; }
 .skills-pagination { display:flex; justify-content:center; align-items:center; gap:18px; padding:20px; color:var(--muted); font-size:12px; }
-.skills-pagination button { border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:7px; padding:7px 12px; }
+.skills-pagination button { border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:10px; padding:8px 12px; }
 .skills-overlay { position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,.36); display:flex; align-items:center; justify-content:center; padding:24px; }
 .skills-modal { width:min(760px,100%); max-height:calc(100dvh - 48px); overflow:auto; background:var(--surface); color:var(--text); border:1px solid var(--line); border-radius: 20px; padding:24px; box-shadow: var(--shadow-menu); }
 .skills-modal h2 { font-size:20px; margin:0 0 10px; }

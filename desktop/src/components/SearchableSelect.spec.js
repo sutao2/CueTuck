@@ -3,6 +3,23 @@ import { afterEach, expect, it, vi } from 'vitest';
 import Select from './SearchableSelect.vue';
 let w;
 afterEach(() => { w?.unmount(); document.body.innerHTML=''; vi.restoreAllMocks(); });
+it('opens a short menu without search, marks selection and supports keyboard cancel/choose', async () => {
+ w=mount(Select,{props:{searchable:false,modelValue:'comfortable',options:[{value:'comfortable',label:'舒适'},{value:'compact',label:'紧凑'}]},attachTo:document.body});
+ await w.get('button').trigger('click');
+ expect(document.querySelector('input')).toBeNull();
+ const list=document.querySelector('[role=listbox]');
+ expect(document.activeElement).toBe(list);
+ expect(document.querySelector('[aria-selected=true] .select-check')).not.toBeNull();
+ list.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})); await flushPromises();
+ list.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await flushPromises();
+ expect(w.emitted('change')).toBeUndefined();
+ expect(document.activeElement).toBe(w.get('button').element);
+ await w.get('button').trigger('click');
+ document.querySelector('[role=listbox]').dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true})); await flushPromises();
+ document.querySelector('[role=listbox]').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); await flushPromises();
+ expect(w.emitted('change')[0][0].target.value).toBe('compact');
+ expect(document.querySelector('.select-popup')).toBeNull();
+});
 it('filters labels, preserves typed null and closes without changing on Escape', async () => {
  w=mount(Select,{props:{modelValue:'x',options:[{value:null,label:'未分类'},{value:'x',label:'软件 / 开发'}]},attachTo:document.body});
  await w.get('button').trigger('click'); const input=document.querySelector('input');

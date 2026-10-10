@@ -1,3 +1,4 @@
+import SearchableSelect from "./SearchableSelect.vue";
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import SettingsModal from './SettingsModal.vue';
@@ -13,7 +14,7 @@ it('saves each launcher option, reloads it and resets only launcher preferences'
   await library.setLocalSetting('close_launcher_after_use', '0');
   const w = mount(SettingsModal); await flushPromises();
   for (const [key, value] of Object.entries({ size: 'large', position: 'center', fontSize: '16', resultLimit: '50' })) {
-    await w.get(`[data-testid="launcher-${key}"]`).setValue(value); await flushPromises();
+    await w.findAllComponents(SearchableSelect).find(c => c.vm.$attrs['data-testid'] === `launcher-${key}`).vm.$emit('change', {target:{value:value}}); await flushPromises();
   }
   expect(await readLauncherPreferences()).toEqual({ size: 'large', position: 'center', fontSize: 16, resultLimit: 50 });
   expect(w.get('[data-testid="settings-feedback"]').text()).toContain('下次唤起');
@@ -31,7 +32,7 @@ it('retains saved preferences on write failure and blocks repeat writes while pe
   const w = mount(SettingsModal); await flushPromises();
   let reject;
   const write = vi.spyOn(library, 'setLocalSetting').mockImplementation(() => new Promise((_, fail) => { reject = fail; }));
-  await w.get('[data-testid="launcher-size"]').setValue('large');
+  await w.findAllComponents(SearchableSelect).find(c => c.vm.$attrs['data-testid'] === 'launcher-size').vm.$emit('change', {target:{value:'large'}});
   expect(w.get('fieldset').element.disabled).toBe(true);
   expect(w.get('.settings-return').element.disabled).toBe(true);
   expect(write).toHaveBeenCalledTimes(1);

@@ -1,3 +1,4 @@
+import SearchableSelect from "./SearchableSelect.vue";
 import { selectOption, selectComponent } from '../test/selectOption.js';
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -1161,7 +1162,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="updates"]').trigger("click");
     await w.get('[data-testid="auto-download"]').setValue(true);
-    await w.get('[data-testid="update-channel"]').setValue("preview");
+    await w.findAllComponents(SearchableSelect).find(c => c.vm.$attrs['data-testid'] === 'update-channel').vm.$emit('change', {target:{value:"preview"}});
     await flushPromises();
     expect(await getLocalSetting("auto_download")).toBe("1");
     expect(await getLocalSetting("update_channel")).toBe("preview");
@@ -1232,7 +1233,7 @@ describe("WorkbenchShell", () => {
     await w.get('[data-testid="open-settings"]').trigger("click");
     await flushPromises();
     await w.get('[data-settings-page="sync"]').trigger("click");
-    await w.get('[data-testid="sync-conflict-strategy"]').setValue("keep_local");
+    await w.findAllComponents(SearchableSelect).find(c => c.vm.$attrs['data-testid'] === 'sync-conflict-strategy').vm.$emit('change', {target:{value:"keep_local"}});
     await flushPromises();
     expect(await getLocalSetting("sync_conflict")).toBe("keep_local");
     await w.get('[data-testid="sync-now"]').trigger("click");
@@ -1870,10 +1871,10 @@ describe("WorkbenchShell", () => {
     expect(w.find('.language-toggle').exists()).toBe(false);
     await w.get('[data-testid="open-settings"]').trigger('click');
     await w.get('[data-settings-page="appearance"]').trigger('click'); await flushPromises();
-    await w.get('[data-testid="ui-language"]').setValue('en'); await flushPromises();
+    await w.findAllComponents(SearchableSelect).find(c => c.vm.$attrs['data-testid'] === 'ui-language').vm.$emit('change', {target:{value:'en'}}); await flushPromises();
     expect(await getLocalSetting('ui_language')).toBe('en');
     expect(w.findAll('[data-settings-page]')[0].text()).toBe('General');
-    await w.get('[data-testid="ui-language"]').setValue('zh'); await flushPromises();
+    await w.findAllComponents(SearchableSelect).find(c => c.vm.$attrs['data-testid'] === 'ui-language').vm.$emit('change', {target:{value:'zh'}}); await flushPromises();
     expect(await getLocalSetting('ui_language')).toBe('zh');
   });
 
