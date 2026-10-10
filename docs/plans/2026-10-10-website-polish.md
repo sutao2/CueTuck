@@ -26,4 +26,5 @@
 - Playwright 验证首页、下载、广场、Skills 四页 × 1440/960/390px 共 12 组布局无横向溢出，每页仅一个主标题；双平台下载保持 beta.25。
 - 鼠标和键盘切换搜索/填写截图通过。通过只读代理读取线上广场 24 条、Skills 20 条；真实搜索“鹈鹕”、提示词正文、Skills 原文和列表视图均可用，无页面脚本异常。
 - 已逐屏检查桌面首屏、发现区、手机首屏/资料库及双尺寸下载页。截图位于 `output/playwright/website-polish-*.png`；完整长截图工具出现重复拼接，视觉验收使用逐屏截图和实际 DOM 尺寸。
-- 待部署与公网复验。
+- 已部署至 https://prompt.likh.cn/ ，静态源码提交 `c1bd467`，目录 `/opt/cuetuck-website-preview/releases/website-20261010-c1bd467`；旧目录 `/opt/cuetuck-website-preview/releases/beta25-d874f3c6` 保留用于回退。
+- 公网 HTML/CSS/JS 与白名单构建逐字节一致。线上四页 × 1440/390px 复验通过，真实广场与 Skills 加载成功，下载仍为 beta.25，无横向溢出或脚本异常；API 三项依赖健康，管理站 HTTP 200。
