@@ -15,4 +15,12 @@
 
 ## 结果
 
-实施中。
+已发布部署（2026-10-10）。
+
+- 源码和发行标签：`fcb74fa4a49154d4247e73797cbf5bb4b89a4cdf`；[beta.26 公开预览版](https://github.com/sutao2/CueTuck/releases/tag/v0.1.0-beta.26)，prerelease=true。
+- [完整远程回归](https://github.com/sutao2/CueTuck/actions/runs/38020849667)与 [Windows 流水线](https://github.com/sutao2/CueTuck/actions/runs/38020849702)成功。Windows 原生测试、x64 安装、启动、窗口操作与卸载通过。
+- Mac arm64 包及只读挂载的 DMG 中 beta.26 版本与固定签名验证通过，DMG 完整性通过。公开更新清单的真实签名下载和临时目录安装通过，未替换用户应用。
+- 七份远程资产回读 SHA256 全部一致；双平台签名校验通过且篡改被拒绝；两平台安装包匿名访问均 HTTP 200。
+- 公开 releases 列表结合现行客户端逻辑确认：beta.24 / beta.25 发现 beta.26，同版不提示，稳定通道不选 beta。
+- 官网切换到 `/opt/cuetuck-website-preview/releases/beta26-fcb74fa4`；容器健康，公网 site.js 与本地构建一致。旧 `square-20261010-38d3df5` 保留回滚；后端及持久卷不变。
+- 资产目录 `output/releases/v0.1.0-beta.26/`；本地发行门禁 9 项及官网数据回归 7 项通过。Apple 公证、Windows Authenticode 与前版状态相同，不新增系统信任声明。
