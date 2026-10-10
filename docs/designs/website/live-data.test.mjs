@@ -5,7 +5,7 @@ const json = data => ({ok:true,json:async()=>data});
 test('browse carries remote filters and preserves server totals beyond the loaded page', async()=>{
  let url;
  const result=await browsePrompts('',{query:'图像 & 代码',category:'cat-image',model:'GPT',offset:24},{fetcher:async u=>{url=new URL(u,'https://prompt.likh.cn');return json({items:[{id:'real'}],total:22392,next_offset:48});}});
- assert.equal(url.pathname,'/v1/square/browse');assert.equal(url.searchParams.get('q'),'图像 & 代码');assert.equal(url.searchParams.get('limit'),'24');assert.equal(url.searchParams.get('offset'),'24');assert.equal(url.searchParams.get('category_id'),'cat-image');assert.equal(result.total,22392);
+ assert.equal(url.pathname,'/v1/square/browse');assert.equal(url.searchParams.get('q'),'图像 & 代码');assert.equal(url.searchParams.get('limit'),'12');assert.equal(url.searchParams.get('offset'),'24');assert.equal(url.searchParams.get('category_id'),'cat-image');assert.equal(result.total,22392);
 });
 test('failed and malformed pages do not silently turn into sample content',async()=>{
  await assert.rejects(browsePrompts('',{},{fetcher:async()=>({ok:false,status:500})}),/500/);

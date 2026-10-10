@@ -38,9 +38,9 @@ it('remeasures resized columns, updates changed data, and respects a shifted gri
   expect(style).toHaveBeenCalledTimes(1);
   expect(w.findAll('.prompt-card').length).toBeLessThan(20);
   await w.setProps({ list: true }); await frame();
-  expect(w.findAll('.prompt-card')[0].attributes('style')).toContain('116px');
+  expect(w.findAll('.prompt-card')[0].attributes('style')).toContain('132px');
   headerTop = 1000; await scroll(3001);
-  expect(w.findAll('.prompt-card')[0].text()).toBe('卡片 13');
+  expect(w.findAll('.prompt-card')[0].text()).toBe('卡片 11');
   await w.setProps({ items: [{ id: 'new', kind: 'prompt', title: '新结果' }] }); await frame();
   expect(w.findAll('.prompt-card')).toHaveLength(1);
   expect(w.text()).toBe('新结果');
@@ -62,4 +62,14 @@ it('sizes mixed local cards independently and clears packing when switching to r
   await w.setProps({list:true}); await flushPromises();
   expect(cards[0].element.style.gridRowEnd).toBe('');
   expect(w.classes()).not.toContain('content-grid');
+});
+
+it('waits until the last 240px before prefetching the next batch', async () => {
+  await setup();
+  await w.setProps({items:Array.from({length:24},(_,id)=>({id,kind:'prompt',title:`卡片 ${id}`}))});
+  await frame();
+  await scroll(1377);
+  expect(w.emitted('near-end')).toBeUndefined();
+  await scroll(1378);
+  expect(w.emitted('near-end')).toHaveLength(1);
 });

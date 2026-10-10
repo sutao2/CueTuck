@@ -22,6 +22,18 @@ it('handles empty data and clamps to the final incomplete row', () => {
 });
 
 it('reserves image and attachment space for published covers before they load', () => {
-  expect(buildRows([{preview_asset:{id:"image"}}],1,false,14)[0].height).toBe(434);
-  expect(buildRows([{preview_asset:{id:"image"}}],1,true,14)[0].height).toBe(116);
+  expect(buildRows([{preview_asset:{id:"image"}}],1,false,14)[0].height).toBe(460);
+  expect(buildRows([{preview_asset:{id:"image"}}],1,true,14)[0].height).toBe(132);
+});
+
+it('reserves collection media before its assets decode', () => {
+  const rows = buildRows([{cover_assets:[{id:'cover'}]}, {}, {cover_json:'["cover"]'}], 1, false, 20);
+  expect(rows[0].height).toBeGreaterThan(rows[1].height);
+  expect(rows[2].height).toBe(rows[0].height);
+  expect(rows[1].top).toBe(rows[0].height + 20);
+});
+
+it('does not reserve media for empty or invalid collection covers', () => {
+  const rows = buildRows([{cover_json:'[]'}, {cover_json:'{}'}, {cover_json:'invalid'}], 1, false, 20);
+  expect(rows.every(row => row.height === 280)).toBe(true);
 });

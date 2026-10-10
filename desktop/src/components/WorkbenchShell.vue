@@ -155,7 +155,7 @@
         @pointerup="endSidebarResize" @pointercancel="endSidebarResize"
         @lostpointercapture="endSidebarResize" @keydown="resizeSidebarByKey" />
 
-      <main ref="contentScroller" v-show="!hasTaskPage && contentKind === 'prompts'" data-region="content" class="content-area">
+      <main ref="contentScroller" v-show="!hasTaskPage && contentKind === 'prompts'" data-region="content" class="content-area" :class="{ 'square-browse': space === 'square' }">
         <section class="content-header">
           <div class="content-heading">
             <SiteNotice v-if="space === 'square' && remoteCatalog?.site" :site="remoteCatalog.site" heading />
@@ -276,7 +276,7 @@
             <article
               :style="cardHeight ? { height: `${cardHeight}px` } : undefined"
               class="prompt-card"
-              :class="{ collection: item.kind === 'collection', 'as-row': view === 'list', 'is-selected': selecting && selectedPrompts.includes(item.id) }"
+              :class="{ 'tall-card': space === 'square' && cardHeight > 300, collection: item.kind === 'collection', 'as-row': view === 'list', 'is-selected': selecting && selectedPrompts.includes(item.id) }"
               @click="selecting && space === 'local' && item.kind === 'prompt' ? selectPrompt(item.id) : openItem(item)"
               :inert="batchBusy ? '' : undefined"
             >
@@ -288,12 +288,12 @@
                 <input type="checkbox" :checked="selectedPrompts.includes(item.id)" :aria-label="`选择 ${item.title}`" :data-select-prompt="item.id" @change="selectPrompt(item.id)" />选择
               </label>
               <div class="card-top">
-                <span class="type-badge"><AppIcon :name="item.kind === 'collection' ? 'folder' : 'file'" />{{ item.kind === "collection" ? "合集" : space === "square" ? "广场" : item.source === 'downloaded' ? '已下载' : '提示词' }}</span>
+                <span v-if="space !== 'square' || item.kind === 'collection'" class="type-badge"><AppIcon :name="item.kind === 'collection' ? 'folder' : 'file'" />{{ item.kind === "collection" ? "合集" : space === "square" ? "广场" : item.source === 'downloaded' ? '已下载' : '提示词' }}</span>
                 <span v-if="cardCategory(item)" class="card-category" :title="cardCategory(item)">{{ cardCategory(item) }}</span>
                 <span v-if="showModelTags && item.model" class="model-tag" data-testid="model-tag">{{ item.model }}</span>
               </div>
               <h3><button type="button" class="prompt-title" @click.stop="openItem(item)"><SearchHighlight :text="item.title" :query="query" /></button></h3>
-              <p v-if="item.author" class="prompt-author" data-testid="prompt-author">{{ item.author }}</p>
+              <p v-if="item.author && space !== 'square'" class="prompt-author" data-testid="prompt-author">{{ item.author }}</p>
               <p class="prompt-excerpt">
                 <SearchHighlight :text="cardExcerpt(item)" :query="query" />
               </p>
@@ -302,6 +302,7 @@
                 <span v-if="item.asset_count > (item.image_count || 0)"><AppIcon name="file" />{{ item.asset_count - (item.image_count || 0) }} 个文件</span>
               </div>
               <div v-if="space === 'square'" class="square-card-metrics" data-testid="square-card-metrics">
+                <span v-if="item.author" class="prompt-author" data-testid="prompt-author" :title="item.author">{{ item.author }}</span>
                 <span title="已记录匿名下载次数；仅统计开启上报后的成功下载"><AppIcon name="download" />{{ formatMetric(item.download_count) }} <span>下载</span></span>
                 <span title="当前收藏此作品的账号数">☆ {{ formatMetric(item.favorite_count) }} <span>收藏</span></span>
               </div>
@@ -704,6 +705,7 @@ import {
   updateLocalPrompt,
 } from "../platform/library.js";
 import "../styles/workbench-chrome.css";
+import "../styles/square-browse.css";
 
 const props = defineProps({
   databaseStatus: { type: String, default: "pending" },

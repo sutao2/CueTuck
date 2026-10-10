@@ -1,4 +1,4 @@
-export const PAGE_SIZE = 24;
+export const PAGE_SIZE = 12;
 export async function requestJson(url, { signal, fetcher = fetch } = {}) {
   const response = await fetcher(url, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000), credentials: 'omit' });
   if (response.status === 409) throw Error('本轮推荐已过期，请换一批重新加载。');

@@ -55,7 +55,7 @@ function measure() {
   scroll.value = root.scrollTop - top;
   viewport.value = root.clientHeight;
   const last = rows.value.at(-1);
-  if (last && scroll.value + viewport.value + 600 >= last.top + last.height) emit('near-end');
+  if (last && scroll.value + viewport.value + 240 >= last.top + last.height) emit('near-end');
 }
 function schedule() { if (props.enabled && frame == null) frame = requestAnimationFrame(measure); }
 function scheduleLayout() { measureStyles = true; schedule(); }

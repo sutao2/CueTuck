@@ -11,7 +11,7 @@ it('only requests a bounded browse page and forwards cancellation', async () => 
   const result = listSquarePage({ query: 'hello', offset: 48, signal: controller.signal });
   const rejected = expect(result).rejects.toThrow('canceled');
   expect(fetch.mock.calls[0][0]).toContain('/v1/square/browse?');
-  expect(fetch.mock.calls[0][0]).toContain('offset=48&limit=48');
+  expect(fetch.mock.calls[0][0]).toContain('offset=48&limit=24');
   controller.abort(); await rejected;
   expect(request.signal.aborted).toBe(true);
   expect(fetch).toHaveBeenCalledTimes(1);

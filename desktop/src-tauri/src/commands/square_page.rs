@@ -25,7 +25,7 @@ pub async fn list_square_page(sort: String, query: String, model: String, conten
         result = async {
             let mut request = crate::http::client()?.get(format!("{}/v1/square/browse", crate::api_config::api_base()?))
                 .timeout(Duration::from_secs(10))
-                .query(&[("sort", sort), ("q", query), ("model", model), ("offset", offset.to_string()), ("limit", "48".into())]);
+                .query(&[("sort", sort), ("q", query), ("model", model), ("offset", offset.to_string()), ("limit", "24".into())]);
             if let Some(ids) = exclude { request = request.query(&[("exclude", serde_json::to_string(&ids).map_err(|_|"推荐参数无效")?)]); }
             if let Some(seed) = recommendation { request = request.query(&[("recommendation", seed)]); }
             if let Some(language) = content_language { request = request.query(&[("content_language", language)]); }

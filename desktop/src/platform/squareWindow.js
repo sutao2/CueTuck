@@ -1,11 +1,13 @@
+import { parseCoverUrls } from '../lib/cover.js';
+
 // Fixed row geometry keeps image decoding and unmounting cards from moving the scroll position.
 export function buildRows(items, columns, list, gap) {
   const rows = [];
   let top = 0;
   for (let start = 0; start < items.length; start += columns) {
-    const cover = items.slice(start, start + columns).some(item => item.reference?.images?.[0] || item.preview_asset);
+    const cover = items.slice(start, start + columns).some(item => item.reference?.images?.[0] || item.preview_asset || item.cover_assets?.length || parseCoverUrls(item.cover_json).length);
     const publishedImages = items.slice(start, start + columns).some(item => item.preview_asset);
-    const height = list ? 116 : publishedImages ? 434 : cover ? 410 : 256;
+    const height = list ? 132 : publishedImages ? 460 : cover ? 440 : 280;
     rows.push({ top, height });
     top += height + gap;
   }
