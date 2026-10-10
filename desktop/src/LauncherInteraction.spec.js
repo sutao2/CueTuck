@@ -309,7 +309,7 @@ it('resumes the same draft, default edits, focused field and scroll across passi
     hidden({payload:'blur'});await flushPromises();expect(w.find('form').exists()).toBe(true);
     await shown();await flushPromises();
     expect(w.findAll('textarea')[0].element.value).toBe('已经填写');expect(document.activeElement).toBe(fields[1].element);
-    expect(w.get('form').element.scrollTop).toBe(42);expect(resize).toHaveBeenLastCalledWith('fill');
+    expect(w.get('form').element.scrollTop).toBe(42);expect(resize).toHaveBeenLastCalledWith('fill', 420);
   }
   await fields[1].setValue('外部复制的参数');await fields[1].trigger('keydown',{key:'Enter'});await flushPromises();
   expect(writeText).toHaveBeenCalledWith('已经填写 外部复制的参数');

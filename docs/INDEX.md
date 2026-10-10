@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-10-launcher-search-polish.md](plans/2026-10-10-launcher-search-polish.md) | 已实现，未发布 | 启动器空散、结果层级不足 | 内容高度、紧凑操作与 Windows 边框精修 |
 | [plans/2026-10-10-beta26-release.md](plans/2026-10-10-beta26-release.md) | 已发布部署 | 发布界面与语言优化 | 同源双平台构建、签名更新及官网下载入口 |
 | [plans/2026-10-10-interface-language.md](plans/2026-10-10-interface-language.md) | 已随 beta.26 发布 | 中英文只切换部分菜单 | 全客户端界面文案与内容语言隔离 |
 | [plans/2026-10-10-component-polish.md](plans/2026-10-10-component-polish.md) | 已随 beta.26 发布 | 设置控件粗糙、广场九宫格未铺满 | 共用控件与短选项菜单精修、九宫格铺满卡片媒体框 |

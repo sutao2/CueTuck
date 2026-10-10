@@ -46,11 +46,46 @@ describe("LauncherApp", () => {
     await flushPromises();
     await w.findAll("button").find((button) => button.text() === "返回").trigger("click");
     await flushPromises();
-    expect(resize.mock.calls.map(([layout]) => layout)).toEqual([
+    expect(resize.mock.calls.map(([layout]) => layout).filter((layout, index, layouts) => index === 0 || layout !== layouts[index - 1])).toEqual([
       "collapsed", "expanded", "collapsed", "expanded", "collapsed", "expanded", "collapsed", "expanded", "fill", "expanded",
     ]);
     expect(show).not.toHaveBeenCalled();
     w.unmount();
+  });
+
+  it("sizes sparse results, keeps height while searching, caps long lists and restores search from fill", async () => {
+    const resize = vi.spyOn(launcherWindow, 'resizeLauncherWindow').mockResolvedValue();
+    let resolveSearch;
+    vi.spyOn(library, 'listLocalPrompts').mockImplementation(() => new Promise(resolve => { resolveSearch = resolve; }));
+    const w = mount(LauncherApp);
+    await flushPromises();
+    await w.get('input').setValue('卡通');
+    expect(resize).toHaveBeenLastCalledWith('expanded', 302);
+    expect(w.text()).toContain('正在搜索');
+    resolveSearch([{ id: 'one', title: '卡通', content: '[System / Prompt] 绘制 {{主题}}，解释 {{主题}}' }]);
+    await flushPromises();
+    expect(resize).toHaveBeenLastCalledWith('expanded', 342);
+    expect(w.get('.row-desc').text()).toBe('绘制 {{主题}}，解释 {{主题}}');
+    expect(w.get('.result-row .pill').text()).toBe('1 个变量');
+    expect(w.get('.result-icon').text()).toBe('');
+    await w.get('input').trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(resize).toHaveBeenLastCalledWith('fill', 420);
+    await w.findAll('button').find(button => button.text() === '返回').trigger('click');
+    await flushPromises();
+    expect(resize).toHaveBeenLastCalledWith('expanded', 342);
+    const calls = resize.mock.calls.length;
+    await w.get('input').setValue('更多');
+    await flushPromises();
+    expect(resize.mock.calls.length).toBe(calls);
+    resolveSearch(Array.from({ length: 20 }, (_, id) => ({ id, title: '更多', content: '正文' })));
+    await flushPromises();
+    expect(resize).toHaveBeenLastCalledWith('expanded', 420);
+    await w.get('input').setValue('不存在');
+    resolveSearch([]);
+    await flushPromises();
+    expect(resize).toHaveBeenLastCalledWith('expanded', 302);
+    expect(w.findAll('[role="option"]')).toHaveLength(3);
   });
 
   it("does not request admin APIs while searching locally", async () => {

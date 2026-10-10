@@ -12,10 +12,10 @@ export function launcherHeightFor(layout) {
   return LAUNCHER_HEIGHTS[layout] ?? LAUNCHER_HEIGHTS.expanded;
 }
 
-export async function resizeLauncherWindow(layout) {
+export async function resizeLauncherWindow(layout, height) {
   if (typeof window === "undefined" || !window.__TAURI_INTERNALS__) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("resize_launcher", { layout });
+  await invoke("resize_launcher", { layout, height });
 }
 
 export async function startDraggingLauncher() {

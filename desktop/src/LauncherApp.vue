@@ -1,7 +1,7 @@
 <template>
   <main
     class="launcher-canvas"
-    :style="{ '--launcher-content-size': `${launcherPreferences.fontSize}px` }"
+    :style="{ '--launcher-content-size': `${launcherPreferences.fontSize}px`, height: `${panelHeight}px`, maxHeight: '100%' }"
     :class="{ 'host-mac': host === 'macos' }"
     :aria-label="tr('快捷搜索')"
     @keydown="onCanvasKey"
@@ -47,7 +47,7 @@
           <p v-if="feedback" role="status" data-testid="launcher-feedback" class="launcher-empty">{{ tr(feedback) }}</p>
           <p v-if="searching" role="status" class="launcher-empty">{{ tr('正在搜索…') }}</p>
           <div v-if="results.length">
-            <p class="group-title">{{ scope === 'square' ? tr('广场搜索 · 显示前 20 条') : tr('本地提示词 · 匹配优先，兼顾常用与收藏') }}</p>
+            <p class="group-title"><span>{{ scope === 'square' ? tr('广场搜索') : tr('本地提示词') }}</span><span>{{ results.length }}</span></p>
             <button
               v-for="(row, index) in results"
               :key="row.id"
@@ -63,19 +63,19 @@
               @click="activate(row, 'default')"
               @mousemove="selectWithPointer($event, index)"
             >
-              <span class="result-icon">{{ rowIcon(row) }}</span>
+              <span class="result-icon"><AppIcon :name="row.kind === 'collection' ? 'folder' : 'file'" /></span>
               <span class="result-copy">
                 <span class="row-title"><SearchHighlight :text="row.title" :query="query" /></span>
                 <span class="row-desc">{{ rowDesc(row) }}</span>
               </span>
-              <span class="pill">{{ scope === 'square' ? (row.kind === 'collection' ? tr('选择提示词') : tr('使用')) : rowIcon(row) === 'VAR' ? tr('变量') : tr('提示词') }}</span>
+              <span class="pill">{{ rowLabel(row) }}</span>
             </button>
           </div>
           <p v-else-if="!searching && !feedback" class="launcher-empty">{{ tr('没有找到相关提示词') }}</p>
           <div v-if="query.trim()" class="quick-actions" :aria-label="tr('输入快捷操作')">
             <p class="group-title">{{ tr('使用当前输入') }}</p>
             <button v-for="(action, index) in quickActions" :key="action.action" :aria-selected="selectedIndex === results.length + index" :id="`launcher-result-${results.length + index}`" type="button" role="option" tabindex="-1" class="result-row" :class="{active: selectedIndex === results.length + index}" :disabled="busy" @mousedown.prevent @click="runQuickAction(action.action)" @mousemove="selectWithPointer($event, results.length + index)">
-              <span class="result-icon">{{ action.icon }}</span><span class="row-title">{{ tr(action.title) }}</span>
+              <span class="result-icon"><AppIcon :name="action.icon" /></span><span class="row-title">{{ tr(action.title) }}</span>
             </button>
           </div>
         </div>
@@ -83,9 +83,8 @@
         <footer v-if="!isCollapsed" class="launcher-foot">
           <div class="launcher-keys">
             <span><kbd>↑↓</kbd> {{ tr('选择') }}</span>
-            <span><kbd>Enter</kbd> {{ tr('使用') }}</span>
-            <span><kbd>{{ copyChord }}</kbd> {{ tr('复制') }}</span>
-            <span><kbd>Esc</kbd> {{ tr('关闭') }}</span>
+            <span class="primary-key"><kbd>Enter</kbd> {{ searchRows[selectedIndex]?.action ? tr('执行') : tr('使用') }}</span>
+            <span v-if="results[selectedIndex]"><kbd>{{ copyChord }}</kbd> {{ tr('复制') }}</span>
           </div>
           <button v-if="scope === 'square' && searchRows[selectedIndex]?.remote" type="button" class="ghost" :disabled="busy" @click="viewSquareDetail(searchRows[selectedIndex])">{{ tr('查看详情') }}</button>
         </footer>
@@ -150,6 +149,7 @@
 
 <script setup>
 import { tr, applyInterfaceLanguage } from './platform/interfaceLanguage.js';
+import AppIcon from './components/AppIcon.vue';
 import SearchHighlight from './components/SearchHighlight.vue';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { rankLauncherResults } from './lib/launcherRanking.js';
@@ -171,7 +171,7 @@ import { createLocalPrompt, getLocalSetting, listLocalPrompts, recordLocalPrompt
 import { copyLauncherText } from "./platform/paste.js";
 import { supportsSelectedText } from "./platform/selectedText.js";
 import { applyHostChrome, detectHost, formatShortcutLabel } from "./platform/windowChrome.js";
-import { DEFAULT_LAUNCHER_PREFERENCES, readLauncherPreferences } from './platform/launcherPreferences.js';
+import { DEFAULT_LAUNCHER_PREFERENCES, readLauncherPreferences, LAUNCHER_SIZES } from './platform/launcherPreferences.js';
 
 const props = defineProps({
   host: { type: String, default: () => detectHost() },
@@ -196,9 +196,9 @@ const actionBusy = ref(false);
 const busy = computed(() => useBusy.value || selectionBusy.value || actionBusy.value);
 const scope = ref('local'), draftTitle = ref(''), draftContent = ref(''), optimizedDraft = ref(false), draftTitleEl = ref(null);
 const quickActions = computed(() => query.value.trim() ? [
-  {action:'create',title:'创建提示词',icon:'＋'},
-  {action:'optimize',title:'AI 优化提示词',icon:'AI'},
-  {action:'square',title:'搜索提示词广场',icon:'⌕'},
+  {action:'create',title:'创建提示词',icon:'plus'},
+  {action:'optimize',title:'AI 优化提示词',icon:'sparkles'},
+  {action:'square',title:'搜索提示词广场',icon:'search'},
 ] : []);
 const searchRows = computed(() => [...results.value, ...quickActions.value]);
 let searchTimer, squareController;
@@ -216,6 +216,16 @@ const isCollapsed = computed(() => step.value === "search" && !query.value.trim(
 const launcherLayout = computed(() =>
   step.value === "fill" ? "fill" : isCollapsed.value ? "collapsed" : "expanded",
 );
+const searchHeight = ref(302);
+const panelHeight = computed(() => isCollapsed.value ? 64 : step.value === 'search'
+  ? Math.min(searchHeight.value, LAUNCHER_SIZES[launcherPreferences.value.size].height)
+  : LAUNCHER_SIZES[launcherPreferences.value.size].height);
+watch([results, searching, feedback], () => {
+  if (searching.value) return;
+  // Search bar 60 + footer 42 + list padding 16 + compact actions 136.
+  searchHeight.value = 254 + (results.value.length ? 24 + results.value.length * 64 : 48)
+    + (feedback.value ? 64 : 0);
+});
 const copyChord = computed(() => formatShortcutLabel("Control+Enter", props.host));
 
 async function searchCurrent(request) {
@@ -277,18 +287,27 @@ async function saveDraft() {
   finally{actionBusy.value=false;}
 }
 
-watch(launcherLayout, (layout) => resizeLauncherWindow(layout).catch((error) => { feedback.value = `窗口调整失败：${error}`; }), { immediate: true });
+let lastRequestedLayout;
+watch([launcherLayout, panelHeight, searching], ([layout, height, pending]) => {
+  if (layout === 'expanded' && step.value === 'search' && pending && lastRequestedLayout === 'expanded') return;
+  lastRequestedLayout = layout;
+  resizeLauncherWindow(layout, height).catch((error) => { feedback.value = `窗口调整失败：${error}`; });
+}, { immediate: true, flush: 'post' });
 watch(selectedIndex, async () => {
   await nextTick();
   document.getElementById(`launcher-result-${selectedIndex.value}`)?.scrollIntoView?.({ block: "nearest" });
 });
 
-function rowIcon(row) {
-  return extractVariables(row.content ?? "").length ? "VAR" : "TXT";
+function rowLabel(row) {
+  if (row.kind === 'collection') return tr('选择提示词');
+  if (row.remote) return tr('使用');
+  const count = extractVariables(row.content ?? '').length;
+  return count ? tr('{0} 个变量', [count]) : tr('直接复制');
 }
 
 function rowDesc(row) {
   return String(row.summary || row.content || "")
+    .replace(/^\s*(?:\[(?:system(?:\s*\/\s*prompt)?|prompt)\]|(?:system|prompt)\s*:)\s*/i, "")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 72);
@@ -513,7 +532,7 @@ async function onShown() {
   if (step.value === 'search') resetState();
   try { launcherPreferences.value = await readLauncherPreferences(); }
   catch (error) { feedback.value = `读取启动器设置失败：${error}`; }
-  try { await resizeLauncherWindow(launcherLayout.value); }
+  try { await resizeLauncherWindow(launcherLayout.value, panelHeight.value); }
   catch (error) { feedback.value = `窗口调整失败：${error}`; }
   await focusCurrent();
   try { await refreshTheme(); } catch (error) { feedback.value = `读取主题失败：${error}`; }
@@ -578,7 +597,7 @@ onUnmounted(() => {
 .launcher-stage.host-windows {
   position: relative;
   border-radius: 0;
-  background: var(--surface-secondary);
+  background: var(--surface);
   box-shadow: none;
 }
 body.theme-dark .launcher-stage.host-windows {
@@ -589,7 +608,7 @@ body.theme-dark .launcher-stage.host-windows {
   position: absolute;
   inset: 0;
   z-index: 2;
-  border: 1px solid color-mix(in srgb, var(--text) 32%, var(--surface-secondary));
+  border: 1px solid color-mix(in srgb, var(--text) 18%, var(--surface));
   pointer-events: none;
 }
 .launcher-stage.host-windows .launcher-foot {
@@ -646,6 +665,7 @@ body.theme-dark .launcher-stage.host-windows {
   display: inline-flex;
   align-items: center;
   min-height: 22px;
+  white-space: nowrap;
   padding: 0 8px;
   border: 1px solid transparent;
   border-radius: 5px;
@@ -669,13 +689,18 @@ body.theme-dark .launcher-stage.host-windows {
   padding: 8px;
 }
 .group-title {
-  margin: 4px 8px 8px;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 12px;
+  height: 24px;
+  align-items: center;
   color: var(--muted);
   font-size: 11px;
 }
 .result-row {
   width: 100%;
-  min-height: 52px;
+  position: relative;
+  min-height: 60px;
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
@@ -689,6 +714,7 @@ body.theme-dark .launcher-stage.host-windows {
 }
 .result-row:hover { background: var(--hover); }
 .result-row.active { background: var(--accent-soft); }
+.result-row.active::before { content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 3px; border-radius: 2px; background: var(--accent); }
 .result-icon {
   width: 32px;
   height: 32px;
@@ -701,13 +727,14 @@ body.theme-dark .launcher-stage.host-windows {
   font-weight: 700;
 }
 .result-row.active .result-icon {
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--surface);
+  color: var(--text);
 }
+.result-icon :deep(svg) { width: 19px; height: 19px; }
 .result-copy {
   display: grid;
   min-width: 0;
-  gap: 2px;
+  gap: 4px;
 }
 .row-title {
   font-size: 14px;
@@ -724,7 +751,12 @@ body.theme-dark .launcher-stage.host-windows {
   white-space: nowrap;
 }
 .launcher-empty {
-  margin: 24px;
+  margin: 0;
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  padding: 8px 12px;
+  font-size: 13px;
   color: var(--muted);
   text-align: center;
 }
@@ -749,6 +781,8 @@ body.theme-dark .launcher-stage.host-windows {
   width: 100%;
   justify-content: flex-end;
 }
+.launcher-keys { width: 100%; font-size: 11px; }
+.launcher-keys .primary-key { margin-left: auto; color: var(--text); }
 .launcher-keys span {
   display: inline-flex;
   align-items: center;
@@ -863,5 +897,5 @@ button:disabled { opacity: .5; cursor: wait; }
 </style>
 
 <style scoped>
-.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:38px;padding-top:8px;padding-bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:10px;padding:14px 16px}.quick-content{flex:1;min-height:110px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:none;min-height:80px;line-height:1.6;overflow:auto}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background: var(--surface-secondary,var(--surface));color:inherit;border: 1px solid transparent;border-radius: var(--radius-control);padding:10px;font:inherit}.quick-draft .field{display:flex;flex-direction:column;gap:6px}.quick-draft p{font-size:12px;line-height:1.5;margin:0;color:var(--muted)}.quick-draft>.field:not(.quick-content),.quick-draft>details,.quick-draft>p{flex-shrink:0}.quick-draft summary{cursor:pointer}.quick-draft-foot{min-height:50px;padding:8px 14px;gap:8px}.quick-draft-foot>.ghost:first-child{margin-right:auto}.quick-draft .preview{max-height:130px;overflow:auto}
+.quick-actions { border-top:1px solid var(--line,#ddd);margin-top:8px;padding-top:4px; }.quick-actions .result-row{min-height:32px;height:32px;padding:0 12px;gap:12px;margin-bottom:2px}.quick-actions .result-icon{width:32px;height:24px;background:transparent;color:var(--muted)}.quick-actions .result-icon :deep(svg){width:16px;height:16px}.quick-actions .row-title{font-size:13px;font-weight:400}.quick-actions .result-row.active::before{top:8px;bottom:8px}.quick-draft{display:flex;flex-direction:column;gap:10px;padding:14px 16px}.quick-content{flex:1;min-height:110px;display:flex;flex-direction:column;gap:6px}.quick-content textarea{flex:1;resize:none;min-height:80px;line-height:1.6;overflow:auto}.quick-draft input,.quick-draft textarea{width:100%;box-sizing:border-box;background: var(--surface-secondary,var(--surface));color:inherit;border: 1px solid transparent;border-radius: var(--radius-control);padding:10px;font:inherit}.quick-draft .field{display:flex;flex-direction:column;gap:6px}.quick-draft p{font-size:12px;line-height:1.5;margin:0;color:var(--muted)}.quick-draft>.field:not(.quick-content),.quick-draft>details,.quick-draft>p{flex-shrink:0}.quick-draft summary{cursor:pointer}.quick-draft-foot{min-height:50px;padding:8px 14px;gap:8px}.quick-draft-foot>.ghost:first-child{margin-right:auto}.quick-draft .preview{max-height:130px;overflow:auto}
 </style>

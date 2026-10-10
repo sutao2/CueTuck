@@ -1423,5 +1423,8 @@
   "请在桌面客户端下载安装更新": "Download and install updates in the desktop app",
   "未能下载更新包，请重试": "Unable to download update package. Please retry.",
   "下载失败，请重试": "Download failed. Please retry.",
-  "JSON 导入示例": "{\"prompts\":[{\"title\":\"Example\",\"content\":\"a\"}]}"
+  "JSON 导入示例": "{\"prompts\":[{\"title\":\"Example\",\"content\":\"a\"}]}",
+  "广场搜索": "Explore prompts",
+  "执行": "Run",
+  "直接复制": "Copy directly"
 }
