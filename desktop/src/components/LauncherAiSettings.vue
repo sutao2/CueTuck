@@ -1,24 +1,25 @@
 <template>
   <div class="settings-group launcher-ai-settings">
-    <h4>本机模型配置</h4>
-    <p>为 AI 优化和本地提示词翻译选择模型。仅主动操作时发送对应正文；API Key 保存在此设备的系统凭据库，不参与同步或备份。</p>
-    <p v-if="!native" role="status">请在桌面客户端配置和使用本机 AI 服务。</p>
+    <h4>{{ tr('本机模型配置') }}</h4>
+    <p>{{ tr('为 AI 优化和本地提示词翻译选择模型。仅主动操作时发送对应正文；API Key 保存在此设备的系统凭据库，不参与同步或备份。') }}</p>
+    <p v-if="!native" role="status">{{ tr('请在桌面客户端配置和使用本机 AI 服务。') }}</p>
     <template v-else>
-      <p v-if="loading">正在读取本机配置…</p>
+      <p v-if="loading">{{ tr('正在读取本机配置…') }}</p>
       <fieldset :disabled="busy || loading || loadFailed">
-        <label class="field"><span>API 基础地址</span><input v-model="endpoint" data-testid="ai-endpoint" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" autocomplete="off"></label>
-        <label class="field"><span>API Key</span><input v-model="apiKey" data-testid="ai-key" type="password" :placeholder="hasKey ? '已保存；留空保留，仅同一地址可沿用' : '填写自己的 API Key'" autocomplete="new-password"></label>
-        <div><button type="button" class="button" data-testid="ai-fetch-models" :disabled="!endpoint.trim()" @click="fetchModels">{{ busy ? '处理中…' : '获取模型列表' }}</button><small>填写接口后直接获取，无需先保存模型。</small></div>
-        <label class="field"><span>启动器优化模型</span><SearchableSelect v-model="model" data-testid="ai-model" aria-label="启动器优化模型" :options="options" :disabled="busy || loading" placeholder="获取模型列表后选择" /></label>
-        <label class="field"><span>本地翻译模型</span><SearchableSelect v-model="translationModel" data-testid="ai-translation-model" aria-label="本地翻译模型" :options="options" :disabled="busy || loading" placeholder="未配置翻译模型" /><small>百炼可选择 qwen-mt-flash 等专用翻译模型，也可使用通用文本模型。模型列表可搜索；列表可见不代表已通过调用测试。</small></label>
-        <div class="modal-actions"><button type="button" class="button primary-button" data-testid="ai-save" :disabled="!model && !translationModel" @click="save">保存本机 AI 配置</button><button type="button" class="button" :disabled="dirty || !saved.model" @click="test">测试优化模型</button><button type="button" class="button" :disabled="dirty || !saved.translation_model" @click="testTranslation">测试翻译模型</button><button type="button" class="button" :disabled="!saved.endpoint" @click="clear">清除配置与密钥</button></div>
+        <label class="field"><span>{{ tr('API 基础地址') }}</span><input v-model="endpoint" data-testid="ai-endpoint" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" autocomplete="off"></label>
+        <label class="field"><span>API Key</span><input v-model="apiKey" data-testid="ai-key" type="password" :placeholder="hasKey ? tr('已保存；留空保留，仅同一地址可沿用') : tr('填写自己的 API Key')" autocomplete="new-password"></label>
+        <div><button type="button" class="button" data-testid="ai-fetch-models" :disabled="!endpoint.trim()" @click="fetchModels">{{ busy ? tr('处理中…') : tr('获取模型列表') }}</button><small>{{ tr('填写接口后直接获取，无需先保存模型。') }}</small></div>
+        <label class="field"><span>{{ tr('启动器优化模型') }}</span><SearchableSelect v-model="model" data-testid="ai-model" :aria-label="tr('启动器优化模型')" :options="options" :disabled="busy || loading" :placeholder="tr('获取模型列表后选择')" /></label>
+        <label class="field"><span>{{ tr('本地翻译模型') }}</span><SearchableSelect v-model="translationModel" data-testid="ai-translation-model" :aria-label="tr('本地翻译模型')" :options="options" :disabled="busy || loading" :placeholder="tr('未配置翻译模型')" /><small>{{ tr('百炼可选择 qwen-mt-flash 等专用翻译模型，也可使用通用文本模型。模型列表可搜索；列表可见不代表已通过调用测试。') }}</small></label>
+        <div class="modal-actions"><button type="button" class="button primary-button" data-testid="ai-save" :disabled="!model && !translationModel" @click="save">{{ tr('保存本机 AI 配置') }}</button><button type="button" class="button" :disabled="dirty || !saved.model" @click="test">{{ tr('测试优化模型') }}</button><button type="button" class="button" :disabled="dirty || !saved.translation_model" @click="testTranslation">{{ tr('测试翻译模型') }}</button><button type="button" class="button" :disabled="!saved.endpoint" @click="clear">{{ tr('清除配置与密钥') }}</button></div>
       </fieldset>
-      <p v-if="note" role="status">{{ note }}</p><button v-if="loadFailed" class="button" type="button" @click="load">重试读取</button>
-      <small>获取列表只读取模型目录；测试只发送固定示例，不读取个人提示词。列表失败不会替换已保存配置。</small>
+      <p v-if="note" role="status">{{ tr(note) }}</p><button v-if="loadFailed" class="button" type="button" @click="load">{{ tr('重试读取') }}</button>
+      <small>{{ tr('获取列表只读取模型目录；测试只发送固定示例，不读取个人提示词。列表失败不会替换已保存配置。') }}</small>
     </template>
   </div>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, onMounted, ref, watch } from 'vue';
 import { translateOnce } from '../platform/translation.js';
 import SearchableSelect from './SearchableSelect.vue';
@@ -27,7 +28,7 @@ const emit=defineEmits(['dirty','busy']);
 const native=Boolean(window.__TAURI_INTERNALS__);
 const endpoint=ref(''),model=ref(''),translationModel=ref(''),apiKey=ref(''),hasKey=ref(false),models=ref([]),note=ref(''),loading=ref(false),busy=ref(false),loadFailed=ref(false),saved=ref({endpoint:'',model:'',translation_model:''});
 const dirty=computed(()=>endpoint.value!==saved.value.endpoint || model.value!==saved.value.model || translationModel.value!==saved.value.translation_model || Boolean(apiKey.value));
-const options=computed(()=>[{value:'',label:'不启用此用途'},...[...new Set([...models.value,model.value,translationModel.value].filter(Boolean))].map(id=>({value:id,label:models.value.includes(id)?id:`${id}（已有选择，待获取核实）`}))]);
+const options=computed(()=>[{value:'',label:tr('不启用此用途')},...[...new Set([...models.value,model.value,translationModel.value].filter(Boolean))].map(id=>({value:id,label:models.value.includes(id)?id:tr('{0}（已有选择，待获取核实）', [id])}))]);
 watch(dirty,value=>emit('dirty',value));watch([busy,loading],()=>emit('busy',busy.value||loading.value));
 watch([endpoint,apiKey],()=>{models.value=[];});
 function apply(value) { endpoint.value=value.endpoint||'';model.value=value.model||'';translationModel.value=value.translation_model||'';hasKey.value=!!value.has_key;apiKey.value='';saved.value={endpoint:endpoint.value,model:model.value,translation_model:translationModel.value}; }

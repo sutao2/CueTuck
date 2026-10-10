@@ -1,32 +1,33 @@
 <template>
  <section class="community-skills">
   <div v-if="!selected" class="community-toolbar">
-   <form class="community-search skills-search" @submit.prevent="search"><AppIcon name="search"/><input v-model="query" :disabled="busy" aria-label="搜索社区 Skills" :placeholder="mine?'搜索我的发布…':'搜索 Skill 名称或描述…'"/><button type="submit" :disabled="busy" aria-label="搜索" title="搜索 · Enter">↵</button></form>
-   <button class="button community-refresh" :disabled="busy" aria-label="刷新" title="刷新" @click="load"><AppIcon name="refresh"/></button>
+   <form class="community-search skills-search" @submit.prevent="search"><AppIcon name="search"/><input v-model="query" :disabled="busy" :aria-label="tr('搜索社区 Skills')" :placeholder="mine?tr('搜索我的发布…'):tr('搜索 Skill 名称或描述…')"/><button type="submit" :disabled="busy" :aria-label="tr('搜索')" :title="tr('搜索 · Enter')">↵</button></form>
+   <button class="button community-refresh" :disabled="busy" :aria-label="tr('刷新')" :title="tr('刷新')" @click="load"><AppIcon name="refresh"/></button>
   </div>
-  <ContentState v-if="error" kind="error" compact title="内容加载失败" :description="error"><button class="button" :disabled="busy" @click="retry">重试</button></ContentState>
-  <ContentState v-if="busy&&!items.length" kind="loading" title="正在加载 Skills…" />
+  <ContentState v-if="error" kind="error" compact :title="tr('内容加载失败')" :description="tr(error)"><button class="button" :disabled="busy" @click="retry">{{ tr('重试') }}</button></ContentState>
+  <ContentState v-if="busy&&!items.length" kind="loading" :title="tr('正在加载 Skills…')" />
   <template v-if="selected">
-   <button class="button" :disabled="busy" @click="selected=null;load()">← 返回列表</button><h2>{{ selected.title }}</h2><p>{{ selected.description }}</p>
-   <p class="muted">发布者：{{ selected.publisher?.display_name }} · {{ skillStatus(selected.status) }} · 许可：{{ selected.license }}</p>
+   <button class="button" :disabled="busy" @click="selected=null;load()">{{ tr('← 返回列表') }}</button><h2>{{ selected.title }}</h2><p>{{ selected.description }}</p>
+   <p class="muted">{{ tr('发布者：') }}{{ selected.publisher?.display_name }} · {{ tr(skillStatus(selected.status)) }} {{ tr('· 许可：') }}{{ selected.license }}</p>
    <p v-if="selected.reason" class="skills-alert">{{ selected.reason }}</p><pre class="community-body">{{ selected.body }}</pre>
-   <h3>完整文件包 · {{ selected.files.length }} 个文件</h3><ul><li v-for="file in selected.files" :key="file.path">{{ file.path }} · {{ file.size }} B{{ file.executable?' · 可执行文件':'' }}</li></ul>
-   <p class="muted">版本校验：{{ selected.digest }}</p><p class="muted">安装只写入文件，不会自动配置 MCP、安装运行时或执行脚本。</p>
-   <div class="skills-actions"><button v-if="!mine" class="button primary-button" :disabled="busy" @click="install">{{ busy?'正在处理…':'安装到智能体…' }}</button><button v-if="mine&&selected.status!=='withdrawn'" class="button" :disabled="busy" @click="withdrawing=true">撤回发布</button></div>
-   <div v-if="withdrawing" class="skills-panel"><p>撤回后其他用户将无法从广场下载，已安装副本会保留。</p><button class="button" :disabled="busy" @click="withdraw">确认撤回</button><button class="button" :disabled="busy" @click="withdrawing=false">取消</button></div>
+   <h3>{{ tr('完整文件包 ·') }} {{ selected.files.length }} {{ tr('个文件') }}</h3><ul><li v-for="file in selected.files" :key="file.path">{{ file.path }} · {{ file.size }} B{{ file.executable?tr(' · 可执行文件'):'' }}</li></ul>
+   <p class="muted">{{ tr('版本校验：') }}{{ selected.digest }}</p><p class="muted">{{ tr('安装只写入文件，不会自动配置 MCP、安装运行时或执行脚本。') }}</p>
+   <div class="skills-actions"><button v-if="!mine" class="button primary-button" :disabled="busy" @click="install">{{ busy?tr('正在处理…'):tr('安装到智能体…') }}</button><button v-if="mine&&selected.status!=='withdrawn'" class="button" :disabled="busy" @click="withdrawing=true">{{ tr('撤回发布') }}</button></div>
+   <div v-if="withdrawing" class="skills-panel"><p>{{ tr('撤回后其他用户将无法从广场下载，已安装副本会保留。') }}</p><button class="button" :disabled="busy" @click="withdraw">{{ tr('确认撤回') }}</button><button class="button" :disabled="busy" @click="withdrawing=false">{{ tr('取消') }}</button></div>
   </template>
   <template v-else>
-   <div class="community-results"><span>{{ mine?'我的发布':'社区作品' }}<small v-if="mine">审核通过后公开展示</small></span><span class="muted" role="status">{{ busy?'正在加载…':`共 ${total} 个 Skill` }}</span></div>
-   <section class="skills-list"><button v-for="item in items" :key="item.id" class="skills-list-row" :disabled="busy" @click="open(item.id)"><span class="skills-list-icon"><AppIcon name="skills"/></span><span class="skills-row-main"><strong>{{ item.title }}</strong><span>{{ item.description }}</span><small>{{ skillCategoryName(item.category) }} · {{ item.publisher?.display_name }} · {{ item.license }}</small><span v-if="mine&&item.reason">{{ item.reason }}</span></span><span class="skills-badge">{{ mine?skillStatus(item.status):'查看并安装' }}</span><span>›</span></button></section>
-   <ContentState v-if="!busy&&!items.length&&!error" :title="query.trim()||category?'没有找到匹配的 Skill':mine?'你还没有发布 Skill':'社区还没有公开的 Skill'" :description="query.trim()||category?'试试其他关键词，或在左侧切换分类。':mine?'发布后可以在这里查看审核进度。':'已有开源 Skill 可在 GitHub 来源中浏览和安装。你也可以创建并发布自己的作品。'" icon="skills">
-    <button v-if="!mine&&!query.trim()&&!category" class="button" @click="emit('browse-github')">浏览 GitHub 来源 <span aria-hidden="true">→</span></button>
-    <button v-if="query.trim()" class="button" @click="query='';search()">清除搜索</button>
+   <div class="community-results"><span>{{ mine?tr('我的发布'):tr('社区作品') }}<small v-if="mine">{{ tr('审核通过后公开展示') }}</small></span><span class="muted" role="status">{{ busy?tr('正在加载…'):tr("共 {0} 个 Skill", [total]) }}</span></div>
+   <section class="skills-list"><button v-for="item in items" :key="item.id" class="skills-list-row" :disabled="busy" @click="open(item.id)"><span class="skills-list-icon"><AppIcon name="skills"/></span><span class="skills-row-main"><strong>{{ item.title }}</strong><span>{{ item.description }}</span><small>{{ tr(skillCategoryName(item.category)) }} · {{ item.publisher?.display_name }} · {{ item.license }}</small><span v-if="mine&&item.reason">{{ item.reason }}</span></span><span class="skills-badge">{{ mine?skillStatus(item.status):tr('查看并安装') }}</span><span>›</span></button></section>
+   <ContentState v-if="!busy&&!items.length&&!error" :title="query.trim()||category?tr('没有找到匹配的 Skill'):mine?tr('你还没有发布 Skill'):tr('社区还没有公开的 Skill')" :description="query.trim()||category?tr('试试其他关键词，或在左侧切换分类。'):mine?tr('发布后可以在这里查看审核进度。'):tr('已有开源 Skill 可在 GitHub 来源中浏览和安装。你也可以创建并发布自己的作品。')" icon="skills">
+    <button v-if="!mine&&!query.trim()&&!category" class="button" @click="emit('browse-github')">{{ tr('浏览 GitHub 来源') }} <span aria-hidden="true">→</span></button>
+    <button v-if="query.trim()" class="button" @click="query='';search()">{{ tr('清除搜索') }}</button>
    </ContentState>
-   <div v-if="total>24&&!error" class="skills-pagination"><button :disabled="busy||offset===0" @click="offset-=24;load()">上一页</button><span>第 {{ Math.floor(offset/24)+1 }} / {{ Math.ceil(total/24) }} 页</span><button :disabled="busy||offset+24>=total" @click="offset+=24;load()">下一页</button></div>
+   <div v-if="total>24&&!error" class="skills-pagination"><button :disabled="busy||offset===0" @click="offset-=24;load()">{{ tr('上一页') }}</button><span>{{ tr('第') }} {{ Math.floor(offset/24)+1 }} / {{ Math.ceil(total/24) }} {{ tr('页') }}</span><button :disabled="busy||offset+24>=total" @click="offset+=24;load()">{{ tr('下一页') }}</button></div>
   </template>
  </section>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import ContentState from './ContentState.vue';
 import {computed,ref,watch,onMounted,onUnmounted} from 'vue';
 import {skillMarket,skillStatus} from '../platform/skillMarket.js';

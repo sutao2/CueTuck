@@ -1,36 +1,37 @@
 <template>
   <section class="attachments" data-testid="attachments" :aria-busy="working" @dragover="dragover" @drop="drop" @paste="paste">
     <header class="attachments-heading">
-      <div><h3>图片与附件 <span>{{ modelValue.length }}</span></h3><p>默认保存在本机，随备份保留；可在设置中手动同步私有附件，不会自动公开。</p></div>
-      <button v-if="!readonly" class="button" type="button" :disabled="disabled || working" @click="picker.click()">＋ 添加文件</button>
+      <div><h3>{{ tr('图片与附件') }} <span>{{ modelValue.length }}</span></h3><p>{{ tr('默认保存在本机，随备份保留；可在设置中手动同步私有附件，不会自动公开。') }}</p></div>
+      <button v-if="!readonly" class="button" type="button" :disabled="disabled || working" @click="picker.click()">{{ tr('＋ 添加文件') }}</button>
       <input v-if="!readonly" ref="picker" hidden type="file" multiple :accept="ASSET_ACCEPT" data-testid="asset-picker" @change="selectFiles">
     </header>
-    <p v-if="error" role="alert">{{ error }}</p><p v-if="note" role="status" class="field-help">{{ note }}</p>
+    <p v-if="error" role="alert">{{ tr(error) }}</p><p v-if="note" role="status" class="field-help">{{ tr(note) }}</p>
     <button v-if="!modelValue.length && !readonly" type="button" class="attachment-drop" :disabled="disabled || working" @click="picker.click()">
-      <AppIcon name="image" /><strong>{{ working ? '正在读取文件…' : '选择文件，或拖到这里' }}</strong><span>也可在编辑页粘贴图片 · 单文件 5 MiB · 共 20 MiB / 12 个</span>
-      <small>图片、PDF、文本、Markdown、CSV、JSON、DOCX、XLSX、PPTX</small>
+      <AppIcon name="image" /><strong>{{ working ? tr('正在读取文件…') : tr('选择文件，或拖到这里') }}</strong><span>{{ tr('也可在编辑页粘贴图片 · 单文件 5 MiB · 共 20 MiB / 12 个') }}</span>
+      <small>{{ tr('图片、PDF、文本、Markdown、CSV、JSON、DOCX、XLSX、PPTX') }}</small>
     </button>
     <div v-if="modelValue.length" class="attachment-grid">
       <article v-for="asset in modelValue" :key="asset.id" class="attachment-item" :class="{ selected: selectedId === asset.id }">
-        <button type="button" class="attachment-open" :aria-label="`查看 ${asset.name}`" @click="openAsset(asset)">
+        <button type="button" class="attachment-open" :aria-label="tr('查看 {0}', [asset.name])" @click="openAsset(asset)">
           <img decoding="async" v-if="asset.mime.startsWith('image/')" :src="assetUrl(asset)" alt="" loading="lazy">
           <span v-else class="attachment-file-icon"><AppIcon name="file" /></span>
           <span class="attachment-label"><strong :title="asset.name">{{ asset.name }}</strong><small>{{ formatBytes(assetSize(asset)) }}</small></span>
         </button>
-        <button v-if="!readonly" type="button" class="attachment-remove" :aria-label="`移除 ${asset.name}`" :disabled="disabled || working" @click="remove(asset.id)">×</button>
+        <button v-if="!readonly" type="button" class="attachment-remove" :aria-label="tr('移除 {0}', [asset.name])" :disabled="disabled || working" @click="remove(asset.id)">×</button>
       </article>
     </div>
     <section v-if="selected" class="attachment-preview" :aria-label="selected.name">
-      <header><strong>{{ selected.name }}</strong><div><button type="button" class="button" :disabled="working || !savedIds.includes(selected.id)" @click="exportFile">{{ savedIds.includes(selected.id) ? '导出副本' : '保存后可导出' }}</button><button type="button" class="button ghost-button" aria-label="收起附件预览" @click="selectedId = ''">收起</button></div></header>
-      <button v-if="selected.mime.startsWith('image/')" type="button" class="image-preview-trigger" aria-label="查看大图" @click="image = selected"><img decoding="async" :src="assetUrl(selected)" :alt="selected.name"></button>
+      <header><strong>{{ selected.name }}</strong><div><button type="button" class="button" :disabled="working || !savedIds.includes(selected.id)" @click="exportFile">{{ savedIds.includes(selected.id) ? tr('导出副本') : tr('保存后可导出') }}</button><button type="button" class="button ghost-button" :aria-label="tr('收起附件预览')" @click="selectedId = ''">{{ tr('收起') }}</button></div></header>
+      <button v-if="selected.mime.startsWith('image/')" type="button" class="image-preview-trigger" :aria-label="tr('查看大图')" @click="image = selected"><img decoding="async" :src="assetUrl(selected)" :alt="selected.name"></button>
       <pre v-else-if="selected.mime === 'text/plain'">{{ textPreview(selected) }}</pre>
-      <p v-else>此文档不在应用内执行或解析。导出副本后，可使用系统应用打开。</p>
+      <p v-else>{{ tr('此文档不在应用内执行或解析。导出副本后，可使用系统应用打开。') }}</p>
     </section>
     <ImageViewer v-if="image" :src="assetUrl(image)" :title="image.name" @close="image = null" />
   </section>
 </template>
 
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref } from 'vue';
 import AppIcon from './AppIcon.vue';
 import ImageViewer from './ImageViewer.vue';

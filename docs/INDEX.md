@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-10-interface-language.md](plans/2026-10-10-interface-language.md) | 已验收，客户端未发版 | 中英文只切换部分菜单 | 全客户端界面文案与内容语言隔离 |
 | [plans/2026-10-10-component-polish.md](plans/2026-10-10-component-polish.md) | 已验收，客户端未发版 | 设置控件粗糙、广场九宫格未铺满 | 共用控件与短选项菜单精修、九宫格铺满卡片媒体框 |
 | [plans/2026-10-10-square-presentation.md](plans/2026-10-10-square-presentation.md) | 官网已上线，客户端已验收未发版 | 双端广场不好看、首屏加载慢 | 搜索与卡片层级、缩小批次和首屏并行加载 |
 | [plans/2026-10-10-website-polish.md](plans/2026-10-10-website-polish.md) | 已上线 | 官网不够专业、参考 ChatGPT 官网 | 首屏与产品叙事、统一下载页；12 组本地布局及公网回归通过 |

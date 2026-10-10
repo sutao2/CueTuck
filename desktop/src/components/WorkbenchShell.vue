@@ -11,14 +11,14 @@
       data-tauri-drag-region
     >
       <div class="titlebar-left" data-tauri-drag-region>
-        <button type="button" class="sidebar-toggle" data-testid="toggle-sidebar" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!sidebarCollapsed" aria-controls="workbench-sidebar" @click="sidebarCollapsed = !sidebarCollapsed"><AppIcon name="sidebar" /></button>
+        <button type="button" class="sidebar-toggle" data-testid="toggle-sidebar" :aria-label="sidebarCollapsed ? tr('展开侧栏') : tr('收起侧栏')" :aria-expanded="!sidebarCollapsed" aria-controls="workbench-sidebar" @click="sidebarCollapsed = !sidebarCollapsed"><AppIcon name="sidebar" /></button>
       </div>
       <div class="titlebar-center" data-tauri-drag-region>
         <AppIcon :name="space === 'local' ? 'folder' : 'square'" /><span data-tauri-drag-region>{{ taskTitle || locationLabel }}</span>
       </div>
       <div class="titlebar-right">
-        <button type="button" class="title-tool" data-testid="titlebar-search" :title="`全局搜索 ${globalSearchShortcutLabel}`" :disabled="globalSearchBlocked" @click="openGlobalSearch">
-          <AppIcon name="search" /><span>全局搜索</span><kbd>{{ globalSearchShortcutLabel }}</kbd>
+        <button type="button" class="title-tool" data-testid="titlebar-search" :title="tr('全局搜索 {0}', [globalSearchShortcutLabel])" :disabled="globalSearchBlocked" @click="openGlobalSearch">
+          <AppIcon name="search" /><span>{{ tr('全局搜索') }}</span><kbd>{{ globalSearchShortcutLabel }}</kbd>
         </button>
       </div>
     </header>
@@ -28,8 +28,8 @@
         <div class="sidebar-brand-row">
           <span class="brand-name">{{ t("brand") }}</span>
         </div>
-        <p class="nav-group-label">提示词</p>
-        <div class="space-switch" role="tablist" aria-label="提示词空间">
+        <p class="nav-group-label">{{ tr('提示词') }}</p>
+        <div class="space-switch" role="tablist" :aria-label="tr('提示词空间')">
           <button
             type="button"
             class="space-tab"
@@ -55,19 +55,19 @@
         </div>
 
         <p class="nav-group-label">Skills</p>
-        <div class="space-switch" role="tablist" aria-label="Skills 空间">
-          <button type="button" class="space-tab" data-space="skills-square" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'square'" :class="{active:contentKind === 'skills' && skillsMode === 'square'}" @click="openSkills('square')"><span class="nav-icon"><AppIcon name="square"/></span><span>Skill 广场</span></button>
-          <button type="button" class="space-tab" data-space="skills-local" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'local'" :class="{active:contentKind === 'skills' && skillsMode === 'local'}" @click="openSkills('local')"><span class="nav-icon"><AppIcon name="skills"/></span><span>本机 Skills</span></button>
+        <div class="space-switch" role="tablist" :aria-label="tr('Skills 空间')">
+          <button type="button" class="space-tab" data-space="skills-square" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'square'" :class="{active:contentKind === 'skills' && skillsMode === 'square'}" @click="openSkills('square')"><span class="nav-icon"><AppIcon name="square"/></span><span>{{ tr('Skill 广场') }}</span></button>
+          <button type="button" class="space-tab" data-space="skills-local" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'local'" :class="{active:contentKind === 'skills' && skillsMode === 'local'}" @click="openSkills('local')"><span class="nav-icon"><AppIcon name="skills"/></span><span>{{ tr('本机 Skills') }}</span></button>
         </div>
         <div v-show="contentKind === 'prompts'" class="sidebar-toolbar">
           <span>{{ space === "local" ? t("myCategories") : t("exploreCategories") }}</span>
           <div>
-            <button type="button" class="mini-button category-collapse" title="全部折叠" @click="collapseAll">折叠</button>
-            <button v-if="space === 'local'" type="button" class="mini-button" data-testid="add-category" title="新建分类" aria-label="新建分类" @click="startAddCategory">＋</button>
+            <button type="button" class="mini-button category-collapse" :title="tr('全部折叠')" @click="collapseAll">{{ tr('折叠') }}</button>
+            <button v-if="space === 'local'" type="button" class="mini-button" data-testid="add-category" :title="tr('新建分类')" :aria-label="tr('新建分类')" @click="startAddCategory">＋</button>
           </div>
         </div>
 
-        <nav v-show="contentKind === 'prompts'" ref="categoryTree" class="category-tree" aria-label="提示词分类">
+        <nav v-show="contentKind === 'prompts'" ref="categoryTree" class="category-tree" :aria-label="tr('提示词分类')">
           <button
             type="button"
             class="tree-row"
@@ -77,25 +77,25 @@
             <span class="chevron ghost">›</span>
             <span class="tree-icon warm"><AppIcon name="square" /></span>
             <span>{{ t("allPrompts") }}</span>
-            <span class="tree-count" :title="space === 'square' ? '全广场公开条目数，不受当前筛选影响' : undefined">{{ space === 'local' ? allLocalItems.length : squareCategoryTotal ?? '—' }}</span>
+            <span class="tree-count" :title="space === 'square' ? tr('全广场公开条目数，不受当前筛选影响') : undefined">{{ space === 'local' ? allLocalItems.length : squareCategoryTotal ?? '—' }}</span>
           </button>
           <button v-if="space === 'local'" type="button" class="tree-row" data-testid="uncategorized"
             :class="{ active: selectedId === '__uncategorized__' }" @click="selectCategory('__uncategorized__')">
             <span class="chevron ghost">›</span>
             <span class="tree-icon"><AppIcon name="folder" /></span>
-            <span>{{ uiLanguage === 'en' ? 'Uncategorized' : '未分类' }}</span>
+            <span>{{ uiLanguage === 'en' ? 'Uncategorized' : tr('未分类') }}</span>
             <span class="tree-count">{{ categoryCount('__uncategorized__') }}</span>
           </button>
           <div v-for="group in visibleCategoryGroups" :key="group.id" class="tree-group" :class="{ open: group.open }">
             <div class="tree-child-row">
-            <button type="button" class="tree-expand" :aria-label="`${group.open ? '收起' : '展开'} ${group.name}`" :aria-expanded="group.open" @click="toggleGroup(group)"><span class="chevron">›</span></button>
+            <button type="button" class="tree-expand" :aria-label="`${group.open ? tr('收起') : tr('展开')} ${group.name}`" :aria-expanded="group.open" @click="toggleGroup(group)"><span class="chevron">›</span></button>
             <button type="button" class="tree-row tree-parent" :class="{ active: selectedId === group.id }" @click="selectCategory(group.id)">
               <span class="tree-icon" :class="group.tone" :style="space === 'square' && group.color ? { color:group.color } : undefined"><AppIcon :name="space === 'square' && group.icon ? group.icon : group.tone" /></span>
-              <span>{{ group.name }}</span>
-              <span class="tree-count" :title="space === 'square' ? '公开条目数（含子分类），不受当前筛选影响' : undefined">{{ categoryCount(group.id) }}</span>
+              <span>{{ categoryLabel(group) }}</span>
+              <span class="tree-count" :title="space === 'square' ? tr('公开条目数（含子分类），不受当前筛选影响') : undefined">{{ categoryCount(group.id) }}</span>
             </button>
             <button v-if="space === 'local' && !group.is_system" type="button" class="category-delete"
-              :aria-label="`删除分类 ${group.name}`" :title="`删除分类 ${group.name}`" @click="startDeleteCategory(group)">×</button>
+              :aria-label="tr('删除分类 {0}', [group.name])" :title="tr('删除分类 {0}', [group.name])" @click="startDeleteCategory(group)">×</button>
             </div>
             <div class="tree-children">
               <div v-for="child in group.children" :key="child.id" v-show="space === 'local' || child.is_system" class="tree-child-row">
@@ -105,43 +105,43 @@
                 :class="{ active: selectedId === child.id }"
                 @click="selectCategory(child.id)"
               >
-                <span>{{ child.name }}</span>
-                <span class="tree-count" :title="space === 'square' ? '公开条目数，不受当前筛选影响' : undefined">{{ categoryCount(child.id) }}</span>
+                <span>{{ categoryLabel(child) }}</span>
+                <span class="tree-count" :title="space === 'square' ? tr('公开条目数，不受当前筛选影响') : undefined">{{ categoryCount(child.id) }}</span>
               </button>
               <button v-if="space === 'local' && !child.is_system" type="button" class="category-delete"
-                :aria-label="`删除分类 ${child.name}`" :title="`删除分类 ${child.name}`" @click="startDeleteCategory(child)">×</button>
+                :aria-label="tr('删除分类 {0}', [child.name])" :title="tr('删除分类 {0}', [child.name])" @click="startDeleteCategory(child)">×</button>
               </div>
             </div>
           </div>
         </nav>
 
-        <div v-show="contentKind === 'skills'" class="sidebar-toolbar"><span>Skill 分类</span><span>自动分类</span></div>
-        <nav v-show="contentKind === 'skills'" class="category-tree skills-category-tree" aria-label="Skill 分类">
-          <p class="skills-category-scope">{{ skillsMode === 'square' ? `数量范围：${skillsCategorySummary.square?.scope || '正在加载'}` : '数量按 Skill 计，合并同源安装' }}</p>
+        <div v-show="contentKind === 'skills'" class="sidebar-toolbar"><span>{{ tr('Skill 分类') }}</span><span>{{ tr('自动分类') }}</span></div>
+        <nav v-show="contentKind === 'skills'" class="category-tree skills-category-tree" :aria-label="tr('Skill 分类')">
+          <p class="skills-category-scope">{{ skillsMode === 'square' ? tr("数量范围：{0}", [skillsCategorySummary.square?.scope || tr('正在加载')]) : tr('数量按 Skill 计，合并同源安装') }}</p>
           <button v-for="category in skillCategories" :key="category.id" type="button" class="tree-row"
             :data-skill-category="category.id || 'all'" :class="{active:skillsCategories[skillsMode] === category.id}"
             :aria-pressed="skillsCategories[skillsMode] === category.id" :disabled="skillsBusy" @click="selectSkillCategory(category.id)">
-            <span class="tree-icon"><AppIcon :name="category.icon"/></span><span>{{ category.name }}</span>
-            <span class="tree-count" :title="skillsCategorySummary[skillsMode]?.scope">{{ skillsCategorySummary[skillsMode]?.ready ? skillsCategorySummary[skillsMode].counts[category.id] : '—' }}</span>
+            <span class="tree-icon"><AppIcon :name="category.icon"/></span><span>{{ tr(category.name) }}</span>
+            <span class="tree-count" :title="tr(skillsCategorySummary[skillsMode]?.scope)">{{ skillsCategorySummary[skillsMode]?.ready ? skillsCategorySummary[skillsMode].counts[category.id] : '—' }}</span>
           </button>
         </nav>
 
         <div class="sidebar-bottom">
-          <button v-if="session.loggedIn" type="button" data-testid="open-publications" @click="publicationsOpen = true"><AppIcon name="file" /><span>我的发布</span><span class="sidebar-bottom-action">›</span></button>
+          <button v-if="session.loggedIn" type="button" data-testid="open-publications" @click="publicationsOpen = true"><AppIcon name="file" /><span>{{ tr('我的发布') }}</span><span class="sidebar-bottom-action">›</span></button>
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
             <AppIcon name="settings" /><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
           </button>
-          <div v-if="sessionRestoreError" class="session-restore-error" role="status"><span>{{ sessionRestoreError }}</span><button type="button" data-testid="retry-session" :disabled="sessionRestoring" @click="restoreSavedSession">重试</button></div>
+          <div v-if="sessionRestoreError" class="session-restore-error" role="status"><span>{{ tr(sessionRestoreError) }}</span><button type="button" data-testid="retry-session" :disabled="sessionRestoring" @click="restoreSavedSession">{{ tr('重试') }}</button></div>
           <div class="sidebar-account">
             <button type="button" class="account-button" data-testid="open-login"
               :disabled="sessionRestoring" :title="session.loggedIn ? session.email : t('login')" @click="openAccount">
-              <span class="avatar">{{ session.loggedIn ? (session.email?.[0] || "已") : "游" }}</span>
-              <span>{{ sessionRestoring ? "恢复登录中…" : session.loggedIn ? session.email || t("loggedIn") : t("login") }}</span>
+              <span class="avatar">{{ session.loggedIn ? (session.email?.[0] || tr('已')) : tr('游') }}</span>
+              <span>{{ sessionRestoring ? tr('恢复登录中…') : session.loggedIn ? session.email || t("loggedIn") : t("login") }}</span>
             </button>
             <button type="button" class="preference-toggle" :title="dark ? t('switchLight') : t('switchDark')" @click="toggleTheme">
               <AppIcon :name="dark ? 'sun' : 'moon'" />
             </button>
-            <button v-if="['available','downloading','verifying','ready','installing'].includes(updateState.phase)" type="button" class="preference-toggle update-toggle" data-testid="sidebar-update" :title="updateState.phase === 'ready' ? '更新已就绪，点击安装' : '有新版本，查看更新'" aria-label="查看应用更新" @click="settingsPage = 'updates'; settingsOpen = true">
+            <button v-if="['available','downloading','verifying','ready','installing'].includes(updateState.phase)" type="button" class="preference-toggle update-toggle" data-testid="sidebar-update" :title="updateState.phase === 'ready' ? tr('更新已就绪，点击安装') : tr('有新版本，查看更新')" :aria-label="tr('查看应用更新')" @click="settingsPage = 'updates'; settingsOpen = true">
               <AppIcon name="download" /><span class="update-dot" />
             </button>
           </div>
@@ -149,7 +149,7 @@
       </aside>
 
       <div v-show="!sidebarCollapsed && viewportWidth >= 900" class="sidebar-resizer" role="separator" tabindex="0"
-        aria-label="调整侧栏宽度" aria-orientation="vertical" aria-controls="workbench-sidebar"
+        :aria-label="tr('调整侧栏宽度')" aria-orientation="vertical" aria-controls="workbench-sidebar"
         :aria-valuenow="sidebarWidth" :aria-valuemin="200" :aria-valuemax="sidebarMaxWidth"
         @pointerdown="startSidebarResize" @pointermove="moveSidebarResize"
         @pointerup="endSidebarResize" @pointercancel="endSidebarResize"
@@ -162,13 +162,13 @@
             <h1 v-else data-testid="results-heading">{{ resultsHeading }}</h1>
             <div v-if="!(space === 'square' && (squareOffline || squareBlocked))" class="browse-summary">
               <span v-if="space === 'square' && remoteCatalog?.site" data-testid="results-heading">{{ resultsHeading }}</span>
-              <span class="result-count" role="status">{{ space === 'square' && squareLoading ? '正在加载…' : `共 ${space === 'square' ? squareTotal : displayedItems.length} 个结果` }}</span>
+              <span class="result-count" role="status">{{ space === 'square' && squareLoading ? tr('正在加载…') : tr("共 {0} 个结果", [space === 'square' ? squareTotal : displayedItems.length]) }}</span>
             </div>
           </div>
           <div class="content-actions" :inert="batchBusy ? '' : undefined">
-            <button v-if="space === 'local' && prompts.length" type="button" class="button ghost-button" data-testid="select-prompts" @click="selecting = !selecting; selectedPrompts = []">{{ selecting ? '取消多选' : '批量整理' }}</button>
-            <button v-if="space === 'square' && sortTab === '推荐' && dismissedRecommendations.length" type="button" class="button ghost-button" @click="restoreRecommendations">恢复推荐偏好</button>
-            <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="refreshSquare"><AppIcon name="refresh" />{{ sortTab === '推荐' ? (!squareLoading && !squareItems.length && recentRecommendations.length ? '重新浏览' : '换一批') : t("refresh") }}</button>
+            <button v-if="space === 'local' && prompts.length" type="button" class="button ghost-button" data-testid="select-prompts" @click="selecting = !selecting; selectedPrompts = []">{{ selecting ? tr('取消多选') : tr('批量整理') }}</button>
+            <button v-if="space === 'square' && sortTab === '推荐' && dismissedRecommendations.length" type="button" class="button ghost-button" @click="restoreRecommendations">{{ tr('恢复推荐偏好') }}</button>
+            <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="refreshSquare"><AppIcon name="refresh" />{{ sortTab === '推荐' ? (!squareLoading && !squareItems.length && recentRecommendations.length ? tr('重新浏览') : tr('换一批')) : t("refresh") }}</button>
             <button
               v-if="space === 'square'"
               type="button"
@@ -197,8 +197,8 @@
               ref="searchInput"
               v-model="query"
               type="search"
-              :aria-label="space === 'square' ? '搜索标题、标签或作者' : '搜索标题或正文'"
-              :placeholder="space === 'square' ? '搜索标题、标签或作者' : '搜索标题或正文'"
+              :aria-label="space === 'square' ? tr('搜索标题、标签或作者') : tr('搜索标题或正文')"
+              :placeholder="space === 'square' ? tr('搜索标题、标签或作者') : tr('搜索标题或正文')"
               @input="scheduleSearch" @compositionstart="beginSearchComposition" @compositionend="finishSearchComposition"
             >
             <kbd>{{ searchShortcutLabel }}</kbd>
@@ -219,21 +219,21 @@
           </div>
           <div class="filter-spacer"></div>
           <div class="filter-controls">
-            <SearchableSelect class="toolbar-select language-filter" data-testid="language-filter" v-if="space === 'square'" v-model="contentLanguage" aria-label="广场内容语言" :options="[{value:'zh',label:'中文优先'},{value:'original',label:'作者原文'}]" @change="onModelFilter" />
+            <SearchableSelect class="toolbar-select language-filter" data-testid="language-filter" v-if="space === 'square'" v-model="contentLanguage" :aria-label="tr('广场内容语言')" :options="[{value:'zh',label:tr('中文优先')},{value:'original',label:tr('作者原文')}]" @change="onModelFilter" />
           <SearchableSelect class="toolbar-select model-filter" :aria-label="t('model')" :title="modelFilter || t('allModels')" data-testid="model-filter" v-model="modelFilter" @change="onModelFilter" :options="[{value:'',label:t('allModels')}, ...modelOptions.map(name => ({value:name,label:space === 'square' ? remoteCatalog?.models.find(item => item.id === name)?.name || name : name}))]" />
-          <div class="view-switch" aria-label="视图切换">
-            <button type="button" :class="{ active: view === 'grid' }" :aria-pressed="view === 'grid'" title="网格视图" @click="view = 'grid'"><AppIcon name="grid" /></button>
-            <button type="button" :class="{ active: view === 'list' }" :aria-pressed="view === 'list'" title="列表视图" @click="view = 'list'"><AppIcon name="list" /></button>
+          <div class="view-switch" :aria-label="tr('视图切换')">
+            <button type="button" :class="{ active: view === 'grid' }" :aria-pressed="view === 'grid'" :title="tr('网格视图')" @click="view = 'grid'"><AppIcon name="grid" /></button>
+            <button type="button" :class="{ active: view === 'list' }" :aria-pressed="view === 'list'" :title="tr('列表视图')" @click="view = 'list'"><AppIcon name="list" /></button>
           </div>
           </div>
         </section>
-        <p v-if="space === 'square' && sortTab === '推荐'" class="square-sort-note">精选、下载热度与新内容 · 每小时轮换，换一批发现更多</p>
-        <p v-if="space === 'square' && sortTab === '最新'" class="square-sort-note">按上架时间从新到旧排序</p>
-        <p v-if="space === 'square' && sortTab === '热门'" class="square-sort-note" data-testid="square-sort-note">按已记录下载量从高到低排序 · 仅包含开启匿名统计后的下载</p>
+        <p v-if="space === 'square' && sortTab === '推荐'" class="square-sort-note">{{ tr('精选、下载热度与新内容 · 每小时轮换，换一批发现更多') }}</p>
+        <p v-if="space === 'square' && sortTab === '最新'" class="square-sort-note">{{ tr('按上架时间从新到旧排序') }}</p>
+        <p v-if="space === 'square' && sortTab === '热门'" class="square-sort-note" data-testid="square-sort-note">{{ tr('按已记录下载量从高到低排序 · 仅包含开启匿名统计后的下载') }}</p>
 
-        <ContentState v-if="space === 'square' && squareOffline" data-testid="square-offline" kind="error" compact title="暂时无法连接广场" description="广场列表暂时不可用，本地库仍可离线使用。">
-          <button type="button" class="button" data-testid="retry-square" @click="loadSquare(true)">重试</button>
-          <button type="button" class="button" data-testid="go-local" @click="openLocal">前往本地</button>
+        <ContentState v-if="space === 'square' && squareOffline" data-testid="square-offline" kind="error" compact :title="tr('暂时无法连接广场')" :description="tr('广场列表暂时不可用，本地库仍可离线使用。')">
+          <button type="button" class="button" data-testid="retry-square" @click="loadSquare(true)">{{ tr('重试') }}</button>
+          <button type="button" class="button" data-testid="go-local" @click="openLocal">{{ tr('前往本地') }}</button>
         </ContentState>
         <div
           v-if="space === 'square' && squareBlocked"
@@ -242,26 +242,26 @@
         >
           <span>◌</span>
           <div>
-            <strong>已关闭广场访问</strong>
-            <small>未请求广场接口。启动器仍只搜本地。</small>
+            <strong>{{ tr('已关闭广场访问') }}</strong>
+            <small>{{ tr('未请求广场接口。启动器仍只搜本地。') }}</small>
           </div>
-          <button type="button" data-testid="go-local" @click="openLocal">前往本地</button>
+          <button type="button" data-testid="go-local" @click="openLocal">{{ tr('前往本地') }}</button>
         </div>
 
-        <p v-if="operationNote" role="status" data-testid="operation-note" class="use-hint">{{ operationNote }}</p>
-        <p v-if="space === 'square' && catalogError && !squareOffline" role="status" class="use-hint">{{ catalogError }}；当前保留上次可用分类，点击刷新重试。</p>
+        <p v-if="operationNote" role="status" data-testid="operation-note" class="use-hint">{{ tr(operationNote) }}</p>
+        <p v-if="space === 'square' && catalogError && !squareOffline" role="status" class="use-hint">{{ tr(catalogError) }}{{ tr('；当前保留上次可用分类，点击刷新重试。') }}</p>
         <BatchOrganize v-if="selecting && space === 'local'" :prompts="selectedRows" :groups="categoryGroups" :collections="allLocalItems.filter(item => item.member_count !== undefined)"
           :can-select-page="pagePromptIds.some(id => !selectedPrompts.includes(id))"
           @select-page="selectPage" @clear-selection="clearSelection" @busy="batchBusy = $event" :complete="finishBatch" />
         <section class="prompt-section" :aria-busy="space === 'square' && squareLoading">
-          <div v-if="hasContentFilter" class="active-filters" aria-label="当前筛选" :inert="batchBusy ? '' : undefined">
-            <button v-if="query.trim()" type="button" :title="query" @click="clearFilters('query')">搜索：{{ query }} <span aria-hidden="true">×</span></button>
+          <div v-if="hasContentFilter" class="active-filters" :aria-label="tr('当前筛选')" :inert="batchBusy ? '' : undefined">
+            <button v-if="query.trim()" type="button" :title="query" @click="clearFilters('query')">{{ tr('搜索：') }}{{ query }} <span aria-hidden="true">×</span></button>
             <button v-if="selectedId" type="button" @click="clearFilters('category')">{{ selectedLabel }} <span aria-hidden="true">×</span></button>
             <button v-if="modelFilter" type="button" @click="clearFilters('model')">{{ activeModelLabel }} <span aria-hidden="true">×</span></button>
-            <button type="button" class="clear-filters" data-testid="clear-filters" @click="clearFilters()">清除筛选</button>
+            <button type="button" class="clear-filters" data-testid="clear-filters" @click="clearFilters()">{{ tr('清除筛选') }}</button>
           </div>
           <template v-if="!(space === 'square' && (squareOffline || squareBlocked))">
-          <ContentState v-if="space === 'square' && squareLoading" kind="loading" title="正在加载提示词…" data-testid="browse-loading" />
+          <ContentState v-if="space === 'square' && squareLoading" kind="loading" :title="tr('正在加载提示词…')" data-testid="browse-loading" />
           <WindowedPromptGrid
             v-else-if="displayedItems.length"
             :items="space === 'square' ? displayedItems : pagedItems"
@@ -285,10 +285,9 @@
               <LocalPromptCover v-if="space === 'local' && item.kind === 'prompt' && item.image_count" :prompt-id="item.id" :title="item.title" :revision="item.updated_at" />
               <CollectionCover v-if="item.kind === 'collection' && (coverPreview(item).length || item.cover_assets?.length)" :type="item.cover?.layout || item.cover_type" :json="item.cover_json" :item-id="item.id" :files="item.cover_assets || []" variant="card" class="square-reference-cover" data-testid="collection-cover-preview" />
               <label v-if="selecting && space === 'local' && item.kind === 'prompt'" class="card-selection" @click.stop>
-                <input type="checkbox" :checked="selectedPrompts.includes(item.id)" :aria-label="`选择 ${item.title}`" :data-select-prompt="item.id" @change="selectPrompt(item.id)" />选择
-              </label>
+                <input type="checkbox" :checked="selectedPrompts.includes(item.id)" :aria-label="tr('选择 {0}', [item.title])" :data-select-prompt="item.id" @change="selectPrompt(item.id)" />{{ tr('选择') }} </label>
               <div class="card-top">
-                <span v-if="space !== 'square' || item.kind === 'collection'" class="type-badge"><AppIcon :name="item.kind === 'collection' ? 'folder' : 'file'" />{{ item.kind === "collection" ? "合集" : space === "square" ? "广场" : item.source === 'downloaded' ? '已下载' : '提示词' }}</span>
+                <span v-if="space !== 'square' || item.kind === 'collection'" class="type-badge"><AppIcon :name="item.kind === 'collection' ? 'folder' : 'file'" />{{ item.kind === "collection" ? tr('合集') : space === "square" ? tr('广场') : item.source === 'downloaded' ? tr('已下载') : tr('提示词') }}</span>
                 <span v-if="cardCategory(item)" class="card-category" :title="cardCategory(item)">{{ cardCategory(item) }}</span>
                 <span v-if="showModelTags && item.model" class="model-tag" data-testid="model-tag">{{ item.model }}</span>
               </div>
@@ -298,17 +297,17 @@
                 <SearchHighlight :text="cardExcerpt(item)" :query="query" />
               </p>
               <div v-if="item.asset_count" class="card-assets" data-testid="card-assets">
-                <span v-if="item.image_count"><AppIcon name="image" />{{ item.image_count }} 张图片</span>
-                <span v-if="item.asset_count > (item.image_count || 0)"><AppIcon name="file" />{{ item.asset_count - (item.image_count || 0) }} 个文件</span>
+                <span v-if="item.image_count"><AppIcon name="image" />{{ item.image_count }} {{ tr('张图片') }}</span>
+                <span v-if="item.asset_count > (item.image_count || 0)"><AppIcon name="file" />{{ item.asset_count - (item.image_count || 0) }} {{ tr('个文件') }}</span>
               </div>
               <div v-if="space === 'square'" class="square-card-metrics" data-testid="square-card-metrics">
                 <span v-if="item.author" class="prompt-author" data-testid="prompt-author" :title="item.author">{{ item.author }}</span>
-                <span title="已记录匿名下载次数；仅统计开启上报后的成功下载"><AppIcon name="download" />{{ formatMetric(item.download_count) }} <span>下载</span></span>
-                <span title="当前收藏此作品的账号数">☆ {{ formatMetric(item.favorite_count) }} <span>收藏</span></span>
+                <span :title="tr('已记录匿名下载次数；仅统计开启上报后的成功下载')"><AppIcon name="download" />{{ formatMetric(item.download_count) }} <span>{{ tr('下载') }}</span></span>
+                <span :title="tr('当前收藏此作品的账号数')">☆ {{ formatMetric(item.favorite_count) }} <span>{{ tr('收藏') }}</span></span>
               </div>
               <div class="card-footer">
                 <template v-if="space === 'square'">
-                  <button type="button" class="card-action card-primary" data-testid="use-square" :disabled="useBusy" @click.stop="openSquareDetail(item, item.kind !== 'collection')">{{ item.kind === 'collection' ? '选择提示词' : '使用' }}</button>
+                  <button type="button" class="card-action card-primary" data-testid="use-square" :disabled="useBusy" @click.stop="openSquareDetail(item, item.kind !== 'collection')">{{ item.kind === 'collection' ? tr('选择提示词') : tr('使用') }}</button>
                   <button
                     type="button"
                     class="card-action card-icon-action"
@@ -318,51 +317,51 @@
                     :disabled="downloadBusy.includes(item.id)"
                     @click.stop="downloadSquare(item)"
                   >
-                    <AppIcon :name="downloadBusy.includes(item.id) ? 'refresh' : downloadedIds.includes(item.id) ? 'folder' : 'download'" /><span class="sr-only">{{ downloadActionLabel(item.id) }}</span>
+                    <AppIcon :name="downloadBusy.includes(item.id) ? 'refresh' : downloadedIds.includes(item.id) ? 'folder' : 'download'" /><span class="sr-only">{{ tr(downloadActionLabel(item.id)) }}</span>
                   </button>
                   <button
                     type="button"
                     class="card-action card-icon-action"
-                    :title="favoriteIds.includes(item.id) ? '取消广场收藏' : '收藏到广场收藏夹'"
-                    :aria-label="favoriteIds.includes(item.id) ? '取消广场收藏' : '收藏到广场收藏夹'"
+                    :title="favoriteIds.includes(item.id) ? tr('取消广场收藏') : tr('收藏到广场收藏夹')"
+                    :aria-label="favoriteIds.includes(item.id) ? tr('取消广场收藏') : tr('收藏到广场收藏夹')"
                     :aria-pressed="favoriteIds.includes(item.id)"
                     data-testid="favorite-square"
                     :disabled="favoriteBusy.includes(item.id)"
                     @click.stop="favoriteSquare(item)"
                   >
-                    <AppIcon name="star" /><span class="sr-only">{{ favoriteIds.includes(item.id) ? "已收藏" : "收藏" }}</span>
+                    <AppIcon name="star" /><span class="sr-only">{{ favoriteIds.includes(item.id) ? tr('已收藏') : tr('收藏') }}</span>
                   </button>
                 </template>
                 <template v-else-if="item.kind === 'prompt'">
-                  <button type="button" class="card-action card-primary" :disabled="useBusy" @click.stop="startUse(item)">{{ extractVariables(item.content).length ? '填写并复制' : '复制提示词' }}</button>
+                  <button type="button" class="card-action card-primary" :disabled="useBusy" @click.stop="startUse(item)">{{ extractVariables(item.content).length ? tr('填写并复制') : tr('复制提示词') }}</button>
                 </template>
-                <button v-else type="button" class="card-action card-primary" @click.stop="openItem(item)">打开合集</button>
-                <button type="button" v-if="contextActions(item).length" class="card-action card-more" data-testid="card-more" :aria-label="`${item.title}的更多操作`" aria-haspopup="menu" @click.stop="openContextMenu($event, item)">···</button>
+                <button v-else type="button" class="card-action card-primary" @click.stop="openItem(item)">{{ tr('打开合集') }}</button>
+                <button type="button" v-if="contextActions(item).length" class="card-action card-more" data-testid="card-more" :aria-label="tr('{0}的更多操作', [item.title])" aria-haspopup="menu" @click.stop="openContextMenu($event, item)">···</button>
               </div>
             </article>
             </template>
           </WindowedPromptGrid>
           <ContentState v-else class="empty-state" :title="emptyHeading" :description="emptyCopy" :icon="space === 'square' ? 'square' : 'library'">
-            <button v-if="hasContentFilter" type="button" class="button" @click="clearFilters()">清除筛选</button>
+            <button v-if="hasContentFilter" type="button" class="button" @click="clearFilters()">{{ tr('清除筛选') }}</button>
             <div v-else-if="space === 'local' && sortTab === '全部'" class="empty-actions">
-              <button type="button" class="button" data-testid="try-example" @click="exampleDraft = true; creating = true">用示例试一遍</button>
-              <button type="button" class="button primary-button" @click="creating = true">新建提示词</button>
-              <button type="button" class="button" @click="settingsPage = 'data'; settingsOpen = true">导入文件</button>
-              <button type="button" class="button" @click="openSquare">去广场挑选</button>
+              <button type="button" class="button" data-testid="try-example" @click="exampleDraft = true; creating = true">{{ tr('用示例试一遍') }}</button>
+              <button type="button" class="button primary-button" @click="creating = true">{{ tr('新建提示词') }}</button>
+              <button type="button" class="button" @click="settingsPage = 'data'; settingsOpen = true">{{ tr('导入文件') }}</button>
+              <button type="button" class="button" @click="openSquare">{{ tr('去广场挑选') }}</button>
             </div>
           </ContentState>
           <div v-if="space === 'square' && !squareLoading && (squareItems.length || squareNextOffset !== null)" class="browse-pagination" role="status">
-            <span v-if="squareMoreLoading">正在加载更多…</span>
+            <span v-if="squareMoreLoading">{{ tr('正在加载更多…') }}</span>
             <template v-else-if="squareNextOffset !== null">
-              <span v-if="squareMoreError">{{ squareMoreError }} 已有内容仍可浏览。</span>
-              <button type="button" class="button" data-testid="square-load-more" @click="recommendationExpired ? refreshSquare() : loadMoreSquare(true)">{{ recommendationExpired ? '换一批' : squareMoreError ? '重试加载' : '加载更多' }}</button>
+              <span v-if="squareMoreError">{{ tr(squareMoreError) }} {{ tr('已有内容仍可浏览。') }}</span>
+              <button type="button" class="button" data-testid="square-load-more" @click="recommendationExpired ? refreshSquare() : loadMoreSquare(true)">{{ recommendationExpired ? tr('换一批') : squareMoreError ? tr('重试加载') : tr('加载更多') }}</button>
             </template>
-            <span v-else>已显示全部 {{ squareTotal }} 条</span>
+            <span v-else>{{ tr('已显示全部') }} {{ squareTotal }} {{ tr('条') }}</span>
           </div>
-          <nav v-if="space === 'local' && pageCount > 1" class="browse-pagination" aria-label="提示词分页">
-            <button type="button" class="button" :disabled="batchBusy || browsePage === 1" @click="changePage(browsePage - 1)">上一页</button>
-            <span role="status">第 {{ browsePage }} / {{ pageCount }} 页 · 每页 48 条</span>
-            <button type="button" class="button" :disabled="batchBusy || browsePage === pageCount" @click="changePage(browsePage + 1)">下一页</button>
+          <nav v-if="space === 'local' && pageCount > 1" class="browse-pagination" :aria-label="tr('提示词分页')">
+            <button type="button" class="button" :disabled="batchBusy || browsePage === 1" @click="changePage(browsePage - 1)">{{ tr('上一页') }}</button>
+            <span role="status">{{ tr('第') }} {{ browsePage }} / {{ pageCount }} {{ tr('页 · 每页 48 条') }}</span>
+            <button type="button" class="button" :disabled="batchBusy || browsePage === pageCount" @click="changePage(browsePage + 1)">{{ tr('下一页') }}</button>
           </nav>
           </template>
         </section>
@@ -370,19 +369,19 @@
       <SkillsPage v-if="skillsVisited" v-show="contentKind === 'skills' && !hasTaskPage" ref="skillsPage" :mode="skillsMode" :category="skillsCategories[skillsMode]" @categories="skillsCategorySummary[$event.mode] = $event" @busy="skillsBusy = $event"/>
       <div v-show="hasTaskPage" class="task-host" data-testid="task-host">
     <section v-if="addingCategory" v-page-focus="closeCategoryDialog" class="workspace-page category-page" role="region" aria-labelledby="category-page-title">
-      <header class="modal-header"><h2 id="category-page-title">新建分类</h2><button type="button" class="page-back" aria-label="返回" :disabled="categoryBusy" @click="closeCategoryDialog">← 返回</button></header>
+      <header class="modal-header"><h2 id="category-page-title">{{ tr('新建分类') }}</h2><button type="button" class="page-back" :aria-label="tr('返回')" :disabled="categoryBusy" @click="closeCategoryDialog">{{ tr('← 返回') }}</button></header>
       <div class="create-body">
-            <label class="field"><span>所属分类</span>
-              <SearchableSelect v-model="addingCategoryId" data-testid="category-parent" :disabled="categoryBusy" :options="[{value:'',label:'无（新建大分类）'}, ...categoryGroups.map(group => ({value:group.id,label:group.name}))]" />
+            <label class="field"><span>{{ tr('所属分类') }}</span>
+              <SearchableSelect v-model="addingCategoryId" data-testid="category-parent" :disabled="categoryBusy" :options="[{value:'',label:tr('无（新建大分类）')}, ...categoryGroups.map(group => ({value:group.id,label:categoryLabel(group)}))]" />
             </label>
-            <label class="field"><span>分类名称</span>
-              <input v-model="newCategoryName" data-testid="new-category-name" :placeholder="addingCategoryId ? '小分类名称' : '大分类名称'" :disabled="categoryBusy"
+            <label class="field"><span>{{ tr('分类名称') }}</span>
+              <input v-model="newCategoryName" data-testid="new-category-name" :placeholder="addingCategoryId ? tr('小分类名称') : tr('大分类名称')" :disabled="categoryBusy"
                 @keydown.enter.prevent="!$event.isComposing && !$event.repeat && confirmAddCategory()">
             </label>
 
-        <p v-if="categoryError" role="alert" data-testid="category-error">{{ categoryError }}</p>
+        <p v-if="categoryError" role="alert" data-testid="category-error">{{ tr(categoryError) }}</p>
       </div>
-      <footer class="modal-footer"><button type="button" class="button ghost-button" :disabled="categoryBusy" @click="closeCategoryDialog">取消</button><button type="button" class="button primary-button" data-testid="confirm-category" :disabled="categoryBusy || !newCategoryName.trim()" @click="confirmAddCategory">{{ categoryBusy ? '正在创建…' : '创建分类' }}</button></footer>
+      <footer class="modal-footer"><button type="button" class="button ghost-button" :disabled="categoryBusy" @click="closeCategoryDialog">{{ tr('取消') }}</button><button type="button" class="button primary-button" data-testid="confirm-category" :disabled="categoryBusy || !newCategoryName.trim()" @click="confirmAddCategory">{{ categoryBusy ? tr('正在创建…') : tr('创建分类') }}</button></footer>
     </section>
     <section v-if="globalSkillResult" v-page-focus="() => { if (!skillsBusy) globalSkillResult = null; }" class="workspace-page" data-testid="skill-search-detail">
       <SkillsPage :key="globalSkillResult.item.id" :entry="globalSkillResult" @close-entry="globalSkillResult = null" :mode="globalSkillResult.scope === 'skills-local' ? 'local' : 'square'" @busy="skillsBusy = $event" />
@@ -445,7 +444,7 @@
       :use-busy="useBusy"
       @use="startUse($event)"
       :item="squareDetail"
-      :back-label="space === 'local' ? '返回本地列表' : '返回广场'"
+      :back-label="space === 'local' ? tr('返回本地列表') : tr('返回广场')"
       :loading="squareDetailLoading"
       :error="squareDetailError"
       :note="operationNote"
@@ -470,48 +469,48 @@
     <section v-if="publishResume" v-show="!loginReason" v-page-focus="() => !publishBusy && (publishResume = false)" class="workspace-page" data-testid="publish-resume" role="region" aria-labelledby="publish-title">
         <header class="modal-header">
           <div>
-            <h2 id="publish-title">发布到广场</h2>
+            <h2 id="publish-title">{{ tr('发布到广场') }}</h2>
           </div>
-          <button type="button" class="page-back" aria-label="返回" :disabled="publishBusy" @click="publishResume = false">← 返回</button>
+          <button type="button" class="page-back" :aria-label="tr('返回')" :disabled="publishBusy" @click="publishResume = false">{{ tr('← 返回') }}</button>
         </header>
         <PublicationPreview v-if="publishPreview" :title="publishPreview.source.title" :content="publishPreview.source.content" :members="publishPreview.members" :cover="publishPreview.coverAssets.length ? publishPreview.source : null" :assets="publishPreview.assets" :category="remoteCatalog?.categories.find(c => c.id === publishPreview.categoryId)?.name" :model="publishPreview.model" />
         <div v-show="!publishPreview" class="create-body">
-          <p v-if="publishSourcesLoading" role="status">正在读取本地内容…</p>
-          <p v-else-if="publishSourcesError" role="alert">{{ publishSourcesError }} <button type="button" data-testid="retry-publish-sources" @click="openPublish">重新读取</button></p>
-          <p v-else-if="!publishSources.length" role="status">本地库还没有内容，请返回本地提示词新建后再发布。</p>
+          <p v-if="publishSourcesLoading" role="status">{{ tr('正在读取本地内容…') }}</p>
+          <p v-else-if="publishSourcesError" role="alert">{{ tr(publishSourcesError) }} <button type="button" data-testid="retry-publish-sources" @click="openPublish">{{ tr('重新读取') }}</button></p>
+          <p v-else-if="!publishSources.length" role="status">{{ tr('本地库还没有内容，请返回本地提示词新建后再发布。') }}</p>
           <label class="field">
-            <span>本地内容</span>
-            <SearchableSelect v-model="publishSourceId" data-testid="publish-source" :disabled="publishBusy || publishSourcesLoading || Boolean(publishSourcesError)" :options="[{value:'',label:'选择要发布的本地提示词或合集'}, ...publishSources.map(item => ({value:item.id,label:item.title}))]" />
+            <span>{{ tr('本地内容') }}</span>
+            <SearchableSelect v-model="publishSourceId" data-testid="publish-source" :disabled="publishBusy || publishSourcesLoading || Boolean(publishSourcesError)" :options="[{value:'',label:tr('选择要发布的本地提示词或合集')}, ...publishSources.map(item => ({value:item.id,label:item.title}))]" />
           </label>
-          <div class="publish-explainer"><AppIcon name="globe" /><div><strong>分享前确认内容可以公开</strong><p>请移除密钥、个人信息和其他不适合公开的内容。</p></div></div>
-          <label v-if="remoteCatalog" class="field"><span>广场分类</span><SearchableSelect v-model="publishCategoryId" data-testid="publish-category" :disabled="publishBusy" :options="[{value:null,label:'未分类'}, ...remoteCatalog.categories.map(category => ({value:category.id,label:remoteCategoryLabel(category)}))]" /></label>
-          <label v-if="remoteCatalog" class="field"><span>适用模型</span><SearchableSelect v-model="publishModel" data-testid="publish-model" :disabled="publishBusy" :options="[{value:null,label:'通用模型'}, ...(publishModel &amp;&amp; !remoteCatalog.models.some(item => item.id === publishModel) ? [{value:publishModel,label:publishModel+'（原有自定义模型）'}] : []), ...remoteCatalog.models.map(model => ({value:model.id,label:model.name}))]" /></label>
-          <p v-if="catalogError" class="use-hint" role="status">{{ catalogError }}；恢复连接后请重新进入发布页更新分类。</p>
-          <p v-if="operationNote" role="status" class="use-hint">{{ operationNote }}</p>
-          <p>提交后本地正文仍可编辑，审核状态不会覆盖本机内容。</p>
+          <div class="publish-explainer"><AppIcon name="globe" /><div><strong>{{ tr('分享前确认内容可以公开') }}</strong><p>{{ tr('请移除密钥、个人信息和其他不适合公开的内容。') }}</p></div></div>
+          <label v-if="remoteCatalog" class="field"><span>{{ tr('广场分类') }}</span><SearchableSelect v-model="publishCategoryId" data-testid="publish-category" :disabled="publishBusy" :options="[{value:null,label:tr('未分类')}, ...remoteCatalog.categories.map(category => ({value:category.id,label:remoteCategoryLabel(category)}))]" /></label>
+          <label v-if="remoteCatalog" class="field"><span>{{ tr('适用模型') }}</span><SearchableSelect v-model="publishModel" data-testid="publish-model" :disabled="publishBusy" :options="[{value:null,label:tr('通用模型')}, ...(publishModel &amp;&amp; !remoteCatalog.models.some(item => item.id === publishModel) ? [{value:publishModel,label:publishModel+'（原有自定义模型）'}] : []), ...remoteCatalog.models.map(model => ({value:model.id,label:model.name}))]" /></label>
+          <p v-if="catalogError" class="use-hint" role="status">{{ tr(catalogError) }}{{ tr('；恢复连接后请重新进入发布页更新分类。') }}</p>
+          <p v-if="operationNote" role="status" class="use-hint">{{ tr(operationNote) }}</p>
+          <p>{{ tr('提交后本地正文仍可编辑，审核状态不会覆盖本机内容。') }}</p>
           <fieldset v-if="publishCoverSource" class="publication-files" :disabled="publishBusy">
-            <legend>合集封面</legend>
-            <label><input v-model="publishCoverIncluded" type="checkbox" data-testid="publish-cover">同时发布合集封面</label>
-            <p class="use-hint">封面图片将上传并接受审核，通过后公开。取消勾选只发布合集内容。</p>
+            <legend>{{ tr('合集封面') }}</legend>
+            <label><input v-model="publishCoverIncluded" type="checkbox" data-testid="publish-cover">{{ tr('同时发布合集封面') }}</label>
+            <p class="use-hint">{{ tr('封面图片将上传并接受审核，通过后公开。取消勾选只发布合集内容。') }}</p>
             <CollectionCover :type="publishCoverSource.cover_type" :json="publishCoverSource.cover_json" />
           </fieldset>
           <fieldset class="publication-files" :disabled="publishBusy || publishAssetsLoading">
-            <legend>公开附件 · 可选</legend>
-            <p class="use-hint">默认不公开任何附件。勾选的文件会上传并交由审核，通过后所有可访问广场的人都能下载；已下载副本无法撤回。</p>
-            <p v-if="publishAssetsLoading" role="status">正在读取附件…</p>
-            <p v-else-if="publishAssetsError" role="alert">{{ publishAssetsError }} <button type="button" @click="loadPublishAssets">重试</button></p>
-            <p v-else-if="!publishAssets.length" class="use-hint">所选内容没有附件。</p>
+            <legend>{{ tr('公开附件 · 可选') }}</legend>
+            <p class="use-hint">{{ tr('默认不公开任何附件。勾选的文件会上传并交由审核，通过后所有可访问广场的人都能下载；已下载副本无法撤回。') }}</p>
+            <p v-if="publishAssetsLoading" role="status">{{ tr('正在读取附件…') }}</p>
+            <p v-else-if="publishAssetsError" role="alert">{{ tr(publishAssetsError) }} <button type="button" @click="loadPublishAssets">{{ tr('重试') }}</button></p>
+            <p v-else-if="!publishAssets.length" class="use-hint">{{ tr('所选内容没有附件。') }}</p>
             <div v-if="publishAssets.some(asset => asset.mime.startsWith('image/'))" class="publication-image-summary">
-              <span>已选择 {{ publishAssets.filter(asset => asset.mime.startsWith('image/') && publishAssetIds.includes(asset.id)).length }} 张图片</span>
-              <button type="button" class="button ghost-button" data-testid="select-publish-images" @click="publishAssetIds = [...new Set([...publishAssetIds, ...publishAssets.filter(asset => asset.mime.startsWith('image/')).map(asset => asset.id)])]">选择全部图片</button>
-              <p v-if="!publishAssets.some(asset => asset.mime.startsWith('image/') && publishAssetIds.includes(asset.id))" role="status">尚未选择图片，本次发布不会包含本地图片。</p>
+              <span>{{ tr('已选择') }} {{ publishAssets.filter(asset => asset.mime.startsWith('image/') && publishAssetIds.includes(asset.id)).length }} {{ tr('张图片') }}</span>
+              <button type="button" class="button ghost-button" data-testid="select-publish-images" @click="publishAssetIds = [...new Set([...publishAssetIds, ...publishAssets.filter(asset => asset.mime.startsWith('image/')).map(asset => asset.id)])]">{{ tr('选择全部图片') }}</button>
+              <p v-if="!publishAssets.some(asset => asset.mime.startsWith('image/') && publishAssetIds.includes(asset.id))" role="status">{{ tr('尚未选择图片，本次发布不会包含本地图片。') }}</p>
             </div>
-            <label v-for="asset in publishAssets" :key="asset.id" class="publication-file"><input v-model="publishAssetIds" type="checkbox" :value="asset.id" data-testid="publish-asset"><img v-if="asset.mime.startsWith('image/')" class="publication-image-preview" :src="assetUrl(asset)" :alt="asset.name" loading="lazy"><span>{{ asset.name }}<small v-if="asset.memberTitle">所属提示词：{{ asset.memberTitle }}</small><small>{{ formatBytes(assetSize(asset)) }} · {{ asset.mime }}</small></span></label>
+            <label v-for="asset in publishAssets" :key="asset.id" class="publication-file"><input v-model="publishAssetIds" type="checkbox" :value="asset.id" data-testid="publish-asset"><img v-if="asset.mime.startsWith('image/')" class="publication-image-preview" :src="assetUrl(asset)" :alt="asset.name" loading="lazy"><span>{{ asset.name }}<small v-if="asset.memberTitle">{{ tr('所属提示词：') }}{{ asset.memberTitle }}</small><small>{{ formatBytes(assetSize(asset)) }} · {{ asset.mime }}</small></span></label>
           </fieldset>
         </div>
-        <p v-if="publishPreview && operationNote" role="status">{{ operationNote }}</p>
+        <p v-if="publishPreview && operationNote" role="status">{{ tr(operationNote) }}</p>
         <footer class="modal-footer">
-          <button type="button" class="button ghost-button" :disabled="publishBusy" @click="publishPreview ? (publishPreview = null) : (publishResume = false)">{{ publishPreview ? '返回修改' : '返回' }}</button>
+          <button type="button" class="button ghost-button" :disabled="publishBusy" @click="publishPreview ? (publishPreview = null) : (publishResume = false)">{{ publishPreview ? tr('返回修改') : tr('返回') }}</button>
           <button
             type="button"
             class="button primary-button"
@@ -519,7 +518,7 @@
             :disabled="!publishSourceId || publishBusy || publishSourcesLoading || Boolean(publishSourcesError) || publishAssetsLoading || Boolean(publishAssetsError)"
             @click="publishPreview ? submitPublish() : previewPublish()"
           >
-            {{ publishBusy ? '正在处理…' : publishPreview ? '确认提交审核' : '预览发布' }}
+            {{ publishBusy ? tr('正在处理…') : publishPreview ? tr('确认提交审核') : tr('预览发布') }}
           </button>
         </footer>
       </section>
@@ -531,31 +530,31 @@
       <div class="modal-backdrop" @click="closeCategoryDialog"></div>
       <section v-dialog-focus="closeCategoryDialog" class="modal category-modal" :role="deletingCategory ? 'alertdialog' : 'dialog'" aria-modal="true" aria-labelledby="category-dialog-title" :aria-busy="categoryBusy">
         <header class="modal-header">
-          <h2 id="category-dialog-title">{{ deletingCategory ? '删除分类' : '新建分类' }}</h2>
-          <button type="button" class="modal-close" aria-label="关闭分类窗口" :disabled="categoryBusy" @click="closeCategoryDialog">×</button>
+          <h2 id="category-dialog-title">{{ deletingCategory ? tr('删除分类') : tr('新建分类') }}</h2>
+          <button type="button" class="modal-close" :aria-label="tr('关闭分类窗口')" :disabled="categoryBusy" @click="closeCategoryDialog">×</button>
         </header>
         <div class="create-body">
-          <p v-if="deletingCategory">删除「{{ deletingCategory.name }}」？该分类中的提示词和合集会移到“未分类”，不会删除正文或合集成员。</p>
-          <p v-if="categoryError" role="alert" data-testid="category-error">{{ categoryError }}</p>
+          <p v-if="deletingCategory">{{ tr('删除「') }}{{ deletingCategory.name }}{{ tr('」？该分类中的提示词和合集会移到“未分类”，不会删除正文或合集成员。') }}</p>
+          <p v-if="categoryError" role="alert" data-testid="category-error">{{ tr(categoryError) }}</p>
         </div>
         <footer class="modal-footer">
-          <button type="button" class="button ghost-button" :data-dialog-autofocus="deletingCategory ? '' : undefined" :disabled="categoryBusy" @click="closeCategoryDialog">取消</button>
-          <button v-if="deletingCategory" type="button" class="button danger-button" data-testid="confirm-delete-category" :disabled="categoryBusy" @click="confirmDeleteCategory">{{ categoryBusy ? '正在删除…' : '删除分类' }}</button>
+          <button type="button" class="button ghost-button" :data-dialog-autofocus="deletingCategory ? '' : undefined" :disabled="categoryBusy" @click="closeCategoryDialog">{{ tr('取消') }}</button>
+          <button v-if="deletingCategory" type="button" class="button danger-button" data-testid="confirm-delete-category" :disabled="categoryBusy" @click="confirmDeleteCategory">{{ categoryBusy ? tr('正在删除…') : tr('删除分类') }}</button>
         </footer>
       </section>
     </div>
 
-    <div v-if="pendingDelete" class="download-notice" data-testid="delete-confirmation" role="group" aria-label="确认删除">
-      <span>删除「{{ pendingDelete.title }}」？{{ pendingDelete.kind === 'collection' ? '合集内的提示词会保留。' : '将从本地列表移除。' }}</span>
-      <button ref="cancelDeleteButton" type="button" :disabled="editorBusy" @click="pendingDelete = null">取消</button>
-      <button type="button" :disabled="editorBusy" data-testid="confirm-delete" @click="confirmRemovePrompt">{{ editorBusy ? '正在删除…' : '确认删除' }}</button>
+    <div v-if="pendingDelete" class="download-notice" data-testid="delete-confirmation" role="group" :aria-label="tr('确认删除')">
+      <span>{{ tr('删除「') }}{{ pendingDelete.title }}」？{{ pendingDelete.kind === 'collection' ? tr('合集内的提示词会保留。') : tr('将从本地列表移除。') }}</span>
+      <button ref="cancelDeleteButton" type="button" :disabled="editorBusy" @click="pendingDelete = null">{{ tr('取消') }}</button>
+      <button type="button" :disabled="editorBusy" data-testid="confirm-delete" @click="confirmRemovePrompt">{{ editorBusy ? tr('正在删除…') : tr('确认删除') }}</button>
     </div>
     <div v-if="operationNotice" class="download-notice" :class="{ 'notice-above-confirmation': pendingDelete }" :data-testid="operationNotice.kind + '-notice'" role="status" aria-live="polite">
-      <span>{{ operationNotice.text }}</span>
-      <button v-if="operationNotice.undo" type="button" data-testid="undo-delete" :disabled="globalSearchBlocked" @click="undoDelete">撤销删除</button>
-      <button v-if="operationNotice.retry" type="button" data-testid="retry-operation-refresh" :disabled="operationRefreshBusy || space !== 'local'" @click="retryOperationRefresh">{{ space !== 'local' ? '请回到本地刷新' : operationRefreshBusy ? '正在刷新…' : '重试刷新' }}</button>
-      <button v-if="operationNotice.success && operationNotice.kind === 'download'" type="button" @click="closeSquareDetail(); openLocal(); operationNotice = null">前往本地</button>
-      <button type="button" aria-label="关闭提示" @click="operationNotice = null">×</button>
+      <span>{{ tr(operationNotice.text) }}</span>
+      <button v-if="operationNotice.undo" type="button" data-testid="undo-delete" :disabled="globalSearchBlocked" @click="undoDelete">{{ tr('撤销删除') }}</button>
+      <button v-if="operationNotice.retry" type="button" data-testid="retry-operation-refresh" :disabled="operationRefreshBusy || space !== 'local'" @click="retryOperationRefresh">{{ space !== 'local' ? tr('请回到本地刷新') : operationRefreshBusy ? tr('正在刷新…') : tr('重试刷新') }}</button>
+      <button v-if="operationNotice.success && operationNotice.kind === 'download'" type="button" @click="closeSquareDetail(); openLocal(); operationNotice = null">{{ tr('前往本地') }}</button>
+      <button type="button" :aria-label="tr('关闭提示')" @click="operationNotice = null">×</button>
     </div>
 
     <GlobalSearch v-if="globalSearchOpen" @close="globalSearchOpen = false" @select="openGlobalResult" />
@@ -595,7 +594,7 @@
         class="context-menu"
         data-testid="context-menu"
         role="menu"
-        aria-label="提示词操作"
+        :aria-label="tr('提示词操作')"
         @keydown="onMenuKeydown"
         :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
         @click.stop
@@ -609,7 +608,7 @@
           :disabled="action.disabled"
           @click="runContextAction(action.id)"
         >
-          {{ action.label }}
+          {{ tr(action.label) }}
         </button>
       </div>
     </div>
@@ -619,11 +618,11 @@
         <span>{{ t("localFirst") }}</span>
       </span>
       <span class="status-sep"></span>
-      <span class="status-item">{{ databaseLabel }}</span>
-      <span class="status-item">本地 <strong>{{ localCount }}</strong> 条</span>
+      <span class="status-item">{{ tr(databaseLabel) }}</span>
+      <span class="status-item">{{ tr('本地') }} <strong>{{ localCount }}</strong> {{ tr('条') }}</span>
       <SyncStatus :session="session" @open="openStatusSettings('sync')" />
       <span class="status-spacer"></span>
-      <button v-if="shortcutStatus.error" type="button" class="status-button" data-testid="shortcut-warning" :title="shortcutStatus.error" @click="openStatusSettings('shortcuts')">快捷键异常 · 点击修复</button>
+      <button v-if="shortcutStatus.error" type="button" class="status-button" data-testid="shortcut-warning" :title="tr(shortcutStatus.error)" @click="openStatusSettings('shortcuts')">{{ tr('快捷键异常 · 点击修复') }}</button>
       <button type="button" class="status-button" @click="$emit('open-launcher')">
         <AppIcon name="search" /> {{ t("launcher") }} <kbd v-if="!shortcutStatus.error">{{ shortcutLabel }}</kbd>
       </button>
@@ -633,6 +632,7 @@
 </template>
 
 <script setup>
+import { categoryLabel, tr, interfaceLanguage, applyInterfaceLanguage } from '../platform/interfaceLanguage.js';
 import SearchableSelect from "./SearchableSelect.vue";
 import { formatMetric } from '../platform/contentMetrics.js';
 import AppIcon from "./AppIcon.vue";
@@ -1021,7 +1021,7 @@ const seenModels = ref([]);
 const defaultModel = ref("");
 const showModelTags = ref(true);
 const variableHints = ref(false);
-const uiLanguage = ref("zh");
+const uiLanguage = interfaceLanguage;
 
 function t(key) {
   return uiText(uiLanguage.value, key);
@@ -1086,9 +1086,9 @@ const selectedLabel = computed(() => {
   if (!selectedId.value) return t("allPrompts");
   if (selectedId.value === "__uncategorized__") return uiLanguage.value === "en" ? "Uncategorized" : "未分类";
   for (const group of visibleCategoryGroups.value) {
-    if (group.id === selectedId.value) return group.name;
+    if (group.id === selectedId.value) return categoryLabel(group);
     const child = group.children.find((item) => item.id === selectedId.value);
-    if (child) return child.name;
+    if (child) return categoryLabel(child);
   }
   return t("allPrompts");
 });
@@ -1099,10 +1099,10 @@ const modelOptions = computed(() =>
 const hasContentFilter = computed(() => Boolean(query.value.trim() || selectedId.value || modelFilter.value));
 const activeModelLabel = computed(() => space.value === 'square' ? remoteCatalog.value?.models.find(item => item.id === modelFilter.value)?.name || modelFilter.value : modelFilter.value);
 const resultsHeading = computed(() => {
-  if (query.value.trim()) return '搜索结果';
+  if (query.value.trim()) return tr('搜索结果');
   if (selectedId.value) return selectedLabel.value;
-  if (space.value === 'local') return sortTab.value === '全部' ? selectedLabel.value : sortTab.value === '最近' ? '最近使用' : '我的收藏';
-  return ({ 推荐: '推荐提示词', 最新: '最新发布', 热门: '热门提示词', 收藏: '我的收藏' })[sortTab.value];
+  if (space.value === 'local') return sortTab.value === '全部' ? selectedLabel.value : sortTab.value === '最近' ? tr('最近使用') : tr('我的收藏');
+  return ({ 推荐: tr('推荐提示词'), 最新: tr('最新发布'), 热门: tr('热门提示词'), 收藏: tr('我的收藏') })[sortTab.value];
 });
 async function clearFilters(field) {
   if (batchBusy.value) return;
@@ -1122,13 +1122,13 @@ const emptyHeading = computed(() => {
 });
 const emptyCopy = computed(() => {
   if (hasContentFilter.value && !(space.value === 'square' && squareOffline.value)) return t('emptyFilteredHint');
-  if (sortTab.value === '最近') return '使用过的提示词会出现在这里，方便下次继续。';
-  if (sortTab.value === '收藏') return space.value === 'local' ? '点击提示词的「···」选择收藏，在这里快速找到常用内容。' : '收藏喜欢的社区提示词后，可在这里再次找到。';
+  if (sortTab.value === '最近') return tr('使用过的提示词会出现在这里，方便下次继续。');
+  if (sortTab.value === '收藏') return space.value === 'local' ? tr('点击提示词的「···」选择收藏，在这里快速找到常用内容。') : tr('收藏喜欢的社区提示词后，可在这里再次找到。');
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
-const locationLabel = computed(() => contentKind.value === "skills" ? (skillsMode.value === "local" ? "本机 Skills" : "Skill 广场") : (space.value === "square" ? t("square") : t("local")));
+const locationLabel = computed(() => contentKind.value === "skills" ? (skillsMode.value === "local" ? tr("本机 Skills") : tr("Skill 广场")) : (space.value === "square" ? t("square") : t("local")));
 const hasTaskPage = computed(() => Boolean(globalSkillResult.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
-const taskTitle = computed(() => globalSkillResult.value ? globalSkillResult.value.item.title : publicationsOpen.value ? '我的发布' : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? '登录账号' : creating.value ? '新建' : editing.value ? '编辑' : using.value ? '使用提示词' : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? '发布到广场' : addingCategory.value ? '新建分类' : '');
+const taskTitle = computed(() => globalSkillResult.value ? globalSkillResult.value.item.title : publicationsOpen.value ? tr('我的发布') : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? tr('登录账号') : creating.value ? tr('新建') : editing.value ? tr('编辑') : using.value ? tr('使用提示词') : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? tr('发布到广场') : addingCategory.value ? tr('新建分类') : '');
 
 function guardSidebarNavigation(event) {
   if (batchBusy.value || skillsBusy.value || publicationsBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
@@ -1743,15 +1743,14 @@ async function loadModelPrefs() {
   showModelTags.value = (await getLocalSetting("show_model_tags")) !== "0";
   variableHints.value = (await getLocalSetting("variable_hints")) === "1";
   const storedLang = await getLocalSetting("ui_language");
-  uiLanguage.value = storedLang === "en" ? "en" : "zh";
-  document.documentElement.lang = uiLanguage.value === "en" ? "en" : "zh-CN";
+  applyInterfaceLanguage(storedLang);
   document.body.dataset.density = (await getLocalSetting('density')) === 'compact' ? 'compact' : 'comfortable';
 }
 
 async function applyUiLanguage(next) {
-  uiLanguage.value = next === "en" ? "en" : "zh";
-  document.documentElement.lang = uiLanguage.value === "en" ? "en" : "zh-CN";
-  await setLocalSetting("ui_language", uiLanguage.value);
+  const value = next === "en" ? "en" : "zh";
+  await setLocalSetting("ui_language", value);
+  applyInterfaceLanguage(value);
 }
 
 function onModelFilter() {
@@ -1958,7 +1957,8 @@ function coverPreview(item) {
 
 function cardCategory(item) {
   if (!item.category_id) return '';
-  return (space.value === 'square' ? remoteCatalog.value?.categories.find(c => c.id === item.category_id) : categoryById(item.category_id))?.name ?? '';
+  const category = space.value === 'square' ? remoteCatalog.value?.categories.find(c => c.id === item.category_id) : categoryById(item.category_id);
+  return categoryLabel(category);
 }
 
 async function savePrompt({ id, kind, title, content, categoryId, model, coverType, coverUrls, assets }) {

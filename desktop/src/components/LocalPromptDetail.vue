@@ -1,27 +1,28 @@
 <template>
   <section v-page-focus="() => $emit('cancel')" class="workspace-page" data-testid="local-detail" aria-labelledby="local-detail-title">
     <header class="modal-header">
-      <div><p class="modal-kicker">{{ prompt.source === 'downloaded' ? '本地副本' : '本地提示词' }}</p><h2 id="local-detail-title">{{ prompt.title }}</h2></div>
-      <button class="page-back" type="button" @click="$emit('cancel')">← 返回</button>
+      <div><p class="modal-kicker">{{ prompt.source === 'downloaded' ? tr('本地副本') : tr('本地提示词') }}</p><h2 id="local-detail-title">{{ prompt.title }}</h2></div>
+      <button class="page-back" type="button" @click="$emit('cancel')">{{ tr('← 返回') }}</button>
     </header>
     <div class="create-body">
       <p v-if="prompt.model || prompt.author" class="use-hint">{{ [prompt.model, prompt.author].filter(Boolean).join(' · ') }}</p>
       <PromptLanguage :text="prompt.content" @change="translated = $event" />
-      <pre class="reading-content">{{ translated || '还没有正文' }}</pre>
+      <pre class="reading-content">{{ translated || tr('还没有正文') }}</pre>
       <template v-if="prompt.asset_count">
-        <h3>参考资料</h3>
-        <p v-if="loading" role="status">正在读取附件…</p>
-        <p v-else-if="error" role="alert">{{ error }} <button type="button" class="button" @click="load">重试</button></p>
+        <h3>{{ tr('参考资料') }}</h3>
+        <p v-if="loading" role="status">{{ tr('正在读取附件…') }}</p>
+        <p v-else-if="error" role="alert">{{ tr(error) }} <button type="button" class="button" @click="load">{{ tr('重试') }}</button></p>
         <AttachmentPanel v-else :model-value="assets" :prompt-id="prompt.id" :saved-ids="assets.map(a => a.id)" readonly />
       </template>
     </div>
     <footer class="modal-footer">
-      <button type="button" class="button ghost-button" data-testid="detail-edit" @click="$emit('edit')">编辑</button>
-      <button type="button" class="button primary-button" @click="$emit('use', { ...prompt, content: translated || prompt.content })">使用提示词</button>
+      <button type="button" class="button ghost-button" data-testid="detail-edit" @click="$emit('edit')">{{ tr('编辑') }}</button>
+      <button type="button" class="button primary-button" @click="$emit('use', { ...prompt, content: translated || prompt.content })">{{ tr('使用提示词') }}</button>
     </footer>
   </section>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { onMounted, ref } from 'vue';
 import { vPageFocus } from '../lib/pageFocus.js';
 import { listPromptAssets } from '../platform/assets.js';

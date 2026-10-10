@@ -1,14 +1,15 @@
 <template>
-  <section v-if="references.length" class="published-files" aria-label="公开附件">
-    <h3>附件 <span>{{ references.length }}</span></h3>
-    <p>查看时联网加载；下载到本地会一并保存全部附件。</p>
-    <div v-for="file in references" :key="file.id" class="file-row"><div><strong>{{ file.name }}</strong><small>{{ formatBytes(file.size) }} · {{ file.mime }}</small></div><button type="button" class="button ghost-button" :disabled="Boolean(busy)" @click="preview(file)">{{ busy === file.id ? '正在加载…' : '查看' }}</button></div>
-    <p v-if="error" role="alert">{{ error }}</p>
-    <div v-if="asset" class="file-preview"><header><strong>{{ asset.name }}</strong><button class="button ghost-button" @click="asset = null">收起</button></header><button v-if="asset.mime.startsWith('image/')" class="image-preview-trigger" type="button" aria-label="查看大图" @click="image = asset"><img :src="assetUrl(asset)" :alt="asset.name"></button><pre v-else-if="asset.mime === 'text/plain'">{{ textPreview(asset) }}</pre><p v-else>此文档不在应用内执行。请下载提示词到本地后，在附件区导出查看。</p></div>
+  <section v-if="references.length" class="published-files" :aria-label="tr('公开附件')">
+    <h3>{{ tr('附件') }} <span>{{ references.length }}</span></h3>
+    <p>{{ tr('查看时联网加载；下载到本地会一并保存全部附件。') }}</p>
+    <div v-for="file in references" :key="file.id" class="file-row"><div><strong>{{ file.name }}</strong><small>{{ formatBytes(file.size) }} · {{ file.mime }}</small></div><button type="button" class="button ghost-button" :disabled="Boolean(busy)" @click="preview(file)">{{ busy === file.id ? tr('正在加载…') : tr('查看') }}</button></div>
+    <p v-if="error" role="alert">{{ tr(error) }}</p>
+    <div v-if="asset" class="file-preview"><header><strong>{{ asset.name }}</strong><button class="button ghost-button" @click="asset = null">{{ tr('收起') }}</button></header><button v-if="asset.mime.startsWith('image/')" class="image-preview-trigger" type="button" :aria-label="tr('查看大图')" @click="image = asset"><img :src="assetUrl(asset)" :alt="asset.name"></button><pre v-else-if="asset.mime === 'text/plain'">{{ textPreview(asset) }}</pre><p v-else>{{ tr('此文档不在应用内执行。请下载提示词到本地后，在附件区导出查看。') }}</p></div>
     <ImageViewer v-if="image" :src="assetUrl(image)" :title="image.name" @close="image = null" />
   </section>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { ref, watch, onUnmounted } from 'vue';
 import { formatBytes, assetUrl, textPreview } from '../platform/assets.js';
 import { downloadPublishedAsset } from '../platform/privateMedia.js';

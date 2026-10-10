@@ -2,40 +2,41 @@
   <div class="global-search-layer" @click.self="$emit('close')">
     <section v-dialog-focus="() => $emit('close')" class="global-search-panel" role="dialog" aria-modal="true" aria-labelledby="global-search-title">
       <header class="global-search-header">
-        <h2 id="global-search-title">全局搜索</h2>
-        <button type="button" class="global-search-close" aria-label="关闭全局搜索" @click="$emit('close')"><kbd>Esc</kbd></button>
+        <h2 id="global-search-title">{{ tr('全局搜索') }}</h2>
+        <button type="button" class="global-search-close" :aria-label="tr('关闭全局搜索')" @click="$emit('close')"><kbd>Esc</kbd></button>
       </header>
-      <div class="global-search-scopes" role="group" aria-label="搜索范围">
+      <div class="global-search-scopes" role="group" :aria-label="tr('搜索范围')">
         <button v-for="option in scopes" :key="option.id" type="button" :aria-pressed="scope === option.id" :data-search-scope="option.id" @click="scope = option.id">
-          <AppIcon :name="option.id === 'local' ? 'library' : 'globe'" />{{ option.label }}
+          <AppIcon :name="option.id === 'local' ? 'library' : 'globe'" />{{ tr(option.label) }}
         </button>
       </div>
       <div class="global-search-field">
         <AppIcon name="search" />
-        <input v-model="query" data-testid="global-search-input" data-dialog-autofocus type="search" role="combobox" aria-label="全局搜索关键词" aria-autocomplete="list" aria-controls="global-search-results" :aria-expanded="results.length > 0" :aria-activedescendant="results.length ? `global-result-${active}` : undefined" :placeholder="scope === 'local' ? '搜索全部本地提示词和合集…' : scope.includes('skills') ? '搜索 Skill 名称或描述…' : '搜索广场标题、标签或作者…'" @keydown="onKeydown" @compositionstart="composing = true; schedule()" @compositionend="composing = false; schedule()" />
+        <input v-model="query" data-testid="global-search-input" data-dialog-autofocus type="search" role="combobox" :aria-label="tr('全局搜索关键词')" aria-autocomplete="list" aria-controls="global-search-results" :aria-expanded="results.length > 0" :aria-activedescendant="results.length ? `global-result-${active}` : undefined" :placeholder="scope === 'local' ? tr('搜索全部本地提示词和合集…') : scope.includes('skills') ? tr('搜索 Skill 名称或描述…') : tr('搜索广场标题、标签或作者…')" @keydown="onKeydown" @compositionstart="composing = true; schedule()" @compositionend="composing = false; schedule()" />
       </div>
-      <p class="global-search-summary" role="status" aria-live="polite">{{ statusText }}</p>
+      <p class="global-search-summary" role="status" aria-live="polite">{{ tr(statusText) }}</p>
       <div v-if="error" class="global-search-empty" role="alert">
-        <p>{{ error }}</p><button type="button" class="button ghost-button" @click="search">重试搜索</button>
+        <p>{{ tr(error) }}</p><button type="button" class="button ghost-button" @click="search">{{ tr('重试搜索') }}</button>
       </div>
       <div v-else-if="!results.length" class="global-search-empty">
         <AppIcon :name="scope === 'local' ? 'library' : 'globe'" />
-        <p>{{ blocked ? '广场访问已关闭' : !query.trim() ? '从这里查找，不必离开当前页面' : loading ? '正在查找…' : '没有找到匹配内容' }}</p>
-        <small>{{ blocked ? '可在设置的网络页面开启广场访问。' : !query.trim() ? '不受当前分类、模型或页面筛选影响' : loading ? '稍等片刻' : '试试更短的关键词，或切换搜索范围' }}</small>
+        <p>{{ blocked ? tr('广场访问已关闭') : !query.trim() ? tr('从这里查找，不必离开当前页面') : loading ? tr('正在查找…') : tr('没有找到匹配内容') }}</p>
+        <small>{{ blocked ? tr('可在设置的网络页面开启广场访问。') : !query.trim() ? tr('不受当前分类、模型或页面筛选影响') : loading ? tr('稍等片刻') : tr('试试更短的关键词，或切换搜索范围') }}</small>
       </div>
-      <div id="global-search-results" ref="resultList" class="global-search-results" role="listbox" aria-label="搜索结果" :aria-busy="loading">
+      <div id="global-search-results" ref="resultList" class="global-search-results" role="listbox" :aria-label="tr('搜索结果')" :aria-busy="loading">
         <button v-for="(row, index) in results" :id="`global-result-${index}`" :key="row.item.id" type="button" role="option" tabindex="-1" :aria-selected="active === index" class="global-search-result" @click="choose(row)">
           <span class="global-search-kind"><AppIcon :name="row.item.kind === 'collection' ? 'folder' : 'file'" /></span>
-          <span class="global-search-result-copy"><strong><SearchHighlight :text="row.item.title" :query="query" /></strong><small><SearchHighlight :text="row.excerpt || '暂无摘要'" :query="query" /></small></span>
-          <span class="global-search-type">{{ row.item.kind === 'skill' ? 'Skill' : row.item.kind === 'collection' ? '合集' : '提示词' }}</span>
+          <span class="global-search-result-copy"><strong><SearchHighlight :text="row.item.title" :query="query" /></strong><small><SearchHighlight :text="row.excerpt || tr('暂无摘要')" :query="query" /></small></span>
+          <span class="global-search-type">{{ row.item.kind === 'skill' ? 'Skill' : row.item.kind === 'collection' ? tr('合集') : tr('提示词') }}</span>
         </button>
       </div>
-      <footer class="global-search-footer"><span><kbd>↑</kbd><kbd>↓</kbd> 选择 <kbd>Enter</kbd> 打开</span><span>{{ scopes.find(option => option.id === scope)?.label + (scope === 'local' || scope === 'skills-local' ? ' · 无需联网' : ' · 联网搜索') }}</span></footer>
+      <footer class="global-search-footer"><span><kbd>↑</kbd><kbd>↓</kbd> {{ tr('选择') }} <kbd>Enter</kbd> {{ tr('打开') }}</span><span>{{ tr(scopes.find(option => option.id === scope)?.label) + (scope === 'local' || scope === 'skills-local' ? tr(' · 无需联网') : tr(' · 联网搜索')) }}</span></footer>
     </section>
   </div>
 </template>
 
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import SearchHighlight from './SearchHighlight.vue';
 import AppIcon from './AppIcon.vue';

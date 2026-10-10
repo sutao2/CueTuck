@@ -1,12 +1,13 @@
 <template>
   <section class="content-state" :class="[kind, { compact }]" :role="kind==='error'?'alert':'status'" :aria-busy="kind==='loading'">
     <AppIcon :name="kind==='loading'?'refresh':kind==='error'?'globe':icon" class="state-icon" />
-    <div class="state-copy"><h3>{{ title }}</h3><p v-if="description">{{ description }}</p></div>
+    <div class="state-copy"><h3>{{ tr(title) }}</h3><p v-if="description">{{ tr(description) }}</p></div>
     <div v-if="$slots.default" class="state-actions"><slot /></div>
     <div v-if="kind==='loading'&&!compact" class="state-skeleton" aria-hidden="true"><i/><i/><i/></div>
   </section>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import AppIcon from './AppIcon.vue';
 defineProps({kind:{type:String,default:'empty'},title:String,description:String,icon:{type:String,default:'search'},compact:Boolean});
 </script>

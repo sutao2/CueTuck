@@ -1,20 +1,21 @@
 <template>
-  <section class="batch-organize" aria-label="批量整理" :aria-busy="busy">
+  <section class="batch-organize" :aria-label="tr('批量整理')" :aria-busy="busy">
     <div class="batch-controls">
-      <strong role="status">已选 {{ prompts.length }} 条</strong>
-      <button type="button" class="button" data-testid="select-page" :disabled="busy || !canSelectPage" @click="$emit('select-page')">选择本页</button>
-      <button type="button" class="button ghost-button" data-testid="clear-selection" :disabled="busy || !prompts.length" @click="$emit('clear-selection')">清空选择</button>
-      <label>操作<select v-model="mode" :disabled="busy"><option value="category">移动分类</option><option value="collection">加入合集</option></select></label>
-      <label v-if="mode === 'category'">目标分类<SearchableSelect v-model="categoryId" :disabled="busy" data-testid="batch-category" :options="[{value:'',label:'未分类'}, ...groups.flatMap(group => [{value:group.id,label:group.name}, ...group.children.map(child => ({value:child.id,label:group.name+' / '+child.name}))])]" /></label>
-      <label v-else>目标合集<SearchableSelect v-model="collectionId" :disabled="busy" data-testid="batch-collection" :options="[{value:'',label:'选择合集'}, ...collections.map(item => ({value:item.id,label:item.title}))]" /></label>
-      <button type="button" class="button primary-button" data-testid="apply-batch" :disabled="busy || !prompts.length || (mode === 'collection' && !collectionId)" @click="apply">{{ busy ? '正在整理…' : '应用到所选' }}</button>
+      <strong role="status">{{ tr('已选') }} {{ prompts.length }} {{ tr('条') }}</strong>
+      <button type="button" class="button" data-testid="select-page" :disabled="busy || !canSelectPage" @click="$emit('select-page')">{{ tr('选择本页') }}</button>
+      <button type="button" class="button ghost-button" data-testid="clear-selection" :disabled="busy || !prompts.length" @click="$emit('clear-selection')">{{ tr('清空选择') }}</button>
+      <label>{{ tr('操作') }}<select v-model="mode" :disabled="busy"><option value="category">{{ tr('移动分类') }}</option><option value="collection">{{ tr('加入合集') }}</option></select></label>
+      <label v-if="mode === 'category'">{{ tr('目标分类') }}<SearchableSelect v-model="categoryId" :disabled="busy" data-testid="batch-category" :options="[{value:'',label:tr('未分类')}, ...groups.flatMap(group => [{value:group.id,label:categoryLabel(group)}, ...group.children.map(child => ({value:child.id,label:categoryLabel(group)+' / '+categoryLabel(child)}))])]" /></label>
+      <label v-else>{{ tr('目标合集') }}<SearchableSelect v-model="collectionId" :disabled="busy" data-testid="batch-collection" :options="[{value:'',label:tr('选择合集')}, ...collections.map(item => ({value:item.id,label:item.title}))]" /></label>
+      <button type="button" class="button primary-button" data-testid="apply-batch" :disabled="busy || !prompts.length || (mode === 'collection' && !collectionId)" @click="apply">{{ busy ? tr('正在整理…') : tr('应用到所选') }}</button>
     </div>
-    <p class="use-hint">翻页保留选择，切换筛选会清空。{{ mode === 'collection' ? '一条提示词只能属于一个合集，已归属其他合集的条目会移入目标合集。' : '只移动所选提示词的分类，正文与附件保持不变。' }}</p>
-    <p v-if="result" role="status" data-testid="batch-result">{{ result }}</p>
-    <ul v-if="errors.length" role="alert"><li v-for="error in errors" :key="error">{{ error }}</li></ul>
+    <p class="use-hint">{{ tr('翻页保留选择，切换筛选会清空。') }}{{ mode === 'collection' ? tr('一条提示词只能属于一个合集，已归属其他合集的条目会移入目标合集。') : tr('只移动所选提示词的分类，正文与附件保持不变。') }}</p>
+    <p v-if="result" role="status" data-testid="batch-result">{{ tr(result) }}</p>
+    <ul v-if="errors.length" role="alert"><li v-for="error in errors" :key="error">{{ tr(error) }}</li></ul>
   </section>
 </template>
 <script setup>
+import { categoryLabel, tr } from '../platform/interfaceLanguage.js';
 import SearchableSelect from "./SearchableSelect.vue";
 import { ref } from 'vue';
 import { addPromptToCollection, moveLocalPromptCategory } from '../platform/library.js';

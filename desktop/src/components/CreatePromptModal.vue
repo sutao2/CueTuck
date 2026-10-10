@@ -2,68 +2,68 @@
     <section v-page-focus="requestClose" class="workspace-page editor-page" data-testid="prompt-editor" role="region" aria-labelledby="editor-title" :aria-busy="busy || assetBusy" @keydown="onSaveKeydown" @paste="assetPanel?.paste($event)" @dragover="assetPanel?.dragover($event)" @drop="assetPanel?.drop($event)">
       <header class="modal-header">
         <div>
-          <h2 id="editor-title">{{ heading }}</h2>
+          <h2 id="editor-title">{{ tr(heading) }}</h2>
         </div>
-        <button type="button" class="page-back" aria-label="返回" :disabled="busy || assetBusy" @click="requestClose">← 返回</button>
+        <button type="button" class="page-back" :aria-label="tr('返回')" :disabled="busy || assetBusy" @click="requestClose">{{ tr('← 返回') }}</button>
       </header>
       <div v-if="confirmDiscard" class="create-body" data-testid="discard-editor">
-        <h3>放弃未保存的修改？</h3>
-        <p>关闭后本次修改不会保存。</p>
+        <h3>{{ tr('放弃未保存的修改？') }}</h3>
+        <p>{{ tr('关闭后本次修改不会保存。') }}</p>
         <div class="modal-actions">
-          <button ref="keepEditingButton" type="button" class="button primary-button" @click="keepEditing">继续编辑</button>
-          <button type="button" class="button danger-button" @click="$emit('cancel')">放弃修改</button>
+          <button ref="keepEditingButton" type="button" class="button primary-button" @click="keepEditing">{{ tr('继续编辑') }}</button>
+          <button type="button" class="button danger-button" @click="$emit('cancel')">{{ tr('放弃修改') }}</button>
         </div>
       </div>
       <div v-else class="create-body" :inert="busy ? '' : undefined">
-        <p v-if="example" class="use-hint">这是可编辑的示例，尚未保存。点击「试填预览」体验变量，保存后可用底栏启动器再次找到它。</p>
-        <p v-if="collectionTitle" class="use-hint" data-testid="collection-only-note">保存到「{{ collectionTitle }}」，仅在此合集中显示。移出合集后会保留为独立提示词。</p>
-        <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
+        <p v-if="example" class="use-hint">{{ tr('这是可编辑的示例，尚未保存。点击「试填预览」体验变量，保存后可用底栏启动器再次找到它。') }}</p>
+        <p v-if="collectionTitle" class="use-hint" data-testid="collection-only-note">{{ tr('保存到「') }}{{ collectionTitle }}{{ tr('」，仅在此合集中显示。移出合集后会保留为独立提示词。') }}</p>
+        <p v-if="error" role="alert" class="use-hint">{{ tr(error) }}</p>
         <div v-if="!prompt && !collectionTitle" class="create-type-grid">
           <button type="button" class="create-type" :disabled="assetBusy || assetLoading" :class="{ active: kind === 'prompt' }" :aria-pressed="kind === 'prompt'" @click="kind = 'prompt'">
-            <strong>单个提示词</strong>
-            <small>一条可直接使用的提示词。</small>
+            <strong>{{ tr('单个提示词') }}</strong>
+            <small>{{ tr('一条可直接使用的提示词。') }}</small>
           </button>
           <button type="button" class="create-type" :disabled="assetBusy || assetLoading" :class="{ active: kind === 'collection' }" :aria-pressed="kind === 'collection'" @click="kind = 'collection'">
-            <strong>提示词合集</strong>
-            <small>同一主题下的一组提示词。</small>
+            <strong>{{ tr('提示词合集') }}</strong>
+            <small>{{ tr('同一主题下的一组提示词。') }}</small>
           </button>
         </div>
         <label class="field">
-          <span>{{ kind === "collection" ? "合集名称" : "标题" }}</span>
-          <input v-model="title" data-dialog-autofocus placeholder="例如：SaaS 官网生成器">
+          <span>{{ kind === "collection" ? tr('合集名称') : tr('标题') }}</span>
+          <input v-model="title" data-dialog-autofocus :placeholder="tr('例如：SaaS 官网生成器')">
         </label>
         <div class="editor-metadata" :class="{ 'single-field': kind === 'collection' }">
         <label v-if="kind === 'prompt'" class="field">
-          <span>模型</span>
-          <SearchableSelect data-testid="prompt-model" v-model="model" :options="[{value:'',label:'未指定'}, ...modelOptions.map(name => ({value:name,label:name}))]" />
+          <span>{{ tr('模型') }}</span>
+          <SearchableSelect data-testid="prompt-model" v-model="model" :options="[{value:'',label:tr('未指定')}, ...modelOptions.map(name => ({value:name,label:name}))]" />
         </label>
         <label class="field">
-          <span>分类</span>
-          <SearchableSelect data-testid="prompt-category" v-model="categoryId" :options="[{value:'',label:'未分类'}, ...groups.flatMap(group => [{value:group.id,label:group.name}, ...group.children.map(child => ({value:child.id,label:group.name+' / '+child.name}))])]" />
+          <span>{{ tr('分类') }}</span>
+          <SearchableSelect data-testid="prompt-category" v-model="categoryId" :options="[{value:'',label:tr('未分类')}, ...groups.flatMap(group => [{value:group.id,label:categoryLabel(group)}, ...group.children.map(child => ({value:child.id,label:categoryLabel(group)+' / '+categoryLabel(child)}))])]" />
         </label>
         </div>
         <div v-if="kind === 'prompt'" class="editor-writing">
           <div class="editor-tools">
-            <button type="button" class="button ghost-button" data-testid="insert-variable" @click="insertVariable">＋ 插入变量</button>
-            <button type="button" class="button ghost-button" :aria-expanded="trialOpen" data-testid="toggle-trial" @click="trialOpen = !trialOpen">{{ trialOpen ? '收起试填' : '试填预览' }}</button>
+            <button type="button" class="button ghost-button" data-testid="insert-variable" @click="insertVariable">{{ tr('＋ 插入变量') }}</button>
+            <button type="button" class="button ghost-button" :aria-expanded="trialOpen" data-testid="toggle-trial" @click="trialOpen = !trialOpen">{{ trialOpen ? tr('收起试填') : tr('试填预览') }}</button>
           </div>
           <div class="editor-writing-grid" :class="{ 'with-trial': trialOpen }">
-            <label class="field"><span>提示词内容</span>
-              <textarea ref="contentInput" v-model="content" rows="12" placeholder="输入 {} 创建独立占位符，或 {{变量名}} 创建同名共用的变量"></textarea>
+            <label class="field"><span>{{ tr('提示词内容') }}</span>
+              <textarea ref="contentInput" v-model="content" rows="12" :placeholder="tr('输入 {} 创建独立占位符，或 {{变量名}} 创建同名共用的变量')"></textarea>
             </label>
             <PromptTrial v-if="trialOpen" :content="content" />
           </div>
         </div>
         <label v-else class="field">
-          <span>封面</span>
+          <span>{{ tr('封面') }}</span>
           <select v-model="coverType" :disabled="assetBusy">
-            <option value="none">无封面</option>
-            <option value="single">单图</option>
-            <option value="grid">九宫格</option>
+            <option value="none">{{ tr('无封面') }}</option>
+            <option value="single">{{ tr('单图') }}</option>
+            <option value="grid">{{ tr('九宫格') }}</option>
           </select>
         </label>
         <label v-if="kind === 'collection' && coverType !== 'none'" class="field">
-          <span>{{ coverType === "single" ? "封面图" : "封面图（最多 9 张，缺图用占位）" }}</span>
+          <span>{{ coverType === "single" ? tr('封面图') : tr('封面图（最多 9 张，缺图用占位）') }}</span>
           <input
             type="file"
             accept="image/png,image/jpeg,image/gif,image/webp"
@@ -73,22 +73,20 @@
             @change="onCoverFiles"
           >
         </label>
-        <p v-if="coverError" role="alert" class="use-hint">{{ coverError }}</p>
+        <p v-if="coverError" role="alert" class="use-hint">{{ tr(coverError) }}</p>
         <template v-if="kind === 'prompt'">
-          <p v-if="assetLoading" role="status">正在读取附件…</p>
-          <p v-else-if="assetError" role="alert">{{ assetError }} <button type="button" class="button" @click="loadAssets">重试</button></p>
+          <p v-if="assetLoading" role="status">{{ tr('正在读取附件…') }}</p>
+          <p v-else-if="assetError" role="alert">{{ tr(assetError) }} <button type="button" class="button" @click="loadAssets">{{ tr('重试') }}</button></p>
           <AttachmentPanel v-else ref="assetPanel" v-model="assets" :prompt-id="prompt?.id" :saved-ids="savedAssetIds" :disabled="busy" @busy="assetBusy = $event" />
         </template>
       </div>
       <footer v-if="!confirmDiscard" class="modal-footer">
-        <button v-if="prompt" type="button" class="button danger-button" :disabled="busy || assetBusy" @click="$emit('remove', prompt.id)">
-          删除
-        </button>
-        <span v-else class="create-location">将创建在本地库</span>
+        <button v-if="prompt" type="button" class="button danger-button" :disabled="busy || assetBusy" @click="$emit('remove', prompt.id)"> {{ tr('删除') }} </button>
+        <span v-else class="create-location">{{ tr('将创建在本地库') }}</span>
         <div class="modal-actions">
-          <button type="button" class="button ghost-button" :disabled="busy || assetBusy" @click="requestClose">取消</button>
+          <button type="button" class="button ghost-button" :disabled="busy || assetBusy" @click="requestClose">{{ tr('取消') }}</button>
           <button type="button" class="button primary-button" :disabled="busy || assetBusy || assetLoading || Boolean(assetError) || !title.trim()" @click="submit">
-            {{ busy ? '正在保存…' : kind === "collection" && !prompt ? "创建合集" : "保存" }}
+            {{ busy ? tr('正在保存…') : kind === "collection" && !prompt ? tr('创建合集') : tr('保存') }}
           </button>
         </div>
       </footer>
@@ -96,6 +94,7 @@
 </template>
 
 <script setup>
+import { categoryLabel, tr } from '../platform/interfaceLanguage.js';
 import SearchableSelect from "./SearchableSelect.vue";
 import { computed, nextTick, onMounted, ref } from "vue";
 import PromptTrial from './PromptTrial.vue';

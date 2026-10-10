@@ -1,38 +1,39 @@
 <template>
   <section v-page-focus="close" class="workspace-page" data-testid="publications-page" aria-labelledby="publications-title">
-    <header class="modal-header"><div><p class="modal-kicker">账号</p><h2 id="publications-title">我的发布</h2></div><button type="button" class="page-back"  :disabled="busy" @click="close">← 返回</button></header>
+    <header class="modal-header"><div><p class="modal-kicker">{{ tr('账号') }}</p><h2 id="publications-title">{{ tr('我的发布') }}</h2></div><button type="button" class="page-back"  :disabled="busy" @click="close">{{ tr('← 返回') }}</button></header>
     <div class="create-body" data-testid="my-publications">
-      <nav class="skills-market-tabs" aria-label="发布内容类型"><button :disabled="busy" :aria-current="kind==='prompts'?'page':undefined" @click="kind='prompts'">提示词</button><button :disabled="busy" :aria-current="kind==='skills'?'page':undefined" @click="kind='skills'">Skills</button></nav>
-      <p class="use-hint">查看已提交到广场的内容、审核结果与驳回说明。</p>
-      <p v-if="!session.loggedIn">登录后查看自己的投稿。<button type="button" class="button" @click="$emit('login')">登录</button></p>
+      <nav class="skills-market-tabs" :aria-label="tr('发布内容类型')"><button :disabled="busy" :aria-current="kind==='prompts'?'page':undefined" @click="kind='prompts'">{{ tr('提示词') }}</button><button :disabled="busy" :aria-current="kind==='skills'?'page':undefined" @click="kind='skills'">Skills</button></nav>
+      <p class="use-hint">{{ tr('查看已提交到广场的内容、审核结果与驳回说明。') }}</p>
+      <p v-if="!session.loggedIn">{{ tr('登录后查看自己的投稿。') }}<button type="button" class="button" @click="$emit('login')">{{ tr('登录') }}</button></p>
       <SkillCommunity v-else-if="kind==='skills'" :key="session.email" mine @busy="skillBusy=$event"/>
-      <p v-else-if="loading" role="status">正在读取投稿…</p>
-      <p v-else-if="error" role="alert">{{ error }} <button type="button" class="button" @click="load">重试</button></p>
+      <p v-else-if="loading" role="status">{{ tr('正在读取投稿…') }}</p>
+      <p v-else-if="error" role="alert">{{ tr(error) }} <button type="button" class="button" @click="load">{{ tr('重试') }}</button></p>
       <template v-else>
       <div class="publication-metrics" data-testid="publication-metrics">
-        <div><strong>{{ formatMetric(rows.length) }}</strong><span>累计投稿</span></div>
-        <div><strong>{{ formatMetric(totalMetric('download_count')) }}</strong><span>已记录下载次数</span></div>
-        <div><strong>{{ formatMetric(totalMetric('favorite_count')) }}</strong><span>当前收藏总次数</span></div>
+        <div><strong>{{ formatMetric(rows.length) }}</strong><span>{{ tr('累计投稿') }}</span></div>
+        <div><strong>{{ formatMetric(totalMetric('download_count')) }}</strong><span>{{ tr('已记录下载次数') }}</span></div>
+        <div><strong>{{ formatMetric(totalMetric('favorite_count')) }}</strong><span>{{ tr('当前收藏总次数') }}</span></div>
       </div>
       <div class="publication-toolbar">
-        <p class="use-hint">下载仅统计开启匿名上报后的成功下载；收藏为各作品当前收藏人数之和，非去重粉丝数。</p>
-        <label>排序 <select v-model="sort" aria-label="作品排序"><option value="latest">最新提交</option><option value="download_count">下载最多</option><option value="favorite_count">收藏最多</option></select></label>
+        <p class="use-hint">{{ tr('下载仅统计开启匿名上报后的成功下载；收藏为各作品当前收藏人数之和，非去重粉丝数。') }}</p>
+        <label>{{ tr('排序') }} <select v-model="sort" :aria-label="tr('作品排序')"><option value="latest">{{ tr('最新提交') }}</option><option value="download_count">{{ tr('下载最多') }}</option><option value="favorite_count">{{ tr('收藏最多') }}</option></select></label>
       </div>
-      <p v-if="!rows.length">暂无投稿。可以从广场的发布入口提交本地提示词。</p>
+      <p v-if="!rows.length">{{ tr('暂无投稿。可以从广场的发布入口提交本地提示词。') }}</p>
       <ul v-else class="publication-list">
         <li v-for="row in sortedRows" :key="row.id">
-          <div class="publication-heading"><strong>{{ row.title || row.source_id }}</strong><span class="publication-status">{{ statusLabel(row.status) }}</span></div>
-          <p class="publication-counters"><span>记录下载 {{ formatMetric(row.download_count) }}</span><span>当前收藏 {{ formatMetric(row.favorite_count) }}</span></p>
-          <p v-if="row.visibility">广场：{{ { online: '已上架', offline: '已下架', trashed: '已移入回收站' }[row.visibility] || row.visibility }}</p>
-          <p v-for="event in row.history || []" :key="event.id">{{ event.status === 'rejected' ? '驳回原因：' : '审核通过' }}{{ event.reason || '' }}<small v-if="event.created_at"> · {{ new Date(event.created_at).toLocaleString() }}</small></p>
+          <div class="publication-heading"><strong>{{ row.title || row.source_id }}</strong><span class="publication-status">{{ tr(statusLabel(row.status)) }}</span></div>
+          <p class="publication-counters"><span>{{ tr('记录下载') }} {{ formatMetric(row.download_count) }}</span><span>{{ tr('当前收藏') }} {{ formatMetric(row.favorite_count) }}</span></p>
+          <p v-if="row.visibility">{{ tr('广场：') }}{{ tr({ online: '已上架', offline: '已下架', trashed: '已移入回收站' }[row.visibility] || row.visibility) }}</p>
+          <p v-for="event in row.history || []" :key="event.id">{{ event.status === 'rejected' ? tr('驳回原因：') : tr('审核通过') }}{{ event.reason || '' }}<small v-if="event.created_at"> · {{ new Date(event.created_at).toLocaleString() }}</small></p>
         </li>
       </ul>
       </template>
     </div>
-    <footer class="modal-footer"><span class="use-hint">{{ session.email }}</span><button v-if="kind==='prompts'" type="button" class="button" :disabled="loading || !session.loggedIn" @click="load">刷新</button></footer>
+    <footer class="modal-footer"><span class="use-hint">{{ session.email }}</span><button v-if="kind==='prompts'" type="button" class="button" :disabled="loading || !session.loggedIn" @click="load">{{ tr('刷新') }}</button></footer>
   </section>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref, watch, onUnmounted } from 'vue';
 import SkillCommunity from './SkillCommunity.vue';
 import { formatMetric } from '../platform/contentMetrics.js';

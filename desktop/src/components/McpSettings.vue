@@ -1,19 +1,20 @@
 <template>
-  <section class="mcp-settings" aria-label="智能体 MCP 接入">
-    <h4>智能体 MCP 接入</h4>
-    <p>让可信智能体只读搜索、读取和填写本地提示词。宿主可能将返回内容发送给模型提供商，请勿接入不可信宿主。</p>
-    <p>MCP 是独立程序，不包含在桌面安装包中。先在仓库根目录执行：</p>
+  <section class="mcp-settings" :aria-label="tr('智能体 MCP 接入')">
+    <h4>{{ tr('智能体 MCP 接入') }}</h4>
+    <p>{{ tr('让可信智能体只读搜索、读取和填写本地提示词。宿主可能将返回内容发送给模型提供商，请勿接入不可信宿主。') }}</p>
+    <p>{{ tr('MCP 是独立程序，不包含在桌面安装包中。先在仓库根目录执行：') }}</p>
     <pre>cargo build --manifest-path mcp/Cargo.toml --release --locked</pre>
-    <label class="field"><span>MCP 程序绝对路径</span><input v-model="executable" data-testid="mcp-executable" placeholder="/绝对路径/promptark-mcp" :disabled="busy" /></label>
-    <label class="setting-row"><span class="setting-copy"><strong>此配置启用广场工具</strong><small>默认关闭。本地工具始终离线；开启后，独立广场工具会发送搜索词到所填站点，只读匿名内容，不使用桌面登录令牌。</small></span><input v-model="square" data-testid="mcp-square" type="checkbox" :disabled="busy" /></label>
-    <label v-if="square" class="field"><span>广场站点</span><input v-model="base" data-testid="mcp-base" :disabled="busy" /></label>
-    <div class="mcp-actions"><button class="button ghost-button" data-testid="mcp-generate" :disabled="busy || !executable.trim()" @click="generate">{{ busy ? '正在检查…' : '生成配置' }}</button><button v-if="config" class="button primary-button" :disabled="busy" @click="copy">复制配置</button></div>
-    <p v-if="note" role="status">{{ note }}</p>
+    <label class="field"><span>{{ tr('MCP 程序绝对路径') }}</span><input v-model="executable" data-testid="mcp-executable" :placeholder="tr('/绝对路径/promptark-mcp')" :disabled="busy" /></label>
+    <label class="setting-row"><span class="setting-copy"><strong>{{ tr('此配置启用广场工具') }}</strong><small>{{ tr('默认关闭。本地工具始终离线；开启后，独立广场工具会发送搜索词到所填站点，只读匿名内容，不使用桌面登录令牌。') }}</small></span><input v-model="square" data-testid="mcp-square" type="checkbox" :disabled="busy" /></label>
+    <label v-if="square" class="field"><span>{{ tr('广场站点') }}</span><input v-model="base" data-testid="mcp-base" :disabled="busy" /></label>
+    <div class="mcp-actions"><button class="button ghost-button" data-testid="mcp-generate" :disabled="busy || !executable.trim()" @click="generate">{{ busy ? tr('正在检查…') : tr('生成配置') }}</button><button v-if="config" class="button primary-button" :disabled="busy" @click="copy">{{ tr('复制配置') }}</button></div>
+    <p v-if="note" role="status">{{ tr(note) }}</p>
     <pre v-if="config" data-testid="mcp-config">{{ config }}</pre>
-    <p>生成操作只检查路径，不运行所选程序，也不修改其他软件配置。将 JSON 添加到支持 mcpServers 的宿主；其他格式需填写相同 command/env，重新连接后生效。目录变化或程序移动后重新生成。</p>
+    <p>{{ tr('生成操作只检查路径，不运行所选程序，也不修改其他软件配置。将 JSON 添加到支持 mcpServers 的宿主；其他格式需填写相同 command/env，重新连接后生效。目录变化或程序移动后重新生成。') }}</p>
   </section>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { ref, watch, onUnmounted } from 'vue';
 import { prepareMcpConfig } from '../platform/mcp.js';
 import { copyLauncherText } from '../platform/paste.js';

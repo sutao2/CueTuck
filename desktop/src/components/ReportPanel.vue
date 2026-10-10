@@ -1,12 +1,13 @@
 <template>
-  <details class="report-panel" @toggle="onToggle"><summary>举报内容 / 我的举报进度</summary>
-    <p class="muted">仅提交当前广场条目和你填写的原因，不包含本地库。</p>
-    <form @submit.prevent="submit"><fieldset :disabled="busy"><label>举报类型<select v-model="category"><option v-for="(label,key) in categories" :key="key" :value="key">{{ label }}</option></select></label><label>举报原因<textarea v-model="reason" maxlength="1000" placeholder="描述具体问题，勿填写密码或其他秘密" required data-testid="report-reason"></textarea></label><button class="button ghost-button" :disabled="!reason.trim()">{{ busy?'正在提交…':'提交举报' }}</button></fieldset></form>
-    <p v-if="error" role="alert">{{ error }}</p><p v-if="message" role="status">{{ message }}</p>
-    <h3>我的举报</h3><button class="button ghost-button" type="button" :disabled="busy" @click="load(0)">刷新进度</button><p v-if="loaded && !rows.length">暂无举报记录</p><article v-for="row in rows" :key="row.id"><strong>{{ statuses[row.status] }} · {{ categories[row.category] }}</strong><p>{{ row.reason }}</p><p v-if="row.resolution">处理结果：{{ row.resolution }}</p><small>{{ new Date(row.updated_at).toLocaleString() }} · {{ row.target_id }}</small></article><div><button v-if="offset>0" class="button ghost-button" :disabled="busy" @click="load(offset-25)">上一页</button><button v-if="offset+25<total" class="button ghost-button" :disabled="busy" @click="load(offset+25)">下一页</button></div>
+  <details class="report-panel" @toggle="onToggle"><summary>{{ tr('举报内容 / 我的举报进度') }}</summary>
+    <p class="muted">{{ tr('仅提交当前广场条目和你填写的原因，不包含本地库。') }}</p>
+    <form @submit.prevent="submit"><fieldset :disabled="busy"><label>{{ tr('举报类型') }}<select v-model="category"><option v-for="(label,key) in categories" :key="key" :value="key">{{ tr(label) }}</option></select></label><label>{{ tr('举报原因') }}<textarea v-model="reason" maxlength="1000" :placeholder="tr('描述具体问题，勿填写密码或其他秘密')" required data-testid="report-reason"></textarea></label><button class="button ghost-button" :disabled="!reason.trim()">{{ busy?tr('正在提交…'):tr('提交举报') }}</button></fieldset></form>
+    <p v-if="error" role="alert">{{ tr(error) }}</p><p v-if="message" role="status">{{ tr(message) }}</p>
+    <h3>{{ tr('我的举报') }}</h3><button class="button ghost-button" type="button" :disabled="busy" @click="load(0)">{{ tr('刷新进度') }}</button><p v-if="loaded && !rows.length">{{ tr('暂无举报记录') }}</p><article v-for="row in rows" :key="row.id"><strong>{{ tr(statuses[row.status]) }} · {{ tr(categories[row.category]) }}</strong><p>{{ row.reason }}</p><p v-if="row.resolution">{{ tr('处理结果：') }}{{ row.resolution }}</p><small>{{ new Date(row.updated_at).toLocaleString() }} · {{ row.target_id }}</small></article><div><button v-if="offset>0" class="button ghost-button" :disabled="busy" @click="load(offset-25)">{{ tr('上一页') }}</button><button v-if="offset+25<total" class="button ghost-button" :disabled="busy" @click="load(offset+25)">{{ tr('下一页') }}</button></div>
   </details>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { ref } from 'vue';
 import { reportRequest } from '../platform/reports.js';
 const props=defineProps({targetId:{type:String,required:true}});

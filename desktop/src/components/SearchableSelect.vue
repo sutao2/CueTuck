@@ -1,20 +1,21 @@
 <template>
-  <button ref="trigger" v-bind="$attrs" type="button" :value="modelValue" class="searchable-select" :title="$attrs.title || selected?.label || placeholder" :disabled="disabled" aria-haspopup="listbox" :aria-expanded="open" :aria-controls="open ? listId : undefined" @click="toggle" @keydown.down.prevent="show" @keydown.up.prevent="show">
-    <span>{{ selected?.label || placeholder }}</span><svg class="select-chevron" aria-hidden="true" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg>
+  <button ref="trigger" v-bind="$attrs" type="button" :value="modelValue" class="searchable-select" :title="$attrs.title || selected?.label || tr(placeholder)" :disabled="disabled" aria-haspopup="listbox" :aria-expanded="open" :aria-controls="open ? listId : undefined" @click="toggle" @keydown.down.prevent="show" @keydown.up.prevent="show">
+    <span>{{ selected?.label || tr(placeholder) }}</span><svg class="select-chevron" aria-hidden="true" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg>
   </button>
   <Teleport to="body">
     <div v-if="open" ref="panel" class="select-popup" :style="position" @keydown.esc.stop.prevent="close" @keydown.tab="close(false)">
-      <div v-if="searchable" class="select-search"><svg aria-hidden="true" viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><input ref="search" v-model="query" role="combobox" aria-label="搜索选项" aria-autocomplete="list" aria-expanded="true" :aria-controls="listId" :aria-activedescendant="visible[active] ? `${listId}-${active}` : undefined" placeholder="搜索选项…" @keydown="navigate"></div>
-      <div :id="listId" ref="list" role="listbox" :aria-label="$attrs['aria-label'] || placeholder" :tabindex="searchable ? -1 : 0" :aria-activedescendant="!searchable && visible[active] ? `${listId}-${active}` : undefined" class="select-results" @keydown="!searchable && navigate($event)">
+      <div v-if="searchable" class="select-search"><svg aria-hidden="true" viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><input ref="search" v-model="query" role="combobox" :aria-label="tr('搜索选项')" aria-autocomplete="list" aria-expanded="true" :aria-controls="listId" :aria-activedescendant="visible[active] ? `${listId}-${active}` : undefined" :placeholder="tr('搜索选项…')" @keydown="navigate"></div>
+      <div :id="listId" ref="list" role="listbox" :aria-label="$attrs['aria-label'] || tr(placeholder)" :tabindex="searchable ? -1 : 0" :aria-activedescendant="!searchable && visible[active] ? `${listId}-${active}` : undefined" class="select-results" @keydown="!searchable && navigate($event)">
         <button v-for="(option,index) in visible" :id="`${listId}-${index}`" :key="index" type="button" role="option" tabindex="-1" :aria-selected="option.value === modelValue" :class="{ highlighted: active === index }" @mousedown.prevent @click="choose(option)"><span>{{ option.label }}</span><svg v-if="option.value === modelValue" class="select-check" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 10 3 3 7-7" /></svg></button>
-        <p v-if="!matches.length" role="status">没有匹配选项，请尝试其他关键词</p>
+        <p v-if="!matches.length" role="status">{{ tr('没有匹配选项，请尝试其他关键词') }}</p>
       </div>
-      <small v-if="matches.length > visible.length">显示前 {{ visible.length }} / {{ matches.length }} 项，请搜索缩小范围</small>
-      <button v-if="query" type="button" class="select-clear" @click="query = ''; search?.focus()">清空搜索</button>
+      <small v-if="matches.length > visible.length">{{ tr('显示前') }} {{ visible.length }} / {{ matches.length }} {{ tr('项，请搜索缩小范围') }}</small>
+      <button v-if="query" type="button" class="select-clear" @click="query = ''; search?.focus()">{{ tr('清空搜索') }}</button>
     </div>
   </Teleport>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue';
 defineOptions({ inheritAttrs: false });
 const props = defineProps({ modelValue: { default: '' }, options: { type:Array, default:() => [] }, placeholder: { type:String, default:'请选择' }, disabled:Boolean, searchable:{type:Boolean,default:true} });

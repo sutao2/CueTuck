@@ -3,7 +3,7 @@
     class="launcher-canvas"
     :style="{ '--launcher-content-size': `${launcherPreferences.fontSize}px` }"
     :class="{ 'host-mac': host === 'macos' }"
-    aria-label="快捷搜索"
+    :aria-label="tr('快捷搜索')"
     @keydown="onCanvasKey"
   >
     <section
@@ -25,7 +25,7 @@
             v-model="query"
             class="launcher-search"
             type="text"
-            placeholder="搜索提示词，或输入一个任务…"
+            :placeholder="tr('搜索提示词，或输入一个任务…')"
             role="combobox"
             aria-autocomplete="list"
             :aria-expanded="!isCollapsed"
@@ -36,18 +36,18 @@
             @keydown="onSearchKey"
           />
           <span class="launcher-window-tools">
-            <button v-if="scope === 'square'" class="pill" type="button" @click="scope = 'local'">返回本地</button><span v-else class="pill">本地</span>
-            <button class="launcher-close-btn" type="button" title="关闭 (Esc)" :disabled="busy" @click="resetAndHide">
+            <button v-if="scope === 'square'" class="pill" type="button" @click="scope = 'local'">{{ tr('返回本地') }}</button><span v-else class="pill">{{ tr('本地') }}</span>
+            <button class="launcher-close-btn" type="button" :title="tr('关闭 (Esc)')" :disabled="busy" @click="resetAndHide">
               Esc
             </button>
           </span>
         </div>
 
-        <div v-if="!isCollapsed" id="launcher-results" class="launcher-list" role="listbox" aria-label="搜索与快捷操作">
-          <p v-if="feedback" role="status" data-testid="launcher-feedback" class="launcher-empty">{{ feedback }}</p>
-          <p v-if="searching" role="status" class="launcher-empty">正在搜索…</p>
+        <div v-if="!isCollapsed" id="launcher-results" class="launcher-list" role="listbox" :aria-label="tr('搜索与快捷操作')">
+          <p v-if="feedback" role="status" data-testid="launcher-feedback" class="launcher-empty">{{ tr(feedback) }}</p>
+          <p v-if="searching" role="status" class="launcher-empty">{{ tr('正在搜索…') }}</p>
           <div v-if="results.length">
-            <p class="group-title">{{ scope === 'square' ? '广场搜索 · 显示前 20 条' : '本地提示词 · 匹配优先，兼顾常用与收藏' }}</p>
+            <p class="group-title">{{ scope === 'square' ? tr('广场搜索 · 显示前 20 条') : tr('本地提示词 · 匹配优先，兼顾常用与收藏') }}</p>
             <button
               v-for="(row, index) in results"
               :key="row.id"
@@ -68,81 +68,79 @@
                 <span class="row-title"><SearchHighlight :text="row.title" :query="query" /></span>
                 <span class="row-desc">{{ rowDesc(row) }}</span>
               </span>
-              <span class="pill">{{ scope === 'square' ? (row.kind === 'collection' ? '选择提示词' : '使用') : rowIcon(row) === 'VAR' ? '变量' : '提示词' }}</span>
+              <span class="pill">{{ scope === 'square' ? (row.kind === 'collection' ? tr('选择提示词') : tr('使用')) : rowIcon(row) === 'VAR' ? tr('变量') : tr('提示词') }}</span>
             </button>
           </div>
-          <p v-else-if="!searching && !feedback" class="launcher-empty">没有找到相关提示词</p>
-          <div v-if="query.trim()" class="quick-actions" aria-label="输入快捷操作">
-            <p class="group-title">使用当前输入</p>
+          <p v-else-if="!searching && !feedback" class="launcher-empty">{{ tr('没有找到相关提示词') }}</p>
+          <div v-if="query.trim()" class="quick-actions" :aria-label="tr('输入快捷操作')">
+            <p class="group-title">{{ tr('使用当前输入') }}</p>
             <button v-for="(action, index) in quickActions" :key="action.action" :aria-selected="selectedIndex === results.length + index" :id="`launcher-result-${results.length + index}`" type="button" role="option" tabindex="-1" class="result-row" :class="{active: selectedIndex === results.length + index}" :disabled="busy" @mousedown.prevent @click="runQuickAction(action.action)" @mousemove="selectWithPointer($event, results.length + index)">
-              <span class="result-icon">{{ action.icon }}</span><span class="row-title">{{ action.title }}</span>
+              <span class="result-icon">{{ action.icon }}</span><span class="row-title">{{ tr(action.title) }}</span>
             </button>
           </div>
         </div>
 
         <footer v-if="!isCollapsed" class="launcher-foot">
           <div class="launcher-keys">
-            <span><kbd>↑↓</kbd> 选择</span>
-            <span><kbd>Enter</kbd> 使用</span>
-            <span><kbd>{{ copyChord }}</kbd> 复制</span>
-            <span><kbd>Esc</kbd> 关闭</span>
+            <span><kbd>↑↓</kbd> {{ tr('选择') }}</span>
+            <span><kbd>Enter</kbd> {{ tr('使用') }}</span>
+            <span><kbd>{{ copyChord }}</kbd> {{ tr('复制') }}</span>
+            <span><kbd>Esc</kbd> {{ tr('关闭') }}</span>
           </div>
-          <button v-if="scope === 'square' && searchRows[selectedIndex]?.remote" type="button" class="ghost" :disabled="busy" @click="viewSquareDetail(searchRows[selectedIndex])">查看详情</button>
+          <button v-if="scope === 'square' && searchRows[selectedIndex]?.remote" type="button" class="ghost" :disabled="busy" @click="viewSquareDetail(searchRows[selectedIndex])">{{ tr('查看详情') }}</button>
         </footer>
       </template>
 
       <template v-else-if="step === 'draft'">
-        <header class="launcher-search-wrap"><img class="brand-mark" :src="appIcon" alt=""><div class="result-copy"><span class="row-title">{{ optimizedDraft ? '检查 AI 优化结果' : '快捷创建提示词' }}</span><span class="row-desc">检查内容后使用或保存</span></div></header>
+        <header class="launcher-search-wrap"><img class="brand-mark" :src="appIcon" alt=""><div class="result-copy"><span class="row-title">{{ optimizedDraft ? tr('检查 AI 优化结果') : tr('快捷创建提示词') }}</span><span class="row-desc">{{ tr('检查内容后使用或保存') }}</span></div></header>
         <div class="launcher-list quick-draft">
-          <label class="field"><span>标题</span><input ref="draftTitleEl" v-model="draftTitle" maxlength="160" :disabled="busy" data-testid="quick-title"></label>
-          <label class="field quick-content"><span>正文 · 可继续修改</span><textarea v-model="draftContent" :disabled="busy" data-testid="quick-content" /></label>
-          <details v-if="optimizedDraft"><summary>查看原始输入</summary><pre class="preview code">{{ query }}</pre></details>
-          <p v-if="feedback" role="status">{{ feedback }}</p>
+          <label class="field"><span>{{ tr('标题') }}</span><input ref="draftTitleEl" v-model="draftTitle" maxlength="160" :disabled="busy" data-testid="quick-title"></label>
+          <label class="field quick-content"><span>{{ tr('正文 · 可继续修改') }}</span><textarea v-model="draftContent" :disabled="busy" data-testid="quick-content" /></label>
+          <details v-if="optimizedDraft"><summary>{{ tr('查看原始输入') }}</summary><pre class="preview code">{{ query }}</pre></details>
+          <p v-if="feedback" role="status">{{ tr(feedback) }}</p>
         </div>
-        <footer class="launcher-foot launcher-actions quick-draft-foot"><button type="button" class="ghost" :disabled="busy" @click="backToSearch">返回输入</button><button type="button" class="ghost" :disabled="busy || !draftContent.trim()" @click="activate({title:draftTitle,content:draftContent}, 'default')">{{ optimizedDraft ? '采用并使用' : '直接使用' }}</button><button type="button" class="primary" :disabled="busy || !draftTitle.trim() || !draftContent.trim()" @click="saveDraft">保存到本地</button></footer>
+        <footer class="launcher-foot launcher-actions quick-draft-foot"><button type="button" class="ghost" :disabled="busy" @click="backToSearch">{{ tr('返回输入') }}</button><button type="button" class="ghost" :disabled="busy || !draftContent.trim()" @click="activate({title:draftTitle,content:draftContent}, 'default')">{{ optimizedDraft ? tr('采用并使用') : tr('直接使用') }}</button><button type="button" class="primary" :disabled="busy || !draftTitle.trim() || !draftContent.trim()" @click="saveDraft">{{ tr('保存到本地') }}</button></footer>
       </template>
       <template v-else>
         <div class="launcher-search-wrap launcher-fill-head">
           <img class="brand-mark" :src="appIcon" alt="" aria-hidden="true" draggable="false" />
           <div class="result-copy">
             <span class="row-title">{{ active?.title }}</span>
-            <span class="row-desc">{{ variableNames.length ? '填写内容，预览后复制' : '确认正文后复制' }}</span>
+            <span class="row-desc">{{ variableNames.length ? tr('填写内容，预览后复制') : tr('确认正文后复制') }}</span>
           </div>
-          <span class="pill">{{ variableNames.length ? `${variableNames.length} 个变量` : '预览' }}</span>
+          <span class="pill">{{ variableNames.length ? tr("{0} 个变量", [variableNames.length]) : tr('预览') }}</span>
         </div>
         <div class="launcher-list launcher-fill-body">
           <div class="form-layout" :class="{ 'preview-only': !variableNames.length }">
             <form v-if="variableNames.length" ref="formEl" class="stack variable-form" @submit.prevent="copyRendered">
-              <div class="form-heading"><h3>填写变量</h3><span>留空使用默认值，无默认值则保留占位符</span></div>
+              <div class="form-heading"><h3>{{ tr('填写变量') }}</h3><span>{{ tr('留空使用默认值，无默认值则保留占位符') }}</span></div>
               <label v-for="(name, index) in variableNames" :key="name" class="field">
                 <span>{{ name }}</span>
-                <textarea :value="values.get(name) ?? ''" rows="1" :placeholder="`填写 ${name}`" :disabled="busy" @input="values.set(name, $event.target.value)" @focus="focusedVariable = name" @keydown="onVariableKey($event, index)"></textarea>
+                <textarea :value="values.get(name) ?? ''" rows="1" :placeholder="tr('填写 {0}', [name])" :disabled="busy" @input="values.set(name, $event.target.value)" @focus="focusedVariable = name" @keydown="onVariableKey($event, index)"></textarea>
               </label>
               <button
                 v-if="canReadSelected"
                 type="button"
                 data-testid="read-selected"
                 class="ghost selection-action"
-                :title="`填入 ${focusedVariable}`"
+                :title="tr('填入 {0}', [focusedVariable])"
                 :disabled="busy"
                 @click="readSelected"
-              >
-                填入原窗口选中文字
-              </button>
+              > {{ tr('填入原窗口选中文字') }} </button>
             </form>
             <section class="stack preview-pane">
-              <h3>实时预览</h3>
+              <h3>{{ tr('实时预览') }}</h3>
               <pre class="preview code">{{ preview }}</pre>
-              <p v-if="feedback" role="status" data-testid="launcher-feedback">{{ feedback }}</p>
+              <p v-if="feedback" role="status" data-testid="launcher-feedback">{{ tr(feedback) }}</p>
             </section>
           </div>
         </div>
         <footer class="launcher-foot launcher-fill-foot">
-          <div class="fill-keys" :title="`${copyChord} 随时复制 · Esc 关闭`"><span><kbd>↵</kbd> {{ variableNames.length ? '下一项 / 末项复制' : '复制' }}</span><span v-if="variableNames.length"><kbd>⇧↵</kbd> 换行</span></div>
+          <div class="fill-keys" :title="tr('{0} 随时复制 · Esc 关闭', [copyChord])"><span><kbd>↵</kbd> {{ variableNames.length ? tr('下一项 / 末项复制') : tr('复制') }}</span><span v-if="variableNames.length"><kbd>⇧↵</kbd> {{ tr('换行') }}</span></div>
           <div class="launcher-actions">
-            <button type="button" class="ghost" :disabled="busy" @click="backToSearch">返回</button>
-            <button v-if="active?.remote" type="button" class="ghost" :disabled="busy" @click="viewSquareDetail(active)">查看详情</button>
-            <button ref="copyButton" type="button" class="primary" :disabled="busy" @click="copyRendered">复制</button>
+            <button type="button" class="ghost" :disabled="busy" @click="backToSearch">{{ tr('返回') }}</button>
+            <button v-if="active?.remote" type="button" class="ghost" :disabled="busy" @click="viewSquareDetail(active)">{{ tr('查看详情') }}</button>
+            <button ref="copyButton" type="button" class="primary" :disabled="busy" @click="copyRendered">{{ tr('复制') }}</button>
             </div>
         </footer>
       </template>
@@ -151,6 +149,7 @@
 </template>
 
 <script setup>
+import { tr, applyInterfaceLanguage } from './platform/interfaceLanguage.js';
 import SearchHighlight from './components/SearchHighlight.vue';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { rankLauncherResults } from './lib/launcherRanking.js';
@@ -502,6 +501,7 @@ function applyLauncherTheme() {
 }
 async function refreshTheme() {
   themePreference = await getLocalSetting("theme");
+  applyInterfaceLanguage(await getLocalSetting("ui_language"));
   applyLauncherTheme();
 }
 

@@ -5,19 +5,19 @@
           <p class="modal-kicker">{{ prompt.title }}</p>
           <h2 id="use-title">{{ heading }}</h2>
         </div>
-        <button type="button" class="page-back" aria-label="返回" :disabled="busy" @click="$emit('cancel')">← 返回</button>
+        <button type="button" class="page-back" :aria-label="tr('返回')" :disabled="busy" @click="$emit('cancel')">{{ tr('← 返回') }}</button>
       </header>
       <div class="create-body use-body">
         <PromptLanguage v-if="!prompt.remote" :text="prompt.content" :disabled="busy" @change="template = $event" />
-        <nav v-if="names.length" class="variable-steps" aria-label="填写步骤">
+        <nav v-if="names.length" class="variable-steps" :aria-label="tr('填写步骤')">
           <button v-for="(name, position) in names" :key="name" type="button" :disabled="busy" :aria-current="step === 'variable' && index === position ? 'step' : undefined" :data-variable-step="position" @click="jump(position)">
-            <span>{{ position + 1 }}</span> {{ name }} <small>{{ resolved(name) ? '已填' : '待填' }}</small>
+            <span>{{ position + 1 }}</span> {{ name }} <small>{{ resolved(name) ? tr('已填') : tr('待填') }}</small>
           </button>
-          <button type="button" :disabled="busy" :aria-current="step === 'preview' ? 'step' : undefined" data-testid="jump-preview" @click="showPreview">预览</button>
+          <button type="button" :disabled="busy" :aria-current="step === 'preview' ? 'step' : undefined" data-testid="jump-preview" @click="showPreview">{{ tr('预览') }}</button>
         </nav>
-        <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
+        <p v-if="error" role="alert" class="use-hint">{{ tr(error) }}</p>
         <template v-if="step === 'variable'">
-          <p class="use-hint">{{ returnToPreview ? '修改后直接更新预览。' : '填写后进入下一步。' }}留空时使用默认值，没有默认值则保留原占位符。</p>
+          <p class="use-hint">{{ returnToPreview ? tr('修改后直接更新预览。') : tr('填写后进入下一步。') }}{{ tr('留空时使用默认值，没有默认值则保留原占位符。') }}</p>
           <label class="field">
             <span data-testid="use-variable">{{ currentName }}</span>
             <textarea
@@ -27,33 +27,31 @@
               v-model="currentValue"
               rows="4"
               data-testid="use-value"
-              :placeholder="'请输入' + currentName"
+              :placeholder="tr('请输入') + ' ' + currentName"
               @keydown="onValueKeydown"
             ></textarea>
             <small v-if="currentHint" data-testid="variable-hint">{{ currentHint }}</small>
-            <small id="variable-input-help" class="field-help">Enter {{ returnToPreview ? '更新预览' : '下一步' }} · Shift+Enter 换行</small>
+            <small id="variable-input-help" class="field-help">Enter {{ returnToPreview ? tr('更新预览') : tr('下一步') }} {{ tr('· Shift+Enter 换行') }}</small>
           </label>
         </template>
         <template v-else>
-          <p class="use-hint">{{ prompt.remote ? '复制当前版本正文；不会下载到本地或增加下载次数。' : '确认后复制到剪贴板，并记一次使用。' }}</p>
-          <p v-if="missing.length" class="use-hint" data-testid="missing-variables">还有 {{ missing.length }} 项未填写，复制时将保留占位符。点击上方参数可补填。</p>
+          <p class="use-hint">{{ prompt.remote ? tr('复制当前版本正文；不会下载到本地或增加下载次数。') : tr('确认后复制到剪贴板，并记一次使用。') }}</p>
+          <p v-if="missing.length" class="use-hint" data-testid="missing-variables">{{ tr('还有') }} {{ missing.length }} {{ tr('项未填写，复制时将保留占位符。点击上方参数可补填。') }}</p>
           <pre class="preview-box" data-testid="use-preview">{{ preview }}</pre>
         </template>
         <details v-if="prompt.asset_count" class="use-assets" @toggle="loadAssets">
-          <summary>参考资料 · {{ prompt.asset_count }} 个附件 <span>复制仅包含正文</span></summary>
-          <p v-if="assetError" role="alert">{{ assetError }} <button type="button" @click="loadAssets">重试</button></p>
-          <p v-if="assetLoading" role="status">正在读取附件…</p>
+          <summary>{{ tr('参考资料 ·') }} {{ prompt.asset_count }} {{ tr('个附件') }} <span>{{ tr('复制仅包含正文') }}</span></summary>
+          <p v-if="assetError" role="alert">{{ tr(assetError) }} <button type="button" @click="loadAssets">{{ tr('重试') }}</button></p>
+          <p v-if="assetLoading" role="status">{{ tr('正在读取附件…') }}</p>
           <AttachmentPanel v-else :model-value="assets" :prompt-id="prompt.id" :saved-ids="assets.map(a => a.id)" readonly />
         </details>
       </div>
       <footer class="modal-footer">
-        <span class="create-location">{{ stepLabel }}</span>
+        <span class="create-location">{{ tr(stepLabel) }}</span>
         <div class="modal-actions">
-          <button v-if="step !== 'preview' || names.length" type="button" class="button ghost-button" :disabled="busy" @click="back">
-            上一步
-          </button>
+          <button v-if="step !== 'preview' || names.length" type="button" class="button ghost-button" :disabled="busy" @click="back"> {{ tr('上一步') }} </button>
           <button ref="nextButton" type="button" class="button primary-button" data-testid="use-next" :disabled="busy" @click="next">
-            {{ busy ? '正在复制…' : step === "preview" ? "复制并完成" : returnToPreview ? "更新预览" : "下一步" }}
+            {{ busy ? tr('正在复制…') : step === "preview" ? tr('复制并完成') : returnToPreview ? tr('更新预览') : tr('下一步') }}
           </button>
         </div>
       </footer>
@@ -61,6 +59,7 @@
 </template>
 
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref, watch } from "vue";
 import { vPageFocus } from "../lib/pageFocus.js";
 import { extractVariables, renderPrompt, variableDefaults } from "../lib/renderPrompt.js";
@@ -102,7 +101,7 @@ watch([step, index], () => {
 
 const currentName = computed(() => names[index.value] ?? "");
 const currentHint = computed(() =>
-  props.hintsEnabled ? hintForVariable(currentName.value) : "",
+  props.hintsEnabled ? tr(hintForVariable(currentName.value)) : "",
 );
 const defaults = variableDefaults(props.prompt.content);
 function resolved(name) {
@@ -124,7 +123,7 @@ function showPreview() {
   preserveValue(); step.value = 'preview';
 }
 const preview = computed(() => renderPrompt(template.value, values.value));
-const heading = computed(() => (step.value === "preview" ? "确认并使用提示词" : currentName.value));
+const heading = computed(() => (step.value === "preview" ? tr("确认并使用提示词") : currentName.value));
 const stepLabel = computed(() =>
   step.value === "preview" ? "预览" : `变量 ${index.value + 1} / ${names.length}`,
 );

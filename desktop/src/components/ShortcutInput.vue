@@ -4,8 +4,8 @@
     readonly
     :value="formatShortcutLabel(modelValue, host)"
     :class="{ recording }"
-    placeholder="点击后按组合键"
-    :title="recording ? '请按组合键；Esc 取消，Tab 下一项' : '点击后直接按组合键'"
+    :placeholder="tr('点击后按组合键')"
+    :title="recording ? tr('请按组合键；Esc 取消，Tab 下一项') : tr('点击后直接按组合键')"
     @focus="start"
     @blur="stop"
     @keydown="record"
@@ -13,6 +13,7 @@
 </template>
 
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { onUnmounted, ref } from "vue";
 import { formatShortcutLabel } from "../platform/windowChrome.js";
 import { setShortcutRecording } from "../platform/shortcut.js";

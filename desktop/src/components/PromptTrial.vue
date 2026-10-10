@@ -1,14 +1,15 @@
 <template>
-  <aside class="prompt-trial" aria-label="试填预览" data-testid="prompt-trial">
-    <h3>试填预览</h3><p class="use-hint">仅预览，不保存填写内容。</p>
+  <aside class="prompt-trial" :aria-label="tr('试填预览')" data-testid="prompt-trial">
+    <h3>{{ tr('试填预览') }}</h3><p class="use-hint">{{ tr('仅预览，不保存填写内容。') }}</p>
     <label v-for="name in names" :key="name" class="field"><span>{{ name }}</span>
       <input :value="values[name]" :placeholder="name" @input="values = { ...values, [name]: $event.target.value }">
     </label>
-    <p v-if="!names.length" class="use-hint">没有变量，以下是原始正文。</p>
-    <pre data-testid="trial-result">{{ result || '输入正文后在这里查看效果' }}</pre>
+    <p v-if="!names.length" class="use-hint">{{ tr('没有变量，以下是原始正文。') }}</p>
+    <pre data-testid="trial-result">{{ result || tr('输入正文后在这里查看效果') }}</pre>
   </aside>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref, watch } from 'vue';
 import { extractVariables, renderPrompt, variableDefaults } from '../lib/renderPrompt.js';
 const props = defineProps({ content: { type: String, default: '' } });

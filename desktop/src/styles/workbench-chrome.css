@@ -947,3 +947,7 @@ body[data-density="compact"] .app-shell .prompt-card.as-row { min-height: 52px; 
 .view-switch button.active { background: var(--surface); box-shadow: 0 1px 3px #0000000d; }
 @media (max-width:600px) { .setting-row > .searchable-select { width: 100%; justify-self: stretch; } }
 @media (prefers-reduced-motion:reduce) { .settings-content input, .settings-content input::before, .field :is(input,textarea) { transition:none; } }
+
+@media (min-width: 601px) {
+  html[lang="en"] .setting-row > .searchable-select { width: 220px; }
+}

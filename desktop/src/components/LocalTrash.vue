@@ -1,14 +1,15 @@
 <template>
   <details data-testid="local-trash" @toggle="opened">
-    <summary>本地回收站</summary>
-    <p>恢复删除的提示词及库内附件。合集恢复为空合集；原成员保留在当前所在位置。最多显示最近 200 个匹配项。</p>
-    <form @submit.prevent="load"><input v-model="query" placeholder="搜索已删除的标题" aria-label="搜索回收站" :disabled="busy"><button type="submit" class="button" :disabled="busy">查找</button></form>
-    <p v-if="note" role="status">{{ note }}</p><p v-if="error" role="alert">{{ error }} <button class="button" :disabled="busy" @click="load">重新读取</button></p>
-    <p v-if="!busy && !error && !items.length">没有已删除的匹配内容</p>
-    <ul><li v-for="item in items" :key="item.kind + item.id"><span>{{ item.title }} · {{ item.kind === 'collection' ? '合集' : '提示词' }}</span><button class="button" :disabled="busy" @click="restore(item)">恢复</button></li></ul>
+    <summary>{{ tr('本地回收站') }}</summary>
+    <p>{{ tr('恢复删除的提示词及库内附件。合集恢复为空合集；原成员保留在当前所在位置。最多显示最近 200 个匹配项。') }}</p>
+    <form @submit.prevent="load"><input v-model="query" :placeholder="tr('搜索已删除的标题')" :aria-label="tr('搜索回收站')" :disabled="busy"><button type="submit" class="button" :disabled="busy">{{ tr('查找') }}</button></form>
+    <p v-if="note" role="status">{{ tr(note) }}</p><p v-if="error" role="alert">{{ tr(error) }} <button class="button" :disabled="busy" @click="load">{{ tr('重新读取') }}</button></p>
+    <p v-if="!busy && !error && !items.length">{{ tr('没有已删除的匹配内容') }}</p>
+    <ul><li v-for="item in items" :key="item.kind + item.id"><span>{{ item.title }} · {{ item.kind === 'collection' ? tr('合集') : tr('提示词') }}</span><button class="button" :disabled="busy" @click="restore(item)">{{ tr('恢复') }}</button></li></ul>
   </details>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { onUnmounted, ref } from 'vue';
 import { listDeletedLocalItems, restoreDeletedLocalItem } from '../platform/library.js';
 const emit = defineEmits(['restored', 'busy']);

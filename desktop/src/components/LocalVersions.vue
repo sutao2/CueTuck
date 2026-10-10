@@ -1,18 +1,19 @@
 <template>
   <details data-testid="local-versions" @toggle="event => event.target.open && load()">
-    <summary>查看同步前版本</summary>
-    <p>保留本机最近 50 次被同步覆盖的标题、正文和库内附件，仅存于本机。恢复会新建独立副本，当前版本不被替换。</p>
-    <p v-if="error" role="alert">{{ error }} <button class="button" :disabled="busy || disabled" @click="load">重新读取</button></p>
-    <p v-if="note" role="status">{{ note }}</p>
-    <p v-if="!busy && !error && !items.length">暂无被同步覆盖的本机版本</p>
+    <summary>{{ tr('查看同步前版本') }}</summary>
+    <p>{{ tr('保留本机最近 50 次被同步覆盖的标题、正文和库内附件，仅存于本机。恢复会新建独立副本，当前版本不被替换。') }}</p>
+    <p v-if="error" role="alert">{{ tr(error) }} <button class="button" :disabled="busy || disabled" @click="load">{{ tr('重新读取') }}</button></p>
+    <p v-if="note" role="status">{{ tr(note) }}</p>
+    <p v-if="!busy && !error && !items.length">{{ tr('暂无被同步覆盖的本机版本') }}</p>
     <ul><li v-for="item in items" :key="item.id"><button type="button" class="button" :disabled="busy || disabled" @click="preview(item)">{{ item.title }} · {{ new Date(Number(item.saved_at)).toLocaleString() }}</button></li></ul>
     <section v-if="selected && payload">
-      <h4>{{ payload.title }}</h4><pre>{{ payload.content }}</pre><p>{{ payload.assets?.length || 0 }} 个库内附件</p>
-      <button type="button" class="button" :disabled="busy || disabled || restored" @click="restore">{{ restored ? '已恢复为本地副本' : '恢复为本地副本' }}</button>
+      <h4>{{ payload.title }}</h4><pre>{{ payload.content }}</pre><p>{{ payload.assets?.length || 0 }} {{ tr('个库内附件') }}</p>
+      <button type="button" class="button" :disabled="busy || disabled || restored" @click="restore">{{ restored ? tr('已恢复为本地副本') : tr('恢复为本地副本') }}</button>
     </section>
   </details>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { onUnmounted, ref } from 'vue';
 import { getLocalPromptVersion, listLocalPromptVersions, restoreLocalPromptVersion } from '../platform/library.js';
 const props = defineProps({ disabled: Boolean });

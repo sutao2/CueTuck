@@ -1,25 +1,26 @@
 <template>
   <div class="update-status" aria-live="polite">
-    <p data-testid="update-note">{{ label }}</p>
+    <p data-testid="update-note">{{ tr(label) }}</p>
     <template v-if="['downloading','verifying','ready'].includes(state.phase)">
-      <progress :value="state.total ? state.downloaded : undefined" :max="state.total || 1" aria-label="更新下载进度" />
+      <progress :value="state.total ? state.downloaded : undefined" :max="state.total || 1" :aria-label="tr('更新下载进度')" />
       <small>{{ bytes(state.downloaded) }}<template v-if="state.total"> / {{ bytes(state.total) }}</template></small>
     </template>
-    <p v-if="state.error" role="alert">{{ state.error }}</p>
-    <button v-if="state.phase === 'available'" class="button" @click="downloadUpdate(channel)">{{ state.error ? '重试下载' : '下载更新' }}</button>
+    <p v-if="state.error" role="alert">{{ tr(state.error) }}</p>
+    <button v-if="state.phase === 'available'" class="button" @click="downloadUpdate(channel)">{{ state.error ? tr('重试下载') : tr('下载更新') }}</button>
     <template v-if="state.phase === 'ready'">
-      <p>更新已下载并通过签名验证。安装将关闭并重新启动应用，请先保存正在编辑的内容。</p>
-      <button class="button" :disabled="dirty" @click="confirming = true">安装并重启</button>
-      <small v-if="dirty">请先保存设置中未保存的修改。</small>
+      <p>{{ tr('更新已下载并通过签名验证。安装将关闭并重新启动应用，请先保存正在编辑的内容。') }}</p>
+      <button class="button" :disabled="dirty" @click="confirming = true">{{ tr('安装并重启') }}</button>
+      <small v-if="dirty">{{ tr('请先保存设置中未保存的修改。') }}</small>
     </template>
-    <small v-if="state.checkedAt">上次检查：{{ state.checkedAt }}</small>
-    <details v-if="state.notes"><summary>发行说明 · {{ state.version }}</summary><p class="release-body" data-testid="release-notes">{{ state.notes }}</p></details>
-    <div v-if="confirming" class="update-confirm" role="alertdialog" aria-modal="true" aria-label="安装更新" @keydown.esc.stop.prevent="confirming = false" @keydown.tab.prevent="focusOther">
-      <section><h3>安装更新并重启？</h3><p>请确认已保存主窗口和启动器中的编辑内容。</p><button ref="cancel" class="button ghost-button" @click="confirming = false">稍后</button><button ref="install" class="button" @click="confirming = false; installUpdate()">安装并重启</button></section>
+    <small v-if="state.checkedAt">{{ tr('上次检查：') }}{{ state.checkedAt }}</small>
+    <details v-if="state.notes"><summary>{{ tr('发行说明 ·') }} {{ state.version }}</summary><p class="release-body" data-testid="release-notes">{{ state.notes }}</p></details>
+    <div v-if="confirming" class="update-confirm" role="alertdialog" aria-modal="true" :aria-label="tr('安装更新')" @keydown.esc.stop.prevent="confirming = false" @keydown.tab.prevent="focusOther">
+      <section><h3>{{ tr('安装更新并重启？') }}</h3><p>{{ tr('请确认已保存主窗口和启动器中的编辑内容。') }}</p><button ref="cancel" class="button ghost-button" @click="confirming = false">{{ tr('稍后') }}</button><button ref="install" class="button" @click="confirming = false; installUpdate()">{{ tr('安装并重启') }}</button></section>
     </div>
   </div>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, nextTick, ref, watch } from 'vue';
 import { updateState as state, downloadUpdate, installUpdate } from '../platform/updates.js';
 defineProps({ channel: String, dirty: Boolean });

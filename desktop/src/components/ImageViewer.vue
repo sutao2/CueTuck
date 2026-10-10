@@ -1,30 +1,31 @@
 <template>
   <Teleport to="body">
     <div class="image-backdrop" @click.self="$emit('close')">
-      <section v-dialog-focus="() => $emit('close')" class="image-viewer" role="dialog" aria-modal="true" :aria-label="`图片预览：${title}`" @keydown="onKey">
+      <section v-dialog-focus="() => $emit('close')" class="image-viewer" role="dialog" aria-modal="true" :aria-label="tr('图片预览：{0}', [title])" @keydown="onKey">
         <header class="image-heading">
           <div class="image-caption"><strong :title="title">{{ title }}</strong><span v-if="loaded">{{ naturalWidth }} × {{ naturalHeight }}</span></div>
-          <button type="button" data-dialog-autofocus aria-label="关闭图片预览" title="关闭 (Esc)" @click="$emit('close')"><AppIcon name="close" /></button>
+          <button type="button" data-dialog-autofocus :aria-label="tr('关闭图片预览')" :title="tr('关闭 (Esc)')" @click="$emit('close')"><AppIcon name="close" /></button>
         </header>
         <div ref="canvas" class="image-canvas" @click.self="$emit('close')" @wheel.prevent="onWheel">
-          <p v-if="failed" class="image-message" role="alert"><AppIcon name="image" />图片无法加载，请关闭后重试。</p>
-          <p v-else-if="!loaded" class="image-message" role="status">正在加载图片…</p>
+          <p v-if="failed" class="image-message" role="alert"><AppIcon name="image" />{{ tr('图片无法加载，请关闭后重试。') }}</p>
+          <p v-else-if="!loaded" class="image-message" role="status">{{ tr('正在加载图片…') }}</p>
           <img v-if="!failed" :key="src" :src="src" :alt="title" referrerpolicy="no-referrer" :class="{ loaded, draggable: canPan, dragging }" :style="imageStyle" draggable="false" @load="onLoad" @error="failed = true; loaded = false" @dblclick.prevent="toggleSize" @pointerdown="startPan" @pointermove="movePan" @pointerup="endPan" @pointercancel="endPan" @lostpointercapture="endPan">
         </div>
-        <p class="image-hint">双击切换原尺寸 · 放大后拖动查看 · Esc 关闭</p>
-        <footer class="image-toolbar" aria-label="图片工具栏">
-          <button type="button" :disabled="!loaded || scale <= .1" aria-label="缩小图片" title="缩小 (−)" @click="resize(-.25)"><AppIcon name="minus" /></button>
+        <p class="image-hint">{{ tr('双击切换原尺寸 · 放大后拖动查看 · Esc 关闭') }}</p>
+        <footer class="image-toolbar" :aria-label="tr('图片工具栏')">
+          <button type="button" :disabled="!loaded || scale <= .1" :aria-label="tr('缩小图片')" :title="tr('缩小 (−)')" @click="resize(-.25)"><AppIcon name="minus" /></button>
           <span class="image-scale">{{ loaded ? Math.round(scale * 100) + '%' : '—' }}</span>
-          <button type="button" :disabled="!loaded || scale >= 4" aria-label="放大图片" title="放大 (+)" @click="resize(.25)"><AppIcon name="plus" /></button>
+          <button type="button" :disabled="!loaded || scale >= 4" :aria-label="tr('放大图片')" :title="tr('放大 (+)')" @click="resize(.25)"><AppIcon name="plus" /></button>
           <i aria-hidden="true" />
-          <button type="button" :disabled="!loaded" :aria-pressed="zoom === null" title="适应窗口 (0)" @click="setZoom(null)"><AppIcon name="fit" /><span>适应</span></button>
-          <button type="button" :disabled="!loaded" :aria-pressed="zoom === 1" title="原始尺寸 (1)" @click="setZoom(1)">1:1</button>
+          <button type="button" :disabled="!loaded" :aria-pressed="zoom === null" :title="tr('适应窗口 (0)')" @click="setZoom(null)"><AppIcon name="fit" /><span>{{ tr('适应') }}</span></button>
+          <button type="button" :disabled="!loaded" :aria-pressed="zoom === 1" :title="tr('原始尺寸 (1)')" @click="setZoom(1)">1:1</button>
         </footer>
       </section>
     </div>
   </Teleport>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { vDialogFocus } from '../lib/dialogFocus.js';
 import AppIcon from './AppIcon.vue';

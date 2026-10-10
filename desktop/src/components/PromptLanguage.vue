@@ -1,17 +1,18 @@
 <template>
-  <section class="prompt-language" aria-label="提示词语言版本">
+  <section class="prompt-language" :aria-label="tr('提示词语言版本')">
     <div class="language-bar">
-      <div class="language-tabs" role="group" aria-label="正文语言"><button v-for="tab in tabs" :key="tab.id" type="button" :aria-pressed="selected === tab.id" :disabled="disabled" @click="select(tab.id)">{{ tab.label }}<span v-if="tab.id !== 'original' && versions[tab.id]"> · {{ versions[tab.id].original ? '原稿' : '已就绪' }}</span></button></div>
-      <label v-if="selected !== 'original' && current && !current.original"><input v-model="compare" type="checkbox">对照原文</label>
+      <div class="language-tabs" role="group" :aria-label="tr('正文语言')"><button v-for="tab in tabs" :key="tab.id" type="button" :aria-pressed="selected === tab.id" :disabled="disabled" @click="select(tab.id)">{{ tr(tab.label) }}<span v-if="tab.id !== 'original' && versions[tab.id]"> · {{ versions[tab.id].original ? tr('原稿') : tr('已就绪') }}</span></button></div>
+      <label v-if="selected !== 'original' && current && !current.original"><input v-model="compare" type="checkbox">{{ tr('对照原文') }}</label>
     </div>
-    <p v-if="busy" role="status">{{ squareId ? '译文正在生成，可先查看原文…' : '正在使用本机配置的模型翻译…' }}</p>
-    <p v-else-if="error" role="alert">{{ error }} <button type="button" class="button" @click="generate">重试</button></p>
-    <p v-else-if="selected !== 'original' && !current" class="language-note">{{ squareId ? '此语言版本尚未生成。生成后大家都可复用。' : '仅将此模板发送到你配置的翻译模型，原文会保留。' }} <button class="button" type="button" :disabled="disabled" @click="generate">{{ selected === 'en' ? '生成英文版本' : '翻译成中文' }}</button></p>
-    <p v-else-if="selected !== 'original' && current" class="language-note">{{ current.original ? '直接使用原稿，无需翻译。' : 'AI 译文 · 已保留原文与变量，使用前请核对。' }}</p>
+    <p v-if="busy" role="status">{{ squareId ? tr('译文正在生成，可先查看原文…') : tr('正在使用本机配置的模型翻译…') }}</p>
+    <p v-else-if="error" role="alert">{{ tr(error) }} <button type="button" class="button" @click="generate">{{ tr('重试') }}</button></p>
+    <p v-else-if="selected !== 'original' && !current" class="language-note">{{ squareId ? tr('此语言版本尚未生成。生成后大家都可复用。') : tr('仅将此模板发送到你配置的翻译模型，原文会保留。') }} <button class="button" type="button" :disabled="disabled" @click="generate">{{ selected === 'en' ? tr('生成英文版本') : tr('翻译成中文') }}</button></p>
+    <p v-else-if="selected !== 'original' && current" class="language-note">{{ current.original ? tr('直接使用原稿，无需翻译。') : tr('AI 译文 · 已保留原文与变量，使用前请核对。') }}</p>
     <pre v-if="compare && current && selected !== 'original'" class="language-original">{{ text }}</pre>
   </section>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { localVersion, squareVersions, translateOnce, sourceLanguage } from '../platform/translation.js';
 const props = defineProps({text:{type:String,default:''},squareId:{type:String,default:''},memberIndex:{type:Number,default:-1},initialVersions:{type:Object,default:null},defaultLanguage:{type:String,default:'original'},disabled:Boolean});

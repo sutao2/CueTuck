@@ -1,12 +1,13 @@
 <template>
-  <button ref="cover" type="button" class="local-prompt-cover square-reference-cover" :aria-label="`查看 ${title} 的图片`" :disabled="opening" @click.stop="openOriginal">
+  <button ref="cover" type="button" class="local-prompt-cover square-reference-cover" :aria-label="tr('查看 {0} 的图片', [title])" :disabled="opening" @click.stop="openOriginal">
     <img v-if="asset && !failed" :src="assetUrl(asset)" alt="" decoding="async" @error="failed = true">
-    <span v-else>{{ opening ? '正在读取原图…' : failed ? '预览暂不可用，点击查看原图' : '图片' }}</span>
+    <span v-else>{{ opening ? tr('正在读取原图…') : failed ? tr('预览暂不可用，点击查看原图') : tr('图片') }}</span>
   </button>
-  <p v-if="originalError" class="cover-error" role="alert">{{ originalError }}</p>
+  <p v-if="originalError" class="cover-error" role="alert">{{ tr(originalError) }}</p>
   <ImageViewer v-if="original" :src="assetUrl(original)" :title="title" @close="original = null" />
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { firstPromptImage, assetUrl } from '../platform/assets.js';
 import ImageViewer from './ImageViewer.vue';

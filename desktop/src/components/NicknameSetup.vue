@@ -2,30 +2,31 @@
   <Teleport to="body">
     <div v-if="loaded || error" class="nickname-backdrop">
       <section v-dialog-focus="() => {}" class="nickname-dialog" role="dialog" aria-modal="true" aria-labelledby="nickname-title" :aria-busy="busy">
-        <div v-if="loaded" class="nickname-avatar" aria-hidden="true">{{ name.trim().slice(0, 1) || '你' }}</div>
-        <h2 id="nickname-title">{{ loaded ? '让大家认识你' : '暂时无法读取账号资料' }}</h2>
-        <p v-if="loaded" class="nickname-description">设置一个公开昵称，用于广场中的作者署名。之后可在「账号与广场」修改。</p>
-        <p v-if="loading" role="status">正在读取账号资料…</p>
+        <div v-if="loaded" class="nickname-avatar" aria-hidden="true">{{ name.trim().slice(0, 1) || tr('你') }}</div>
+        <h2 id="nickname-title">{{ loaded ? tr('让大家认识你') : tr('暂时无法读取账号资料') }}</h2>
+        <p v-if="loaded" class="nickname-description">{{ tr('设置一个公开昵称，用于广场中的作者署名。之后可在「账号与广场」修改。') }}</p>
+        <p v-if="loading" role="status">{{ tr('正在读取账号资料…') }}</p>
         <form v-else-if="loaded" @submit.prevent="save">
           <label class="field">
-            <span>昵称</span>
-            <input ref="nameInput" v-model="name" data-testid="nickname-input" autocomplete="nickname" placeholder="你希望大家怎么称呼你？" required :disabled="busy" aria-describedby="nickname-note nickname-error">
+            <span>{{ tr('昵称') }}</span>
+            <input ref="nameInput" v-model="name" data-testid="nickname-input" autocomplete="nickname" :placeholder="tr('你希望大家怎么称呼你？')" required :disabled="busy" aria-describedby="nickname-note nickname-error">
           </label>
-          <p id="nickname-note" class="nickname-note">昵称会公开显示，请勿填写邮箱或其他私人信息。</p>
-          <p id="nickname-error" role="alert">{{ error }}</p>
-          <button class="button primary-button nickname-save" type="submit" :disabled="busy || !name.trim()" data-testid="nickname-save">{{ saving ? '正在保存…' : '保存并继续' }}</button>
+          <p id="nickname-note" class="nickname-note">{{ tr('昵称会公开显示，请勿填写邮箱或其他私人信息。') }}</p>
+          <p id="nickname-error" role="alert">{{ tr(error) }}</p>
+          <button class="button primary-button nickname-save" type="submit" :disabled="busy || !name.trim()" data-testid="nickname-save">{{ saving ? tr('正在保存…') : tr('保存并继续') }}</button>
         </form>
         <div v-else>
-          <p role="alert">{{ error }}</p>
-          <button class="button" :disabled="busy" @click="load">重新读取</button>
+          <p role="alert">{{ tr(error) }}</p>
+          <button class="button" :disabled="busy" @click="load">{{ tr('重新读取') }}</button>
         </div>
-        <button class="button ghost-button nickname-exit" type="button" :disabled="busy" @click="emit('logout')">退出登录，使用本地库</button>
+        <button class="button ghost-button nickname-exit" type="button" :disabled="busy" @click="emit('logout')">{{ tr('退出登录，使用本地库') }}</button>
       </section>
     </div>
   </Teleport>
 </template>
 
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { getMe, putMe } from '../platform/session.js';
 import { vDialogFocus } from '../lib/dialogFocus.js';

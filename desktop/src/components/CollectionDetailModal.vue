@@ -2,54 +2,53 @@
     <section v-page-focus="() => !busy && $emit('cancel')" class="workspace-page" data-testid="collection-detail" role="region" aria-labelledby="collection-title" :aria-busy="busy || loading">
       <header class="modal-header">
         <div>
-          <p class="modal-kicker">提示词合集</p>
+          <p class="modal-kicker">{{ tr('提示词合集') }}</p>
           <h2 id="collection-title">{{ collection.title }}</h2>
         </div>
-        <button type="button" class="page-back" aria-label="返回" :disabled="busy" @click="$emit('cancel')">← 返回</button>
+        <button type="button" class="page-back" :aria-label="tr('返回')" :disabled="busy" @click="$emit('cancel')">{{ tr('← 返回') }}</button>
       </header>
       <div class="create-body collection-body" :inert="busy ? '' : undefined">
-        <p v-if="error" role="alert" class="use-hint">{{ error }}</p>
-        <p v-if="loading" role="status" class="use-hint">正在读取合集…</p>
-        <button v-else-if="!ready" type="button" class="button ghost-button" data-testid="retry-collection-load" :disabled="busy" @click="$emit('retry')">重新读取</button>
+        <p v-if="error" role="alert" class="use-hint">{{ tr(error) }}</p>
+        <p v-if="loading" role="status" class="use-hint">{{ tr('正在读取合集…') }}</p>
+        <button v-else-if="!ready" type="button" class="button ghost-button" data-testid="retry-collection-load" :disabled="busy" @click="$emit('retry')">{{ tr('重新读取') }}</button>
         <template v-if="ready">
         <CollectionCover :type="collection.cover_type" :json="collection.cover_json" />
-        <div class="collection-members-heading"><p class="use-hint">{{ members.length }} 个提示词</p><button type="button" class="button primary-button" data-testid="create-collection-prompt" :disabled="busy || loading" @click="$emit('create')">＋ 新建提示词</button></div>
-        <div v-if="!members.length" class="collection-empty"><strong>把相关提示词放在一起</strong><p>从下方选择本地提示词，或新建仅属于这个合集的提示词。</p></div>
+        <div class="collection-members-heading"><p class="use-hint">{{ members.length }} {{ tr('个提示词') }}</p><button type="button" class="button primary-button" data-testid="create-collection-prompt" :disabled="busy || loading" @click="$emit('create')">{{ tr('＋ 新建提示词') }}</button></div>
+        <div v-if="!members.length" class="collection-empty"><strong>{{ tr('把相关提示词放在一起') }}</strong><p>{{ tr('从下方选择本地提示词，或新建仅属于这个合集的提示词。') }}</p></div>
         <ul class="member-list">
           <li v-for="member in members" :key="member.id">
             <button type="button" class="member-title" :title="member.title" @click="$emit('open', member)">{{ member.title }}</button>
             <span class="member-actions">
-            <button type="button" class="card-action" @click="$emit('use', member)">使用</button>
-            <button type="button" class="card-action" data-testid="remove-member" @click="$emit('remove-member', member.id)">移出合集</button>
+            <button type="button" class="card-action" @click="$emit('use', member)">{{ tr('使用') }}</button>
+            <button type="button" class="card-action" data-testid="remove-member" @click="$emit('remove-member', member.id)">{{ tr('移出合集') }}</button>
             </span>
           </li>
         </ul>
         <div class="member-picker">
-          <label class="field"><span>搜索并加入提示词</span><input v-model="memberQuery" type="search" placeholder="搜索本地提示词标题" /></label>
-          <p class="use-hint">可多选；已有合集的提示词会移动到本合集，正文保持不变。移出合集会保留为独立提示词。</p>
+          <label class="field"><span>{{ tr('搜索并加入提示词') }}</span><input v-model="memberQuery" type="search" :placeholder="tr('搜索本地提示词标题')" /></label>
+          <p class="use-hint">{{ tr('可多选；已有合集的提示词会移动到本合集，正文保持不变。移出合集会保留为独立提示词。') }}</p>
           <div class="member-choices">
             <label v-for="prompt in filteredAvailable" :key="prompt.id">
               <input v-model="selectedPromptIds" type="checkbox" :value="prompt.id" :data-member-choice="prompt.id" />
-              <span>{{ prompt.title }}<small v-if="prompt.collection_id">将从原合集移入</small></span>
+              <span>{{ prompt.title }}<small v-if="prompt.collection_id">{{ tr('将从原合集移入') }}</small></span>
             </label>
-            <p v-if="!filteredAvailable.length" role="status">{{ memberQuery ? '没有匹配的提示词' : '暂无可加入的提示词' }}</p>
+            <p v-if="!filteredAvailable.length" role="status">{{ memberQuery ? tr('没有匹配的提示词') : tr('暂无可加入的提示词') }}</p>
           </div>
         </div>
         </template>
       </div>
       <footer class="modal-footer">
-        <button type="button" class="button ghost-button" data-testid="edit-collection" :disabled="busy || !ready" @click="$emit('edit')">编辑合集</button>
+        <button type="button" class="button ghost-button" data-testid="edit-collection" :disabled="busy || !ready" @click="$emit('edit')">{{ tr('编辑合集') }}</button>
         <div class="modal-actions">
-          <button type="button" class="button ghost-button" :disabled="busy" @click="$emit('cancel')">返回</button>
-          <button type="button" class="button primary-button" data-testid="add-collection-members" :disabled="busy || !ready || !selectedPromptIds.length" @click="add">
-            加入合集
-          </button>
+          <button type="button" class="button ghost-button" :disabled="busy" @click="$emit('cancel')">{{ tr('返回') }}</button>
+          <button type="button" class="button primary-button" data-testid="add-collection-members" :disabled="busy || !ready || !selectedPromptIds.length" @click="add"> {{ tr('加入合集') }} </button>
         </div>
       </footer>
     </section>
 </template>
 
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref, watch } from "vue";
 import { vPageFocus } from "../lib/pageFocus.js";
 import CollectionCover from "./CollectionCover.vue";

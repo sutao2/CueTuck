@@ -1,18 +1,19 @@
 <template>
-  <section class="publication-preview" aria-label="发布预览" data-testid="publication-preview">
-    <p class="preview-eyebrow">发布预览 · 审核通过后公开</p>
+  <section class="publication-preview" :aria-label="tr('发布预览')" data-testid="publication-preview">
+    <p class="preview-eyebrow">{{ tr('发布预览 · 审核通过后公开') }}</p>
     <h2>{{ title }}</h2>
-    <section v-if="cover"><h3>公开合集封面</h3><CollectionCover :type="cover.cover_type" :json="cover.cover_json" /></section>
-    <p class="preview-meta">{{ category || '未分类' }} · {{ model || '通用模型' }}</p>
+    <section v-if="cover"><h3>{{ tr('公开合集封面') }}</h3><CollectionCover :type="cover.cover_type" :json="cover.cover_json" /></section>
+    <p class="preview-meta">{{ category || tr('未分类') }} · {{ model || tr('通用模型') }}</p>
     <template v-if="members?.length"><article v-for="(member,index) in members" :key="index"><h3>{{ member.title }}</h3><pre>{{ member.content }}</pre></article></template>
-    <pre v-else>{{ content || '没有正文' }}</pre>
-    <h3>公开附件 <span>{{ assets.length }}</span></h3>
-    <p v-if="!assets.length" class="preview-meta">{{ cover ? '仅公开上方合集封面，不公开成员附件。' : '本次不会公开任何附件或图片。' }}</p>
+    <pre v-else>{{ content || tr('没有正文') }}</pre>
+    <h3>{{ tr('公开附件') }} <span>{{ assets.length }}</span></h3>
+    <p v-if="!assets.length" class="preview-meta">{{ cover ? tr('仅公开上方合集封面，不公开成员附件。') : tr('本次不会公开任何附件或图片。') }}</p>
     <div v-else class="preview-files"><figure v-for="asset in assets" :key="asset.id"><img v-if="asset.mime.startsWith('image/')" :src="assetUrl(asset)" :alt="asset.name"><figcaption>{{ asset.name }}<small v-if="asset.memberTitle">{{ asset.memberTitle }}</small></figcaption></figure></div>
-    <p class="preview-meta">确认正文和附件适合公开后提交。返回修改会保留当前选择。</p>
+    <p class="preview-meta">{{ tr('确认正文和附件适合公开后提交。返回修改会保留当前选择。') }}</p>
   </section>
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import CollectionCover from './CollectionCover.vue';
 import { assetUrl } from '../platform/assets.js';
 defineProps({ cover:Object, title:String, content:String, category:String, model:String, members:Array, assets:{type:Array,default:()=>[]} });

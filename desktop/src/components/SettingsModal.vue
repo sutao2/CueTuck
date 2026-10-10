@@ -1,10 +1,10 @@
 <template>
-  <section class="settings-page" data-testid="settings-page" aria-label="设置" @keydown.esc="onEscape">
+  <section class="settings-page" data-testid="settings-page" :aria-label="tr('设置')" @keydown.esc="onEscape">
       <div class="settings-window-drag" data-tauri-drag-region aria-hidden="true"></div>
       <div class="settings-body" :inert="pendingAction ? '' : undefined">
         <nav class="settings-nav" aria-labelledby="settings-title">
-          <button ref="returnButton" type="button" class="settings-return" aria-label="返回应用" :disabled="saving || loading || dataBusy || importBusy || billingBusy || logoutBusy || syncBusy" @click="requestClose"><span aria-hidden="true">←</span> 返回应用</button>
-          <label class="settings-search"><AppIcon name="search" /><input v-model="settingsQuery" type="search" aria-label="搜索设置" placeholder="搜索设置…" @keydown.esc.stop="clearSearchOrReturn" /></label>
+          <button ref="returnButton" type="button" class="settings-return" :aria-label="tr('返回应用')" :disabled="saving || loading || dataBusy || importBusy || billingBusy || logoutBusy || syncBusy" @click="requestClose"><span aria-hidden="true">←</span> {{ tr('返回应用') }}</button>
+          <label class="settings-search"><AppIcon name="search" /><input v-model="settingsQuery" type="search" :aria-label="tr('搜索设置')" :placeholder="tr('搜索设置…')" @keydown.esc.stop="clearSearchOrReturn" /></label>
           <h2 id="settings-title">{{ uiText(uiLanguage, "settings") }}</h2>
           <button
             v-for="page in filteredPages"
@@ -17,17 +17,17 @@
           >
             <AppIcon :name="page.icon" /><span>{{ page.label }}</span>
           </button>
-          <p v-if="!filteredPages.length" class="settings-no-results" role="status">没有匹配的设置</p>
+          <p v-if="!filteredPages.length" class="settings-no-results" role="status">{{ tr('没有匹配的设置') }}</p>
         </nav>
         <main :key="current" class="settings-content" :aria-label="pages.find(page => page.id === current)?.label">
           <fieldset class="settings-fields" :disabled="saving || loading">
           <section v-if="current === 'general'">
-            <h3>常规</h3>
-            <p>管理应用启动、托盘和快捷窗口的使用偏好。</p>
+            <h3>{{ tr('常规') }}</h3>
+            <p>{{ tr('管理应用启动、托盘和快捷窗口的使用偏好。') }}</p>
             <div class="settings-group">
-            <p v-if="prefError" data-testid="pref-error">{{ prefError }}</p>
+            <p v-if="prefError" data-testid="pref-error">{{ tr(prefError) }}</p>
             <label class="setting-row">
-              <span class="setting-copy"><strong>开机启动</strong><small>登录系统后自动打开唤词。</small></span>
+              <span class="setting-copy"><strong>{{ tr('开机启动') }}</strong><small>{{ tr('登录系统后自动打开唤词。') }}</small></span>
               <input
                 type="checkbox"
                 data-testid="launch-at-login"
@@ -36,7 +36,7 @@
               >
             </label>
             <label class="setting-row">
-              <span class="setting-copy"><strong>关闭后最小化到托盘</strong><small>关闭主窗口后保留在托盘，方便随时返回。</small></span>
+              <span class="setting-copy"><strong>{{ tr('关闭后最小化到托盘') }}</strong><small>{{ tr('关闭主窗口后保留在托盘，方便随时返回。') }}</small></span>
               <input
                 type="checkbox"
                 data-testid="minimize-to-tray"
@@ -45,7 +45,7 @@
               >
             </label>
             <label class="setting-row">
-              <span class="setting-copy"><strong>使用后自动关闭快捷窗口</strong><small>复制或粘贴成功后收起启动器，失败时保留填写内容。</small></span>
+              <span class="setting-copy"><strong>{{ tr('使用后自动关闭快捷窗口') }}</strong><small>{{ tr('复制或粘贴成功后收起启动器，失败时保留填写内容。') }}</small></span>
               <input
                 type="checkbox"
                 data-testid="close-launcher-after-use"
@@ -54,81 +54,81 @@
               >
             </label>
             </div>
-            <h4>启动器</h4>
-            <p>仅影响独立快捷窗口，保存后下次唤起生效。</p>
+            <h4>{{ tr('启动器') }}</h4>
+            <p>{{ tr('仅影响独立快捷窗口，保存后下次唤起生效。') }}</p>
             <div class="settings-group">
               <label v-for="option in launcherSettingRows" :key="option.key" class="setting-row">
-                <span class="setting-copy"><strong>{{ option.label }}</strong><small>{{ option.description }}</small></span>
-                <SearchableSelect :data-testid="`launcher-${option.key}`" :aria-label="option.label" :searchable="false" :disabled="saving || loading" :model-value="launcherPreferences[option.key]" :options="option.choices" @change="changeLauncherPreference(option.key, $event)" />
+                <span class="setting-copy"><strong>{{ tr(option.label) }}</strong><small>{{ tr(option.description) }}</small></span>
+                <SearchableSelect :data-testid="`launcher-${option.key}`" :aria-label="tr(option.label)" :searchable="false" :disabled="saving || loading" :model-value="launcherPreferences[option.key]" :options="option.choices.map(choice => ({...choice, label: tr(choice.label)}))" @change="changeLauncherPreference(option.key, $event)" />
               </label>
               <div class="setting-row">
-                <span class="setting-copy"><strong>恢复启动器默认设置</strong><small>仅恢复上面四项，不修改快捷键或使用后关闭。</small></span>
-                <button type="button" class="button ghost-button" data-testid="reset-launcher-preferences" @click="saveLauncherPreferences({ ...DEFAULT_LAUNCHER_PREFERENCES })">恢复默认</button>
+                <span class="setting-copy"><strong>{{ tr('恢复启动器默认设置') }}</strong><small>{{ tr('仅恢复上面四项，不修改快捷键或使用后关闭。') }}</small></span>
+                <button type="button" class="button ghost-button" data-testid="reset-launcher-preferences" @click="saveLauncherPreferences({ ...DEFAULT_LAUNCHER_PREFERENCES })">{{ tr('恢复默认') }}</button>
               </div>
               <div class="setting-row">
-                <span class="setting-copy"><strong>启动器快捷键</strong><small>唤起、新建与粘贴最近使用的组合键。</small></span>
-                <button type="button" class="button ghost-button" @click="current = 'shortcuts'">前往快捷键</button>
+                <span class="setting-copy"><strong>{{ tr('启动器快捷键') }}</strong><small>{{ tr('唤起、新建与粘贴最近使用的组合键。') }}</small></span>
+                <button type="button" class="button ghost-button" @click="current = 'shortcuts'">{{ tr('前往快捷键') }}</button>
               </div>
             </div>
           </section>
           <section v-else-if="current === 'account'" class="account-page">
-            <h3>账号与广场</h3>
-            <p>管理你的身份，分享你的创作。</p>
-            <p v-if="logoutError" role="alert">{{ logoutError }}</p>
+            <h3>{{ tr('账号与广场') }}</h3>
+            <p>{{ tr('管理你的身份，分享你的创作。') }}</p>
+            <p v-if="logoutError" role="alert">{{ tr(logoutError) }}</p>
             <div class="account-overview" data-testid="account-overview">
               <div class="account-avatar" aria-hidden="true">{{ accountInitial }}</div>
               <div class="account-identity">
-                <span class="account-eyebrow">{{ session.loggedIn ? '当前账号' : '本地工作空间' }}</span>
+                <span class="account-eyebrow">{{ session.loggedIn ? tr('当前账号') : tr('本地工作空间') }}</span>
                 <h4 data-testid="account-name">{{ accountName }}</h4>
-                <span class="account-email" data-testid="current-account">{{ session.loggedIn ? session.email : '未登录' }}</span>
+                <span class="account-email" data-testid="current-account">{{ session.loggedIn ? session.email : tr('未登录') }}</span>
               </div>
               <div class="account-session-actions">
-                <span v-if="session.loggedIn" class="account-badge">已登录</span>
-                <button v-if="!session.loggedIn" type="button" class="button primary-button" data-testid="settings-login" @click="$emit('login')">登录</button>
-                <button v-else type="button" class="button ghost-button" data-testid="settings-logout" :disabled="logoutBusy" @click="$emit('logout')">{{ logoutBusy ? '正在退出…' : '退出登录' }}</button>
+                <span v-if="session.loggedIn" class="account-badge">{{ tr('已登录') }}</span>
+                <button v-if="!session.loggedIn" type="button" class="button primary-button" data-testid="settings-login" @click="$emit('login')">{{ tr('登录') }}</button>
+                <button v-else type="button" class="button ghost-button" data-testid="settings-logout" :disabled="logoutBusy" @click="$emit('logout')">{{ logoutBusy ? tr('正在退出…') : tr('退出登录') }}</button>
               </div>
             </div>
             <div class="account-grid">
               <div class="account-card setting-block account-profile-card">
-                <header class="account-card-heading"><span class="account-section-icon"><AppIcon name="user" /></span><div><h4>公开资料</h4><p>用于作者主页，让广场里的创作有你的名字。</p></div></header>
+                <header class="account-card-heading"><span class="account-section-icon"><AppIcon name="user" /></span><div><h4>{{ tr('公开资料') }}</h4><p>{{ tr('用于作者主页，让广场里的创作有你的名字。') }}</p></div></header>
                 <form class="author-profile" @submit.prevent="saveAuthorProfile">
-                  <label class="profile-field"><span>显示名</span>
-                    <input data-testid="author-display-name" :disabled="!session.loggedIn" v-model="displayName" placeholder="你希望大家怎么称呼你？" @input="profileNote = ''">
+                  <label class="profile-field"><span>{{ tr('显示名') }}</span>
+                    <input data-testid="author-display-name" :disabled="!session.loggedIn" v-model="displayName" :placeholder="tr('你希望大家怎么称呼你？')" @input="profileNote = ''">
                   </label>
-                  <label class="profile-field"><span>简介 <small>选填</small></span>
-                    <textarea data-testid="author-bio" :disabled="!session.loggedIn" v-model="bio" rows="5" placeholder="介绍你的创作方向，或你擅长的领域…" @input="profileNote = ''"></textarea>
+                  <label class="profile-field"><span>{{ tr('简介') }} <small>{{ tr('选填') }}</small></span>
+                    <textarea data-testid="author-bio" :disabled="!session.loggedIn" v-model="bio" rows="5" :placeholder="tr('介绍你的创作方向，或你擅长的领域…')" @input="profileNote = ''"></textarea>
                   </label>
-                  <p class="account-form-hint">{{ session.loggedIn ? '显示名与简介会公开展示，登录邮箱不会因编辑资料而改变。' : '登录后即可编辑公开资料。' }}</p>
+                  <p class="account-form-hint">{{ session.loggedIn ? tr('显示名与简介会公开展示，登录邮箱不会因编辑资料而改变。') : tr('登录后即可编辑公开资料。') }}</p>
                   <div class="account-save-row">
-                    <button type="submit" class="button primary-button" data-testid="save-author-profile" :disabled="!session.loggedIn" @click.prevent="saveAuthorProfile">{{ saving ? '正在保存…' : '保存资料' }}</button>
-                    <small role="status" data-testid="author-profile-note">{{ profileNote || (profileDirty ? '有未保存的修改' : '修改后点击保存') }}</small>
+                    <button type="submit" class="button primary-button" data-testid="save-author-profile" :disabled="!session.loggedIn" @click.prevent="saveAuthorProfile">{{ saving ? tr('正在保存…') : tr('保存资料') }}</button>
+                    <small role="status" data-testid="author-profile-note">{{ tr(profileNote) || (profileDirty ? tr('有未保存的修改') : tr('修改后点击保存')) }}</small>
                   </div>
                 </form>
               </div>
               <div class="account-side">
                 <div class="account-card account-publications">
-                  <header class="account-card-heading"><span class="account-section-icon"><AppIcon name="globe" /></span><div><h4>我的发布</h4><p>查看投稿、审核进度与已公开的作品。</p></div></header>
-                  <button type="button" class="button ghost-button" data-testid="settings-publications" @click="$emit('publications')">查看我的发布 <span aria-hidden="true">↗</span></button>
+                  <header class="account-card-heading"><span class="account-section-icon"><AppIcon name="globe" /></span><div><h4>{{ tr('我的发布') }}</h4><p>{{ tr('查看投稿、审核进度与已公开的作品。') }}</p></div></header>
+                  <button type="button" class="button ghost-button" data-testid="settings-publications" @click="$emit('publications')">{{ tr('查看我的发布') }} <span aria-hidden="true">↗</span></button>
                 </div>
                 <div class="account-card setting-block account-billing-card">
-                  <div class="account-plan-heading"><h4>订阅与权益</h4><span v-if="session.loggedIn && billingMock" class="account-test-badge">Mock · 测试环境</span></div>
-                  <strong class="account-plan" data-testid="billing-pro">{{ session.loggedIn ? (billingPro ? 'Pro' : '未订阅') : '未登录' }}</strong>
-                  <p class="account-form-hint">{{ session.loggedIn ? '本地创作随时可用，订阅状态以当前账号为准。' : '登录后查看订阅与兑换权益。' }}</p>
-                  <small v-if="session.loggedIn && billingMock" class="account-mock-status" data-testid="billing-mock">Mock · {{ billingMockPro ? '模拟 Pro' : '模拟未订阅' }}（不扣款，不改变真实权益）</small>
-                  <small v-if="!billingMock && billingNote" class="account-mock-status" role="status" data-testid="billing-note">{{ billingNote }}</small>
+                  <div class="account-plan-heading"><h4>{{ tr('订阅与权益') }}</h4><span v-if="session.loggedIn && billingMock" class="account-test-badge">{{ tr('Mock · 测试环境') }}</span></div>
+                  <strong class="account-plan" data-testid="billing-pro">{{ session.loggedIn ? (billingPro ? 'Pro' : tr('未订阅')) : tr('未登录') }}</strong>
+                  <p class="account-form-hint">{{ session.loggedIn ? tr('本地创作随时可用，订阅状态以当前账号为准。') : tr('登录后查看订阅与兑换权益。') }}</p>
+                  <small v-if="session.loggedIn && billingMock" class="account-mock-status" data-testid="billing-mock">Mock · {{ billingMockPro ? tr('模拟 Pro') : tr('模拟未订阅') }}{{ tr('（不扣款，不改变真实权益）') }}</small>
+                  <small v-if="!billingMock && billingNote" class="account-mock-status" role="status" data-testid="billing-note">{{ tr(billingNote) }}</small>
                   <details class="account-billing-details">
-                    <summary>{{ billingMock ? '模拟测试与测试码' : '兑换码与支付' }}</summary>
+                    <summary>{{ billingMock ? tr('模拟测试与测试码') : tr('兑换码与支付') }}</summary>
                     <div class="author-profile">
-                      <small v-if="billingMock && billingNote" role="status" data-testid="billing-note">{{ billingNote }}</small>
+                      <small v-if="billingMock && billingNote" role="status" data-testid="billing-note">{{ tr(billingNote) }}</small>
                       <div v-if="session.loggedIn && billingMock" class="account-test-actions">
-                        <button v-for="(label, outcome) in { success: '模拟成功', failure: '模拟失败', cancel: '模拟取消', reset: '重置模拟' }" :key="outcome" type="button" class="button ghost-button" :data-testid="`billing-mock-${outcome}`" :disabled="billingBusy" @click="runCheckout(outcome)">{{ label }}</button>
+                        <button v-for="(label, outcome) in { success: '模拟成功', failure: '模拟失败', cancel: '模拟取消', reset: '重置模拟' }" :key="outcome" type="button" class="button ghost-button" :data-testid="`billing-mock-${outcome}`" :disabled="billingBusy" @click="runCheckout(outcome)">{{ tr(label) }}</button>
                       </div>
-                      <label class="profile-field"><span>{{ billingMock ? 'Mock 测试码（仅模拟权益）' : '兑换码' }}</span>
-                        <input data-testid="billing-redeem-code" :disabled="!session.loggedIn || billingBusy" v-model="redeemCode" placeholder="输入兑换码">
+                      <label class="profile-field"><span>{{ billingMock ? tr('Mock 测试码（仅模拟权益）') : tr('兑换码') }}</span>
+                        <input data-testid="billing-redeem-code" :disabled="!session.loggedIn || billingBusy" v-model="redeemCode" :placeholder="tr('输入兑换码')">
                       </label>
                       <div class="account-test-actions">
-                        <button type="button" class="button ghost-button" data-testid="billing-redeem" :disabled="!session.loggedIn || billingBusy || (billingMock && !/^TEST-[A-F0-9]{32}$/i.test(redeemCode.trim()))" @click="runRedeem">{{ billingMock ? '兑换测试码' : '兑换' }}</button>
-                        <button v-if="!billingMock" type="button" class="button primary-button" data-testid="billing-checkout" :disabled="!session.loggedIn || billingBusy" @click="runCheckout">前往支付</button>
+                        <button type="button" class="button ghost-button" data-testid="billing-redeem" :disabled="!session.loggedIn || billingBusy || (billingMock && !/^TEST-[A-F0-9]{32}$/i.test(redeemCode.trim()))" @click="runRedeem">{{ billingMock ? tr('兑换测试码') : tr('兑换') }}</button>
+                        <button v-if="!billingMock" type="button" class="button primary-button" data-testid="billing-checkout" :disabled="!session.loggedIn || billingBusy" @click="runCheckout">{{ tr('前往支付') }}</button>
                       </div>
                     </div>
                   </details>
@@ -137,42 +137,42 @@
             </div>
             <div class="account-card account-preferences">
               <label class="setting-row">
-                <span class="setting-copy"><strong>下载时保留作者信息</strong><small>新下载的本地副本展示原作者，不改变提示词正文。</small></span>
+                <span class="setting-copy"><strong>{{ tr('下载时保留作者信息') }}</strong><small>{{ tr('新下载的本地副本展示原作者，不改变提示词正文。') }}</small></span>
                 <input type="checkbox" data-testid="keep-author-on-download" :checked="keepAuthorOnDownload" @change="toggleKeepAuthorOnDownload">
               </label>
             </div>
           </section>
           <section v-else-if="current === 'shortcuts'">
-            <h3>快捷键</h3>
-            <p>登记全局组合以唤起独立启动器。与系统冲突时可更换组合；底栏按钮仍可打开启动器。</p>
-            <p v-if="shortcutStatus.error" role="alert">快捷键注册未完成：{{ shortcutStatus.error }}。请重新录入并保存。</p>
+            <h3>{{ tr('快捷键') }}</h3>
+            <p>{{ tr('登记全局组合以唤起独立启动器。与系统冲突时可更换组合；底栏按钮仍可打开启动器。') }}</p>
+            <p v-if="shortcutStatus.error" role="alert">{{ tr('快捷键注册未完成：') }}{{ tr(shortcutStatus.error) }}{{ tr('。请重新录入并保存。') }}</p>
             <div class="settings-group">
-            <p class="save-mode-hint">点击后按组合键，完成后保存。支持 Ctrl / Alt / Command 组合或 F1–F24；Tab 切换，Esc 取消。系统保留组合可能被拦截。</p>
+            <p class="save-mode-hint">{{ tr('点击后按组合键，完成后保存。支持 Ctrl / Alt / Command 组合或 F1–F24；Tab 切换，Esc 取消。系统保留组合可能被拦截。') }}</p>
             <label class="field">
-              <span>唤起启动器</span>
+              <span>{{ tr('唤起启动器') }}</span>
               <ShortcutInput v-model="shortcut" :host="host" data-testid="launcher-shortcut" />
             </label>
             <label class="field">
-              <span>新建提示词</span>
+              <span>{{ tr('新建提示词') }}</span>
               <ShortcutInput v-model="newPromptShortcut" :host="host" data-testid="new-prompt-shortcut" />
             </label>
             <label class="field">
-              <span>快速粘贴最近使用</span>
+              <span>{{ tr('快速粘贴最近使用') }}</span>
               <ShortcutInput v-model="pasteRecentShortcut" :host="host" data-testid="paste-recent-shortcut" />
             </label>
             <div class="modal-actions">
-              <button type="button" class="button primary-button" @click="saveShortcut">保存快捷键</button>
+              <button type="button" class="button primary-button" @click="saveShortcut">{{ tr('保存快捷键') }}</button>
             </div>
-            <p v-if="shortcutError" data-testid="shortcut-error">{{ shortcutError }}</p>
+            <p v-if="shortcutError" data-testid="shortcut-error">{{ tr(shortcutError) }}</p>
             </div>
           </section>
           <section v-else-if="current === 'sync'" data-testid="settings-unavailable">
-            <h3>同步</h3>
+            <h3>{{ tr('同步') }}</h3>
             <SyncStatus :session="session" expanded />
-            <p>已登录可立即同步个人库。启动器始终只读本机；MCP 广场工具需在接入配置中另行启用。</p>
+            <p>{{ tr('已登录可立即同步个人库。启动器始终只读本机；MCP 广场工具需在接入配置中另行启用。') }}</p>
             <div class="settings-group">
             <label class="setting-row" data-testid="auto-sync-queue-row">
-              <span class="setting-copy"><strong>离线操作排队</strong><small>收藏或发布失败时保存在本机。点击「立即同步」，或之后成功收藏/发布时重试发送；不会自动同步整个个人库。</small></span>
+              <span class="setting-copy"><strong>{{ tr('离线操作排队') }}</strong><small>{{ tr('收藏或发布失败时保存在本机。点击「立即同步」，或之后成功收藏/发布时重试发送；不会自动同步整个个人库。') }}</small></span>
               <input
                 type="checkbox"
                 data-testid="auto-sync-queue"
@@ -181,7 +181,7 @@
               >
             </label>
             <label class="setting-row" data-testid="sync-wifi-images-row">
-              <span class="setting-copy"><strong>仅在 Wi-Fi 下同步图片与附件</strong><small>无法判定或非 Wi-Fi 时，封面和本次勾选的附件均延后；标题与正文照常同步。</small></span>
+              <span class="setting-copy"><strong>{{ tr('仅在 Wi-Fi 下同步图片与附件') }}</strong><small>{{ tr('无法判定或非 Wi-Fi 时，封面和本次勾选的附件均延后；标题与正文照常同步。') }}</small></span>
               <input
                 type="checkbox"
                 data-testid="sync-wifi-images"
@@ -190,167 +190,165 @@
               >
             </label>
             <div class="setting-row" data-testid="sync-conflict">
-              <span class="setting-copy"><strong>冲突处理</strong><small>默认采用较新正文，附件仅补齐合并。保留本地时跳过已有提示词的正文与附件下载，远端独有条目仍写入。</small></span>
-              <SearchableSelect data-testid="sync-conflict-strategy" aria-label="冲突处理" :searchable="false" :disabled="saving || loading" :model-value="syncConflict" :options="[{value:'newer',label:'较新者胜'},{value:'keep_local',label:'保留本地'}]" @change="saveSyncConflict" />
+              <span class="setting-copy"><strong>{{ tr('冲突处理') }}</strong><small>{{ tr('默认采用较新正文，附件仅补齐合并。保留本地时跳过已有提示词的正文与附件下载，远端独有条目仍写入。') }}</small></span>
+              <SearchableSelect data-testid="sync-conflict-strategy" :aria-label="tr('冲突处理')" :searchable="false" :disabled="saving || loading" :model-value="syncConflict" :options="[{value:'newer',label:tr('较新者胜')},{value:'keep_local',label:tr('保留本地')}]" @change="saveSyncConflict" />
             </div>
             <div class="setting-row">
-              <label class="setting-copy" for="include-sync-assets"><strong>本次包含私有附件</strong><small>将本机库附件上传到 {{ session.email || '当前账号' }}，并补齐账号库文件，不公开。合并保留两端已有附件，不同步附件删除；每次需重新勾选。</small></label>
+              <label class="setting-copy" for="include-sync-assets"><strong>{{ tr('本次包含私有附件') }}</strong><small>{{ tr('将本机库附件上传到') }} {{ session.email || tr('当前账号') }}{{ tr('，并补齐账号库文件，不公开。合并保留两端已有附件，不同步附件删除；每次需重新勾选。') }}</small></label>
               <input id="include-sync-assets" v-model="syncIncludeAssets" :disabled="syncBusy" type="checkbox" data-testid="sync-include-assets">
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>立即同步</strong><small>已登录时推拉账号库。未登录打开登录，不会假装已同步。</small></span>
-              <button type="button" class="button ghost-button" data-testid="sync-now" :disabled="syncBusy || dataBusy" @click="runSyncNow()">{{ syncBusy ? '正在同步…' : '立即同步' }}</button>
+              <span class="setting-copy"><strong>{{ tr('立即同步') }}</strong><small>{{ tr('已登录时推拉账号库。未登录打开登录，不会假装已同步。') }}</small></span>
+              <button type="button" class="button ghost-button" data-testid="sync-now" :disabled="syncBusy || dataBusy" @click="runSyncNow()">{{ syncBusy ? tr('正在同步…') : tr('立即同步') }}</button>
             </div>
-            <p v-if="syncNote" role="status" data-testid="sync-note">{{ syncNote }}</p>
-            <button v-if="syncQueuePending" type="button" class="button ghost-button" data-testid="retry-sync-queue" :disabled="syncBusy || dataBusy" @click="runSyncNow(true)">重试发送队列</button>
+            <p v-if="syncNote" role="status" data-testid="sync-note">{{ tr(syncNote) }}</p>
+            <button v-if="syncQueuePending" type="button" class="button ghost-button" data-testid="retry-sync-queue" :disabled="syncBusy || dataBusy" @click="runSyncNow(true)">{{ tr('重试发送队列') }}</button>
             </div>
             <LocalVersions :disabled="syncBusy || dataBusy" @busy="dataBusy = $event" @restored="emit('imported')" />
           </section>
           <section v-else-if="current === 'models'">
-            <h3>AI 与模型</h3>
-            <p>管理本机模型标签，以及 AI 优化与提示词翻译的模型配置。</p>
+            <h3>{{ tr('AI 与模型') }}</h3>
+            <p>{{ tr('管理本机模型标签，以及 AI 优化与提示词翻译的模型配置。') }}</p>
             <div class="settings-group">
-            <p class="save-mode-hint">本页修改后请点击「保存本机模型偏好」。</p>
+            <p class="save-mode-hint">{{ tr('本页修改后请点击「保存本机模型偏好」。') }}</p>
             <label class="field">
-              <span>默认目标模型</span>
-              <input v-model="defaultModel" data-testid="default-model" placeholder="本机目录名称">
+              <span>{{ tr('默认目标模型') }}</span>
+              <input v-model="defaultModel" data-testid="default-model" :placeholder="tr('本机目录名称')">
             </label>
             <label class="field">
-              <span>已启用模型库</span>
-              <textarea v-model="modelCatalog" data-testid="model-catalog" rows="3" placeholder="每行一个本机模型名"></textarea>
+              <span>{{ tr('已启用模型库') }}</span>
+              <textarea v-model="modelCatalog" data-testid="model-catalog" rows="3" :placeholder="tr('每行一个本机模型名')"></textarea>
             </label>
             <label class="setting-row">
-              <span class="setting-copy"><strong>显示模型标签</strong><small>只影响本机卡片展示。</small></span>
+              <span class="setting-copy"><strong>{{ tr('显示模型标签') }}</strong><small>{{ tr('只影响本机卡片展示。') }}</small></span>
               <input type="checkbox" data-testid="show-model-tags" v-model="showModelTags">
             </label>
             <label class="setting-row">
-              <span class="setting-copy"><strong>变量智能建议</strong><small>关闭时不提供建议；打开也不上传正文。</small></span>
+              <span class="setting-copy"><strong>{{ tr('变量智能建议') }}</strong><small>{{ tr('关闭时不提供建议；打开也不上传正文。') }}</small></span>
               <input type="checkbox" data-testid="variable-hints" v-model="variableHints">
             </label>
             <label class="field">
-              <span>自定义模型列表</span>
-              <textarea v-model="customModels" data-testid="custom-models" rows="2" placeholder="本机自定义名称"></textarea>
+              <span>{{ tr('自定义模型列表') }}</span>
+              <textarea v-model="customModels" data-testid="custom-models" rows="2" :placeholder="tr('本机自定义名称')"></textarea>
             </label>
             <div class="modal-actions">
-              <button type="button" class="button primary-button" data-testid="save-models" @click="saveModels">保存本机模型偏好</button>
+              <button type="button" class="button primary-button" data-testid="save-models" @click="saveModels">{{ tr('保存本机模型偏好') }}</button>
             </div>
             </div>
           </section>
           <section v-else-if="current === 'data'">
-            <h3>数据与备份</h3>
-            <p>管理本机资料、导入导出与数据恢复。</p>
+            <h3>{{ tr('数据与备份') }}</h3>
+            <p>{{ tr('管理本机资料、导入导出与数据恢复。') }}</p>
             <LocalTrash :disabled="dataBusy || importBusy" @busy="dataBusy = $event" @restored="emit('imported')" />
             <div class="settings-group">
             <div class="setting-row">
-              <span class="setting-copy"><strong>SQLite 数据库</strong><small>打开库文件所在目录。</small></span>
-              <button type="button" class="button ghost-button" data-testid="open-library-dir" @click="openDir">打开目录</button>
+              <span class="setting-copy"><strong>{{ tr('SQLite 数据库') }}</strong><small>{{ tr('打开库文件所在目录。') }}</small></span>
+              <button type="button" class="button ghost-button" data-testid="open-library-dir" @click="openDir">{{ tr('打开目录') }}</button>
             </div>
             <div class="setting-row">
-              <span class="setting-copy"><strong>导出本地库备份</strong><small>ZIP 含数据库与 JSON，包括已存入库的图片和附件；外部图片链接不下载打包。恢复时请解压并选择其中的 promptark.sqlite。</small></span>
-              <button type="button" class="button ghost-button" data-testid="export-zip" @click="doZip">导出 ZIP</button>
+              <span class="setting-copy"><strong>{{ tr('导出本地库备份') }}</strong><small>{{ tr('ZIP 含数据库与 JSON，包括已存入库的图片和附件；外部图片链接不下载打包。恢复时请解压并选择其中的 promptark.sqlite。') }}</small></span>
+              <button type="button" class="button ghost-button" data-testid="export-zip" @click="doZip">{{ tr('导出 ZIP') }}</button>
             </div>
             <label class="setting-row">
-              <span class="setting-copy"><strong>自动备份</strong><small>仅桌面：开启即备份，应用运行时每 24 小时备份一次，保留历史文件。</small></span>
+              <span class="setting-copy"><strong>{{ tr('自动备份') }}</strong><small>{{ tr('仅桌面：开启即备份，应用运行时每 24 小时备份一次，保留历史文件。') }}</small></span>
               <input type="checkbox" data-testid="auto-backup" :checked="autoBackup" :disabled="dataBusy" @change="toggleAutoBackup">
             </label>
-            <p v-if="autoBackupNote" role="status" data-testid="auto-backup-note">{{ autoBackupNote }}</p>
+            <p v-if="autoBackupNote" role="status" data-testid="auto-backup-note">{{ tr(autoBackupNote) }}</p>
             <p v-if="zipPath" data-testid="zip-path">{{ zipPath }}</p>
             <div class="setting-row">
-              <span class="setting-copy"><strong>导出 JSON</strong><small>导出可阅读、可再次导入的提示词数据。</small></span>
-              <button type="button" class="button ghost-button" @click="doExport">导出 JSON</button>
+              <span class="setting-copy"><strong>{{ tr('导出 JSON') }}</strong><small>{{ tr('导出可阅读、可再次导入的提示词数据。') }}</small></span>
+              <button type="button" class="button ghost-button" @click="doExport">{{ tr('导出 JSON') }}</button>
             </div>
-            <textarea v-if="exportText" v-model="exportText" rows="6" aria-label="导出的 JSON" readonly></textarea>
+            <textarea v-if="exportText" v-model="exportText" rows="6" :aria-label="tr('导出的 JSON')" readonly></textarea>
             <div class="import-drop" data-testid="import-drop" @dragover.prevent @drop.prevent="dropImport">
-              <strong>导入提示词文件</strong><p>选择或拖入 JSON 文件，预览后再确认导入。</p>
-              <label class="button ghost-button file-choice">选择 JSON 文件<input type="file" accept=".json,application/json" :disabled="importBusy" data-testid="import-file" @change="chooseImport" /></label>
-              <p v-if="importFilename" role="status">{{ importBusy ? '正在读取：' : '已选择：' }}{{ importFilename }}</p>
+              <strong>{{ tr('导入提示词文件') }}</strong><p>{{ tr('选择或拖入 JSON 文件，预览后再确认导入。') }}</p>
+              <label class="button ghost-button file-choice">{{ tr('选择 JSON 文件') }}<input type="file" accept=".json,application/json" :disabled="importBusy" data-testid="import-file" @change="chooseImport" /></label>
+              <p v-if="importFilename" role="status">{{ importBusy ? tr('正在读取：') : tr('已选择：') }}{{ importFilename }}</p>
             </div>
-            <details class="advanced-import"><summary>高级：粘贴 JSON</summary>
+            <details class="advanced-import"><summary>{{ tr('高级：粘贴 JSON') }}</summary>
             <label class="field">
-              <span>导入 JSON</span>
-              <textarea v-model="importText" :disabled="importBusy" rows="5" placeholder='{"prompts":[{"title":"一","content":"a"}]}' @input="preview = null; importFilename = ''"></textarea>
+              <span>{{ tr('导入 JSON') }}</span>
+              <textarea v-model="importText" :disabled="importBusy" rows="5" :placeholder="JSON.stringify({prompts:[{title:tr('标题'),content:'...'}]})" @input="preview = null; importFilename = ''"></textarea>
             </label>
             </details>
             <div class="modal-actions">
-              <button type="button" class="button ghost-button" :disabled="importBusy" @click="doPreview">预览</button>
-              <button type="button" class="button primary-button" :disabled="importBusy || !preview" @click="doApply">确认导入</button>
+              <button type="button" class="button ghost-button" :disabled="importBusy" @click="doPreview">{{ tr('预览') }}</button>
+              <button type="button" class="button primary-button" :disabled="importBusy || !preview" @click="doApply">{{ tr('确认导入') }}</button>
             </div>
-            <p v-if="preview" data-testid="import-preview">
-              将导入 {{ preview.prompt_count }} 条提示词、{{ preview.collection_count }} 个合集。确认前不会写入。
-            </p>
-            <p v-if="importNote" role="status">{{ importNote }}</p>
-            <div class="restore-choice"><button type="button" class="button ghost-button" data-testid="choose-restore" :disabled="dataBusy || !usesSystemKeychain()" @click="chooseRestore">选择备份文件</button><small v-if="!usesSystemKeychain()">文件恢复需要桌面应用</small></div>
+            <p v-if="preview" data-testid="import-preview"> {{ tr('将导入') }} {{ preview.prompt_count }} {{ tr('条提示词、') }}{{ preview.collection_count }} {{ tr('个合集。确认前不会写入。') }} </p>
+            <p v-if="importNote" role="status">{{ tr(importNote) }}</p>
+            <div class="restore-choice"><button type="button" class="button ghost-button" data-testid="choose-restore" :disabled="dataBusy || !usesSystemKeychain()" @click="chooseRestore">{{ tr('选择备份文件') }}</button><small v-if="!usesSystemKeychain()">{{ tr('文件恢复需要桌面应用') }}</small></div>
             <label class="field">
-              <span>恢复库文件路径</span>
+              <span>{{ tr('恢复库文件路径') }}</span>
               <input v-model="restorePath" :disabled="dataBusy" placeholder="/path/to/promptark.sqlite">
             </label>
             <div class="modal-actions">
-              <button type="button" class="button ghost-button" :disabled="dataBusy" @click="doBackup">备份库文件</button>
-              <button type="button" class="button danger-button" :disabled="dataBusy || !restorePath.trim()" @click="previewRestore">恢复库文件</button>
+              <button type="button" class="button ghost-button" :disabled="dataBusy" @click="doBackup">{{ tr('备份库文件') }}</button>
+              <button type="button" class="button danger-button" :disabled="dataBusy || !restorePath.trim()" @click="previewRestore">{{ tr('恢复库文件') }}</button>
             </div>
-            <p v-if="backupPath" data-testid="backup-path">已备份到 {{ backupPath }}</p>
-            <p v-if="dataError" data-testid="backup-error">{{ dataError }}</p>
+            <p v-if="backupPath" data-testid="backup-path">{{ tr('已备份到') }} {{ backupPath }}</p>
+            <p v-if="dataError" data-testid="backup-error">{{ tr(dataError) }}</p>
             </div>
           </section>
           <section v-else-if="current === 'network'">
-            <h3>网络与代理</h3>
-            <p>控制联网范围，以及桌面端使用的代理。</p>
+            <h3>{{ tr('网络与代理') }}</h3>
+            <p>{{ tr('控制联网范围，以及桌面端使用的代理。') }}</p>
             <div class="settings-group">
             <label class="setting-row">
-              <span class="setting-copy"><strong>允许访问提示词广场</strong><small>关闭后工作台不请求广场；启动器仍只搜本地。</small></span>
+              <span class="setting-copy"><strong>{{ tr('允许访问提示词广场') }}</strong><small>{{ tr('关闭后工作台不请求广场；启动器仍只搜本地。') }}</small></span>
               <input type="checkbox" data-testid="square-access" :checked="squareAccess" @change="toggleSquareAccess">
             </label>
             <label class="setting-row setting-block" data-testid="proxy-row">
-              <span class="setting-copy"><strong>代理</strong><small>空则跟随系统。填写 http 或 https 地址后，本机请求走该代理。浏览器预览不走该代理。</small></span>
+              <span class="setting-copy"><strong>{{ tr('代理') }}</strong><small>{{ tr('空则跟随系统。填写 http 或 https 地址后，本机请求走该代理。浏览器预览不走该代理。') }}</small></span>
               <input
                 data-testid="http-proxy"
                 v-model="httpProxy"
-                placeholder="跟随系统"
+                :placeholder="tr('跟随系统')"
                 @change="saveHttpProxy"
               >
             </label>
-            <p v-if="proxyError" data-testid="proxy-error">{{ proxyError }}</p>
+            <p v-if="proxyError" data-testid="proxy-error">{{ tr(proxyError) }}</p>
             <div class="setting-row" data-testid="sync-status">
-              <span class="setting-copy"><strong>同步状态</strong><small>个人库可立即同步。没有后台自动同步，不会显示假进度。</small></span>
-              <span class="setting-control">手动立即同步</span>
+              <span class="setting-copy"><strong>{{ tr('同步状态') }}</strong><small>{{ tr('个人库可立即同步。没有后台自动同步，不会显示假进度。') }}</small></span>
+              <span class="setting-control">{{ tr('手动立即同步') }}</span>
             </div>
             </div>
             <McpSettings />
           </section>
           <section v-else-if="current === 'appearance'">
-            <h3>外观</h3>
-            <p>选择适合你的主题、语言与内容密度。</p>
-            <div class="theme-choices" role="group" aria-label="主题">
+            <h3>{{ tr('外观') }}</h3>
+            <p>{{ tr('选择适合你的主题、语言与内容密度。') }}</p>
+            <div class="theme-choices" role="group" :aria-label="tr('主题')">
               <button v-for="option in [{id:'system',label:'跟随系统'},{id:'light',label:'浅色'},{id:'dark',label:'深色'}]" :key="option.id" type="button" class="theme-choice" :data-theme-choice="option.id" :aria-pressed="themeChoice === option.id" @click="chooseTheme(option.id)">
                 <span class="theme-preview" :class="`preview-${option.id}`" aria-hidden="true"><span class="preview-sidebar"></span><span class="preview-paper"><i></i><i></i><i></i></span></span>
-                <span>{{ option.label }}</span>
+                <span>{{ tr(option.label) }}</span>
               </button>
             </div>
             <div class="settings-group">
             <label class="field">
-              <span>界面语言</span>
-              <SearchableSelect data-testid="ui-language" aria-label="界面语言" :searchable="false" :disabled="saving || loading" :model-value="uiLanguage" :options="[{value:'zh',label:'中文'},{value:'en',label:'English'}]" @change="saveUiLanguage($event.target.value, $event)" />
+              <span>{{ tr('界面语言') }}</span>
+              <SearchableSelect data-testid="ui-language" :aria-label="tr('界面语言')" :searchable="false" :disabled="saving || loading" :model-value="uiLanguage" :options="[{value:'zh',label:tr('中文')},{value:'en',label:'English'}]" @change="saveUiLanguage($event.target.value, $event)" />
             </label>
             <label class="setting-row">
-              <span class="setting-copy"><strong>提示词双语版本</strong><small>关闭不删除已有中英正文。</small></span>
+              <span class="setting-copy"><strong>{{ tr('提示词双语版本') }}</strong><small>{{ tr('关闭不删除已有中英正文。') }}</small></span>
               <input type="checkbox" data-testid="prompt-bilingual" :checked="promptBilingual" @change="toggleBilingual">
             </label>
             <label class="field">
-              <span>内容密度</span>
-              <SearchableSelect data-testid="density" aria-label="内容密度" :searchable="false" :disabled="saving || loading" :model-value="density" :options="[{value:'comfortable',label:'舒适'},{value:'compact',label:'紧凑'}]" @change="saveDensity($event.target.value, $event)" />
+              <span>{{ tr('内容密度') }}</span>
+              <SearchableSelect data-testid="density" :aria-label="tr('内容密度')" :searchable="false" :disabled="saving || loading" :model-value="density" :options="[{value:'comfortable',label:tr('舒适')},{value:'compact',label:tr('紧凑')}]" @change="saveDensity($event.target.value, $event)" />
             </label>
             </div>
           </section>
           <section v-else-if="current === 'privacy'">
-            <h3>隐私与安全</h3>
-            <p>了解数据的保存方式，管理统计与使用记录。</p>
+            <h3>{{ tr('隐私与安全') }}</h3>
+            <p>{{ tr('了解数据的保存方式，管理统计与使用记录。') }}</p>
             <div class="settings-group">
             <div class="setting-row">
-              <span class="setting-copy"><strong>本地提示词默认不上传</strong><small>未点发布不得把本地正文送出。</small></span>
-              <span class="setting-control">始终生效</span>
+              <span class="setting-copy"><strong>{{ tr('本地提示词默认不上传') }}</strong><small>{{ tr('未点发布不得把本地正文送出。') }}</small></span>
+              <span class="setting-control">{{ tr('始终生效') }}</span>
             </div>
             <label class="setting-row" data-testid="anonymous-download-stats-row">
-              <span class="setting-copy"><strong>匿名下载统计</strong><small>默认开启，可随时关闭。成功下载只上报条目 id，不含账号、正文或标题。关闭时不请求。统计失败不影响下载。</small></span>
+              <span class="setting-copy"><strong>{{ tr('匿名下载统计') }}</strong><small>{{ tr('默认开启，可随时关闭。成功下载只上报条目 id，不含账号、正文或标题。关闭时不请求。统计失败不影响下载。') }}</small></span>
               <input
                 type="checkbox"
                 data-testid="anonymous-download-stats"
@@ -359,29 +357,29 @@
               >
             </label>
             <div class="setting-row">
-              <span class="setting-copy"><strong>清除使用历史</strong><small>只删最近使用记录，不删提示词正文。</small></span>
-              <button type="button" class="button danger-button" data-testid="clear-use-history" @click="pendingAction = 'history'">清除</button>
+              <span class="setting-copy"><strong>{{ tr('清除使用历史') }}</strong><small>{{ tr('只删最近使用记录，不删提示词正文。') }}</small></span>
+              <button type="button" class="button danger-button" data-testid="clear-use-history" @click="pendingAction = 'history'">{{ tr('清除') }}</button>
             </div>
             <div class="setting-row" data-testid="keychain-row">
               <span class="setting-copy">
-                <strong>系统钥匙串</strong>
-                <small v-if="usesSystemKeychain()">Refresh 只在系统密钥库，不进 Web Storage。</small>
-                <small v-else>浏览器预览没有系统密钥库。Refresh 不进 Web Storage。</small>
+                <strong>{{ tr('系统钥匙串') }}</strong>
+                <small v-if="usesSystemKeychain()">{{ tr('Refresh 只在系统密钥库，不进 Web Storage。') }}</small>
+                <small v-else>{{ tr('浏览器预览没有系统密钥库。Refresh 不进 Web Storage。') }}</small>
               </span>
-              <span class="setting-control">{{ usesSystemKeychain() ? "本机钥匙串" : "浏览器内存" }}</span>
+              <span class="setting-control">{{ usesSystemKeychain() ? tr('本机钥匙串') : tr('浏览器内存') }}</span>
             </div>
             </div>
           </section>
           <section v-else-if="current === 'updates'" data-testid="settings-updates">
-            <h3>更新</h3>
-            <p>管理版本、更新通道与发行说明。</p>
+            <h3>{{ tr('更新') }}</h3>
+            <p>{{ tr('管理版本、更新通道与发行说明。') }}</p>
             <div class="settings-group">
             <div class="setting-row">
-              <span class="setting-copy"><strong>当前版本</strong><small>桌面包 {{ appVersion }}，与本机构建一致。</small></span>
-              <button type="button" class="button ghost-button" data-testid="check-updates" :disabled="['checking','downloading','verifying','ready','installing'].includes(updateState.phase)" @click="runCheckUpdates">检查更新</button>
+              <span class="setting-copy"><strong>{{ tr('当前版本') }}</strong><small>{{ tr('桌面包') }} {{ appVersion }}{{ tr('，与本机构建一致。') }}</small></span>
+              <button type="button" class="button ghost-button" data-testid="check-updates" :disabled="['checking','downloading','verifying','ready','installing'].includes(updateState.phase)" @click="runCheckUpdates">{{ tr('检查更新') }}</button>
             </div>
             <label class="setting-row">
-              <span class="setting-copy"><strong>自动下载更新</strong><small>发现新版本后自动下载并验证，安装前由你确认。</small></span>
+              <span class="setting-copy"><strong>{{ tr('自动下载更新') }}</strong><small>{{ tr('发现新版本后自动下载并验证，安装前由你确认。') }}</small></span>
               <input
                 type="checkbox"
                 data-testid="auto-download"
@@ -390,11 +388,11 @@
               >
             </label>
             <label class="setting-row">
-              <span class="setting-copy"><strong>更新通道</strong><small>稳定版只用正式发行，预览版只用预发行。</small></span>
-              <SearchableSelect data-testid="update-channel" aria-label="更新通道" :searchable="false" :disabled="saving || loading || ['checking','downloading','verifying','ready','installing'].includes(updateState.phase)" :model-value="updateChannel" :options="[{value:'stable',label:'稳定版'},{value:'preview',label:'预览版'}]" @change="saveUpdateChannel" />
+              <span class="setting-copy"><strong>{{ tr('更新通道') }}</strong><small>{{ tr('稳定版只用正式发行，预览版只用预发行。') }}</small></span>
+              <SearchableSelect data-testid="update-channel" :aria-label="tr('更新通道')" :searchable="false" :disabled="saving || loading || ['checking','downloading','verifying','ready','installing'].includes(updateState.phase)" :model-value="updateChannel" :options="[{value:'stable',label:tr('稳定版')},{value:'preview',label:tr('预览版')}]" @change="saveUpdateChannel" />
             </label>
             <div class="setting-row">
-              <span class="setting-copy"><strong>发行说明</strong><small>随检查更新展示，不来自应用商店。</small></span>
+              <span class="setting-copy"><strong>{{ tr('发行说明') }}</strong><small>{{ tr('随检查更新展示，不来自应用商店。') }}</small></span>
               <span class="setting-control">GitHub Releases</span>
             </div>
             <UpdateStatus :channel="updateChannel" :dirty="hasUnsaved" />
@@ -405,16 +403,16 @@
         </main>
       </div>
       <footer class="settings-feedback" :class="{ error: feedbackError }" role="status" aria-live="polite" data-testid="settings-feedback">
-        {{ loading ? '正在读取设置…' : saving ? '正在保存…' : feedback || (current === 'sync' ? '附件授权仅用于本次同步，不保存；其余偏好即时保存。' : '开关与选择项即时保存；有保存按钮的表单需手动保存。') }}
+        {{ loading ? tr('正在读取设置…') : saving ? tr('正在保存…') : tr(feedback) || (current === 'sync' ? tr('附件授权仅用于本次同步，不保存；其余偏好即时保存。') : tr('开关与选择项即时保存；有保存按钮的表单需手动保存。')) }}
       </footer>
       <div v-if="pendingAction" class="settings-confirm-layer">
         <section class="settings-confirm" role="alertdialog" aria-modal="true" aria-labelledby="settings-confirm-title" aria-describedby="settings-confirm-copy" @keydown.tab="trapConfirmationFocus">
-          <h3 id="settings-confirm-title">{{ pendingAction === 'discard' ? '放弃未保存的修改？' : pendingAction === 'restore' ? '恢复数据库？' : '清除使用历史？' }}</h3>
-          <p v-if="pendingAction === 'restore' && restorePreview" data-testid="restore-preview">备份已校验：{{ restorePreview.prompt_count }} 条提示词、{{ restorePreview.collection_count }} 个合集、{{ restorePreview.asset_count }} 个库内文件（含回收站文件）。恢复前会自动备份当前库；不会合并两份数据。</p>
-          <p id="settings-confirm-copy">{{ pendingAction === 'discard' ? '尚未保存的表单和导入文本将被丢弃，已经保存的设置不受影响。' : pendingAction === 'restore' ? `将使用 ${restorePath} 替换当前库。请先备份当前数据，此操作不是合并导入。` : '将清除最近使用记录与使用次数，不删除提示词正文。' }}</p>
+          <h3 id="settings-confirm-title">{{ pendingAction === 'discard' ? tr('放弃未保存的修改？') : pendingAction === 'restore' ? tr('恢复数据库？') : tr('清除使用历史？') }}</h3>
+          <p v-if="pendingAction === 'restore' && restorePreview" data-testid="restore-preview">{{ tr('备份已校验：') }}{{ restorePreview.prompt_count }} {{ tr('条提示词、') }}{{ restorePreview.collection_count }} {{ tr('个合集、') }}{{ restorePreview.asset_count }} {{ tr('个库内文件（含回收站文件）。恢复前会自动备份当前库；不会合并两份数据。') }}</p>
+          <p id="settings-confirm-copy">{{ pendingAction === 'discard' ? tr('尚未保存的表单和导入文本将被丢弃，已经保存的设置不受影响。') : pendingAction === 'restore' ? tr("将使用 {0} 替换当前库。请先备份当前数据，此操作不是合并导入。", [restorePath]) : tr('将清除最近使用记录与使用次数，不删除提示词正文。') }}</p>
           <div class="modal-actions">
-            <button ref="confirmCancel" type="button" class="button" data-testid="cancel-settings-action" @click="pendingAction = null; emit('stay')">{{ pendingAction === 'discard' ? '继续编辑' : '取消' }}</button>
-            <button type="button" class="button danger-button" data-testid="confirm-settings-action" @click="confirmAction">{{ pendingAction === 'discard' ? '放弃修改' : '确认执行' }}</button>
+            <button ref="confirmCancel" type="button" class="button" data-testid="cancel-settings-action" @click="pendingAction = null; emit('stay')">{{ pendingAction === 'discard' ? tr('继续编辑') : tr('取消') }}</button>
+            <button type="button" class="button danger-button" data-testid="confirm-settings-action" @click="confirmAction">{{ pendingAction === 'discard' ? tr('放弃修改') : tr('确认执行') }}</button>
           </div>
         </section>
       </div>
@@ -422,6 +420,7 @@
 </template>
 
 <script setup>
+import { tr, applyInterfaceLanguage } from '../platform/interfaceLanguage.js';
 import McpSettings from './McpSettings.vue';
 import LocalTrash from './LocalTrash.vue';
 import LocalVersions from './LocalVersions.vue';
@@ -481,6 +480,8 @@ function usesSystemKeychain() {
 }
 
 const uiLanguage = ref(props.language);
+watch(uiLanguage, applyInterfaceLanguage, { immediate: true });
+watch(() => props.language, value => { uiLanguage.value = value; });
 const themeChoice = ref(props.theme);
 watch(() => props.theme, (value) => { themeChoice.value = value; });
 const pages = computed(() => [
@@ -576,7 +577,7 @@ const displayName = ref("");
 const bio = ref("");
 const profileNote = ref("");
 const savedProfileName = ref("");
-const accountName = computed(() => props.session.loggedIn ? (savedProfileName.value.trim() || props.session.email?.split("@")[0] || "我的账号") : "本地访客");
+const accountName = computed(() => props.session.loggedIn ? (savedProfileName.value.trim() || props.session.email?.split("@")[0] || tr("我的账号")) : tr("本地访客"));
 const accountInitial = computed(() => Array.from(accountName.value)[0]?.toUpperCase() || "P");
 const saving = ref(false);
 const loading = ref(true);
@@ -1112,7 +1113,7 @@ async function chooseTheme(value) {
 
 async function saveUiLanguage(value, event) {
   await savePreference("ui_language", uiLanguage, value, event, () => {
-    document.documentElement.lang = value === "en" ? "en" : "zh-CN";
+    applyInterfaceLanguage(value);
     emit("language", value);
   });
 }

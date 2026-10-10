@@ -1,13 +1,14 @@
 <template>
-  <div class="window-controls" aria-label="窗口控制" @mousedown.stop @dblclick.stop>
-    <button type="button" aria-label="最小化" title="最小化" @click="run('minimize')"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.5h10" /></svg></button>
-    <button type="button" :aria-label="maximized ? '还原窗口' : '最大化'" :title="maximized ? '还原窗口' : '最大化'" @click="run('toggleMaximize')"><svg viewBox="0 0 12 12" aria-hidden="true"><path v-if="maximized" d="M3.5 3.5v-2h7v7h-2M1.5 3.5h7v7h-7z" /><path v-else d="M1.5 1.5h9v9h-9z" /></svg></button>
-    <button type="button" class="window-close" aria-label="关闭窗口" title="关闭窗口" @click="run('close')"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m1.5 1.5 9 9m0-9-9 9" /></svg></button>
-    <p v-if="error" class="window-control-error" role="alert">窗口操作未完成，请重试。</p>
+  <div class="window-controls" :aria-label="tr('窗口控制')" @mousedown.stop @dblclick.stop>
+    <button type="button" :aria-label="tr('最小化')" :title="tr('最小化')" @click="run('minimize')"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.5h10" /></svg></button>
+    <button type="button" :aria-label="maximized ? tr('还原窗口') : tr('最大化')" :title="maximized ? tr('还原窗口') : tr('最大化')" @click="run('toggleMaximize')"><svg viewBox="0 0 12 12" aria-hidden="true"><path v-if="maximized" d="M3.5 3.5v-2h7v7h-2M1.5 3.5h7v7h-7z" /><path v-else d="M1.5 1.5h9v9h-9z" /></svg></button>
+    <button type="button" class="window-close" :aria-label="tr('关闭窗口')" :title="tr('关闭窗口')" @click="run('close')"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m1.5 1.5 9 9m0-9-9 9" /></svg></button>
+    <p v-if="error" class="window-control-error" role="alert">{{ tr('窗口操作未完成，请重试。') }}</p>
   </div>
 </template>
 
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 const maximized = ref(false), error = ref(false);

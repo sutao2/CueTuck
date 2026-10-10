@@ -1,11 +1,12 @@
 <template>
-  <button ref="element" v-bind="$attrs" type="button" class="published-image" :aria-label="`查看 ${title || file.name} 的图片`" @click.stop="open">
+  <button ref="element" v-bind="$attrs" type="button" class="published-image" :aria-label="tr('查看 {0} 的图片', [title || file.name])" @click.stop="open">
     <img v-if="asset && !failed" :src="assetUrl(asset)" :alt="title || file.name" decoding="async" @error="failed = true">
-    <span v-else>{{ failed ? '图片加载失败，点击重试' : '正在加载图片…' }}</span>
+    <span v-else>{{ failed ? tr('图片加载失败，点击重试') : tr('正在加载图片…') }}</span>
   </button>
   <ImageViewer v-if="viewing && asset" :src="assetUrl(asset)" :title="title || file.name" @close="viewing = false" />
 </template>
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { assetUrl } from '../platform/assets.js';
 import { getSession } from '../platform/session.js';

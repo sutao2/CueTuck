@@ -1,72 +1,72 @@
 <template>
     <section v-page-focus="() => $emit('cancel')" class="workspace-page square-reading-page" data-testid="square-detail" role="region" aria-labelledby="square-detail-title">
       <div class="detail-scroll">
-      <nav class="detail-navigation" aria-label="详情导航"><button type="button" class="page-back" aria-label="返回" @click="$emit('cancel')">← {{ backLabel }}</button></nav>
+      <nav class="detail-navigation" :aria-label="tr('详情导航')"><button type="button" class="page-back" :aria-label="tr('返回')" @click="$emit('cancel')">← {{ tr(backLabel) }}</button></nav>
       <header class="detail-heading">
         <div>
           <h2 id="square-detail-title">{{ item.title }}</h2>
-          <div class="detail-meta"><span>{{ item.kind === 'collection' ? '提示词合集' : '提示词' }}</span><span v-if="item.model">{{ item.model }}</span></div>
+          <div class="detail-meta"><span>{{ item.kind === 'collection' ? tr('提示词合集') : tr('提示词') }}</span><span v-if="item.model">{{ item.model }}</span></div>
           <div v-if="publisherName" class="detail-publisher" data-testid="square-publisher">
             <span class="publisher-avatar" aria-hidden="true">{{ Array.from(publisherName)[0] }}</span>
-            <div><p><span class="publisher-label">{{ item.publisher ? '发布者' : '来源作者' }}</span><strong>{{ publisherName }}</strong></p><p v-if="item.publisher?.bio" class="publisher-bio">{{ item.publisher.bio }}</p></div>
+            <div><p><span class="publisher-label">{{ item.publisher ? tr('发布者') : tr('来源作者') }}</span><strong>{{ publisherName }}</strong></p><p v-if="item.publisher?.bio" class="publisher-bio">{{ item.publisher.bio }}</p></div>
           </div>
         </div>
       </header>
         <div class="detail-actions">
-          <button v-if="item.kind !== 'collection'" type="button" class="button primary-button" data-testid="square-detail-use" :disabled="loading || Boolean(error) || useBusy || !(translated || item.content)?.trim()" @click="$emit('use', { ...item, content: translated || item.content, remote: true, asset_count: 0 })">使用</button>
-          <button v-if="downloaded && sourceImages.length && item.kind !== 'collection'" type="button" class="button ghost-button" :disabled="loading || Boolean(error) || downloading" data-testid="complete-square-images" @click="$emit('complete-images')">{{ downloading ? (downloadProgress || '正在补图…') : '补全参考图' }}</button>
-          <button type="button" class="button ghost-button" :disabled="favoriteBusy" @click="$emit('favorite')">{{ favorite ? '已收藏' : '收藏' }}</button>
-          <button type="button" class="button ghost-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (!downloaded && item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? (downloadProgress || '正在下载…') : downloaded ? '打开本地副本' : '下载到本地' }}</button>
+          <button v-if="item.kind !== 'collection'" type="button" class="button primary-button" data-testid="square-detail-use" :disabled="loading || Boolean(error) || useBusy || !(translated || item.content)?.trim()" @click="$emit('use', { ...item, content: translated || item.content, remote: true, asset_count: 0 })">{{ tr('使用') }}</button>
+          <button v-if="downloaded && sourceImages.length && item.kind !== 'collection'" type="button" class="button ghost-button" :disabled="loading || Boolean(error) || downloading" data-testid="complete-square-images" @click="$emit('complete-images')">{{ downloading ? (downloadProgress || tr('正在补图…')) : tr('补全参考图') }}</button>
+          <button type="button" class="button ghost-button" :disabled="favoriteBusy" @click="$emit('favorite')">{{ favorite ? tr('已收藏') : tr('收藏') }}</button>
+          <button type="button" class="button ghost-button" data-testid="square-detail-download" :disabled="loading || Boolean(error) || downloading || (!downloaded && item.kind === 'collection' && !item.members?.length)" @click="$emit('download')">{{ downloading ? (downloadProgress || tr('正在下载…')) : downloaded ? tr('打开本地副本') : tr('下载到本地') }}</button>
         </div>
 
       <div class="detail-content">
-        <p v-if="loading" role="status">正在读取详情…</p>
+        <p v-if="loading" role="status">{{ tr('正在读取详情…') }}</p>
         <div v-else-if="error" role="alert">
-          <p>{{ error }}</p>
-          <button type="button" class="button ghost-button" data-testid="square-detail-retry" @click="$emit('retry')">重试</button>
+          <p>{{ tr(error) }}</p>
+          <button type="button" class="button ghost-button" data-testid="square-detail-retry" @click="$emit('retry')">{{ tr('重试') }}</button>
         </div>
         <template v-else>
           <CollectionCover v-if="item.cover" :type="item.cover.layout" :files="coverFiles" :item-id="item.id" />
           <div class="detail-reading-grid" :class="{ 'has-media': sourceImages.length || publishedImages.length }">
-          <section class="detail-text" aria-label="提示词内容">
-          <h3 class="detail-section-label">{{ item.kind === 'collection' ? '合集内容' : '提示词正文' }}</h3>
+          <section class="detail-text" :aria-label="tr('提示词内容')">
+          <h3 class="detail-section-label">{{ item.kind === 'collection' ? tr('合集内容') : tr('提示词正文') }}</h3>
           <template v-if="item.kind === 'collection'">
-            <p>{{ item.members?.length || 0 }} 个提示词</p>
-            <p v-if="!item.members?.length">该合集缺少成员快照，暂时无法下载。</p>
+            <p>{{ item.members?.length || 0 }} {{ tr('个提示词') }}</p>
+            <p v-if="!item.members?.length">{{ tr('该合集缺少成员快照，暂时无法下载。') }}</p>
             <article v-for="(member, index) in item.members" :key="index" data-testid="square-detail-member">
-              <div class="member-heading"><h3>{{ member.title }}</h3><button type="button" class="button" data-testid="square-member-use" :disabled="useBusy || !(memberTranslations[index] || member.content)?.trim()" @click="$emit('use', { ...member, content: memberTranslations[index] || member.content, remote: true, asset_count: 0 })">使用</button></div>
+              <div class="member-heading"><h3>{{ member.title }}</h3><button type="button" class="button" data-testid="square-member-use" :disabled="useBusy || !(memberTranslations[index] || member.content)?.trim()" @click="$emit('use', { ...member, content: memberTranslations[index] || member.content, remote: true, asset_count: 0 })">{{ tr('使用') }}</button></div>
               <p v-if="member.model">{{ member.model }}</p>
               <PromptLanguage :text="member.content" :square-id="item.id" :initial-versions="item.translations || {}" :member-index="index" :default-language="defaultLanguage" @change="memberTranslations[index] = $event" /><pre class="square-body">{{ memberTranslations[index] || member.content }}</pre>
               <PublishedAttachments :item-id="item.id" :references="(item.asset_refs || []).filter(file => member.asset_ids?.includes(file.id))" />
             </article>
           </template>
-          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" :initial-versions="item.translations || {}" :default-language="defaultLanguage" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || '还没有正文' }}</pre></template>
+          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" :initial-versions="item.translations || {}" :default-language="defaultLanguage" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || tr('还没有正文') }}</pre></template>
           <PublishedAttachments v-if="item.kind !== 'collection'" :item-id="item.id" :references="item.asset_refs || []" />
           </section>
-          <aside v-if="sourceImages.length || publishedImages.length || item.reference" class="detail-media" aria-label="参考资料">
-          <section v-if="sourceImages.length" class="detail-gallery" aria-label="来源参考图">
-            <div class="gallery-label"><span>来源参考图 · 非本软件生成</span></div>
+          <aside v-if="sourceImages.length || publishedImages.length || item.reference" class="detail-media" :aria-label="tr('参考资料')">
+          <section v-if="sourceImages.length" class="detail-gallery" :aria-label="tr('来源参考图')">
+            <div class="gallery-label"><span>{{ tr('来源参考图 · 非本软件生成') }}</span></div>
             <figure>
               <div class="gallery-stage">
-                <button v-if="!imageFailed" type="button" class="gallery-open" aria-label="查看大图" @click="largeImage = activeImage"><img decoding="async" :key="imageKey" :src="activeImage.url" :alt="activeImage.alt" referrerpolicy="no-referrer" @error="imageFailed = true" @load="imageLoaded = true"></button>
-                <div v-if="imageFailed" class="gallery-fallback" role="status">图片暂时无法加载 <button class="button" type="button" @click="retryImage">重试图片</button></div>
-                <span v-else-if="!imageLoaded" class="gallery-loading" role="status">正在加载图片…</span>
+                <button v-if="!imageFailed" type="button" class="gallery-open" :aria-label="tr('查看大图')" @click="largeImage = activeImage"><img decoding="async" :key="imageKey" :src="activeImage.url" :alt="activeImage.alt" referrerpolicy="no-referrer" @error="imageFailed = true" @load="imageLoaded = true"></button>
+                <div v-if="imageFailed" class="gallery-fallback" role="status">{{ tr('图片暂时无法加载') }} <button class="button" type="button" @click="retryImage">{{ tr('重试图片') }}</button></div>
+                <span v-else-if="!imageLoaded" class="gallery-loading" role="status">{{ tr('正在加载图片…') }}</span>
               </div>
               <figcaption><span>{{ activeImage.alt }}</span><a v-if="activeImage.source" :href="activeImage.source" target="_blank" rel="noopener noreferrer">{{ item.reference.author }} ↗</a></figcaption>
             </figure>
-            <div class="gallery-thumbs" aria-label="选择预览图片">
-              <button v-for="(image, index) in galleryImages" :key="image.url" type="button" :aria-label="`预览图片 ${index + 1}`" :aria-pressed="imageIndex === index" @click="selectImage(index)"><img decoding="async" :src="image.url" alt="" loading="lazy" referrerpolicy="no-referrer"><span>{{ index + 1 }}</span></button>
+            <div class="gallery-thumbs" :aria-label="tr('选择预览图片')">
+              <button v-for="(image, index) in galleryImages" :key="image.url" type="button" :aria-label="tr('预览图片 {0}', [index + 1])" :aria-pressed="imageIndex === index" @click="selectImage(index)"><img decoding="async" :src="image.url" alt="" loading="lazy" referrerpolicy="no-referrer"><span>{{ index + 1 }}</span></button>
             </div>
           </section>
           <p v-if="item.reference" class="reference-credit"><a v-if="referenceLink(item.reference.url)" :href="referenceLink(item.reference.url)" target="_blank" rel="noopener noreferrer">{{ item.reference.repository }} ↗</a> · {{ item.reference.author }} · <a v-if="referenceLink(item.reference.license_url)" :href="referenceLink(item.reference.license_url)" target="_blank" rel="noopener noreferrer">{{ item.reference.license }}</a></p>
-          <section v-if="publishedImages.length" class="published-gallery" aria-label="发布图片">
-            <h3>图片 · {{ publishedImages.length }}</h3>
+          <section v-if="publishedImages.length" class="published-gallery" :aria-label="tr('发布图片')">
+            <h3>{{ tr('图片 ·') }} {{ publishedImages.length }}</h3>
             <div :class="{ 'single-image': publishedImages.length === 1 }"><PublishedImage v-for="file in publishedImages" :key="file.id" :item-id="item.id" :file="file" :title="file.name" /></div>
           </section>
           </aside>
           </div>
         </template>
-        <p v-if="note" role="status">{{ note }}</p>
+        <p v-if="note" role="status">{{ tr(note) }}</p>
         <ReportPanel v-if="!loading && !error" :key="item.id" :target-id="item.id" />
       </div>
       </div>
@@ -75,6 +75,7 @@
 </template>
 
 <script setup>
+import { tr } from '../platform/interfaceLanguage.js';
 import { vPageFocus } from "../lib/pageFocus.js";
 import CollectionCover from './CollectionCover.vue';
 import ReportPanel from './ReportPanel.vue';
