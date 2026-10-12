@@ -425,10 +425,14 @@ mod restore_tests {
         let address = socket.local_addr().unwrap();
         let url = format!("http://{address}");
         drop(socket);
+        // Windows may keep a refused loopback connection pending; bound fault injection
+        // explicitly so the test exercises application retries on both platforms.
+        let retry_client = reqwest::Client::builder().no_proxy()
+            .connect_timeout(Duration::from_millis(100)).timeout(Duration::from_secs(2)).build().unwrap();
         let started = std::time::Instant::now();
         let server = tokio::spawn(async move {
             use tokio::io::{AsyncReadExt, AsyncWriteExt};
-            tokio::time::sleep(Duration::from_millis(200)).await;
+            tokio::time::sleep(Duration::from_millis(500)).await;
             let listener = tokio::net::TcpListener::bind(address).await.unwrap();
             let (mut stream, _) = listener.accept().await.unwrap();
             let mut bytes = [0; 4096];
@@ -438,7 +442,7 @@ mod restore_tests {
         });
         let store = MemoryRefreshStore::default();
         store.save_refresh("ref.old").unwrap();
-        let session = tokio::time::timeout(Duration::from_secs(5), refresh_saved_session(&store, &client(), &url)).await.unwrap().unwrap().unwrap();
+        let session = tokio::time::timeout(Duration::from_secs(5), refresh_saved_session(&store, &retry_client, &url)).await.unwrap().unwrap().unwrap();
         server.await.unwrap();
         assert!(started.elapsed() >= Duration::from_secs(1));
         assert_eq!(session.access_token, "acc.new");
@@ -454,8 +458,12 @@ mod restore_tests {
         let dir = tempfile::tempdir().unwrap();
         let store = FileRefreshStore(dir.path().into());
         store.save_refresh("ref.offline").unwrap();
+        // Windows may keep a refused loopback connection pending; bound fault injection
+        // explicitly so the test exercises application retries on both platforms.
+        let retry_client = reqwest::Client::builder().no_proxy()
+            .connect_timeout(Duration::from_millis(100)).timeout(Duration::from_secs(2)).build().unwrap();
         let started = std::time::Instant::now();
-        let result = tokio::time::timeout(Duration::from_secs(5), refresh_saved_session(&store, &client(), &url)).await.unwrap();
+        let result = tokio::time::timeout(Duration::from_secs(5), refresh_saved_session(&store, &retry_client, &url)).await.unwrap();
         assert!(result.is_err());
         assert!(started.elapsed() >= Duration::from_secs(3));
         assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.offline"));
