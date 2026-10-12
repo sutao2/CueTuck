@@ -33,7 +33,8 @@ pub async fn list_square_page(sort: String, query: String, model: String, conten
             if let Some(token) = access_token { request = request.bearer_auth(token); }
             let mut response = request.send().await.map_err(|_| "广场连接失败".to_string())?;
             if response.status() == reqwest::StatusCode::CONFLICT { return Err("本轮推荐已过期，请点击换一批重新加载。".into()); }
-            if !response.status().is_success() { return Err("广场暂时不可用".into()); }
+            super::ensure_authorized(response.status())?;
+    if !response.status().is_success() { return Err("广场暂时不可用".into()); }
             let mut body = Vec::new();
             while let Some(chunk) = response.chunk().await.map_err(|_| "广场响应读取失败".to_string())? {
                 if body.len() + chunk.len() > 1024 * 1024 { return Err("广场分页响应过大".into()); }

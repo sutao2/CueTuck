@@ -4,6 +4,11 @@ let testTransport = null;
 let testMeTransport = null;
 let oauthProviderList = [];
 let refreshPending = null;
+let sessionEpoch = 0;
+const listeners = new Set();
+export const getSessionEpoch = () => sessionEpoch;
+export function subscribeSession(listener) { listeners.add(listener); return () => listeners.delete(listener); }
+function notifySession() { for (const listener of listeners) listener(getSession()); }
 
 function isTauri() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -23,6 +28,8 @@ function stripRefreshFromWebStorage() {
 }
 
 export function resetMemorySession() {
+  sessionEpoch += 1;
+  listeners.clear();
   accessToken = null;
   accountEmail = null;
   refreshPending = null;
@@ -56,6 +63,7 @@ function applySession(result, fallbackEmail) {
   if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
   accessToken = result.access_token ?? result.accessToken ?? null;
   accountEmail = result.email ?? fallbackEmail ?? null;
+  notifySession();
   return { email: accountEmail, accessToken };
 }
 
@@ -69,6 +77,7 @@ export async function listOAuthProviders() {
 export async function loginSession({ email, password } = {}) {
   const title = String(email ?? "").trim();
   if (!title || !password) throw new Error("邮箱和密码不能为空");
+  sessionEpoch += 1;
   if (refreshPending) await refreshPending.catch(() => {});
   let result;
   if (testTransport) {
@@ -86,6 +95,7 @@ export async function loginOAuthSession(provider, { signal } = {}) {
   if (name !== "google" && name !== "github") {
     throw new Error("不支持的登录方式");
   }
+  sessionEpoch += 1;
   if (refreshPending) await refreshPending.catch(() => {});
   let result;
   if (testTransport) {
@@ -153,22 +163,26 @@ export function refreshSession() {
     else throw new Error("浏览器预览不持久化登录令牌");
     applySession(result ?? {}, accountEmail);
     return getSession();
-  })().finally(() => { refreshPending = null; });
+  })().catch(error => {
+    if (String(error?.message || error) === 'SESSION_EXPIRED') {
+      applySession({}, null);
+      throw new Error('登录已失效，请重新登录');
+    }
+    throw error;
+  }).finally(() => { refreshPending = null; });
   return refreshPending;
 }
 
 export async function logoutSession() {
+  sessionEpoch += 1;
   if (refreshPending) await refreshPending.catch(() => {});
   const token = accessToken;
   accessToken = null;
   accountEmail = null;
+  notifySession();
   if (typeof localStorage !== "undefined") stripRefreshFromWebStorage();
   if (isTauri()) {
-    try {
-      await tauriInvoke("logout_local_session", { accessToken: token });
-    } catch {
-      /* 本地已清会话 */
-    }
+    await tauriInvoke("logout_local_session", { accessToken: token });
   }
 }
 

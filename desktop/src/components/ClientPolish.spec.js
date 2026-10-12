@@ -166,8 +166,23 @@ it('restores the account on mount and offers retry after a temporary failure', a
   });
   await shell();
   expect(restore).toHaveBeenCalledTimes(1);
-  expect(w.text()).toContain('登录暂未恢复');
+  expect(w.text()).toContain('网络连接失败');
   await w.get('[data-testid="retry-session"]').trigger('click'); await flushPromises();
   expect(w.get('[data-testid="open-login"]').text()).toContain('restored@example.test');
   expect(w.find('[data-testid="retry-session"]').exists()).toBe(false);
+});
+
+it('retries a failed startup restoration on reconnect and removes listeners on unmount',async()=>{
+ const restore=vi.spyOn(session,'restoreSession').mockRejectedValueOnce(new Error('暂时无法恢复登录，请检查网络后重试')).mockResolvedValue(session.getSession());
+ await shell();expect(restore).toHaveBeenCalledTimes(1);
+ window.dispatchEvent(new Event('online'));window.dispatchEvent(new Event('focus'));await flushPromises();
+ expect(restore).toHaveBeenCalledTimes(2);
+ window.dispatchEvent(new Event('online'));await flushPromises();expect(restore).toHaveBeenCalledTimes(2);
+ w.unmount();window.dispatchEvent(new Event('online'));await flushPromises();expect(restore).toHaveBeenCalledTimes(2);
+});
+
+it('does not automatically retry a damaged login file when the network reconnects',async()=>{
+ const restore=vi.spyOn(session,'restoreSession').mockRejectedValue(new Error('登录配置损坏，请重新登录'));
+ await shell();expect(w.text()).toContain('本机登录配置不可用');
+ window.dispatchEvent(new Event('online'));await flushPromises();expect(restore).toHaveBeenCalledTimes(1);
 });

@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-12-session-recovery.md](plans/2026-10-12-session-recovery.md) | 已实现 | 登录续期和联网恢复 | 明确 401 才续期重试，联网恢复与错误区分 |
 | [plans/2026-10-12-session-file.md](plans/2026-10-12-session-file.md) | 已实现 | 登录不再访问系统钥匙串 | 用户指定应用目录令牌文件及连接失败自动重试 |
 | [plans/2026-10-12-beta29-release.md](plans/2026-10-12-beta29-release.md) | 已发布部署 | 发布 Skill 修复与 Windows 便携版 | 双平台同源构建、签名更新及官网入口 |
 | [plans/2026-10-12-local-skill-publish.md](plans/2026-10-12-local-skill-publish.md) | 已随 beta.29 发布 | 本机 Skill 发布失败及详情按钮间距 | 发布包名兼容本机目录，保留文件内容 |

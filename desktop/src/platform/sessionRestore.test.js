@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock('@tauri-apps/api/core', () => ({ invoke }));
 import { getSession, loginSession, logoutSession, refreshSession, resetMemorySession, restoreSession } from './session.js';
-beforeEach(() => { resetMemorySession(); invoke.mockReset(); window.__TAURI_INTERNALS__ = {}; localStorage.clear(); sessionStorage.clear(); });
+beforeEach(() => { resetMemorySession(); invoke.mockReset(); window.__TAURI_INTERNALS__ = { invoke }; localStorage.clear(); sessionStorage.clear(); });
 afterEach(() => { delete window.__TAURI_INTERNALS__; resetMemorySession(); });
 const pair = { email: 'restore@example.test', access_token: 'acc.restored' };
 it('restores a saved native session once without persisting tokens in web storage', async () => {
@@ -39,4 +39,57 @@ it('waits for restoration before switching accounts', async () => {
 it('clears saved credentials on explicit logout even without an in-memory access token', async () => {
   invoke.mockResolvedValue(null); await logoutSession();
   expect(invoke).toHaveBeenCalledWith('logout_local_session', {accessToken:null});
+});
+
+it('clears in-memory login only when refresh explicitly rejects saved credentials', async () => {
+  invoke.mockResolvedValueOnce(pair); await restoreSession();
+  invoke.mockRejectedValueOnce('SESSION_EXPIRED');
+  await expect(refreshSession()).rejects.toThrow('登录已失效');
+  expect(getSession().loggedIn).toBe(false);
+});
+
+it('merges concurrent unauthorized requests and retries each once with the new token', async () => {
+  const { invokeCommand } = await import('./tauri.js');
+  invoke.mockResolvedValueOnce(pair); await restoreSession(); invoke.mockClear();
+  invoke.mockImplementation(async (command, args) => {
+    if (command === 'refresh_local_session') return {...pair, access_token:'acc.new'};
+    if (args.accessToken === pair.access_token) throw 'SESSION_EXPIRED';
+    return 'ok';
+  });
+  expect(await Promise.all([invokeCommand('get_me',{access_token:pair.access_token}),invokeCommand('get_me',{access_token:pair.access_token})])).toEqual(['ok','ok']);
+  expect(invoke.mock.calls.filter(([c])=>c==='refresh_local_session')).toHaveLength(1);
+  expect(invoke.mock.calls.filter(([c])=>c==='get_me')).toHaveLength(4);
+});
+
+it('does not replay writes for network failures or repeated unauthorized responses', async () => {
+  const { invokeCommand } = await import('./tauri.js');
+  invoke.mockResolvedValueOnce(pair); await restoreSession(); invoke.mockClear();
+  invoke.mockRejectedValueOnce('network timeout');
+  await expect(invokeCommand('submit_publication',{accessToken:pair.access_token})).rejects.toBe('network timeout');
+  expect(invoke).toHaveBeenCalledTimes(1);
+  invoke.mockClear();
+  invoke.mockImplementation(async c=>{if(c==='refresh_local_session')return {...pair,access_token:'acc.new'};throw 'SESSION_EXPIRED';});
+  await expect(invokeCommand('submit_publication',{accessToken:pair.access_token})).rejects.toThrow('登录已失效');
+  expect(invoke).toHaveBeenCalledTimes(3);
+});
+
+it('does not replay an old request after switching accounts', async () => {
+  const { invokeCommand } = await import('./tauri.js');
+  invoke.mockResolvedValueOnce(pair); await restoreSession();
+  let rejectOld; invoke.mockImplementationOnce(()=>new Promise((_,reject)=>{rejectOld=reject;}));
+  const request=invokeCommand('get_me',{accessToken:pair.access_token});
+  const failure=expect(request).rejects.toThrow('登录已变更');
+  await vi.waitFor(()=>expect(rejectOld).toBeTypeOf('function'));
+  invoke.mockResolvedValueOnce({email:'other@test',access_token:'acc.other'});
+  await loginSession({email:'other@test',password:'test'});
+  rejectOld('SESSION_EXPIRED'); await failure;
+  expect(getSession().email).toBe('other@test');
+  expect(invoke.mock.calls.filter(([c])=>c==='get_me')).toHaveLength(1);
+});
+
+it('reports a failed local logout cleanup instead of claiming credentials were deleted',async()=>{
+ invoke.mockResolvedValueOnce(pair);await restoreSession();
+ invoke.mockRejectedValueOnce('无法删除登录配置文件');
+ await expect(logoutSession()).rejects.toBe('无法删除登录配置文件');
+ expect(getSession().loggedIn).toBe(false);
 });

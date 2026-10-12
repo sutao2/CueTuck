@@ -664,7 +664,7 @@ import BatchOrganize from './BatchOrganize.vue';
 import LocalPromptDetail from './LocalPromptDetail.vue';
 import { extractVariables } from '../lib/renderPrompt.js';
 import UsePromptModal from "./UsePromptModal.vue";
-import { getSession, logoutSession, restoreSession } from "../platform/session.js";
+import { getSession, logoutSession, restoreSession, subscribeSession } from "../platform/session.js";
 import { filterLocalItems, listLocalFavoriteIds, toggleLocalFavorite } from "../platform/localFavorites.js";
 import { parseModelNames } from "../platform/modelCatalog.js";
 import { uiText } from "../platform/uiStrings.js";
@@ -894,6 +894,7 @@ const session = ref(getSession());
 const profileReady = ref(false);
 watch(() => session.value.email, () => { profileReady.value = false; }, { flush: 'sync' });
 const sessionRestoring = ref(false), sessionRestoreError = ref('');
+let retrySessionOnConnect = false;
 async function restoreSavedSession() {
   if (sessionRestoring.value) return;
   sessionRestoring.value = true;
@@ -902,16 +903,37 @@ async function restoreSavedSession() {
   try {
     await restoreSession();
     sessionRestoreError.value = '';
+    retrySessionOnConnect = false;
     session.value = getSession();
-  } catch {
-    sessionRestoreError.value = '登录暂未恢复，请检查网络或本机登录配置';
+  } catch (error) {
+    const message = String(error?.message || error);
+    retrySessionOnConnect = message.includes('检查网络') || message === 'offline';
+    sessionRestoreError.value = retrySessionOnConnect ? '网络连接失败，联网后将自动恢复登录' : message.includes('登录已失效') ? '登录已失效，请重新登录' : message.includes('配置') || message.includes('应用数据') || message.includes('令牌无效') ? '本机登录配置不可用，请重新登录或检查文件权限' : '登录暂未恢复，服务暂时不可用，请稍后重试';
   } finally { clearTimeout(noticeTimer); sessionRestoring.value = false; }
   if (session.value.loggedIn) {
     await refreshFavorites();
     if (space.value === 'square') await loadSquare();
   }
 }
-onMounted(restoreSavedSession);
+function retryConnectedSession() {
+  if (retrySessionOnConnect && !sessionRestoring.value && navigator.onLine !== false) void restoreSavedSession();
+}
+let unsubscribeSession;
+onMounted(() => {
+  unsubscribeSession = subscribeSession(value => {
+    session.value = value;
+    if (!value.loggedIn) favoriteIds.value = [];
+    else { retrySessionOnConnect = false; sessionRestoreError.value = ''; }
+  });
+  window.addEventListener('online', retryConnectedSession);
+  window.addEventListener('focus', retryConnectedSession);
+  void restoreSavedSession();
+});
+onUnmounted(() => {
+  unsubscribeSession?.();
+  window.removeEventListener('online', retryConnectedSession);
+  window.removeEventListener('focus', retryConnectedSession);
+});
 const loginReason = ref("");
 const publishResume = ref(false);
 const pendingPublish = ref(false);
@@ -1294,6 +1316,8 @@ async function logoutFromSettings() {
   if (logoutBusy.value) return;
   logoutBusy.value = true;
   logoutError.value = '';
+  retrySessionOnConnect = false;
+  sessionRestoreError.value = '';
   try {
     await logoutSession();
     session.value = getSession();

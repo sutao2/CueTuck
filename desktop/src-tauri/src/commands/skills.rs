@@ -404,6 +404,7 @@ pub async fn skill_market_request(window:tauri::WebviewWindow,action:String,id:O
     let mut request=if matches!(action.as_str(),"submit"|"withdraw"){client.post(url).json(&body.ok_or("缺少请求内容")?)}else{client.get(url)};
     if let Some(query)=query{request=request.query(&query);}if let Some(token)=access_token{request=request.bearer_auth(token);}
     let mut response=request.timeout(std::time::Duration::from_secs(90)).send().await.map_err(|_|"Skill 社区连接失败，请重试")?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success(){return Err(match response.status().as_u16(){401=>"请登录后继续，或重新登录刷新会话",403=>"当前账号或站点不允许此操作",404=>"Skill 不存在或已下架",409=>"内容状态已变化，请刷新后重试",413=>"Skill 文件包超过大小上限",422=>"请先在账号设置中填写昵称",429=>"今日发布次数已用完",400=>"Skill 名称、许可或文件包不符合要求",_=>"Skill 社区暂时不可用，请重试"}.into());}
     let mut bytes=Vec::new();while let Some(chunk)=response.chunk().await.map_err(|_|"读取 Skill 响应失败")?{if bytes.len()+chunk.len()>crate::skill_bundle::MAX_BUNDLE_JSON{return Err("Skill 响应超过大小上限".into());}bytes.extend_from_slice(&chunk);}
     serde_json::from_slice(&bytes).map_err(|_|"Skill 社区返回了无效响应".into())

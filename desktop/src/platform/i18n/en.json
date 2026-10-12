@@ -1343,7 +1343,7 @@
   "合集封面布局无效": "Invalid collection cover layout",
   "合集封面附件关联无效": "Invalid collection cover attachment association",
   "合集附件未关联到成员": "Collection attachment is not associated with a member",
-  "登录已失效，请重新登录": "Your session expired. Sign in again.",
+  "登录已失效，请重新登录": "Your session is no longer valid. Please sign in again.",
   "附件正在上传或账号存储配额已满，请稍后重试": "Attachments are uploading or your storage quota is full. Retry later.",
   "附件传输失败（{0}），请重试": "Attachment transfer failed ({0}). Please retry.",
   "附件长度校验失败": "Attachment length verification failed",
@@ -1433,5 +1433,8 @@
   "浏览器预览仅在当前会话保持登录。": "Browser preview keeps you signed in only for the current session.",
   "登录信息存储": "Login storage",
   "令牌仅存于本机应用目录，不参与备份或同步。": "Tokens stay in the local app directory and are excluded from backups and sync.",
-  "本机配置文件": "Local configuration file"
+  "本机配置文件": "Local configuration file",
+  "网络连接失败，联网后将自动恢复登录": "Connection failed. Your session will restore when you reconnect.",
+  "本机登录配置不可用，请重新登录或检查文件权限": "Local login configuration is unavailable. Sign in again or check file permissions.",
+  "登录暂未恢复，服务暂时不可用，请稍后重试": "The service is temporarily unavailable. Retry restoring your session later."
 }

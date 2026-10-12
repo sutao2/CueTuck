@@ -43,6 +43,7 @@ pub async fn square_reports(access_token:String,config:Option<serde_json::Value>
     let client=crate::http::client()?;
     let request=if let Some(config)=config {client.post(format!("{}/v1/reports",api_base()?)).json(&config)} else {client.get(format!("{}/v1/reports",api_base()?)).query(&[("offset",offset.unwrap_or(0))])};
     let response=request.bearer_auth(access_token).send().await.map_err(|_|"举报服务连接失败".to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success(){return Err(match response.status().as_u16(){401=>"登录已失效，请重新登录",404=>"该内容已不可举报",429=>"每天最多提交 20 件举报，请稍后重试",_=>"举报请求失败，请重试"}.into());}
     response.json().await.map_err(|_|"举报响应无效".into())
 }
@@ -50,6 +51,7 @@ pub async fn square_reports(access_token:String,config:Option<serde_json::Value>
 #[tauri::command]
 pub async fn get_square_catalog() -> Result<serde_json::Value, String> {
     let response = crate::http::client()?.get(format!("{}/v1/square/catalog",api_base()?)).send().await.map_err(|error|error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() { return Err("广场字典暂时不可用".into()); }
     response.json().await.map_err(|error|error.to_string())
 }
@@ -84,6 +86,7 @@ pub async fn list_square_items(
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("广场暂时不可用".to_string());
     }
@@ -100,6 +103,7 @@ pub async fn get_square_content(id: String, access_token: Option<String>) -> Res
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("广场暂时不可用".to_string());
     }
@@ -114,6 +118,7 @@ pub async fn record_square_download(id: String) -> Result<serde_json::Value, Str
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("download stats failed".into());
     }
@@ -158,6 +163,7 @@ pub async fn create_publication(
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("发布失败".to_string());
     }
@@ -173,6 +179,7 @@ pub async fn list_my_publications(access_token: String) -> Result<serde_json::Va
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("发布列表暂时不可用".to_string());
     }
@@ -210,6 +217,7 @@ async fn favorite_request(method: &str, id: Option<&str>, access_token: &str) ->
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("收藏失败".to_string());
     }
@@ -226,7 +234,8 @@ pub async fn square_translations(id:String,target:Option<String>,access_token:Op
  let client=crate::http::client()?;let mut req=if target.is_some(){client.post(url)}else{client.get(url)};
  if let Some(token)=access_token{req=req.bearer_auth(token)}
  let response=req.send().await.map_err(|_|"翻译服务连接失败")?;
- if !response.status().is_success(){return Err(match response.status().as_u16(){401=>"请先登录再生成广场译文",429=>"今日翻译次数已用完，请稍后重试",503=>"广场翻译暂时暂停，请稍后重试",404=>"该提示词已不可用",_=>"读取翻译失败，请重试"}.into())}
+ super::ensure_authorized(response.status())?;
+    if !response.status().is_success(){return Err(match response.status().as_u16(){401=>"请先登录再生成广场译文",429=>"今日翻译次数已用完，请稍后重试",503=>"广场翻译暂时暂停，请稍后重试",404=>"该提示词已不可用",_=>"读取翻译失败，请重试"}.into())}
  response.json().await.map_err(|_|"翻译响应无效".into())
 }
 

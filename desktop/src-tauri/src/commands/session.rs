@@ -242,7 +242,7 @@ async fn refresh_saved_session(
     };
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
         store.clear_refresh()?;
-        return Ok(None);
+        return Err("SESSION_EXPIRED".into());
     }
     if !response.status().is_success() {
         return Err("暂时无法恢复登录，请稍后重试".to_string());
@@ -260,6 +260,7 @@ pub async fn get_me(access_token: String) -> Result<Value, String> {
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("查看资料失败".to_string());
     }
@@ -279,6 +280,7 @@ pub async fn put_me(
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("保存资料失败".to_string());
     }
@@ -294,6 +296,7 @@ pub async fn put_library_changes(access_token: String, items: Vec<Value>) -> Res
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("同步失败".to_string());
     }
@@ -312,6 +315,7 @@ pub async fn list_library_changes(
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("同步失败".to_string());
     }
@@ -326,6 +330,7 @@ pub async fn get_billing_status(access_token: String) -> Result<Value, String> {
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("账单暂时不可用".to_string());
     }
@@ -346,7 +351,7 @@ pub async fn start_billing_checkout(
         .await
         .map_err(|error| error.to_string())?;
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
-        return Err("账单需要登录".to_string());
+        return Err("SESSION_EXPIRED".to_string());
     }
     let status = response.status();
     let payload: Value = response
@@ -382,6 +387,7 @@ pub async fn redeem_billing_code(
         .send()
         .await
         .map_err(|error| error.to_string())?;
+    super::ensure_authorized(response.status())?;
     if !response.status().is_success() {
         return Err("兑换失败".to_string());
     }
@@ -486,7 +492,7 @@ mod restore_tests {
         assert!(refresh_saved_session(&store, &client(), "invalid-url").await.is_err());
         assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.old"));
         let (url, handle) = server(401, "{}");
-        assert!(refresh_saved_session(&store, &client(), &url).await.unwrap().is_none());
+        assert!(matches!(refresh_saved_session(&store, &client(), &url).await, Err(e) if e == "SESSION_EXPIRED"));
         handle.join().unwrap(); assert_eq!(store.load_refresh().unwrap(), None);
     }
 }
