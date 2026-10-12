@@ -123,6 +123,6 @@ docker compose -f deploy/local-services.yml up -d
 
 ## Windows 免安装 ZIP
 
-`desktop-windows` 在同一次构建中同时产出 NSIS 安装包与 `CueTuck_<version>_x64-portable.zip`。ZIP 包含 `cuetuck.exe`、MIT 许可证和中英使用说明，使用系统 [WebView2 Runtime](https://v2.tauri.app/distribute/windows-installer/#webview2-installation-options)。这是免安装分发，用户数据和凭据仍保存在 Windows 用户目录及系统凭据库，与安装版共用；移动程序目录不会迁移数据。保持免安装使用时，退出后手动下载新版 ZIP 替换程序；应用内更新仍启动 NSIS 安装程序。
+`desktop-windows` 在同一次构建中同时产出 NSIS 安装包与 `CueTuck_<version>_x64-portable.zip`。ZIP 包含 `cuetuck.exe`、MIT 许可证和中英使用说明，使用系统 [WebView2 Runtime](https://v2.tauri.app/distribute/windows-installer/#webview2-installation-options)。这是免安装分发，用户数据及登录令牌仍保存在 Windows 用户目录（登录为 auth/session.json），AI 密钥使用系统凭据库，与安装版共用；移动程序目录不会迁移数据。保持免安装使用时，退出后手动下载新版 ZIP 替换程序；应用内更新仍启动 NSIS 安装程序。
 
 CI 在运行 NSIS 之前从 ZIP 解压到含空格的临时路径，校验程序与原始构建一致、启动 10 秒且存在主窗口。ZIP 与安装包一起进入 `cuetuck-windows-nsis` artifact，`SHA256SUMS-windows` 覆盖两者，`build-info.json` 包含 portable 文件名、哈希及验证记录。发布时将 ZIP 加入同源发行附件和总 `SHA256SUMS`；`latest.json` 的 Windows 更新项仍指向带签名的 NSIS 包。

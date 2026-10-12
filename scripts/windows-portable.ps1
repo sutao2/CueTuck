@@ -22,7 +22,8 @@ https://developer.microsoft.com/microsoft-edge/webview2/
 
 本版本免安装，但数据不会保存在程序旁边：提示词和设置仍使用
 Windows 用户数据目录（%APPDATA%\app.promptark.desktop），
-WebView 缓存使用用户本地数据目录，密钥保存在系统凭据库。
+登录令牌保存为该目录下的 auth/session.json，不保存账号密码。
+WebView 缓存使用用户本地数据目录，AI 密钥仍保存在系统凭据库。
 与同一 Windows 账号的安装版共用数据，请勿同时运行两个版本。
 复制 ZIP 或程序文件夹到另一台电脑不会迁移数据或登录凭据。
 
@@ -32,8 +33,9 @@ WebView 缓存使用用户本地数据目录，密钥保存在系统凭据库。
 
 Extract the entire ZIP and run cuetuck.exe. Requires Microsoft Edge WebView2.
 This is an installation-free distribution, not a self-contained data folder.
-Data is stored in the Windows user profile and secrets in the credential store,
-and is shared with the installed version. Do not run both at the same time.
+Data and login tokens (auth/session.json) are stored in the Windows user profile.
+Account passwords are not saved; AI keys remain in the credential store.
+Data is shared with the installed version. Do not run both at the same time.
 To remain portable, quit the app and replace it with the latest ZIP manually.
 The in-app updater launches the installer. Copying this folder does not migrate data.
 '@ | Set-Content -Encoding utf8NoBOM (Join-Path $stage 'README.txt')

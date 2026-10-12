@@ -57,4 +57,4 @@ Mac 预览构建必须复用固定签名身份，禁止 `-` / ad-hoc 回退。`n
 
 - Given 同源 Windows 构建产物 When 发布 Then 安装包和 portable ZIP 都附在发行中，总 SHA256SUMS 覆盖 ZIP，更新清单仍使用 NSIS 签名产物。
 - Given 已下载 ZIP When 解压到含空格的新目录并启动 Then 应用持续运行且显示主窗口；CI 必须在本轮安装版安装之前执行此验证。
-- Given 包内 README When 核对使用边界 Then 说明 WebView2 依赖、用户目录数据、系统凭据及手动替换 ZIP 的更新方式。
+- Given 包内 README When 核对使用边界 Then 说明 WebView2 依赖、用户目录数据与登录令牌文件、AI 系统凭据及手动替换 ZIP 的更新方式。
