@@ -149,8 +149,8 @@ try {
     await session.loginSession({ email: 'qa@example.test', password: 'test' });
     (await import('/src/platform/square.js')).setMineTransport(async () => [{ id: 'qa', title: '隔离验收投稿', status: 'pending' }]);
   }); }`);
-  await click(/button "游 登录"/);
   await fill(/textbox "昵称"/, '验收作者'); await click(/button "保存并继续"/);
+  await click(/button "q qa@example.test"/);
   await click(/button "查看我的发布"/);
   await target(/隔离验收投稿/); await run('screenshot');
   await click(/button "(?:← )?返回"/); await click(/button "切换浅色主题"/);
