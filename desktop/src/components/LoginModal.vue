@@ -67,13 +67,13 @@ const busy = computed(() => Boolean(pending.value));
 defineExpose({ close, busy });
 const abort = new AbortController();
 
-function usesSystemKeychain() {
+function usesNativeSessionStore() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
 }
 
-const tokenNote = usesSystemKeychain()
-  ? "Refresh 只写入系统钥匙串，不会进浏览器存储。"
-  : "Refresh 不进 Web Storage。浏览器预览不写入系统钥匙串。";
+const tokenNote = usesNativeSessionStore()
+  ? "登录令牌保存在本机配置文件，不保存账号密码。"
+  : "浏览器预览仅在当前会话保持登录。";
 
 onMounted(async () => {
   try {

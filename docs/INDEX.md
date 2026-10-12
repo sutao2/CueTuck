@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-12-session-file.md](plans/2026-10-12-session-file.md) | 已实现 | 登录不再访问系统钥匙串 | 用户指定应用目录令牌文件及连接失败自动重试 |
 | [plans/2026-10-12-beta29-release.md](plans/2026-10-12-beta29-release.md) | 已发布部署 | 发布 Skill 修复与 Windows 便携版 | 双平台同源构建、签名更新及官网入口 |
 | [plans/2026-10-12-local-skill-publish.md](plans/2026-10-12-local-skill-publish.md) | 已随 beta.29 发布 | 本机 Skill 发布失败及详情按钮间距 | 发布包名兼容本机目录，保留文件内容 |
 | [plans/2026-10-12-windows-portable.md](plans/2026-10-12-windows-portable.md) | 已随 beta.29 发布 | Windows 免安装分发 | ZIP 打包、启动验证和校验和 |
@@ -212,7 +213,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/collections/spec.md](specs/collections/spec.md) | 目标 | 做合集 | 合集编辑/删除与全库成员管理 |
 | [specs/categories/spec.md](specs/categories/spec.md) | 目标 | 做分类树 | 自定义大/小分类、新建校验与安全删除 |
 | [specs/variables/spec.md](specs/variables/spec.md) | 目标 | 做使用向导或渲染 | 变量解析、字面值与特殊名称隔离 |
-| [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 邮箱验证、注册门禁和找回；Refresh 进钥匙串 |
+| [specs/auth/spec.md](specs/auth/spec.md) | 目标 | 改登录或令牌存放 | 邮箱验证、注册门禁和找回；Refresh 存本机配置文件 |
 | [specs/settings/spec.md](specs/settings/spec.md) | 目标 | 做设置 | 十页完整设置页面、搜索、主题卡与保存反馈 |
 | [specs/publish/spec.md](specs/publish/spec.md) | 目标 | 改发布提交 | 提示词及合集成员快照；入队不等于提交审核 |
 | [specs/admin/spec.md](specs/admin/spec.md) | 目标 | 做管理台或审核写路径 | 身份/内容/审核/站点运营、权限与真实消费者 |

@@ -79,14 +79,14 @@
 
 ### Requirement: 令牌（M5）
 
-Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Access 与 Refresh MUST 类型隔离并轮换。M5 提供者是邮箱 + 密码，见 [ADR 0008](../../architecture/decisions/0008-m5-backend-contract.md)。Google 与 GitHub 授权码登录见 [ADR 0013](../../architecture/decisions/0013-oauth-google-github.md)。不绑定 QQ / LinuxDo。
+Refresh token MUST 存放在应用数据目录的 `auth/session.json`，MUST NOT 进入 Web Storage、业务备份或云同步。仅保存续期令牌，不保存账号密码；Access 保持内存。文件原子替换，Unix 目录 0700 / 文件 0600，Windows 继承用户应用数据目录 ACL。按用户明确要求替代原钥匙串方案，升级不访问旧钥匙串，需重新登录一次；退出与明确 401 删除文件。实现及场景见 [登录文件计划](../../plans/2026-10-12-session-file.md)。Access 与 Refresh MUST 类型隔离并轮换。M5 提供者是邮箱 + 密码，见 [ADR 0008](../../architecture/decisions/0008-m5-backend-contract.md)。Google 与 GitHub 授权码登录见 [ADR 0013](../../architecture/decisions/0013-oauth-google-github.md)。不绑定 QQ / LinuxDo。
 
 #### Scenario: 刷新轮换
 
 - GIVEN 用户已登录并持有一对 Access 与 Refresh
 - WHEN 使用 Refresh 换发新会话
 - THEN 旧 Access 与旧 Refresh 均失效
-- AND 新 Refresh 只进入系统钥匙串
+- AND 新 Refresh 只进入本机登录令牌文件
 
 ### Requirement: 口令存储
 
@@ -247,9 +247,9 @@ Refresh token MUST 存放在系统钥匙串，MUST NOT 进入 Web Storage。Acce
 
 ### Requirement: 桌面更新与重启恢复会话
 
-主窗口启动 MUST 使用原有系统凭据库中的 Refresh 恢复会话，更新不改变凭据服务名。无凭据时作为访客；网络或钥匙串读取失败保留凭据并显示重试，只有明确失效才清除。恢复不阻塞本地库初始化；并发恢复合并，登录和退出等待正在进行的恢复，避免旧恢复覆盖新账号或退出状态。浏览器预览不触发系统凭据读取，令牌不进入 Web Storage。
+主窗口启动 MUST 使用本机登录配置文件中的 Refresh 恢复会话；更新后不回退读取旧钥匙串。无凭据时作为访客；网络或登录配置读取失败保留凭据并显示重试，只有明确失效才清除。恢复不阻塞本地库初始化；并发恢复合并，登录和退出等待正在进行的恢复，避免旧恢复覆盖新账号或退出状态。浏览器预览不读取本机登录配置，令牌不进入 Web Storage。
 
 - Given 更新前已登录且凭据有效 When 更新或重启主窗口 Then 自动恢复邮箱与鉴权收藏，原 Refresh 轮换保存。
 - Given 无凭据 When 首次启动 Then 正常访客，不显示错误。
-- Given 暂时断网或钥匙串无法读取 When 恢复失败后重试 Then 保留原凭据，再次可恢复，不误报凭据失效。
+- Given 暂时断网或登录配置无法读取 When 恢复失败后重试 Then 保留原凭据，再次可恢复，不误报凭据失效。
 - Given 正在恢复 When 用户退出或登录其他账号 Then 串行完成，最终状态以用户操作为准。

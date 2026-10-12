@@ -1,5 +1,6 @@
-use crate::session::{persist_session_tokens, KeyringRefreshStore, RefreshStore};
+use crate::session::{persist_session_tokens, FileRefreshStore, RefreshStore};
 use reqwest::redirect::Policy;
+use tauri::{AppHandle, Manager};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashSet;
@@ -21,6 +22,10 @@ pub struct SessionView {
 
 use crate::api_config::api_base;
 
+fn session_store(app: &AppHandle) -> Result<FileRefreshStore, String> {
+    Ok(FileRefreshStore(app.path().app_data_dir().map_err(|_| "无法定位应用数据目录")?))
+}
+
 fn http_client(follow_redirects: bool) -> Result<reqwest::Client, String> {
     let mut builder = crate::http::client_builder()?.timeout(Duration::from_secs(10));
     if !follow_redirects {
@@ -29,9 +34,9 @@ fn http_client(follow_redirects: bool) -> Result<reqwest::Client, String> {
     builder.build().map_err(|error| error.to_string())
 }
 
-fn persist_pair(pair: TokenPair) -> Result<SessionView, String> {
+fn persist_pair(app: &AppHandle, pair: TokenPair) -> Result<SessionView, String> {
     persist_session_tokens(
-        &KeyringRefreshStore,
+        &session_store(app)?,
         &pair.access_token,
         &pair.refresh_token,
     )?;
@@ -55,7 +60,7 @@ pub async fn list_oauth_providers() -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub async fn login_local_session(email: String, password: String) -> Result<SessionView, String> {
+pub async fn login_local_session(app: AppHandle, email: String, password: String) -> Result<SessionView, String> {
     let response = http_client(true)?
         .post(format!("{}/v1/session", api_base()?))
         .json(&serde_json::json!({ "email": email, "password": password }))
@@ -66,7 +71,7 @@ pub async fn login_local_session(email: String, password: String) -> Result<Sess
         return Err("登录失败".to_string());
     }
     let pair: TokenPair = response.json().await.map_err(|error| error.to_string())?;
-    persist_pair(pair)
+    persist_pair(&app, pair)
 }
 
 #[tauri::command]
@@ -172,7 +177,7 @@ pub async fn poll_oauth_session(flow_id: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn commit_oauth_session(flow_id: String) -> Result<SessionView, String> {
+pub async fn commit_oauth_session(app: AppHandle, flow_id: String) -> Result<SessionView, String> {
     if is_cancelled(&flow_id)? {
         return Err("已取消".to_string());
     }
@@ -185,7 +190,7 @@ pub async fn commit_oauth_session(flow_id: String) -> Result<SessionView, String
     if cancelled.contains(&flow_id) {
         return Err("已取消".to_string());
     }
-    let view = persist_pair(pair)?;
+    let view = persist_pair(&app, pair)?;
     cancelled.insert(flow_id);
     Ok(view)
 }
@@ -200,8 +205,8 @@ pub async fn cancel_oauth_session(flow_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn logout_local_session(access_token: Option<String>) -> Result<(), String> {
-    KeyringRefreshStore.clear_refresh()?;
+pub async fn logout_local_session(app: AppHandle, access_token: Option<String>) -> Result<(), String> {
+    session_store(&app)?.clear_refresh()?;
     if let Some(token) = access_token {
         let _ = http_client(true)?
             .delete(format!("{}/v1/session", api_base()?))
@@ -213,8 +218,8 @@ pub async fn logout_local_session(access_token: Option<String>) -> Result<(), St
 }
 
 #[tauri::command]
-pub async fn refresh_local_session() -> Result<Option<SessionView>, String> {
-    refresh_saved_session(&KeyringRefreshStore, &http_client(false)?, &api_base()?).await
+pub async fn refresh_local_session(app: AppHandle) -> Result<Option<SessionView>, String> {
+    refresh_saved_session(&session_store(&app)?, &http_client(false)?, &api_base()?).await
 }
 
 async fn refresh_saved_session(
@@ -223,9 +228,18 @@ async fn refresh_saved_session(
     base: &str,
 ) -> Result<Option<SessionView>, String> {
     let Some(refresh) = store.load_refresh()? else { return Ok(None) };
-    let response = client.post(format!("{base}/v1/session/refresh"))
-        .json(&serde_json::json!({ "refresh_token": refresh }))
-        .send().await.map_err(|_| "暂时无法恢复登录，请检查网络后重试".to_string())?;
+    let mut attempt = 0;
+    let response = loop {
+        match client.post(format!("{base}/v1/session/refresh"))
+            .json(&serde_json::json!({ "refresh_token": refresh })).send().await {
+            Ok(response) => break response,
+            Err(error) if error.is_connect() && attempt < 2 => {
+                attempt += 1;
+                tokio::time::sleep(Duration::from_secs(attempt)).await;
+            }
+            Err(_) => return Err("暂时无法恢复登录，请检查网络后重试".into()),
+        }
+    };
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
         store.clear_refresh()?;
         return Ok(None);
@@ -396,6 +410,49 @@ mod restore_tests {
             write!(stream, "HTTP/1.1 {status} Response\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
         });
         (url, handle)
+    }
+
+    #[tokio::test]
+    async fn restore_retries_connection_failure_when_network_recovers() {
+        let socket = tokio::net::TcpSocket::new_v4().unwrap();
+        socket.bind("127.0.0.1:0".parse().unwrap()).unwrap();
+        let address = socket.local_addr().unwrap();
+        let url = format!("http://{address}");
+        drop(socket);
+        let started = std::time::Instant::now();
+        let server = tokio::spawn(async move {
+            use tokio::io::{AsyncReadExt, AsyncWriteExt};
+            tokio::time::sleep(Duration::from_millis(200)).await;
+            let listener = tokio::net::TcpListener::bind(address).await.unwrap();
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut bytes = [0; 4096];
+            stream.read(&mut bytes).await.unwrap();
+            let body = r#"{"email":"test@example.test","access_token":"acc.new","refresh_token":"ref.new"}"#;
+            stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+        });
+        let store = MemoryRefreshStore::default();
+        store.save_refresh("ref.old").unwrap();
+        let session = tokio::time::timeout(Duration::from_secs(5), refresh_saved_session(&store, &client(), &url)).await.unwrap().unwrap().unwrap();
+        server.await.unwrap();
+        assert!(started.elapsed() >= Duration::from_secs(1));
+        assert_eq!(session.access_token, "acc.new");
+        assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.new"));
+    }
+
+    #[tokio::test]
+    async fn restore_stops_retrying_and_preserves_file_when_offline() {
+        let socket = tokio::net::TcpSocket::new_v4().unwrap();
+        socket.bind("127.0.0.1:0".parse().unwrap()).unwrap();
+        let url = format!("http://{}", socket.local_addr().unwrap());
+        drop(socket);
+        let dir = tempfile::tempdir().unwrap();
+        let store = FileRefreshStore(dir.path().into());
+        store.save_refresh("ref.offline").unwrap();
+        let started = std::time::Instant::now();
+        let result = tokio::time::timeout(Duration::from_secs(5), refresh_saved_session(&store, &client(), &url)).await.unwrap();
+        assert!(result.is_err());
+        assert!(started.elapsed() >= Duration::from_secs(3));
+        assert_eq!(store.load_refresh().unwrap().as_deref(), Some("ref.offline"));
     }
 
     #[tokio::test]

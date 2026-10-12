@@ -1682,36 +1682,36 @@ describe("WorkbenchShell", () => {
     expect(w.text()).toContain("还没有最近使用");
   });
 
-  it("does not claim the keychain row uses the local keychain in browser preview", async () => {
+  it("describes session-only login storage in browser preview", async () => {
     const w = mount(WorkbenchShell);
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="privacy"]').trigger("click");
     const row = w.get('[data-testid="keychain-row"]');
-    expect(row.text()).toContain("系统钥匙串");
-    expect(row.text()).toContain("不进 Web Storage");
-    expect(row.text()).not.toContain("本机钥匙串");
+    expect(row.text()).toContain("登录信息存储");
+    expect(row.text()).toContain("当前会话保持登录");
+    expect(row.text()).not.toContain("本机配置文件");
     expect(w.text()).toContain("匿名下载统计");
     expect(w.get('[data-testid="anonymous-download-stats-row"]').text()).not.toContain("尚未提供");
   });
 
-  it("does not claim login writes refresh to the system keychain in browser preview", async () => {
+  it("describes browser login without claiming persistent storage", async () => {
     const w = mount(WorkbenchShell);
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="account"]').trigger("click");
     await w.get('[data-testid="settings-login"]').trigger("click");
     expect(w.get('[data-testid="login-token-note"]').text()).not.toContain("只写入系统钥匙串");
-    expect(w.get('[data-testid="login-token-note"]').text()).toContain("不进 Web Storage");
+    expect(w.get('[data-testid="login-token-note"]').text()).toContain("当前会话保持登录");
   });
 
-  it("labels the keychain row as local keychain inside Tauri", async () => {
+  it("labels login storage as a local configuration file inside Tauri", async () => {
     const w = mount(SettingsModal, {
       props: { session: { loggedIn: false, email: "" }, host: "macos", theme: "light" },
     });
     window.__TAURI_INTERNALS__ = {};
     try {
       await w.get('[data-settings-page="privacy"]').trigger("click");
-      expect(w.get('[data-testid="keychain-row"]').text()).toContain("本机钥匙串");
-      expect(w.get('[data-testid="keychain-row"]').text()).toContain("不进 Web Storage");
+      expect(w.get('[data-testid="keychain-row"]').text()).toContain("本机配置文件");
+      expect(w.get('[data-testid="keychain-row"]').text()).toContain("不参与备份或同步");
     } finally {
       delete window.__TAURI_INTERNALS__;
     }

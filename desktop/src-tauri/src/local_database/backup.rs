@@ -345,9 +345,13 @@ mod tests {
         create_prompt_in_dir(dir.path(), "ZIP新提交", "WAL正文", None).unwrap();
         writer.execute("UPDATE prompts SET content = 'WAL中尚未检查点的正文'", []).unwrap();
         assert!(dir.path().join("promptark.sqlite-wal").metadata().unwrap().len() > 0);
+        use crate::session::RefreshStore;
+        crate::session::FileRefreshStore(dir.path().into()).save_refresh("ref.private-backup-sentinel").unwrap();
         let dest = dir.path().join("backup.zip");
         export_library_zip_in_dir(dir.path(), &dest).unwrap();
         let data = std::fs::read(dest).unwrap();
+        assert!(!data.windows(b"ref.private-backup-sentinel".len()).any(|window| window == b"ref.private-backup-sentinel"));
+        assert!(!data.windows(b"session.json".len()).any(|window| window == b"session.json"));
         let mut offset = 0;
         let extracted = tempfile::tempdir().unwrap();
         let mut json = serde_json::Value::Null;

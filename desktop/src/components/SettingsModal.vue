@@ -277,7 +277,7 @@
             </div>
             <p v-if="preview" data-testid="import-preview"> {{ tr('将导入') }} {{ preview.prompt_count }} {{ tr('条提示词、') }}{{ preview.collection_count }} {{ tr('个合集。确认前不会写入。') }} </p>
             <p v-if="importNote" role="status">{{ tr(importNote) }}</p>
-            <div class="restore-choice"><button type="button" class="button ghost-button" data-testid="choose-restore" :disabled="dataBusy || !usesSystemKeychain()" @click="chooseRestore">{{ tr('选择备份文件') }}</button><small v-if="!usesSystemKeychain()">{{ tr('文件恢复需要桌面应用') }}</small></div>
+            <div class="restore-choice"><button type="button" class="button ghost-button" data-testid="choose-restore" :disabled="dataBusy || !usesNativeSessionStore()" @click="chooseRestore">{{ tr('选择备份文件') }}</button><small v-if="!usesNativeSessionStore()">{{ tr('文件恢复需要桌面应用') }}</small></div>
             <label class="field">
               <span>{{ tr('恢复库文件路径') }}</span>
               <input v-model="restorePath" :disabled="dataBusy" placeholder="/path/to/promptark.sqlite">
@@ -362,11 +362,11 @@
             </div>
             <div class="setting-row" data-testid="keychain-row">
               <span class="setting-copy">
-                <strong>{{ tr('系统钥匙串') }}</strong>
-                <small v-if="usesSystemKeychain()">{{ tr('Refresh 只在系统密钥库，不进 Web Storage。') }}</small>
-                <small v-else>{{ tr('浏览器预览没有系统密钥库。Refresh 不进 Web Storage。') }}</small>
+                <strong>{{ tr('登录信息存储') }}</strong>
+                <small v-if="usesNativeSessionStore()">{{ tr('令牌仅存于本机应用目录，不参与备份或同步。') }}</small>
+                <small v-else>{{ tr('浏览器预览仅在当前会话保持登录。') }}</small>
               </span>
-              <span class="setting-control">{{ usesSystemKeychain() ? tr('本机钥匙串') : tr('浏览器内存') }}</span>
+              <span class="setting-control">{{ usesNativeSessionStore() ? tr('本机配置文件') : tr('浏览器内存') }}</span>
             </div>
             </div>
           </section>
@@ -475,7 +475,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["cancel", "stay", "theme", "imported", "login", "logout", "history-cleared", "language", "launcher-shortcut-saved", "publications"]);
 
-function usesSystemKeychain() {
+function usesNativeSessionStore() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
 }
 

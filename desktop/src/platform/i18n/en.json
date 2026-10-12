@@ -1426,5 +1426,12 @@
   "JSON 导入示例": "{\"prompts\":[{\"title\":\"Example\",\"content\":\"a\"}]}",
   "广场搜索": "Explore prompts",
   "执行": "Run",
-  "直接复制": "Copy directly"
+  "直接复制": "Copy directly",
+  "正在恢复登录，请稍候": "Restoring your session. Please wait.",
+  "登录暂未恢复，请检查网络或本机登录配置": "Session not restored. Check your network or local session configuration.",
+  "登录令牌保存在本机配置文件，不保存账号密码。": "Login tokens are saved in a local configuration file. Your account password is not saved.",
+  "浏览器预览仅在当前会话保持登录。": "Browser preview keeps you signed in only for the current session.",
+  "登录信息存储": "Login storage",
+  "令牌仅存于本机应用目录，不参与备份或同步。": "Tokens stay in the local app directory and are excluded from backups and sync.",
+  "本机配置文件": "Local configuration file"
 }
