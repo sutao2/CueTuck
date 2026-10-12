@@ -14,6 +14,8 @@ on:
       - 'shared/**'
       - 'scripts/release-check*'
       - 'scripts/windows-chrome-smoke.ps1'
+      - 'scripts/windows-portable.ps1'
+      - 'LICENSE'
       - '.github/workflows/desktop-windows.yml'
 
 permissions:
@@ -52,6 +54,9 @@ jobs:
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml
       - name: Build production-connected preview NSIS
         run: npx tauri build --bundles nsis --config src-tauri/tauri.preview.conf.json --ci
+      - name: Package and smoke-test portable ZIP before installation
+        shell: pwsh
+        run: ../scripts/windows-portable.ps1
       - name: Verify binary, install, launch and uninstall
         shell: pwsh
         run: |
@@ -88,8 +93,9 @@ jobs:
           Copy-Item $installer.FullName 'windows-artifact/'
           Copy-Item ($installer.FullName + '.sig') 'windows-artifact/'
           $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $($installer.Name)" | Set-Content -Encoding utf8NoBOM 'windows-artifact/SHA256SUMS-windows'
-          @{ source_commit=(git rev-parse HEAD); api=$env:PROMPTARK_API_BASE; architecture='x64'; installer=$installer.Name; sha256=$hash; smoke='install, launch 10s, uninstall'; authenticode=(Get-AuthenticodeSignature $installer.FullName).Status.ToString() } | ConvertTo-Json | Set-Content -Encoding utf8NoBOM 'windows-artifact/build-info.json'
+          "$hash  $($installer.Name)" | Add-Content -Encoding utf8NoBOM 'windows-artifact/SHA256SUMS-windows'
+          @{ source_commit=(git rev-parse HEAD); api=$env:PROMPTARK_API_BASE; architecture='x64'; portable=(Get-Content 'windows-artifact/portable-info.json' -Raw | ConvertFrom-Json); installer=$installer.Name; sha256=$hash; smoke='install, launch 10s, uninstall'; authenticode=(Get-AuthenticodeSignature $installer.FullName).Status.ToString() } | ConvertTo-Json | Set-Content -Encoding utf8NoBOM 'windows-artifact/build-info.json'
+          Remove-Item 'windows-artifact/portable-info.json'
       - uses: actions/upload-artifact@v4
         with:
           name: cuetuck-windows-nsis

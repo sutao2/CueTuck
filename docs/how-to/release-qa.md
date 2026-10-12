@@ -52,3 +52,9 @@ Mac 预览构建必须复用固定签名身份，禁止 `-` / ad-hoc 回退。`n
 预览版必须同时满足语义版本带预发行后缀和 GitHub `prerelease=true`；正式版必须同时为稳定版本和 `prerelease=false`。不得为了让 GitHub `/releases/latest/` 可用而修改预览版标记：客户端从公开 releases 列表按通道筛选，安装使用 `/releases/download/{tag}/latest.json`。
 
 发布验收必须先使用公开 releases 列表与现行客户端选择逻辑验证：旧版发现新版、同版不提示、稳定通道不选 beta；再验证选中版本专属清单的签名下载和隔离安装。仅验证静态 latest 入口不代表用户能检查到更新。
+
+## Windows 免安装包
+
+- Given 同源 Windows 构建产物 When 发布 Then 安装包和 portable ZIP 都附在发行中，总 SHA256SUMS 覆盖 ZIP，更新清单仍使用 NSIS 签名产物。
+- Given 已下载 ZIP When 解压到含空格的新目录并启动 Then 应用持续运行且显示主窗口；CI 必须在本轮安装版安装之前执行此验证。
+- Given 包内 README When 核对使用边界 Then 说明 WebView2 依赖、用户目录数据、系统凭据及手动替换 ZIP 的更新方式。

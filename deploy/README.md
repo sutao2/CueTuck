@@ -120,3 +120,9 @@ docker compose -f deploy/local-services.yml up -d
 ## CueTuck 签名更新
 
 公开仓库为 [sutao2/CueTuck](https://github.com/sutao2/CueTuck)。首次 CueTuck 安装包为更新信任引导版本，旧预览包仍需手动安装一次；后续由同一私钥签名，通过每个发行的 `latest.json` 提供平台资产。私钥保存在发布主机受限文件和仓库 Actions Secret，不提交；预览及正式工作流必须携带 `TAURI_SIGNING_PRIVATE_KEY`，均生成更新签名资产。签名更新不等于 Apple 公证或 Windows 发布者签名。数据库文件、应用 identifier、凭据服务与线上持久卷继续使用旧内部标识以保持兼容，产品界面与新安装包使用 CueTuck。
+
+## Windows 免安装 ZIP
+
+`desktop-windows` 在同一次构建中同时产出 NSIS 安装包与 `CueTuck_<version>_x64-portable.zip`。ZIP 包含 `cuetuck.exe`、MIT 许可证和中英使用说明，使用系统 [WebView2 Runtime](https://v2.tauri.app/distribute/windows-installer/#webview2-installation-options)。这是免安装分发，用户数据和凭据仍保存在 Windows 用户目录及系统凭据库，与安装版共用；移动程序目录不会迁移数据。保持免安装使用时，退出后手动下载新版 ZIP 替换程序；应用内更新仍启动 NSIS 安装程序。
+
+CI 在运行 NSIS 之前从 ZIP 解压到含空格的临时路径，校验程序与原始构建一致、启动 10 秒且存在主窗口。ZIP 与安装包一起进入 `cuetuck-windows-nsis` artifact，`SHA256SUMS-windows` 覆盖两者，`build-info.json` 包含 portable 文件名、哈希及验证记录。发布时将 ZIP 加入同源发行附件和总 `SHA256SUMS`；`latest.json` 的 Windows 更新项仍指向带签名的 NSIS 包。
