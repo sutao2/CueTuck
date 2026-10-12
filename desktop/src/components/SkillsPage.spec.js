@@ -160,3 +160,17 @@ it('shows only discovery and installation actions for GitHub sources',async()=>{
  await w.get('.skills-list-row').trigger('click');await flushPromises();expect(button('安装到…')).toBeTruthy();expect(button('发布到社区')).toBeUndefined();
  await w.get('.skills-back').trigger('click');await flushPromises();await click('社区广场');expect(button('创建 Skill')).toBeTruthy();expect(button('发布到社区')).toBeTruthy();
 });
+
+it('publishes from a versioned local directory with the exported portable name and original display name',async()=>{
+ setSessionTransport(async()=>({access_token:'test',email:'author@test'}));await loginSession({email:'author@test',password:'test'});
+ snapshot.skills[0].path='C:\\Users\\admin\\.agents\\skills\\1password-1.0.1';
+ prepared={...prepared,folder_name:'1password-1.0.1',package:{...packageData,name:'1password',license:'MIT'}};
+ const bundle={name:'1password',files:[{path:'SKILL.md',content:'dGVzdA==',executable:false}]};
+ const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='export_bundle'?bundle:base(r));
+ const submit=vi.fn(async()=>({id:'one',status:'pending'}));setSkillMarketTransport(async(action,args)=>action==='submit'?submit(args.body):{items:[],total:0,category_counts:{}});
+ await mountPage({mode:'local'});await w.get('.skills-list-row').trigger('click');await flushPromises();await click('发布到社区');
+ expect(transport).toHaveBeenCalledWith(expect.objectContaining({action:'prepare_local',path:snapshot.skills[0].path}),expect.anything());
+ expect(w.find('[role="alert"]').exists()).toBe(false);expect(w.text()).toContain('已选择 1password');
+ expect(button('提交审核').attributes('disabled')).toBeDefined();await w.get('.skill-authoring input[type=checkbox]').setValue(true);await click('提交审核');
+ expect(submit).toHaveBeenCalledWith(expect.objectContaining({title:'1password',bundle,confirm_public:true}));resetMemorySession();
+});

@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-12-local-skill-publish.md](plans/2026-10-12-local-skill-publish.md) | 已实现 | 本机 Skill 发布失败及详情按钮间距 | 发布包名兼容本机目录，保留文件内容 |
 | [plans/2026-10-12-windows-portable.md](plans/2026-10-12-windows-portable.md) | 已验收 | Windows 免安装分发 | ZIP 打包、启动验证和校验和 |
 | [../LICENSE](../LICENSE) | 现行 | 查看开源许可 | MIT 许可证全文 |
 | [plans/2026-10-12-mit-community.md](plans/2026-10-12-mit-community.md) | 已实施 | 修改许可证与社区入口 | MIT 元数据及七语言 LinuxDO 入口 |

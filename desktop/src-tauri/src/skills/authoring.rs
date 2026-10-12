@@ -50,7 +50,13 @@ pub fn export(data: &Path, key: &str) -> Result<Bundle> {
     let prepared = install::prepared(data, key)?;
     let root = install::prepared_dir(data, key)?.join("package");
     let bundle = Bundle {
-        name: prepared.folder_name,
+        name: if crate::skill_bundle::valid_name(&prepared.folder_name) {
+            prepared.folder_name.clone()
+        } else if crate::skill_bundle::valid_name(&prepared.package.name) {
+            prepared.package.name.clone()
+        } else {
+            format!("skill-{}", &files::digest(prepared.folder_name.as_bytes())[..16])
+        },
         files: prepared
             .package
             .files
@@ -105,6 +111,39 @@ pub fn prepare(data: &Path, bundle: Bundle, expected_digest: &str) -> Result<Pre
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn export_local_names_without_changing_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        for (folder, name, expected) in [
+            ("1password-1.0.1", "1password", Some("1password")),
+            ("existing-skill", "other-name", Some("existing-skill")),
+            ("股票分析 1.0", "股票分析", None),
+            ("Some Skill", "CON", None),
+            ("a".repeat(65).as_str(), "a".repeat(65).as_str(), None),
+        ] {
+            let path = temp.path().join(folder);
+            fs::create_dir_all(path.join("references")).unwrap();
+            let body = format!("---\nname: {name}\ndescription: Test\n---\n# Original");
+            fs::write(path.join("SKILL.md"), &body).unwrap();
+            fs::write(path.join("references/data.bin"), [0, 255, 1]).unwrap();
+            let p = install::prepare_local(&data, &path).unwrap();
+            let bundle = export(&data, &p.id).unwrap();
+            assert!(crate::skill_bundle::valid_name(&bundle.name));
+            if let Some(expected) = expected {
+                assert_eq!(bundle.name, expected);
+            } else {
+                assert!(bundle.name.starts_with("skill-"));
+            }
+            assert_eq!(export(&data, &p.id).unwrap().name, bundle.name);
+            assert_eq!(bundle.files.len(), 2);
+            let imported = prepare(&data, bundle.clone(), &bundle.digest()).unwrap();
+            assert_eq!(p.package.digest, imported.package.digest);
+            assert_eq!(fs::read_to_string(path.join("SKILL.md")).unwrap(), body);
+            assert_eq!(fs::read(path.join("references/data.bin")).unwrap(), [0, 255, 1]);
+        }
+    }
+
     #[test]
     fn create_export_install_round_trip() {
         let temp = tempfile::tempdir().unwrap();
