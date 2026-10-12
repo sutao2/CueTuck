@@ -25,4 +25,3 @@
 - 本机出口 GitHub 匿名 API 额度用尽（403，remaining=0）；改用服务器独立出口匿名读取公开 releases 列表，以现行客户端逻辑验证 beta.27 / beta.28 发现 beta.29，同版不提示，稳定通道不选 beta。
 - 官网部署至 `/opt/cuetuck-website-preview/releases/beta29-cbc0009`，容器健康检查通过，公网 site.js 与本地构建哈希一致；上一版 `beta28-00139bee` 保留回滚。后端和持久卷不变。
 - 资产及证据位于 `output/releases/v0.1.0-beta.29/`。Windows 手工视觉/DPI 检查、Apple 公证与 Windows Authenticode 的未验证边界保持。
-
