@@ -1,6 +1,6 @@
 # Windows 免安装 ZIP
 
-状态：实施中。
+状态：已验收。
 
 ## 范围与步骤
 
@@ -19,4 +19,7 @@
 
 ## 验证记录
 
-待填写。
+- 源提交 `1dc0554b8ff8aa0796e8d063e02335dbda6ec40b` 的 [Windows CI](https://github.com/sutao2/CueTuck/actions/runs/38217837929) 成功：原生测试、NSIS 构建、ZIP 解压启动、安装版启动/窗口按钮与卸载均通过。
+- 下载 artifact 回读：ZIP 内仅含 `cuetuck.exe`、`LICENSE`、`README.txt`，归档完整；安装包与 ZIP 的 SHA-256 均匹配 SHA256SUMS-windows，portable 哈希匹配 build-info.json，source_commit 与构建提交一致。
+- 本次便携产物：`CueTuck_0.1.0-beta.28_x64-portable.zip`；SHA-256 `68c64c36004214ced0b3282b179e8a2ea1b84aea1a7047e7e46f84955a930c24`。只生成 CI artifact，未添加到现有 GitHub Release。
+- `python3 scripts/docs-check`（363 份 Markdown）和 `git diff --check` 通过。
