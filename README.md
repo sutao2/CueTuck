@@ -6,6 +6,8 @@
 
 **Your prompts, a shortcut away.**
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE) · [![LinuxDO](https://img.shields.io/badge/community-LinuxDO-FFA500)](https://linux.do/)
+
 **简体中文** · [English](docs/i18n/README.en.md) · [日本語](docs/i18n/README.ja.md) · [한국어](docs/i18n/README.ko.md) · [Español](docs/i18n/README.es.md) · [Français](docs/i18n/README.fr.md) · [Deutsch](docs/i18n/README.de.md)
 
 你的桌面提示词启动器。用一个全局快捷键唤起 CueTuck，搜索常用模板、填写变量、回车复制，再粘贴到正在使用的 AI 工具。提示词库、参考图片与 Skills 管理，让好用的工作方式随时可用。
@@ -98,3 +100,11 @@ npm run dev
 - [参与贡献](CONTRIBUTING.md) · [文档索引](docs/INDEX.md) · [测试门禁](docs/reference/test-gates.md)。
 
 报告问题时请附上系统、应用版本、复现步骤和脱敏截图，勿提交密钥或会话令牌。
+
+## 社区交流
+
+欢迎到 [LinuxDO](https://linux.do/) 社区交流 AI 工具与提示词使用心得。
+
+## 开源协议
+
+CueTuck 基于 [MIT 许可证](LICENSE) 开源。第三方依赖、社区样例与素材遵循各自的许可声明。

@@ -1,4 +1,5 @@
 [package]
+license = "MIT"
 name = "cuetuck"
 version = "0.1.0-beta.28"
 description = "CueTuck desktop"

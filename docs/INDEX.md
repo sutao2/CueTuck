@@ -6,6 +6,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [../LICENSE](../LICENSE) | 现行 | 查看开源许可 | MIT 许可证全文 |
+| [plans/2026-10-12-mit-community.md](plans/2026-10-12-mit-community.md) | 已实施 | 修改许可证与社区入口 | MIT 元数据及七语言 LinuxDO 入口 |
 | [plans/2026-10-10-beta28-release.md](plans/2026-10-10-beta28-release.md) | 已发布部署 | 发布空输入搜索栏修复 | 双平台同源构建、更新验证与官网入口 |
 | [plans/2026-10-10-launcher-empty-restore.md](plans/2026-10-10-launcher-empty-restore.md) | 已随 beta.28 发布 | 恢复未输入时的小搜索栏 | 空输入 64，展开后保持固定尺寸 |
 | [plans/2026-10-10-beta27-release.md](plans/2026-10-10-beta27-release.md) | 已发布部署 | 发布固定尺寸启动器 | 双平台同源构建、签名更新与官网下载入口 |

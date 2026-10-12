@@ -6,6 +6,8 @@
 
 **Your prompts, a shortcut away.**
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](../../LICENSE) · [![LinuxDO](https://img.shields.io/badge/community-LinuxDO-FFA500)](https://linux.do/)
+
 [简体中文](../../README.md) · **English** · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
 Your desktop prompt launcher. Open CueTuck with a global shortcut, find a reusable prompt, fill its variables and copy it into your AI tool. A local library, reference images and Skills management keep your workflows close at hand.
@@ -96,3 +98,11 @@ This starts the browser preview. Stop it before running `npm run tauri dev` for 
 [Local development](../../docs/how-to/local-dev.md) · [Deployment and releases](../../deploy/README.md) · [Contributing](../../CONTRIBUTING.md) · [Test gates](../../docs/reference/test-gates.md)
 
 Most technical documentation is currently in Chinese. Include your OS, app version, reproduction steps and redacted screenshots in bug reports. Never include keys or session tokens.
+
+## Community
+
+Join [LinuxDO](https://linux.do/) to discuss AI tools and share prompt workflows.
+
+## License
+
+CueTuck is released under the [MIT License](../../LICENSE). Third-party dependencies, community samples and assets retain their respective licenses.

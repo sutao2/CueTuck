@@ -6,6 +6,8 @@
 
 **Your prompts, a shortcut away.**
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](../../LICENSE) · [![LinuxDO](https://img.shields.io/badge/community-LinuxDO-FFA500)](https://linux.do/)
+
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · **한국어** · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
 데스크톱 프롬프트 런처입니다. 전역 단축키로 CueTuck을 열고 템플릿을 검색한 뒤 변수를 채워 복사하세요. 사용 중인 AI 도구에 바로 붙여 넣을 수 있습니다. 로컬 라이브러리, 참고 이미지와 Skills 관리로 자주 쓰는 작업 방식을 가까이 두세요.
@@ -96,3 +98,11 @@ npm run dev
 [로컬 개발](../../docs/how-to/local-dev.md) · [배포](../../deploy/README.md) · [기여 안내](../../CONTRIBUTING.md) · [테스트 기준](../../docs/reference/test-gates.md)
 
 기술 문서는 주로 중국어입니다. 문제 신고에는 OS, 앱 버전, 재현 단계, 개인정보를 가린 스크린샷을 포함하고 키나 세션 토큰은 제외하세요.
+
+## 커뮤니티
+
+[LinuxDO](https://linux.do/)에서 AI 도구와 프롬프트 활용 경험을 나눠 보세요.
+
+## 라이선스
+
+CueTuck은 [MIT 라이선스](../../LICENSE)로 공개됩니다. 타사 의존성, 커뮤니티 예제 및 자료에는 각각의 라이선스가 적용됩니다.

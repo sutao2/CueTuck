@@ -6,6 +6,8 @@
 
 **Your prompts, a shortcut away.**
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](../../LICENSE) · [![LinuxDO](https://img.shields.io/badge/community-LinuxDO-FFA500)](https://linux.do/)
+
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Français](README.fr.md) · **Deutsch**
 
 Dein Prompt-Launcher für den Desktop. Öffne CueTuck per globalem Tastenkürzel, finde eine Vorlage, fülle ihre Variablen aus und kopiere das Ergebnis in dein KI-Tool. Lokale Bibliothek, Referenzbilder und Skills-Verwaltung halten deine Arbeitsabläufe griffbereit.
@@ -96,3 +98,11 @@ Dies startet die Browser-Vorschau. Beende sie, bevor du die native App mit `npm 
 [Lokale Entwicklung](../../docs/how-to/local-dev.md) · [Bereitstellung und Releases](../../deploy/README.md) · [Mitwirken](../../CONTRIBUTING.md) · [Testkriterien](../../docs/reference/test-gates.md)
 
 Die technische Dokumentation ist überwiegend auf Chinesisch. Nenne bei Fehlermeldungen Betriebssystem, App-Version und Reproduktionsschritte und entferne persönliche Daten aus Screenshots. Keine Schlüssel oder Sitzungstoken veröffentlichen.
+
+## Community
+
+Tausche dich auf [LinuxDO](https://linux.do/) über KI-Werkzeuge und Prompt-Workflows aus.
+
+## Lizenz
+
+CueTuck wird unter der [MIT-Lizenz](../../LICENSE) veröffentlicht. Für Abhängigkeiten Dritter, Community-Beispiele und Materialien gelten weiterhin ihre jeweiligen Lizenzen.

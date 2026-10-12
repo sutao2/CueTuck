@@ -6,6 +6,8 @@
 
 **Your prompts, a shortcut away.**
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](../../LICENSE) · [![LinuxDO](https://img.shields.io/badge/community-LinuxDO-FFA500)](https://linux.do/)
+
 [简体中文](../../README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · **Français** · [Deutsch](README.de.md)
 
 Votre lanceur de prompts pour ordinateur. Ouvrez CueTuck avec un raccourci global, trouvez un modèle, remplissez ses variables et copiez le résultat dans votre outil d’IA. Bibliothèque locale, images de référence et gestion des Skills gardent vos méthodes de travail à portée de main.
@@ -96,3 +98,11 @@ Ces commandes lancent l’aperçu navigateur. Arrêtez-le avant d’exécuter `n
 [Développement local](../../docs/how-to/local-dev.md) · [Déploiement et distribution](../../deploy/README.md) · [Contribuer](../../CONTRIBUTING.md) · [Critères de test](../../docs/reference/test-gates.md)
 
 La documentation technique est principalement en chinois. Pour signaler un bug, indiquez le système, la version, les étapes et des captures sans données personnelles. Ne joignez jamais de clés ou de jetons de session.
+
+## Communauté
+
+Échangez sur les outils d’IA et les usages des prompts sur [LinuxDO](https://linux.do/).
+
+## Licence
+
+CueTuck est distribué sous [licence MIT](../../LICENSE). Les dépendances tierces, les exemples de la communauté et les ressources conservent leurs licences respectives.

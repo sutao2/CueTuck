@@ -6,6 +6,8 @@
 
 **Your prompts, a shortcut away.**
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](../../LICENSE) · [![LinuxDO](https://img.shields.io/badge/community-LinuxDO-FFA500)](https://linux.do/)
+
 [简体中文](../../README.md) · [English](README.en.md) · **日本語** · [한국어](README.ko.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
 デスクトップ用のプロンプトランチャーです。グローバルショートカットで CueTuck を呼び出し、テンプレートを検索、変数を入力してコピー。そのまま普段の AI ツールで使えます。ローカルライブラリ、参考画像、Skills 管理で、よく使う作業手順を手元に。
@@ -96,3 +98,11 @@ npm run dev
 [ローカル開発](../../docs/how-to/local-dev.md) · [デプロイと配布](../../deploy/README.md) · [貢献ガイド](../../CONTRIBUTING.md) · [テスト条件](../../docs/reference/test-gates.md)
 
 技術文書は主に中国語です。不具合報告には OS、バージョン、再現手順、個人情報を除いた画像を添えてください。キーやセッショントークンは記載しないでください。
+
+## コミュニティ
+
+[LinuxDO](https://linux.do/) で AI ツールやプロンプトの活用方法について交流しましょう。
+
+## ライセンス
+
+CueTuck は [MIT ライセンス](../../LICENSE) で公開されています。サードパーティの依存関係、コミュニティのサンプル、素材にはそれぞれのライセンスが適用されます。
