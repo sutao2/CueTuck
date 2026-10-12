@@ -16,4 +16,13 @@
 
 ## 记录
 
-发布中。
+已发布部署（2026-10-12）。
+
+- 源提交 `cbc0009ee71059c40f08bbb8d4c5185331cf0a8b`；[beta.29 公开预览发行](https://github.com/sutao2/CueTuck/releases/tag/v0.1.0-beta.29)，prerelease=true。
+- [完整回归](https://github.com/sutao2/CueTuck/actions/runs/38221922162)与 [Windows 构建](https://github.com/sutao2/CueTuck/actions/runs/38221922410)成功；包含原生测试、portable ZIP 含空格目录解压启动与主窗口检查、NSIS 安装启动及卸载。
+- Mac DMG 完整性、只读挂载内版本及既有固定签名验证通过；双平台更新签名验证通过且篡改拒绝。
+- 八份公开附件回读 SHA256 一致，DMG、NSIS 与 portable ZIP 匿名 HTTP 200；公开清单签名下载及临时目录隔离安装通过，未替换用户应用。
+- 本机出口 GitHub 匿名 API 额度用尽（403，remaining=0）；改用服务器独立出口匿名读取公开 releases 列表，以现行客户端逻辑验证 beta.27 / beta.28 发现 beta.29，同版不提示，稳定通道不选 beta。
+- 官网部署至 `/opt/cuetuck-website-preview/releases/beta29-cbc0009`，容器健康检查通过，公网 site.js 与本地构建哈希一致；上一版 `beta28-00139bee` 保留回滚。后端和持久卷不变。
+- 资产及证据位于 `output/releases/v0.1.0-beta.29/`。Windows 手工视觉/DPI 检查、Apple 公证与 Windows Authenticode 的未验证边界保持。
+
