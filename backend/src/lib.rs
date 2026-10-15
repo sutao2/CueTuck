@@ -3,6 +3,7 @@ mod prompt_search;
 #[path = "../../shared/skill_bundle.rs"]
 mod skill_bundle;
 mod skill_market;
+mod content_versions;
 mod skill_moderation;
 #[path = "../../shared/translation.rs"]
 mod prompt_translation;

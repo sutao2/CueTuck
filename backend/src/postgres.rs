@@ -35,6 +35,8 @@ impl Pg {
             .await?;
         if reset {
             for table in [
+                "content_versions",
+                "content_heads",
                 "reports",
                 "report_events",
                 "safety_rules",
@@ -277,6 +279,7 @@ impl Pg {
         self.init_notifications().await?;
         self.init_skill_market().await?;
         self.init_skill_ai_jobs().await?;
+        self.init_content_versions().await?;
         Ok(())
     }
 
