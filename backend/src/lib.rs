@@ -482,6 +482,7 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/square/items/:id/assets/:asset_id", get(media::public_asset))
         .route("/v1/admin/publications/:id/assets/:asset_id", get(media::review_asset))
         .route("/v1/publications/mine", get(list_my_publications))
+        .route("/v1/publications/:id/withdraw", post(content_versions::withdraw))
         .route("/v1/content/:kind/:id/versions", get(content_versions::history))
         .route("/v1/content/:kind/:id/versions/:version", get(content_versions::snapshot))
         .route("/v1/me", get(me::get_me).put(me::put_me))

@@ -124,6 +124,9 @@ pub async fn submit(
     }
     let id = uuid::Uuid::new_v4().to_string();
     if let Some(revision)=&body.revision {
+        let name:Option<String>=sqlx::query_scalar(&format!("SELECT bundle->>'name' FROM {} WHERE id=$1",pg.t("skill_publications")))
+            .bind(&revision.content_id).fetch_optional(&mut *tx).await.map_err(db)?;
+        if name.as_deref()!=Some(&body.bundle.name) {return Err(StatusCode::BAD_REQUEST)}
         pg.register_content_candidate(&mut tx,"skill",&id,&actor,revision,&json!({"revision":revision,"bundle":body.bundle,"title":body.title,"description":body.description,"license":body.license,"category":body.category})).await?;
     }
     let digest = body.bundle.digest();
@@ -148,8 +151,8 @@ pub struct Browse {
     #[serde(default)]
     status: String,
 }
-fn summary() -> &'static str {
-    "jsonb_build_object('id',p.id,'title',p.title,'description',p.description,'category',p.category,'license',p.license,'name',p.bundle->>'name','digest',p.digest,'status',p.status,'reason',p.reason,'created_at',p.created_at,'publisher',jsonb_build_object('display_name',COALESCE(NULLIF(a.display_name,''),'社区作者')))"
+fn summary(pg: &Pg) -> String {
+    format!("{} || jsonb_build_object('is_update',EXISTS(SELECT 1 FROM {1} c WHERE c.kind='skill' AND c.submission_id=p.id),'revision',(SELECT jsonb_build_object('content_id',c.content_id,'base_version',c.base_version,'change_note',c.change_note) FROM {1} c WHERE c.kind='skill' AND c.submission_id=p.id))", "jsonb_build_object('id',p.id,'title',p.title,'description',p.description,'category',p.category,'license',p.license,'name',p.bundle->>'name','digest',p.digest,'status',p.status,'reason',p.reason,'created_at',p.created_at,'publisher',jsonb_build_object('display_name',COALESCE(NULLIF(a.display_name,''),'社区作者')))", pg.t("content_candidates"))
 }
 async fn listing(
     state: &AppState,
@@ -170,7 +173,7 @@ async fn listing(
         return Err(StatusCode::BAD_REQUEST);
     }
     let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
-    let result:Value=sqlx::query_scalar(&format!("WITH available AS (SELECT p.*,a.display_name FROM {} p JOIN {} a ON a.email=p.author_email WHERE ($1='admin' OR ($1='mine' AND p.author_email=$2) OR ($1='public' AND p.status='approved' AND NOT a.disabled AND NOT EXISTS(SELECT 1 FROM {4} c WHERE c.kind='skill' AND c.submission_id=p.id)))), filtered AS (SELECT * FROM available WHERE ($3='' OR category=$3) AND ($4='' OR strpos(lower(title||' '||description||' '||(bundle->>'name')),lower($4))>0) AND ($6='' OR status=$6)), page AS (SELECT * FROM filtered ORDER BY created_at DESC,id LIMIT 24 OFFSET $5) SELECT jsonb_build_object('items',COALESCE((SELECT jsonb_agg({} ORDER BY p.created_at DESC,p.id) FROM page p JOIN {} a ON a.email=p.author_email),'[]'::jsonb),'total',(SELECT count(*) FROM filtered),'offset',$5::bigint,'category_counts',COALESCE((SELECT jsonb_object_agg(category,n) FROM (SELECT category,count(*) n FROM available GROUP BY category) c),'{{}}'::jsonb))",pg.t("skill_publications"),pg.t("accounts"),summary(),pg.t("accounts"),pg.t("content_candidates"))).bind(mode).bind(actor).bind(&q.category).bind(q.q.trim()).bind(q.offset).bind(&q.status).fetch_one(&pg.pool).await.map_err(db)?;
+    let result:Value=sqlx::query_scalar(&format!("WITH available AS (SELECT p.*,a.display_name FROM {} p JOIN {} a ON a.email=p.author_email WHERE ($1='admin' OR ($1='mine' AND p.author_email=$2) OR ($1='public' AND p.status='approved' AND NOT a.disabled AND NOT EXISTS(SELECT 1 FROM {4} c WHERE c.kind='skill' AND c.submission_id=p.id)))), filtered AS (SELECT * FROM available WHERE ($3='' OR category=$3) AND ($4='' OR strpos(lower(title||' '||description||' '||(bundle->>'name')),lower($4))>0) AND ($6='' OR status=$6)), page AS (SELECT * FROM filtered ORDER BY created_at DESC,id LIMIT 24 OFFSET $5) SELECT jsonb_build_object('items',COALESCE((SELECT jsonb_agg({} ORDER BY p.created_at DESC,p.id) FROM page p JOIN {} a ON a.email=p.author_email),'[]'::jsonb),'total',(SELECT count(*) FROM filtered),'offset',$5::bigint,'category_counts',COALESCE((SELECT jsonb_object_agg(category,n) FROM (SELECT category,count(*) n FROM available GROUP BY category) c),'{{}}'::jsonb))",pg.t("skill_publications"),pg.t("accounts"),summary(pg),pg.t("accounts"),pg.t("content_candidates"))).bind(mode).bind(actor).bind(&q.category).bind(q.q.trim()).bind(q.offset).bind(&q.status).fetch_one(&pg.pool).await.map_err(db)?;
     Ok(Json(result))
 }
 pub async fn browse(
@@ -201,7 +204,7 @@ pub async fn admin_list(
 }
 async fn visible(state: &AppState, headers: &HeaderMap, id: &str) -> Result<Value, StatusCode> {
     let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
-    let row=sqlx::query(&format!("SELECT {},p.author_email,p.bundle,p.history, a.disabled FROM {} p JOIN {} a ON a.email=p.author_email WHERE p.id=$1",summary(),pg.t("skill_publications"),pg.t("accounts"))).bind(id).fetch_optional(&pg.pool).await.map_err(db)?.ok_or(StatusCode::NOT_FOUND)?;
+    let row=sqlx::query(&format!("SELECT {},p.author_email,p.bundle,p.history, a.disabled FROM {} p JOIN {} a ON a.email=p.author_email WHERE p.id=$1",summary(pg),pg.t("skill_publications"),pg.t("accounts"))).bind(id).fetch_optional(&pg.pool).await.map_err(db)?.ok_or(StatusCode::NOT_FOUND)?;
     let mut value: Value = row.get(0);
     let author: String = row.get(1);
     let disabled: bool = row.get(4);
@@ -251,9 +254,10 @@ pub async fn package(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
     let value = visible(&state, &headers, &id).await?;
-    Ok(Json(
-        json!({"bundle":value["bundle"],"digest":value["digest"]}),
-    ))
+    let pg=state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let version:Option<i64>=sqlx::query_scalar(&format!("SELECT version FROM {} WHERE kind='skill' AND content_id=$1 AND snapshot->>'digest'=$2 AND snapshot->'bundle'=$3 ORDER BY version DESC LIMIT 1",pg.t("content_versions")))
+        .bind(&id).bind(value["digest"].as_str()).bind(&value["bundle"]).fetch_optional(&pg.pool).await.map_err(db)?;
+    Ok(Json(json!({"bundle":value["bundle"],"digest":value["digest"],"version":version})))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -308,6 +312,10 @@ async fn transition(
     } else {
         body.status.as_str()
     };
+    if current=="approved" && status=="withdrawn" {
+        let candidate:bool=sqlx::query_scalar(&format!("SELECT EXISTS(SELECT 1 FROM {} WHERE kind='skill' AND submission_id=$1)",pg.t("content_candidates"))).bind(&id).fetch_one(&mut *tx).await.map_err(db)?;
+        if candidate {return Err(StatusCode::CONFLICT)}
+    }
     if current == "withdrawn"
         || (!owner && matches!(status, "approved" | "rejected") && current != "pending")
     {
@@ -422,6 +430,11 @@ mod tests {
         assert_eq!(request(&s,"GET","/v1/skills","",json!(null)).await.1["total"],1);
         let pg=s.db.as_ref().unwrap();pg.init_content_versions().await.unwrap();
         let count:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {} WHERE kind='skill'",pg.t("content_heads"))).fetch_one(&pg.pool).await.unwrap();assert_eq!(count,1);
+        let withdraw=json!({"status":"withdrawn","reason":"withdraw","expected_status":"approved"});
+        assert_eq!(request(&s,"POST",&format!("/v1/skills/{}/withdraw",candidate["id"].as_str().unwrap()),&author,withdraw.clone()).await.0,StatusCode::CONFLICT);
+        assert_eq!(request(&s,"POST",&format!("/v1/skills/{id}/withdraw"),&author,withdraw).await.0,StatusCode::OK);
+        assert!(request(&s,"GET",&format!("/v1/skills/{}/bundle",candidate["id"].as_str().unwrap()),"",json!(null)).await.0.is_client_error());
+        assert_eq!(request(&s,"GET",&format!("/v1/content/skill/{id}/versions/1"),"",json!(null)).await.0,StatusCode::NOT_FOUND);
     }
     #[tokio::test]
     async fn publication_review_install_visibility_and_idempotency() {

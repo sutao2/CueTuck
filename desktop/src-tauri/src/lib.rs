@@ -168,6 +168,7 @@ pub fn run() {
             commands::square::record_square_download,
             commands::square::create_publication,
             commands::square::content_versions_request,
+            commands::square::withdraw_publication,
             commands::database::content_update_request,
             commands::square::list_my_publications,
             commands::square::put_favorite,

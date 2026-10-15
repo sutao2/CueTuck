@@ -277,3 +277,13 @@ pub async fn content_versions_request(kind: String, id: String, version: Option<
     if !response.status().is_success(){return Err(format!("读取版本失败（{}）",response.status().as_u16()))}
     response.json().await.map_err(|e|e.to_string())
 }
+
+#[tauri::command]
+pub async fn withdraw_publication(id:String,access_token:String)->Result<serde_json::Value,String> {
+    let mut url=url::Url::parse(&api_base()?).map_err(|_|"服务地址无效")?;
+    url.path_segments_mut().map_err(|_|"服务地址无效")?.extend(["v1","publications",&id,"withdraw"]);
+    let response=crate::http::client()?.post(url).bearer_auth(access_token).send().await.map_err(|e|e.to_string())?;
+    super::ensure_authorized(response.status())?;
+    if !response.status().is_success(){return Err("撤回失败，投稿可能已经完成审核，请刷新后查看".into())}
+    response.json().await.map_err(|e|e.to_string())
+}

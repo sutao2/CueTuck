@@ -1,23 +1,25 @@
 <template>
  <section class="community-skills">
   <div v-if="!selected" class="community-toolbar">
-   <form class="community-search skills-search" @submit.prevent="search"><AppIcon name="search"/><input v-model="query" :disabled="busy" :aria-label="tr('搜索社区 Skills')" :placeholder="mine?tr('搜索我的发布…'):tr('搜索 Skill 名称或描述…')"/><button type="submit" :disabled="busy" :aria-label="tr('搜索')" :title="tr('搜索 · Enter')">↵</button></form>
-   <button class="button community-refresh" :disabled="busy" :aria-label="tr('刷新')" :title="tr('刷新')" @click="load"><AppIcon name="refresh"/></button>
+   <form class="community-search skills-search" @submit.prevent="search"><AppIcon name="search"/><input v-model="query" :disabled="busy||historyBusy" :aria-label="tr('搜索社区 Skills')" :placeholder="mine?tr('搜索我的发布…'):tr('搜索 Skill 名称或描述…')"/><button type="submit" :disabled="busy||historyBusy" :aria-label="tr('搜索')" :title="tr('搜索 · Enter')">↵</button></form>
+   <button class="button community-refresh" :disabled="busy||historyBusy" :aria-label="tr('刷新')" :title="tr('刷新')" @click="load"><AppIcon name="refresh"/></button>
   </div>
-  <ContentState v-if="error" kind="error" compact :title="tr('内容加载失败')" :description="tr(error)"><button class="button" :disabled="busy" @click="retry">{{ tr('重试') }}</button></ContentState>
+  <ContentState v-if="error" kind="error" compact :title="tr('内容加载失败')" :description="tr(error)"><button class="button" :disabled="busy||historyBusy" @click="retry">{{ tr('重试') }}</button></ContentState>
   <ContentState v-if="busy&&!items.length" kind="loading" :title="tr('正在加载 Skills…')" />
   <template v-if="selected">
-   <button class="button" :disabled="busy" @click="selected=null;load()">{{ tr('← 返回列表') }}</button><h2>{{ selected.title }}</h2><p>{{ selected.description }}</p>
+   <button class="button" :disabled="busy||historyBusy" @click="selected=null;load()">{{ tr('← 返回列表') }}</button><h2>{{ selected.title }}</h2><p>{{ selected.description }}</p>
    <p class="muted">{{ tr('发布者：') }}{{ selected.publisher?.display_name }} · {{ tr(skillStatus(selected.status)) }} {{ tr('· 许可：') }}{{ selected.license }}</p>
    <p v-if="selected.reason" class="skills-alert">{{ selected.reason }}</p><pre class="community-body">{{ selected.body }}</pre>
    <h3>{{ tr('完整文件包 ·') }} {{ selected.files.length }} {{ tr('个文件') }}</h3><ul><li v-for="file in selected.files" :key="file.path">{{ file.path }} · {{ file.size }} B{{ file.executable?tr(' · 可执行文件'):'' }}</li></ul>
+   <button v-if="selected.status==='approved'&&!selected.is_update" class="button" :disabled="busy||historyBusy" @click="historyOpen=!historyOpen">{{ tr("版本历史") }}</button>
+   <ContentVersionHistory v-if="historyOpen" :key="selected.id" kind="skill" :id="selected.id" :author="mine" @close="historyOpen=false" @busy="historyBusy=$event" />
    <p class="muted">{{ tr('版本校验：') }}{{ selected.digest }}</p><p class="muted">{{ tr('安装只写入文件，不会自动配置 MCP、安装运行时或执行脚本。') }}</p>
-   <div class="skills-actions"><button v-if="!mine" class="button primary-button" :disabled="busy" @click="install">{{ busy?tr('正在处理…'):tr('安装到智能体…') }}</button><button v-if="mine&&selected.status!=='withdrawn'" class="button" :disabled="busy" @click="withdrawing=true">{{ tr('撤回发布') }}</button></div>
-   <div v-if="withdrawing" class="skills-panel"><p>{{ tr('撤回后其他用户将无法从广场下载，已安装副本会保留。') }}</p><button class="button" :disabled="busy" @click="withdraw">{{ tr('确认撤回') }}</button><button class="button" :disabled="busy" @click="withdrawing=false">{{ tr('取消') }}</button></div>
+   <div class="skills-actions"><button v-if="!mine" class="button primary-button" :disabled="busy||historyBusy" @click="install">{{ busy?tr('正在处理…'):tr('安装到智能体…') }}</button><button v-if="mine&&selected.status!=='withdrawn'&&(selected.status!=='approved'||!selected.is_update)" class="button" :disabled="busy||historyBusy" @click="withdrawing=true">{{ tr('撤回发布') }}</button></div>
+   <div v-if="withdrawing" class="skills-panel"><p>{{ tr('撤回后其他用户将无法从广场下载，已安装副本会保留。') }}</p><button class="button" :disabled="busy||historyBusy" @click="withdraw">{{ tr('确认撤回') }}</button><button class="button" :disabled="busy||historyBusy" @click="withdrawing=false">{{ tr('取消') }}</button></div>
   </template>
   <template v-else>
    <div class="community-results"><span>{{ mine?tr('我的发布'):tr('社区作品') }}<small v-if="mine">{{ tr('审核通过后公开展示') }}</small></span><span class="muted" role="status">{{ busy?tr('正在加载…'):tr("共 {0} 个 Skill", [total]) }}</span></div>
-   <section class="skills-list"><button v-for="item in items" :key="item.id" class="skills-list-row" :disabled="busy" @click="open(item.id)"><span class="skills-list-icon"><AppIcon name="skills"/></span><span class="skills-row-main"><strong>{{ item.title }}</strong><span>{{ item.description }}</span><small>{{ tr(skillCategoryName(item.category)) }} · {{ item.publisher?.display_name }} · {{ item.license }}</small><span v-if="mine&&item.reason">{{ item.reason }}</span></span><span class="skills-badge">{{ mine?skillStatus(item.status):tr('查看并安装') }}</span><span>›</span></button></section>
+   <section class="skills-list"><button v-for="item in items" :key="item.id" class="skills-list-row" :disabled="busy||historyBusy" @click="open(item.id)"><span class="skills-list-icon"><AppIcon name="skills"/></span><span class="skills-row-main"><strong>{{ item.title }}</strong><span>{{ item.description }}</span><small>{{ tr(skillCategoryName(item.category)) }} · {{ item.publisher?.display_name }} · {{ item.license }}</small><span v-if="mine&&item.reason">{{ item.reason }}</span></span><span class="skills-badge">{{ mine?skillStatus(item.status):tr('查看并安装') }}</span><span>›</span></button></section>
    <ContentState v-if="!busy&&!items.length&&!error" :title="query.trim()||category?tr('没有找到匹配的 Skill'):mine?tr('你还没有发布 Skill'):tr('社区还没有公开的 Skill')" :description="query.trim()||category?tr('试试其他关键词，或在左侧切换分类。'):mine?tr('发布后可以在这里查看审核进度。'):tr('已有开源 Skill 可在 GitHub 来源中浏览和安装。你也可以创建并发布自己的作品。')" icon="skills">
     <button v-if="!mine&&!query.trim()&&!category" class="button" @click="emit('browse-github')">{{ tr('浏览 GitHub 来源') }} <span aria-hidden="true">→</span></button>
     <button v-if="query.trim()" class="button" @click="query='';search()">{{ tr('清除搜索') }}</button>
@@ -29,20 +31,22 @@
 <script setup>
 import { tr } from '../platform/interfaceLanguage.js';
 import ContentState from './ContentState.vue';
+import ContentVersionHistory from './ContentVersionHistory.vue';
 import {computed,ref,watch,onMounted,onUnmounted} from 'vue';
 import {skillMarket,skillStatus} from '../platform/skillMarket.js';
 import {skillCategoryName,skillCategoryCounts} from '../platform/skillCategories.js';
 import AppIcon from './AppIcon.vue';
 const props=defineProps({category:{type:String,default:''},mine:{type:Boolean,default:false},initialId:{type:String,default:''}}),emit=defineEmits(['install','busy','categories','browse-github']);
 const mine=computed(()=>props.mine),items=ref([]),total=ref(0),offset=ref(0),query=ref(''),busy=ref(false),error=ref(''),selected=ref(null),withdrawing=ref(false);
+const historyOpen=ref(false),historyBusy=ref(false);
 let generation=0,disposed=false,last=()=>load();
-async function run(task){if(busy.value)return;last=()=>run(task);const current=++generation;busy.value=true;error.value='';try{const result=await task();return result;}catch(e){if(!disposed&&current===generation)error.value=String(e.message||e);}finally{if(current===generation)busy.value=false;}}
+async function run(task){if(busy.value||historyBusy.value)return;last=()=>run(task);const current=++generation;busy.value=true;error.value='';try{const result=await task();return result;}catch(e){if(!disposed&&current===generation)error.value=String(e.message||e);}finally{if(current===generation)busy.value=false;}}
 async function load(){await run(async()=>{const result=await skillMarket(mine.value?'mine':'browse',{query:{q:query.value,category:props.category,offset:offset.value}});if(disposed)return;items.value=result.items;total.value=result.total;emit('categories',{ready:true,counts:{...skillCategoryCounts([]),...result.category_counts,'':Object.values(result.category_counts||{}).reduce((a,b)=>a+b,0)},scope:mine.value?'我的社区发布':'社区 Skills'});});}
-async function open(id){await run(async()=>{selected.value=await skillMarket('detail',{id});withdrawing.value=false;});}
-async function install(){await run(async()=>{const result=await skillMarket('bundle',{id:selected.value.id});if(result.digest!==selected.value.digest)throw new Error('发布版本已变化，请返回列表重新加载');emit('install',{...result,item:selected.value});});}
+async function open(id){await run(async()=>{selected.value=await skillMarket('detail',{id});withdrawing.value=false;historyOpen.value=false;});}
+async function install(){await run(async()=>{const result=await skillMarket('bundle',{id:selected.value.id});if(result.digest!==selected.value.digest)throw new Error('发布版本已变化，请返回列表重新加载');emit('install',{...result,community:Number.isSafeInteger(result.version)?{id:selected.value.id,version:result.version}:null,item:selected.value});});}
 async function withdraw(){const id=selected.value.id;const result=await run(()=>skillMarket('withdraw',{id,body:{status:'withdrawn',expected_status:selected.value.status,reason:'作者撤回'}}));if(result){selected.value=null;withdrawing.value=false;await load();}}
 function search(){offset.value=0;load();}function retry(){last();}
-watch(()=>props.category,()=>{selected.value=null;offset.value=0;load();});watch(busy,v=>emit('busy',v),{flush:'sync'});
+watch(()=>props.category,()=>{selected.value=null;offset.value=0;load();});watch([busy,historyBusy],([a,b])=>emit('busy',a||b),{flush:'sync'});
 onMounted(()=>props.initialId?open(props.initialId):load());onUnmounted(()=>{disposed=true;generation++;emit('busy',false);});
 defineExpose({reload:load});
 </script>

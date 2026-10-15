@@ -166,6 +166,7 @@
             </div>
           </div>
           <div class="content-actions" :inert="batchBusy ? '' : undefined">
+            <button v-if="space === 'local' && nativeDownloads" class="button ghost-button" @click="contentUpdatesOpen=true">{{ tr("下载更新") }}</button>
             <button v-if="space === 'local' && prompts.length" type="button" class="button ghost-button" data-testid="select-prompts" @click="selecting = !selecting; selectedPrompts = []">{{ selecting ? tr('取消多选') : tr('批量整理') }}</button>
             <button v-if="space === 'square' && sortTab === '推荐' && dismissedRecommendations.length" type="button" class="button ghost-button" @click="restoreRecommendations">{{ tr('恢复推荐偏好') }}</button>
             <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="refreshSquare"><AppIcon name="refresh" />{{ sortTab === '推荐' ? (!squareLoading && !squareItems.length && recentRecommendations.length ? tr('重新浏览') : tr('换一批')) : t("refresh") }}</button>
@@ -404,7 +405,8 @@
       @save="savePrompt"
       @remove="removePrompt"
     />
-    <MyPublications v-if="publicationsOpen" v-show="!loginReason" :session="session" :initial-kind="contentKind==='skills'?'skills':'prompts'" @busy="publicationsBusy=$event" @cancel="publicationsOpen = false" @login="openLogin('查看我的发布')" />
+    <ContentUpdates v-if="contentUpdatesOpen" @close="contentUpdatesOpen=false" @busy="contentUpdatesBusy=$event" @changed="refreshOperationView" />
+    <MyPublications v-if="publicationsOpen" v-show="!loginReason" :session="session" :initial-kind="contentKind==='skills'?'skills':'prompts'" @busy="publicationsBusy=$event" @update="openPublishedUpdate" @cancel="publicationsOpen = false" @login="openLogin('查看我的发布')" />
     <LocalPromptDetail v-if="reading" :key="reading.id" v-show="!editing && !using && !loginReason"
       :prompt="reading" @cancel="reading = null" @edit="editing = reading" @use="startUse($event)" />
     <UsePromptModal
@@ -469,10 +471,11 @@
     <section v-if="publishResume" v-show="!loginReason" v-page-focus="() => !publishBusy && (publishResume = false)" class="workspace-page" data-testid="publish-resume" role="region" aria-labelledby="publish-title">
         <header class="modal-header">
           <div>
-            <h2 id="publish-title">{{ tr('发布到广场') }}</h2>
+            <h2 id="publish-title">{{ publishRevision ? '发布更新' : tr('发布到广场') }}</h2>
           </div>
           <button type="button" class="page-back" :aria-label="tr('返回')" :disabled="publishBusy" @click="publishResume = false">{{ tr('← 返回') }}</button>
         </header>
+        <div v-if="publishRevision" class="create-body"><p>{{ tr("更新原广场条目 · 基于 v") }}{{ publishRevision.base_version }}{{ tr("。审核期间旧版保持可用。") }}</p><label class="field"><span>{{ tr("更新说明") }}</span><textarea v-model="publishChangeNote" :disabled="publishBusy||Boolean(publishPreview)" maxlength="2000" /></label><details><summary>{{ tr("对照当前公开版本") }}</summary><pre style="white-space:pre-wrap">{{ [publishPrevious?.title,publishPrevious?.content,...(publishPrevious?.members||[]).map(m=>`${m.title}\n${m.content}`)].filter(Boolean).join('\n\n') }}</pre></details></div>
         <PublicationPreview v-if="publishPreview" :title="publishPreview.source.title" :content="publishPreview.source.content" :members="publishPreview.members" :cover="publishPreview.coverAssets.length ? publishPreview.source : null" :assets="publishPreview.assets" :category="remoteCatalog?.categories.find(c => c.id === publishPreview.categoryId)?.name" :model="publishPreview.model" />
         <div v-show="!publishPreview" class="create-body">
           <p v-if="publishSourcesLoading" role="status">{{ tr('正在读取本地内容…') }}</p>
@@ -660,6 +663,8 @@ onMounted(() => { stopUpdateChecks = startUpdateChecks(); });
 onUnmounted(() => stopUpdateChecks?.());
 import SquareDetailModal from "./SquareDetailModal.vue";
 import MyPublications from './MyPublications.vue';
+import ContentUpdates from './ContentUpdates.vue';
+import { contentVersions, localContentUpdate } from '../platform/contentVersions.js';
 import BatchOrganize from './BatchOrganize.vue';
 import LocalPromptDetail from './LocalPromptDetail.vue';
 import { extractVariables } from '../lib/renderPrompt.js';
@@ -720,7 +725,7 @@ const searchInput = ref(null);
 const globalSearchOpen = ref(false);
 const globalSkillResult = ref(null);
 const globalSearchShortcutLabel = computed(() => formatShortcutLabel(props.host === 'macos' ? 'Super+K' : 'Control+K', props.host));
-const globalSearchBlocked = computed(() => publicationsBusy.value || skillsBusy.value || batchBusy.value || editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length > 0 || favoriteBusy.value.length > 0 || Boolean(pendingDelete.value || deletingCategory.value || pendingNavigation.value));
+const globalSearchBlocked = computed(() => publicationsBusy.value || contentUpdatesBusy.value || skillsBusy.value || batchBusy.value || editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length > 0 || favoriteBusy.value.length > 0 || Boolean(pendingDelete.value || deletingCategory.value || pendingNavigation.value));
 function openGlobalSearch() {
   if (globalSearchBlocked.value || document.querySelector('[aria-modal="true"]')) return;
   closeContextMenu();
@@ -814,13 +819,13 @@ onUnmounted(() => {
 
 function handleWorkbenchShortcut(event) {
   if (session.value.loggedIn && !profileReady.value) return;
-  if (batchBusy.value || skillsBusy.value || publicationsBusy.value) return;
+  if (batchBusy.value || skillsBusy.value || publicationsBusy.value || contentUpdatesBusy.value) return;
   const modifier = props.host === 'macos' ? event.metaKey : event.ctrlKey;
   if (!modifier || event.altKey || event.shiftKey || event.repeat || event.isComposing || event.keyCode === 229) return;
   if (globalSearchOpen.value) return;
   if (event.key.toLowerCase() === 'k') { event.preventDefault(); openGlobalSearch(); return; }
   if (addingCategory.value || deletingCategory.value) return;
-  if (globalSkillResult.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
+  if (globalSkillResult.value || contentUpdatesOpen.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
   if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
   if (event.key.toLowerCase() === 'f' && !settingsOpen.value && !publishResume.value) {
     event.preventDefault(); if (contentKind.value === 'skills') { skillsPage.value?.focusSearch?.(); } else { focusSearch(); } return;
@@ -843,6 +848,8 @@ watch(creating, value => { if (!value) exampleDraft.value = false; });
 const creatingInCollection = ref(null);
 const editing = ref(null);
 const reading = ref(null);
+const contentUpdatesOpen=ref(false),contentUpdatesBusy=ref(false);
+const nativeDownloads=Boolean(window.__TAURI_INTERNALS__);
 const publicationsOpen = ref(false), publicationsBusy=ref(false);
 const selecting = ref(false), selectedPrompts = ref([]), batchBusy = ref(false);
 const selectedRows = computed(() => prompts.value.filter(p => selectedPrompts.value.includes(p.id)));
@@ -944,6 +951,7 @@ let publishSourcesRequest = 0;
 watch(publishResume, value => { if (!value) { ++publishSourcesRequest; publishPreview.value = null; } }, { flush: 'sync' });
 onUnmounted(() => { ++publishSourcesRequest; });
 const publishSourceId = ref("");
+const publishRevision=ref(null),publishChangeNote=ref(''),publishPrevious=ref(null);
 const publishCoverIncluded = ref(true);
 const publishCoverSource = computed(() => publishSources.value.find(item => item.id === publishSourceId.value && item.kind === 'collection' && item.cover_type !== 'none' && parseCoverUrls(item.cover_json).length));
 const publishCategoryId = ref(null), publishModel = ref(null);
@@ -1149,11 +1157,11 @@ const emptyCopy = computed(() => {
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
 const locationLabel = computed(() => contentKind.value === "skills" ? (skillsMode.value === "local" ? tr("本机 Skills") : tr("Skill 广场")) : (space.value === "square" ? t("square") : t("local")));
-const hasTaskPage = computed(() => Boolean(globalSkillResult.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
-const taskTitle = computed(() => globalSkillResult.value ? globalSkillResult.value.item.title : publicationsOpen.value ? tr('我的发布') : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? tr('登录账号') : creating.value ? tr('新建') : editing.value ? tr('编辑') : using.value ? tr('使用提示词') : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? tr('发布到广场') : addingCategory.value ? tr('新建分类') : '');
+const hasTaskPage = computed(() => Boolean(globalSkillResult.value || contentUpdatesOpen.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
+const taskTitle = computed(() => contentUpdatesOpen.value ? '下载内容更新' : globalSkillResult.value ? globalSkillResult.value.item.title : publicationsOpen.value ? tr('我的发布') : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? tr('登录账号') : creating.value ? tr('新建') : editing.value ? tr('编辑') : using.value ? tr('使用提示词') : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? tr('发布到广场') : addingCategory.value ? tr('新建分类') : '');
 
 function guardSidebarNavigation(event) {
-  if (batchBusy.value || skillsBusy.value || publicationsBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
+  if (batchBusy.value || skillsBusy.value || publicationsBusy.value || contentUpdatesBusy.value) { event.preventDefault(); event.stopPropagation(); return; }
   if (!hasTaskPage.value) return;
   const button = event.target.closest('button');
   if (!button || button.matches('.preference-toggle, .tree-expand, .category-collapse')) return;
@@ -1163,7 +1171,7 @@ function guardSidebarNavigation(event) {
 }
 
 function navigateTo(action) {
-  if (batchBusy.value || skillsBusy.value || publicationsBusy.value) return;
+  if (batchBusy.value || skillsBusy.value || publicationsBusy.value || contentUpdatesBusy.value) return;
   if (!hasTaskPage.value) { action(); return; }
   if (editorBusy.value || useBusy.value || publishBusy.value || categoryBusy.value || collectionBusy.value || loginPage.value?.busy || settingsView.value?.busy || downloadBusy.value.length || favoriteBusy.value.length) return;
   pendingNavigation.value = action;
@@ -1187,7 +1195,7 @@ function finishNavigation() {
   pendingNavigation.value = null;
   pendingDelete.value = null;
   globalSkillResult.value = null;
-  creating.value = false; creatingInCollection.value = null; editing.value = null; using.value = null; reading.value = null; publicationsOpen.value = false;
+  creating.value = false; creatingInCollection.value = null; editing.value = null; using.value = null; reading.value = null; publicationsOpen.value = false; contentUpdatesOpen.value=false;
   openedCollection.value = null; closeSquareDetail();
   loginReason.value = ''; publishResume.value = false; pendingPublish.value = false;
   closeCategoryDialog();
@@ -1503,7 +1511,17 @@ async function loadPublishSources() {
   ];
 }
 
-async function openPublish() {
+async function openPublishedUpdate(row) {
+  publicationsBusy.value=true;
+  try {
+    const history=await contentVersions(row.kind||'prompt',row.id);
+    const previous=await contentVersions(row.kind||'prompt',row.id,history.current_version);
+    publicationsOpen.value=false;
+    await openPublish({row,previous,revision:{content_id:row.id,base_version:history.current_version}});
+  } catch(error) {notifyOperation(`读取发布版本失败：${error.message||error}`,false,'publish');}
+  finally {publicationsBusy.value=false;}
+}
+async function openPublish(update = null) {
   if (publishResume.value && publishSourcesLoading.value) return;
   const request = ++publishSourcesRequest;
   const token = getSession().accessToken;
@@ -1514,9 +1532,10 @@ async function openPublish() {
   publishSourcesError.value = '';
   publishSources.value = [];
   publishSourceId.value = '';
+  publishRevision.value=update?.revision||null;publishPrevious.value=update?.previous?.snapshot||null;publishChangeNote.value='';
   try {
     const [sources] = await Promise.all([loadPublishSources(), loadRemoteCatalog()]);
-    if (current()) publishSources.value = sources;
+    if (current()) { publishSources.value = sources.filter(s=>!update?.row || (s.kind||'prompt')===(update.row.kind||'prompt')); if(update?.row&&publishSources.value.some(s=>s.id===update.row.source_id)) publishSourceId.value=update.row.source_id; }
   } catch (error) {
     if (current()) publishSourcesError.value = `本地内容读取失败：${error.message || error}`;
   } finally { if (current()) publishSourcesLoading.value = false; }
@@ -1556,16 +1575,24 @@ async function finishProfile() {
 
 async function previewPublish() {
   if (publishBusy.value || !publishSourceId.value || publishAssetsLoading.value || publishAssetsError.value) return;
+  if(publishRevision.value&&!publishChangeNote.value.trim()){operationNote.value='请填写更新说明';return;}
   const source = publishSources.value.find(item => item.id === publishSourceId.value), token = getSession().accessToken;
   const request = publishSourcesRequest;
   publishBusy.value = true;
   try {
     if (!source) throw Error('未选择本地内容');
     const members = source.kind === 'collection' ? await listCollectionMembers(source.id) : undefined;
+    if (members && nativeDownloads && publishRevision.value) {
+      const { origin } = await localContentUpdate({action:'preview',kind:'collection',local_id:source.id});
+      if (origin?.remote_id === publishRevision.value.content_id) {
+        const remoteIds = new Map(Object.entries(origin.member_map || {}).map(([remote, local]) => [local, remote]));
+        for (const member of members) member.publishedMemberId = remoteIds.get(member.id) || member.id;
+      }
+    }
     if (members && !members.length) throw Error('合集至少需要一条提示词才能发布');
     if (members?.some(member => !member.title?.trim() || !member.content?.trim())) throw Error('合集成员标题和正文不能为空');
     if (request !== publishSourcesRequest || token !== getSession().accessToken || !publishResume.value) return;
-    publishPreview.value = JSON.parse(JSON.stringify({ source, members, coverAssets: publishCoverIncluded.value && source.kind === 'collection' ? collectionCoverAssets(source) : [], assets: publishAssets.value.filter(asset => publishAssetIds.value.includes(asset.id)), categoryId: remoteCatalog.value ? publishCategoryId.value : publicationCategory(source.category_id), model: remoteCatalog.value ? publishModel.value : source.model, token }));
+    publishPreview.value = JSON.parse(JSON.stringify({ source, members, revision:publishRevision.value?{...publishRevision.value,change_note:publishChangeNote.value.trim(),request_id:crypto.randomUUID()}:null, coverAssets: publishCoverIncluded.value && source.kind === 'collection' ? collectionCoverAssets(source) : [], assets: publishAssets.value.filter(asset => publishAssetIds.value.includes(asset.id)), categoryId: remoteCatalog.value ? publishCategoryId.value : publicationCategory(source.category_id), model: remoteCatalog.value ? publishModel.value : source.model, token }));
   } catch (error) { operationNote.value = `预览失败：${error.message || error}`; }
   finally { publishBusy.value = false; }
 }
@@ -1585,7 +1612,7 @@ async function submitPublish() {
       const currentMembers = snapshot.members;
       if (selectedAssets.some(asset => !currentMembers.some(member => member.id === asset.memberId))) throw new Error('所选附件的成员已移出合集，请重新选择本地内容');
       members = currentMembers.map(member => ({
-        title: member.title, content: member.content, category_id: publicationCategory(member.category_id), model: member.model,
+        member_id: member.publishedMemberId || member.id, title: member.title, content: member.content, category_id: publicationCategory(member.category_id), model: member.model,
         ...(selectedAssets.some(asset => asset.memberId === member.id) ? { asset_ids: selectedAssets.filter(asset => asset.memberId === member.id).map(asset => asset.id) } : {}),
       }));
       if (!members.length) throw new Error('合集至少需要一条提示词才能发布');
@@ -1603,6 +1630,7 @@ async function submitPublish() {
     assertAccount();
     const result = await publishWithQueue({
       sourceId: publishSourceId.value,
+      ...(snapshot.revision ? {revision:snapshot.revision} : {}),
       title: source?.title,
       content: source?.content ?? "",
       categoryId: snapshot.categoryId,

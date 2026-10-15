@@ -2,6 +2,7 @@ import { applyLocalImport, importDownloadedPrompt, getLocalSetting, listLocalCat
 import { downloadReferenceImages } from './referenceAssets.js';
 import { referenceImages } from '../lib/squareReference.js';
 import { validateAssets } from './assets.js';
+import { contentVersions, localContentUpdate, prepareVersionDownload } from './contentVersions.js';
 import { getSession } from "./session.js";
 import { downloadPublishedAsset, validateReferences, validateCollectionAssets } from './privateMedia.js';
 
@@ -170,6 +171,20 @@ async function downloadNewSquareItem(id, onCountUpdated, onProgress) {
   const existing = (await listLocalPrompts()).find(row => row.remote_id === id);
   if (existing) return existing;
   const payload = await fetchSquareContent(id);
+  if (isTauri()) {
+    let history;
+    try { history = await contentVersions(payload.kind || 'prompt', id); }
+    catch (error) { if (!String(error?.message || error).includes('404')) throw error; }
+    if (history) {
+      const revision = await contentVersions(payload.kind || 'prompt', id, history.current_version);
+      const prepared = await prepareVersionDownload(revision, onProgress);
+      onProgress?.({ stage: 'saving' });
+      const result = await localContentUpdate({ action: 'import', kind: revision.kind, remote_id: id, version: revision.version, remote: revision.snapshot, payload: prepared });
+      await cacheDownloadTranslations({ ...payload, ...revision.snapshot });
+      void recordAnonymousDownload(id, onCountUpdated);
+      return result;
+    }
+  }
   const refs = validateReferences(payload.asset_refs ?? []);
   const localCategoryIds = new Set((await listLocalCategories()).map(category => category.id));
   const localCategory = id => localCategoryIds.has(id) ? id : null;
@@ -212,6 +227,12 @@ async function downloadNewSquareItem(id, onCountUpdated, onProgress) {
       model: payload.model,
     });
   }
+  await cacheDownloadTranslations(payload);
+  void recordAnonymousDownload(id, onCountUpdated);
+  return row;
+}
+
+async function cacheDownloadTranslations(payload) {
   if (isTauri()) {
     for (const target of ['zh','en']) {
       const entry=payload.translations?.[target];
@@ -222,8 +243,6 @@ async function downloadNewSquareItem(id, onCountUpdated, onProgress) {
       }
     }
   }
-  void recordAnonymousDownload(id, onCountUpdated);
-  return row;
 }
 
 async function recordAnonymousDownload(id, onCountUpdated) {
@@ -254,12 +273,12 @@ async function recordAnonymousDownload(id, onCountUpdated) {
   }
 }
 
-export async function createPublication({ sourceId, title, content, categoryId, model, kind, members, assetRefs, cover } = {}) {
+export async function createPublication({ sourceId, title, content, categoryId, model, kind, members, assetRefs, cover, revision } = {}) {
   const id = String(sourceId ?? "").trim();
   if (!id) throw new Error("未选择本地内容");
   if (assetRefs) validateReferences(assetRefs);
   if (kind === 'collection') validateCollectionAssets(members, assetRefs ?? [], cover);
-  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}), ...(kind ? { kind } : {}), ...(members ? { members } : {}), ...(cover ? { cover } : {}), ...(assetRefs ? { assetRefs } : {}) });
+  if (testPublishTransport) return testPublishTransport({ sourceId: id, title, content, ...(categoryId ? { categoryId } : {}), ...(model ? { model } : {}), ...(kind ? { kind } : {}), ...(members ? { members } : {}), ...(cover ? { cover } : {}), ...(assetRefs ? { assetRefs } : {}), ...(revision ? { revision } : {}) });
   if (isTauri()) {
     return tauriInvoke("create_publication", {
       source_id: id,
@@ -272,6 +291,7 @@ export async function createPublication({ sourceId, title, content, categoryId, 
       members: members ?? [],
       cover: cover ?? null,
       asset_refs: assetRefs ?? [],
+      revision: revision ?? null,
     });
   }
   const token = getSession().accessToken;
@@ -283,7 +303,7 @@ export async function createPublication({ sourceId, title, content, categoryId, 
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ source_id: id, title, content, category_id: categoryId, model, kind, members, cover, ...(assetRefs ? { asset_refs: assetRefs } : {}) }),
+      body: JSON.stringify({ source_id: id, title, content, category_id: categoryId, model, kind, members, cover, revision, ...(assetRefs ? { asset_refs: assetRefs } : {}) }),
     });
     if (!response.ok) throw new Error("发布失败");
     return response.json();

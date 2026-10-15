@@ -98,6 +98,7 @@ impl Pg {
         self.check_publishing(&mut tx).await?;
         let role = actor_lock(self, &mut tx, author, token, false).await?;
         if let Some(revision)=revision {
+            self.catalog_lock(&mut tx).await?;
             let request=serde_json::json!({"publication":publication,"revision":revision});
             self.register_content_candidate(&mut tx,&publication.kind,&publication.id,author,revision,&request).await?;
             if let Some(row)=sqlx::query(&format!("SELECT * FROM {} WHERE id=$1",self.t("publications"))).bind(&publication.id).fetch_optional(&mut *tx).await.map_err(db_error)? {

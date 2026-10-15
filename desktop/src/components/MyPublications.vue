@@ -9,6 +9,7 @@
       <p v-else-if="loading" role="status">{{ tr('正在读取投稿…') }}</p>
       <p v-else-if="error" role="alert">{{ tr(error) }} <button type="button" class="button" @click="load">{{ tr('重试') }}</button></p>
       <template v-else>
+      <ContentVersionHistory v-if="historyRow" :key="historyRow.id" :id="historyRow.id" :kind="historyRow.kind||'prompt'" :source-id="historyRow.source_id" author @close="historyRow=null" @busy="historyBusy=$event" @submitted="load" />
       <div class="publication-metrics" data-testid="publication-metrics">
         <div><strong>{{ formatMetric(rows.length) }}</strong><span>{{ tr('累计投稿') }}</span></div>
         <div><strong>{{ formatMetric(totalMetric('download_count')) }}</strong><span>{{ tr('已记录下载次数') }}</span></div>
@@ -21,10 +22,15 @@
       <p v-if="!rows.length">{{ tr('暂无投稿。可以从广场的发布入口提交本地提示词。') }}</p>
       <ul v-else class="publication-list">
         <li v-for="row in sortedRows" :key="row.id">
-          <div class="publication-heading"><strong>{{ row.title || row.source_id }}</strong><span class="publication-status">{{ tr(statusLabel(row.status)) }}</span></div>
+          <div class="publication-heading"><strong>{{ row.title || row.source_id }}</strong><span class="publication-status">{{ row.current_version ? `v${row.current_version} · ` : '' }}{{ tr(statusLabel(row.status)) }}</span></div>
+          <button v-if="row.status==='approved'&&row.visibility==='online'" class="button" :disabled="busy" @click="emit('update',row)">{{ tr("发布更新") }}</button>
+          <button v-if="row.status==='approved'&&row.visibility==='online'" class="button" :disabled="busy" @click="historyRow=row">{{ tr("版本历史") }}</button>
           <p class="publication-counters"><span>{{ tr('记录下载') }} {{ formatMetric(row.download_count) }}</span><span>{{ tr('当前收藏') }} {{ formatMetric(row.favorite_count) }}</span></p>
+          <button v-if="row.revision&&row.status==='pending'" class="button" :disabled="busy" @click="withdrawRow=row.id">{{ tr('撤回更新') }}</button>
+          <div v-if="withdrawRow===row.id"><p>{{ tr('确认撤回这次待审核更新？当前公开版本保持不变。') }}</p><button class="button" :disabled="busy" @click="withdraw(row)">{{ tr('确认撤回') }}</button><button class="button" :disabled="busy" @click="withdrawRow=null">{{ tr('取消') }}</button></div>
+          <p v-if="row.revision">{{ tr('更新说明') }}：{{ row.revision.change_note }} · v{{ row.revision.base_version }} → v{{ row.revision.base_version+1 }}</p>
           <p v-if="row.visibility">{{ tr('广场：') }}{{ tr({ online: '已上架', offline: '已下架', trashed: '已移入回收站' }[row.visibility] || row.visibility) }}</p>
-          <p v-for="event in row.history || []" :key="event.id">{{ event.status === 'rejected' ? tr('驳回原因：') : tr('审核通过') }}{{ event.reason || '' }}<small v-if="event.created_at"> · {{ new Date(event.created_at).toLocaleString() }}</small></p>
+          <p v-for="event in row.history || []" :key="event.id">{{ event.status === 'rejected' ? tr('驳回原因：') : event.status === 'withdrawn' ? tr('已撤回') : tr('审核通过') }}{{ event.reason || '' }}<small v-if="event.created_at"> · {{ new Date(event.created_at).toLocaleString() }}</small></p>
         </li>
       </ul>
       </template>
@@ -36,13 +42,17 @@
 import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref, watch, onUnmounted } from 'vue';
 import SkillCommunity from './SkillCommunity.vue';
+import ContentVersionHistory from './ContentVersionHistory.vue';
 import { formatMetric } from '../platform/contentMetrics.js';
+import { withdrawPublication } from '../platform/contentVersions.js';
 import { listMyPublications } from '../platform/square.js';
 import { vPageFocus } from '../lib/pageFocus.js';
 const props = defineProps({ session: { type: Object, required: true }, initialKind:{type:String,default:'prompts'} });
-const emit=defineEmits(['cancel', 'login','busy']);
+const emit=defineEmits(['cancel', 'login','busy','update']);
+const withdrawRow=ref(null),withdrawBusy=ref(false);
+const historyRow=ref(null),historyBusy=ref(false);
 const kind=ref(props.initialKind),skillBusy=ref(false);
-const busy=computed(()=>loading.value||skillBusy.value);
+const busy=computed(()=>loading.value||skillBusy.value||historyBusy.value||withdrawBusy.value);
 function close(){if(!busy.value)emit('cancel');}
 const rows = ref([]), loading = ref(false), error = ref('');
 const sort = ref('latest');
@@ -55,7 +65,8 @@ const sortedRows = computed(() => sort.value === 'latest' ? rows.value : [...row
   return value(b) - value(a);
 }));
 let request = 0;
-const statusLabel = value => ({ pending: '待审核', approved: '已通过', rejected: '需修改' }[value] || value);
+const statusLabel = value => ({ pending: '待审核', approved: '已通过', rejected: '需修改', withdrawn:'已撤回' }[value] || value);
+async function withdraw(row){withdrawBusy.value=true;try{await withdrawPublication(row.id);withdrawRow.value=null;await load();}catch(err){error.value=String(err.message||err);}finally{withdrawBusy.value=false;}}
 async function load() {
   const token = ++request;
   rows.value = []; error.value = ''; loading.value = false;

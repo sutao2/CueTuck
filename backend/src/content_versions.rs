@@ -104,10 +104,10 @@ impl Pg {
             sqlx::query(&format!("UPDATE {} SET author_email=NULL WHERE kind=$1 AND content_id=$2",self.t("content_heads")))
                 .bind(&publication.kind).bind(&id).execute(&mut **tx).await.map_err(db)?;
         }
-        sqlx::query(&format!("INSERT INTO {}(id,title,kind,excerpt,model,member_count,content,category_id,members,sort_index)
+        sqlx::query(&format!("INSERT INTO {} AS current_item(id,title,kind,excerpt,model,member_count,content,category_id,members,sort_index)
           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,COALESCE((SELECT max(sort_index)+1 FROM {0}),0))
           ON CONFLICT(id) DO UPDATE SET title=EXCLUDED.title,excerpt=EXCLUDED.excerpt,model=EXCLUDED.model,
-            member_count=EXCLUDED.member_count,content=EXCLUDED.content,category_id=EXCLUDED.category_id,members=EXCLUDED.members",self.t("square_items")))
+            member_count=EXCLUDED.member_count,content=EXCLUDED.content,category_id=EXCLUDED.category_id,members=EXCLUDED.members,revision=current_item.revision+1",self.t("square_items")))
             .bind(&id).bind(&item.title).bind(&item.kind).bind(&item.excerpt).bind(&item.model).bind(item.member_count)
             .bind(&item.content).bind(&item.category_id).bind(serde_json::json!(item.members)).execute(&mut **tx).await.map_err(db)?;
         if base>0 {
@@ -187,10 +187,20 @@ mod tests {
         let mut update=json!({"source_id":"local","title":"Updated","content":"v2","revision":{"content_id":id,"base_version":1,"change_note":"Improve","request_id":uuid::Uuid::new_v4().to_string()}});
         let (status,candidate)=request(&state,"POST","/v1/publications",&token,update.clone()).await;
         assert_eq!(status,StatusCode::OK);
+        let mine=pg.author_reviews("author@test.local").await.unwrap();
+        let submitted=mine["items"].as_array().unwrap().iter().find(|r|r["id"]==candidate["id"]).unwrap();
+        assert_eq!(submitted["revision"]["content_id"],id);
+        assert_eq!(submitted["revision"]["base_version"],1);
         assert_eq!(state.get_item(id).await.unwrap().unwrap().content.as_deref(),Some("v1"));
         assert_eq!(request(&state,"POST","/v1/publications",&token,update.clone()).await.1["id"],candidate["id"]);
         update["content"]=json!("different retry");
         assert_eq!(request(&state,"POST","/v1/publications",&token,update.clone()).await.0,StatusCode::CONFLICT);
+        let mut withdrawn=update.clone();withdrawn["revision"]["request_id"]=json!(uuid::Uuid::new_v4().to_string());
+        let withdrawn=request(&state,"POST","/v1/publications",&token,withdrawn).await.1;
+        let withdraw_path=format!("/v1/publications/{}/withdraw",withdrawn["id"].as_str().unwrap());
+        assert_eq!(request(&state,"POST",&withdraw_path,&token,json!(null)).await.0,StatusCode::OK);
+        assert_eq!(pg.review_publication(withdrawn["id"].as_str().unwrap(),"approved",None,None).await.err(),Some(StatusCode::CONFLICT));
+        assert_eq!(state.get_item(id).await.unwrap().unwrap().content.as_deref(),Some("v1"));
         pg.review_publication(candidate["id"].as_str().unwrap(),"approved",None,None).await.unwrap();
         assert_eq!(state.get_item(id).await.unwrap().unwrap().content.as_deref(),Some("v2"));
         assert!(state.get_item(candidate["id"].as_str().unwrap()).await.unwrap().is_none());
@@ -286,4 +296,23 @@ pub async fn snapshot(axum::extract::State(state): axum::extract::State<crate::A
     let value:Option<Value>=sqlx::query_scalar(&format!("SELECT jsonb_build_object('id',content_id,'kind',kind,'version',version,'change_note',change_note,'published_at',published_at,'snapshot',snapshot) FROM {} WHERE kind=$1 AND content_id=$2 AND version=$3",pg.t("content_versions")))
         .bind(&kind).bind(&id).bind(version).fetch_optional(&pg.pool).await.map_err(db)?;
     Ok(axum::Json(value.ok_or(StatusCode::NOT_FOUND)?))
+}
+
+pub async fn withdraw(axum::extract::State(state):axum::extract::State<crate::AppState>,headers:axum::http::HeaderMap,
+    axum::extract::Path(id):axum::extract::Path<String>) -> Result<axum::Json<Value>,StatusCode> {
+    let author=crate::require_user(&state,&headers).await?;
+    let token=crate::bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
+    let pg=state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let mut tx=pg.pool.begin().await.map_err(db)?;
+    crate::admin_risk::actor_lock(pg,&mut tx,&author,&token,false).await?;
+    pg.catalog_lock(&mut tx).await?;
+    let row=sqlx::query(&format!("SELECT p.author_email,p.status FROM {} p WHERE p.id=$1 AND EXISTS(SELECT 1 FROM {} c WHERE c.kind=p.kind AND c.submission_id=p.id) FOR UPDATE",pg.t("publications"),pg.t("content_candidates")))
+        .bind(&id).fetch_optional(&mut *tx).await.map_err(db)?.ok_or(StatusCode::NOT_FOUND)?;
+    if row.get::<Option<String>,_>("author_email").as_deref()!=Some(&author){return Err(StatusCode::FORBIDDEN)}
+    if row.get::<String,_>("status")!="pending" {return Err(StatusCode::CONFLICT)}
+    sqlx::query(&format!("UPDATE {} SET status='withdrawn' WHERE id=$1",pg.t("publications"))).bind(&id).execute(&mut *tx).await.map_err(db)?;
+    sqlx::query(&format!("INSERT INTO {}(publication_id,actor_email,status,reason) VALUES($1,$2,'withdrawn','作者撤回更新')",pg.t("review_events"))).bind(&id).bind(&author).execute(&mut *tx).await.map_err(db)?;
+    crate::admin_risk::audit(pg,&mut tx,&author,"publication_update_withdrawn",serde_json::json!({"id":id})).await?;
+    tx.commit().await.map_err(db)?;
+    Ok(axum::Json(serde_json::json!({"id":id,"status":"withdrawn"})))
 }

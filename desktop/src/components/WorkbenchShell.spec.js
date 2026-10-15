@@ -314,7 +314,7 @@ describe("WorkbenchShell", () => {
     await submitPreview(w);
     await flushPromises();
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ kind: "collection", members: [
-      { title: "成员", content: "完整正文", category_id: "cat-software-0", model: "GPT" },
+      { member_id: member.id, title: "成员", content: "完整正文", category_id: "cat-software-0", model: "GPT" },
     ] }));
     expect((await listLocalPrompts())[0].content).toBe("完整正文");
   });

@@ -6,10 +6,11 @@ import { downloadSquareItem, fetchSquareContent, resetSquare, setSquareContentTr
 
 const invoke = vi.hoisted(() => vi.fn(async () => []));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
-afterEach(() => { delete window.__TAURI_INTERNALS__; invoke.mockClear(); resetSquare(); });
+afterEach(() => { delete window.__TAURI_INTERNALS__; invoke.mockReset(); invoke.mockImplementation(async()=>[]); resetSquare(); });
 
 it("sends a whole downloaded collection to the native transactional import", async () => {
   window.__TAURI_INTERNALS__ = {};
+  invoke.mockImplementation(async command=>{if(command==='content_versions_request')throw new Error('读取版本失败（404）');return [];});
   setSquareContentTransport(async () => ({ id: "remote", kind: "collection", title: "合集", members: [{ title: "成员", content: "正文", model: "Flux" }] }));
   await downloadSquareItem("remote");
   const call = invoke.mock.calls.find(([command]) => command === "apply_local_import");
@@ -64,4 +65,20 @@ it("uses native snapshot commands including tombstones and keep-local", async ()
   invoke.mockResolvedValueOnce('native-sha256');
   expect(await assetHash(asset)).toBe('native-sha256');
   expect(invoke).toHaveBeenLastCalledWith('hash_private_asset', { asset });
+});
+
+it('pins the published revision and imports provenance and collection member identities in one native write',async()=>{
+ window.__TAURI_INTERNALS__={};
+ const snapshot={id:'remote',kind:'collection',title:'Collection',members:[{member_id:'stable-member',title:'Member',content:'version two'}],asset_refs:[]};
+ setSquareContentTransport(async()=>({...snapshot,members:[{title:'racing latest',content:'not the pinned revision'}]}));
+ invoke.mockImplementation(async(command,args)=>{
+  if(command==='content_versions_request')return args.version===null?{current_version:2}:{id:'remote',kind:'collection',version:2,snapshot};
+  if(command==='content_update_request')return {local_id:'saved',kind:'collection',version:2};
+  return [];
+ });
+ await downloadSquareItem('remote');
+ const writes=invoke.mock.calls.filter(([command])=>command==='content_update_request');
+ expect(writes).toHaveLength(1);
+ expect(writes[0][1].request).toMatchObject({action:'import',remote_id:'remote',version:2,remote:snapshot,payload:{prompts:[{remote_member_id:'stable-member',content:'version two'}]}});
+ expect(invoke.mock.calls.some(([command])=>command==='apply_local_import')).toBe(false);
 });
