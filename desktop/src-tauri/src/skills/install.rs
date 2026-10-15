@@ -62,6 +62,7 @@ pub fn store_prepared(
             folder_name,
             package,
             source,
+            community: None,
             local_path,
         };
         fs::write(
@@ -165,14 +166,17 @@ pub fn plan(
     let installed = registry.installations.get(&target);
     let same_origin = match (&p.source, installed.and_then(|i| i.source.as_ref())) {
         (Some(a), Some(b)) => a.identity() == b.identity(),
-        _ => false,
+        _ => match (&p.community, installed.and_then(|i| i.community.as_ref())) {
+            (Some(a),Some(b)) => a.id==b.id,
+            _ => false,
+        },
     };
     let same = old.as_ref().is_some_and(|o| o.digest == p.package.digest);
     let modified = installed
         .zip(old.as_ref())
         .is_some_and(|(i, o)| i.digest != o.digest);
     let status = if same
-        && (same_origin || (p.source.is_none() && installed.is_some_and(|i| i.source.is_none())))
+        && (same_origin || (p.source.is_none() && p.community.is_none() && installed.is_some_and(|i| i.source.is_none() && i.community.is_none())))
     {
         "same"
     } else if old.is_none() {
@@ -335,12 +339,16 @@ pub fn install_one(
         return Err("上次操作尚未恢复，请刷新后重试".into());
     }
     let plan = plan(defaults, registry, p, &selection.root_id)?;
+    if let (Some(next),Some(current))=(&p.community,registry.installations.get(&plan.target).and_then(|i|i.community.as_ref())) {
+        if next.id==current.id && next.version<current.version {return Err("来源版本已更新，请重新获取广场版本".into())}
+    }
     if plan.current_digest != selection.expected_digest {
         return Err("目标在预览后发生变化，请重新比较".into());
     }
     if plan.status == "same" {
         if let Some(i) = registry.installations.get_mut(&plan.target) {
             i.source = p.source.clone();
+            i.community = p.community.clone();
             i.checked_at = Some(now());
             i.upstream_commit = p.source.as_ref().map(|s| s.commit.clone());
         }
@@ -386,6 +394,7 @@ pub fn install_one(
         root_id: selection.root_id.clone(),
         digest: p.package.digest.clone(),
         source: p.source.clone(),
+        community: p.community.clone(),
         installed_at: now(),
         checked_at: None,
         upstream_commit: None,
@@ -527,6 +536,7 @@ pub fn restore(
         root_id: b.root_id.clone(),
         digest: b.digest.clone(),
         source: None,
+        community: None,
         installed_at: now(),
         checked_at: None,
         upstream_commit: None,

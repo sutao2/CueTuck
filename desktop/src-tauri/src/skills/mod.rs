@@ -69,12 +69,16 @@ pub struct Package {
     pub digest: String,
     pub warnings: Vec<String>,
 }
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CommunitySource { pub id: String, pub version: i64 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Installation {
     pub path: PathBuf,
     pub root_id: String,
     pub digest: String,
     pub source: Option<Source>,
+    #[serde(default)]
+    pub community: Option<CommunitySource>,
     pub installed_at: u64,
     #[serde(default)]
     pub checked_at: Option<u64>,
@@ -92,6 +96,8 @@ pub struct FoundSkill {
     pub readonly: bool,
     pub status: String,
     pub source: Option<Source>,
+    #[serde(default)]
+    pub community: Option<CommunitySource>,
     pub installed_digest: Option<String>,
     pub warnings: Vec<String>,
     pub checked_at: Option<u64>,
@@ -156,6 +162,8 @@ pub struct Prepared {
     pub folder_name: String,
     pub package: Package,
     pub source: Option<Source>,
+    #[serde(default)]
+    pub community: Option<CommunitySource>,
     pub local_path: Option<PathBuf>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]

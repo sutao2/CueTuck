@@ -407,3 +407,8 @@ pub async fn choose_library_backup(app: AppHandle) -> Result<Option<String>, Str
             .transpose()
     }).await.map_err(|error| error.to_string())?
 }
+
+#[tauri::command]
+pub fn content_update_request(app: AppHandle, request: crate::local_database::content_updates::Request) -> Result<serde_json::Value,String> {
+    crate::local_database::content_updates::run(&data_dir(&app)?,request)
+}

@@ -20,7 +20,7 @@ pub enum Request {
     Snapshot,
     Create { name:String, body:String },
     ExportBundle { id:String },
-    PrepareBundle { bundle:crate::skill_bundle::Bundle, digest:String },
+    PrepareBundle { bundle:crate::skill_bundle::Bundle, digest:String, #[serde(default)] community:Option<skills::CommunitySource> },
     Catalog {
         input: String,
     },
@@ -132,7 +132,13 @@ fn run_local(
     match request {
         Request::Create {name,body} => value(skills::authoring::create(&dir,&defaults,&name,&body)?),
         Request::ExportBundle {id} => value(skills::authoring::export(&dir,&id)?),
-        Request::PrepareBundle {bundle,digest} => value(skills::authoring::prepare(&dir,bundle,&digest)?),
+        Request::PrepareBundle {bundle,digest,community} => {
+            if community.as_ref().is_some_and(|s|s.id.is_empty() || s.id.len()>200 || s.version<1) {return Err("社区来源版本无效".into())}
+            let mut prepared=skills::authoring::prepare(&dir,bundle,&digest)?;
+            prepared.community=community;
+            std::fs::write(install::prepared_dir(&dir,&prepared.id)?.join("prepared.json"),serde_json::to_vec(&prepared).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+            value(prepared)
+        },
         Request::PrepareLocal { path } => value(install::prepare_local(&dir, &path)?),
         Request::ReadPrepared { id, file } => {
             install::prepared(&dir, &id)?;

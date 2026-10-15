@@ -294,9 +294,10 @@ pub async fn download_private_asset(access_token: String, reference: Reference) 
 }
 
 #[tauri::command]
-pub async fn download_published_asset(item_id: String, access_token: Option<String>, reference: Reference) -> Result<Asset, String> {
+pub async fn download_published_asset(item_id: String, access_token: Option<String>, reference: Reference, version: Option<i64>) -> Result<Asset, String> {
     let mut url = reqwest::Url::parse(&base()?).map_err(|_| "附件服务地址无效")?;
     url.path_segments_mut().map_err(|_| "附件服务地址无效")?.extend(["v1", "square", "items", &item_id, "assets", &reference.id]);
+    if let Some(version)=version {if version<1 {return Err("版本无效".into())}url.query_pairs_mut().append_pair("version",&version.to_string());}
     download(url.to_string(), access_token, reference).await
 }
 

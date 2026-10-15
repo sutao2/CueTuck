@@ -143,6 +143,7 @@ pub async fn create_publication(
     members: Option<Vec<serde_json::Value>>,
     cover: Option<serde_json::Value>,
     asset_refs: Option<Vec<super::media::Reference>>,
+    revision: Option<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
     if source_id.trim().is_empty() {
         return Err("未选择本地内容".to_string());
@@ -161,6 +162,7 @@ pub async fn create_publication(
             "members": members.unwrap_or_default(),
             "cover": cover,
             "asset_refs": asset_refs.unwrap_or_default(),
+            "revision": revision,
         }))
         .send()
         .await
@@ -261,4 +263,17 @@ mod publisher_tests {
         let forwarded=serde_json::to_value(current).unwrap();
         assert_eq!(forwarded["publisher"],serde_json::json!({"display_name":"公开昵称","bio":"公开简介"}));
     }
+}
+
+#[tauri::command]
+pub async fn content_versions_request(kind: String, id: String, version: Option<i64>, access_token: Option<String>) -> Result<serde_json::Value,String> {
+    if !matches!(kind.as_str(),"prompt"|"collection"|"skill") || id.is_empty() || version.is_some_and(|v|v<1) {return Err("无效的版本请求".into())}
+    let mut url=url::Url::parse(&api_base()?).map_err(|_|"服务地址无效")?;
+    {let mut path=url.path_segments_mut().map_err(|_|"服务地址无效")?;path.extend(["v1","content",&kind,&id,"versions"]);if let Some(v)=version {path.push(&v.to_string());}}
+    let mut request=crate::http::client()?.get(url);
+    if let Some(token)=access_token {request=request.bearer_auth(token);}
+    let response=request.send().await.map_err(|e|e.to_string())?;
+    super::ensure_authorized(response.status())?;
+    if !response.status().is_success(){return Err(format!("读取版本失败（{}）",response.status().as_u16()))}
+    response.json().await.map_err(|e|e.to_string())
 }

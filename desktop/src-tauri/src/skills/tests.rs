@@ -854,3 +854,29 @@ async fn real_public_expanded_source_packages() {
         );
     }
 }
+
+#[test]
+fn community_provenance_survives_install_backup_and_legacy_registry_read() {
+    let (t,data,roots,mut registry,mut first)=setup();
+    first.community=Some(CommunitySource{id:"community-id".into(),version:1});
+    let target=install::install_one(&data,&roots,&mut registry,&first,&selection(&roots[0],None,false)).unwrap();
+    assert_eq!(registry.installations[&target].community,first.community);
+    first.community.as_mut().unwrap().version=2;
+    install::install_one(&data,&roots,&mut registry,&first,&selection(&roots[0],Some(first.package.digest.clone()),false)).unwrap();
+    assert_eq!(registry.installations[&target].community.as_ref().unwrap().version,2);
+    first.community.as_mut().unwrap().version=1;
+    assert!(install::install_one(&data,&roots,&mut registry,&first,&selection(&roots[0],Some(first.package.digest.clone()),false)).is_err());
+
+    let next_dir=t.path().join("next/sample");skill(&next_dir,"updated");
+    let mut next=install::prepare_local(&data,&next_dir).unwrap();next.community=Some(CommunitySource{id:"community-id".into(),version:3});
+    fs::write(target.join("SKILL.md"),"local user changes").unwrap();
+    let plan=install::plan(&roots,&registry,&next,&roots[0].id).unwrap();
+    assert_eq!(plan.status,"modified");
+    assert!(install::install_one(&data,&roots,&mut registry,&next,&selection(&roots[0],plan.current_digest.clone(),false)).is_err());
+    install::install_one(&data,&roots,&mut registry,&next,&selection(&roots[0],plan.current_digest,true)).unwrap();
+    assert_eq!(registry.installations[&target].community.as_ref().unwrap().version,3);
+    assert_eq!(registry.backups[0].installation.as_ref().unwrap().community.as_ref().unwrap().version,2);
+    assert_eq!(fs::read_to_string(registry.backups[0].path.join("SKILL.md")).unwrap(),"local user changes");
+    let mut legacy=serde_json::to_value(&registry.installations[&target]).unwrap();legacy.as_object_mut().unwrap().remove("community");
+    assert!(serde_json::from_value::<Installation>(legacy).unwrap().community.is_none());
+}

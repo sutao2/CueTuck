@@ -167,6 +167,8 @@ pub fn run() {
             commands::square::get_square_content,
             commands::square::record_square_download,
             commands::square::create_publication,
+            commands::square::content_versions_request,
+            commands::database::content_update_request,
             commands::square::list_my_publications,
             commands::square::put_favorite,
             commands::square::delete_favorite,

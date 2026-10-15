@@ -865,3 +865,22 @@ async fn direct_ai_can_publish_all_nine_reviewed_collection_cover_images() {
     assert_eq!(pg.finish_ai(&p,&local,0,&[run],None).await.unwrap().status,"approved");
     assert_eq!(media::public_references(&state,&p.id).await.unwrap().len(),9);
 }
+
+#[tokio::test]
+async fn pinned_revision_assets_survive_updates_and_remain_subject_to_visibility() {
+    let (state,a,_b,admin,reference,id,_store,_server)=public_fixture().await;
+    let pg=state.db.as_ref().unwrap();
+    pg.review_publication(&id,"approved",None,None).await.unwrap();
+    let (_,candidate)=crate::admin_security_tests::request(&state,"POST","/v1/publications",&a,json!({"source_id":"file-source","title":"Without old file","content":"v2","revision":{"content_id":id,"base_version":1,"change_note":"Remove attachment","request_id":Uuid::new_v4().to_string()}})).await;
+    if candidate["status"]=="pending" {pg.review_publication(candidate["id"].as_str().unwrap(),"approved",None,None).await.unwrap();}
+    let public=format!("/v1/square/items/{id}/assets/{}",reference["id"].as_str().unwrap());
+    assert_eq!(get(&state,"",&public).await.status(),StatusCode::NOT_FOUND);
+    assert_eq!(get(&state,"",&format!("{public}?version=1")).await.status(),StatusCode::OK);
+    assert_eq!(get(&state,"",&format!("{public}?version=2")).await.status(),StatusCode::NOT_FOUND);
+    // Isolate the immutable snapshot as the remaining reference for reclamation.
+    sqlx::query(&format!("UPDATE {} SET asset_refs='[]' WHERE id=$1",pg.t("publications"))).bind(&id).execute(&pg.pool).await.unwrap();
+    let media_id=reference["media_id"].as_str().unwrap();age_media(&state,media_id).await;
+    assert_eq!(reclaim(&state,&admin,media_id).await.0,StatusCode::CONFLICT);
+    sqlx::query(&format!("UPDATE {} SET visibility='offline' WHERE id=$1",pg.t("square_items"))).bind(&id).execute(&pg.pool).await.unwrap();
+    assert_eq!(get(&state,"",&format!("{public}?version=1")).await.status(),StatusCode::NOT_FOUND);
+}

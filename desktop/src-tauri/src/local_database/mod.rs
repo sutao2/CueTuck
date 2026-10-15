@@ -1,4 +1,5 @@
 mod backup;
+pub mod content_updates;
 pub mod recovery;
 pub mod history;
 mod auto_backup;
@@ -167,6 +168,7 @@ pub fn initialize_in_dir(dir: &Path) -> Result<String, String> {
         )
         .map_err(|error| error.to_string())?;
     ensure_prompt_columns(&connection)?;
+    content_updates::initialize(&connection)?;
     for table in ["categories", "settings"] {
         if !table_columns(&connection, table)?.iter().any(|column| column == "updated_at") {
             connection.execute(&format!("ALTER TABLE {table} ADD COLUMN updated_at TEXT NOT NULL DEFAULT '0'"), [])

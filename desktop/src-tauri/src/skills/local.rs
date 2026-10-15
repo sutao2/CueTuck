@@ -343,6 +343,7 @@ pub fn scan(defaults: &[Root], registry: &Registry) -> Scan {
                 readonly,
                 status,
                 source,
+                community: installation.and_then(|i| i.community.clone()),
                 installed_digest: installation.map(|i| i.digest.clone()),
                 warnings: notes,
                 checked_at: installation.and_then(|i| i.checked_at),

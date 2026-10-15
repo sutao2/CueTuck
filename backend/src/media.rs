@@ -414,7 +414,7 @@ pub(crate) async fn moderation_images(state:&AppState,publication:&crate::Public
     let mut images=vec![];let mut total=0;
     for file in &publication.asset_refs {
         if !matches!(file.mime.as_str(),"image/png"|"image/jpeg"|"image/webp"){return Err("附件包含不支持的图片或文档，转人工".into())}
-        let row=publication_asset_row(state,&publication.id,&file.id,false).await.map_err(|_|"投稿图片授权不可用")?;
+        let row=publication_asset_row(state,&publication.id,&file.id,false,None).await.map_err(|_|"投稿图片授权不可用")?;
         // Use verified stored MIME, never allow an author-controlled data URL or storage URL.
         let mime:String=row.get("content_type");
         if mime!=file.mime{return Err("图片元数据不一致，转人工".into())}
@@ -432,31 +432,39 @@ pub(crate) async fn public_references(state: &AppState, id: &str) -> Result<Vec<
     serde_json::from_value(value.unwrap_or_else(|| serde_json::json!([]))).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
-async fn publication_asset_row(state: &AppState, id: &str, asset_id: &str, public: bool) -> Result<sqlx::postgres::PgRow, StatusCode> {
+async fn publication_asset_row(state: &AppState, id: &str, asset_id: &str, public: bool, version: Option<i64>) -> Result<sqlx::postgres::PgRow, StatusCode> {
     let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     let row = sqlx::query(&format!("SELECT author_email,asset_refs FROM {} WHERE id=$1", pg.t("publications")))
         .bind(id).fetch_optional(&pg.pool).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?.ok_or(StatusCode::NOT_FOUND)?;
-    let refs: Vec<crate::library::AssetReference> = if public { public_references(state, id).await? }
+    let refs: Vec<crate::library::AssetReference> = if public && version.is_some() {
+        let item=state.get_item(id).await?.ok_or(StatusCode::NOT_FOUND)?;
+        let refs:Option<serde_json::Value>=sqlx::query_scalar(&format!("SELECT snapshot->'asset_refs' FROM {} WHERE kind=$1 AND content_id=$2 AND version=$3",pg.t("content_versions")))
+            .bind(&item.kind).bind(id).bind(version).fetch_optional(&pg.pool).await.map_err(|_|StatusCode::SERVICE_UNAVAILABLE)?;
+        serde_json::from_value(refs.ok_or(StatusCode::NOT_FOUND)?).map_err(|_|StatusCode::INTERNAL_SERVER_ERROR)?
+    } else if public { public_references(state, id).await? }
         else { serde_json::from_value(row.get("asset_refs")).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? };
     let selected = refs.iter().find(|file| file.id == asset_id).ok_or(StatusCode::NOT_FOUND)?;
     owned(state, &row.get::<String,_>("author_email"), &selected.media_id).await
 }
 
-pub async fn public_asset(State(state): State<AppState>, Path((id, asset_id)): Path<(String,String)>, headers: axum::http::HeaderMap) -> Result<Response, StatusCode> {
+#[derive(serde::Deserialize)]
+pub struct AssetVersion { version: Option<i64> }
+
+pub async fn public_asset(axum::extract::Query(query): axum::extract::Query<AssetVersion>, State(state): State<AppState>, Path((id, asset_id)): Path<(String,String)>, headers: axum::http::HeaderMap) -> Result<Response, StatusCode> {
     if !state.square_public().await? { crate::require_user(&state, &headers).await?; }
-    let row = publication_asset_row(&state, &id, &asset_id, true).await?;
+    let row = publication_asset_row(&state, &id, &asset_id, true, query.version).await?;
     let response = verified_response(&state, &row).await?;
     if !state.square_public().await? { crate::require_user(&state, &headers).await?; }
-    publication_asset_row(&state, &id, &asset_id, true).await?;
+    publication_asset_row(&state, &id, &asset_id, true, query.version).await?;
     Ok(response)
 }
 
 pub async fn review_asset(State(state): State<AppState>, Path((id, asset_id)): Path<(String,String)>, headers: axum::http::HeaderMap) -> Result<Response, StatusCode> {
     crate::require_staff(&state, &headers).await?;
-    let row = publication_asset_row(&state, &id, &asset_id, false).await?;
+    let row = publication_asset_row(&state, &id, &asset_id, false, None).await?;
     let response = verified_response(&state, &row).await?;
     crate::require_staff(&state, &headers).await?;
-    publication_asset_row(&state, &id, &asset_id, false).await?;
+    publication_asset_row(&state, &id, &asset_id, false, None).await?;
     Ok(response)
 }
 

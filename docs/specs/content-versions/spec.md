@@ -11,3 +11,9 @@
 详细 Given/When/Then 与各阶段验收见[实施计划](../../plans/2026-10-15-content-versioning.md)。
 
 已实现接口：`POST /v1/publications` 与 `POST /v1/skills` 可选 `revision`（content_id、base_version、change_note、request_id），不传时保留首次投稿行为。`GET /v1/content/:kind/:id/versions` 返回最近 100 条版本摘要，`.../versions/:version` 返回指定快照；均受当前公开状态约束。合集成员可选 member_id，旧缺失值保留未知，不能据此猜测关联。
+
+本地实现：SQLite 新增 downloaded_content 和 content_update_backups，不改写旧行。更新请求携带预览摘要，在立即事务内再次核验；备份与覆盖原子提交。备份恢复为独立副本，不覆盖之后的修改。日常使用次数不作为内容冲突，也不因更新重置。旧 JSON 导入或同步副本缺少来源基准时保持未知；整库 SQLite 备份包含新表。合集旧快照缺少任一成员 ID 时仅允许另存，未修改的已移除远端成员可删除，本地修改过的移除成员以及本地新增成员保留。
+
+社区 Skill 在安装记录及备份中保存独立社区 ID/版本，未关联的旧记录不猜配。同文件内容的新版也推进来源版本；过期预览不能倒退来源版本。更新必须保持原包目录名，并复用既有文件摘要复核、路径保护、替换确认与备份恢复。GitHub 来源流程保留。
+
+固定版本附件使用原公开地址加 `?version=N`，仍复核当前上架权限；版本快照引用的文件不可清理。
