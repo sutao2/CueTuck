@@ -1437,5 +1437,20 @@
   "网络连接失败，联网后将自动恢复登录": "Connection failed. Your session will restore when you reconnect.",
   "本机登录配置不可用，请重新登录或检查文件权限": "Local login configuration is unavailable. Sign in again or check file permissions.",
   "登录暂未恢复，服务暂时不可用，请稍后重试": "The service is temporarily unavailable. Retry restoring your session later.",
-  "正文显示方式": "Content display"
+  "正文显示方式": "Content display",
+  "请选择发布许可": "Choose a publishing license",
+  "选择允许他人如何使用和分享你的 Skill。": "Choose how others may use and share your Skill.",
+  "查看完整许可条款": "View full license terms",
+  "Skill 原有许可": "Existing Skill license",
+  "保留 Skill 原有许可，请以包内许可文件为准。": "Preserves the existing Skill license. Refer to the license files in the package.",
+  "宽松使用，保留声明": "Permissive use; keep notices",
+  "允许商用、修改和分发；需保留版权及许可声明。": "Allows commercial use, modification and distribution; retain copyright and license notices.",
+  "宽松使用，含专利授权": "Permissive use with patent grant",
+  "允许商用、修改和分发，含明确专利授权；需保留相关声明并注明修改。": "Allows commercial use, modification and distribution with an explicit patent grant; retain required notices and state changes.",
+  "分发衍生软件时保持开源": "Keep distributed derivatives open source",
+  "允许商用、修改和分发；分发受许可约束的软件及修改版时，需提供源码并沿用 GPL 3.0。": "Allows commercial use, modification and distribution; when distributing covered software and modifications, provide source under GPL 3.0.",
+  "内容可商用，需署名": "Commercial use of content with attribution",
+  "允许分享和改编内容，包括商用；需署名、附许可链接并注明修改。": "Allows sharing and adapting content, including commercially; give credit, link the license and indicate changes.",
+  "内容需署名，相同方式共享": "Attribute content and share alike",
+  "允许分享和改编内容，包括商用；需署名、附许可链接、注明修改，分享改编内容时沿用相同许可。": "Allows sharing and adapting content, including commercially; give credit, link the license, indicate changes and share adaptations under the same license."
 }

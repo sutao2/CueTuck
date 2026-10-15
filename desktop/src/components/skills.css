@@ -26,6 +26,9 @@
 .skills-panel h2 small { color:var(--muted); font-weight:400; margin-left:6px; }
 .skills-form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:16px; }
 .skills-form label { display:flex; flex-direction:column; gap:7px; color:var(--muted); font-size:12px; }
+.skill-license-field { display:flex; flex-direction:column; align-items:flex-start; gap:7px; min-width:0; }
+.skill-license-field p { margin:0; font-size:12px; line-height:1.6; }
+.skill-license-field a { font-size:12px; color:var(--text); }
 .skills-form .wide { grid-column:1/-1; }
 .skills-form textarea,.skills-form input,.skills-search input { color:var(--text); background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font:inherit; min-width:0; }
 .skills-path-input { display:flex; gap:8px; }

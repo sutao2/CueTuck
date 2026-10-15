@@ -145,7 +145,7 @@ it('keeps independent sidebar category choices and blocks them during installati
 it('shows publishing actions in the square and keeps directory tools in local Skills',async()=>{w=mount(SkillsPage,{props:{mode:'square'},attachTo:document.body});await flushPromises();expect(button('创建 Skill')).toBeTruthy();expect(button('发布到社区')).toBeTruthy();expect(button('从文件夹安装')).toBeUndefined();expect(button('备份与记录')).toBeUndefined();expect(button('管理目录')).toBeUndefined();});
 it('creates a durable native draft and preserves form input on failure',async()=>{const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='create'?Promise.reject(new Error('同名 Skill 已存在')):base(r));await mountPage();await click('创建 Skill');const form=w.get('.skill-authoring');await form.findAll('input')[0].setValue('my-skill');await form.findAll('textarea')[0].setValue('审查代码');await form.findAll('textarea')[1].setValue('# Steps\n检查变更');await click('保存到本机');expect(w.text()).toContain('同名 Skill 已存在');expect(form.findAll('input')[0].element.value).toBe('my-skill');const create=transport.mock.calls.find(([r])=>r.action==='create')[0];expect(create.body).toContain('name: "my-skill"');expect(create.body).toContain('# Steps');});
 
-it('publishes the full selected package only after consent and reuses an unchanged retry id',async()=>{setSessionTransport(async()=>({access_token:'test',email:'author@test'}));await loginSession({email:'author@test',password:'test'});const bundle={name:'example',files:[{path:'SKILL.md',content:'dGVzdA==',executable:false},{path:'scripts/run.sh',content:'ZWNobyB0ZXN0',executable:true}]};const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='export_bundle'?bundle:base(r));const submit=vi.fn().mockRejectedValueOnce(new Error('网络中断')).mockResolvedValue({id:'one',status:'pending'});setSkillMarketTransport(async(action,args)=>action==='submit'?submit(args.body):{items:[],total:0,category_counts:{}});w=mount(SkillsPage,{props:{mode:'square'},attachTo:document.body});await flushPromises();await click('发布到社区');await click('从文件夹选择');expect(w.text()).toContain('scripts/run.sh');expect(button('提交审核').attributes('disabled')).toBeDefined();const form=w.get('.skill-authoring');await form.findAll('input').find(i=>i.attributes('placeholder')==='例如 MIT、CC BY 4.0').setValue('MIT');await form.get('input[type=checkbox]').setValue(true);await click('提交审核');expect(w.text()).toContain('网络中断');await click('提交审核');expect(submit.mock.calls[0][0].bundle.files).toHaveLength(2);expect(submit.mock.calls[1][0].request_id).toBe(submit.mock.calls[0][0].request_id);expect(w.text()).toContain('已提交审核');resetMemorySession();});
+it('publishes the full selected package only after consent and reuses an unchanged retry id',async()=>{setSessionTransport(async()=>({access_token:'test',email:'author@test'}));await loginSession({email:'author@test',password:'test'});const bundle={name:'example',files:[{path:'SKILL.md',content:'dGVzdA==',executable:false},{path:'scripts/run.sh',content:'ZWNobyB0ZXN0',executable:true}]};const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='export_bundle'?bundle:base(r));const submit=vi.fn().mockRejectedValueOnce(new Error('网络中断')).mockResolvedValue({id:'one',status:'pending'});setSkillMarketTransport(async(action,args)=>action==='submit'?submit(args.body):{items:[],total:0,category_counts:{}});w=mount(SkillsPage,{props:{mode:'square'},attachTo:document.body});await flushPromises();await click('发布到社区');await click('从文件夹选择');expect(w.text()).toContain('scripts/run.sh');expect(button('提交审核').attributes('disabled')).toBeDefined();const form=w.get('.skill-authoring');await form.get('#skill-publish-license').trigger('click');document.querySelector('[role=option]').click();await flushPromises();await form.get('input[type=checkbox]').setValue(true);await click('提交审核');expect(w.text()).toContain('网络中断');await click('提交审核');expect(submit.mock.calls[0][0].bundle.files).toHaveLength(2);expect(submit.mock.calls[1][0].request_id).toBe(submit.mock.calls[0][0].request_id);expect(w.text()).toContain('已提交审核');resetMemorySession();});
 
 it('clears the previous publish package when the replacement folder cannot be prepared',async()=>{
  setSessionTransport(async()=>({access_token:'test',email:'author@test'}));await loginSession({email:'author@test',password:'test'});
@@ -193,4 +193,32 @@ it('replaces the carried local Skill with another selected path and requires fre
  expect(w.get('.skill-authoring input[type=checkbox]').element.checked).toBe(false);
  expect(button('提交审核').attributes('disabled')).toBeDefined();
  resetMemorySession();
+});
+
+it.each(['未知','Custom team license'])('explains publishing license choices and preserves the source license: %s',async(license)=>{
+ setSessionTransport(async()=>({access_token:'test',email:'author@test'}));await loginSession({email:'author@test',password:'test'});
+ prepared={...prepared,package:{...packageData,license}};
+ const bundle={name:'example',files:[{path:'SKILL.md',content:'dGVzdA==',executable:false}]};
+ const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='export_bundle'?bundle:base(r));
+ const submit=vi.fn(async()=>({id:'one',status:'pending'}));setSkillMarketTransport(async(action,args)=>action==='submit'?submit(args.body):{items:[],total:0,category_counts:{}});
+ await mountPage({mode:'local'});await w.findAll('.skills-list-row')[0].trigger('click');await flushPromises();await click('发布到社区');
+ const field=w.get('#skill-publish-license');expect(field.element.value).toBe(license==='未知'?'':license);
+ expect(w.find('input[placeholder="例如 MIT、CC BY 4.0"]').exists()).toBe(false);
+ if(license==='未知'){
+  expect(field.text()).toContain('请选择发布许可');
+  await w.get('.skill-authoring input[type=checkbox]').setValue(true);await click('提交审核');expect(submit).not.toHaveBeenCalled();
+ }
+ await field.trigger('click');
+ const choices=()=>[...document.querySelectorAll('[role=option]')];
+ for(const name of ['MIT','Apache-2.0','GPL-3.0-only','CC BY 4.0','CC BY-SA 4.0'])expect(choices().some(e=>e.textContent.startsWith(name+' · '))).toBe(true);
+ choices().find(e=>e.textContent.startsWith('Apache-2.0 · ')).click();await flushPromises();
+ expect(w.get('#skill-license-description').text()).toContain('含明确专利授权');
+ expect(w.get('.skill-license-field a').attributes('href')).toBe('https://choosealicense.com/licenses/apache-2.0/');
+ expect(w.get('.skill-authoring input[type=checkbox]').element.checked).toBe(false);
+ if(license!=='未知'){
+  await field.trigger('click');choices().find(e=>e.textContent.startsWith(license+' · ')).click();await flushPromises();
+  expect(field.element.value).toBe(license);expect(w.get('#skill-license-description').text()).toContain('保留 Skill 原有许可');
+ }
+ await w.get('.skill-authoring input[type=checkbox]').setValue(true);await click('提交审核');
+ expect(submit).toHaveBeenCalledWith(expect.objectContaining({license:license==='未知'?'Apache-2.0':license,bundle}));resetMemorySession();
 });
