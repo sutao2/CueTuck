@@ -427,7 +427,7 @@ pub(crate) async fn moderation_images(state:&AppState,publication:&crate::Public
 
 pub(crate) async fn public_references(state: &AppState, id: &str) -> Result<Vec<crate::library::AssetReference>, StatusCode> {
     let Some(pg) = &state.db else { return Ok(vec![]) };
-    let value: Option<serde_json::Value> = sqlx::query_scalar(&format!("SELECT p.asset_refs FROM {} p JOIN {} s ON s.id=p.id WHERE p.id=$1 AND p.status='approved' AND s.visibility='online'", pg.t("publications"), pg.t("square_items")))
+    let value: Option<serde_json::Value> = sqlx::query_scalar(&format!("SELECT COALESCE((SELECT v.snapshot->'asset_refs' FROM {2} v JOIN {3} h USING(kind,content_id) WHERE v.content_id=p.id AND v.version=h.current_version AND v.kind=s.kind),p.asset_refs) FROM {} p JOIN {} s ON s.id=p.id WHERE p.id=$1 AND p.status='approved' AND s.visibility='online'", pg.t("publications"), pg.t("square_items"), pg.t("content_versions"), pg.t("content_heads")))
         .bind(id).fetch_optional(&pg.pool).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     serde_json::from_value(value.unwrap_or_else(|| serde_json::json!([]))).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
@@ -462,7 +462,7 @@ pub async fn review_asset(State(state): State<AppState>, Path((id, asset_id)): P
 
 pub(crate) async fn public_cover(state: &AppState, id: &str) -> Result<Option<crate::CollectionCover>, StatusCode> {
     let Some(pg) = &state.db else { return Ok(None) };
-    let value: Option<Option<sqlx::types::Json<crate::CollectionCover>>> = sqlx::query_scalar(&format!("SELECT p.cover FROM {} p JOIN {} s ON s.id=p.id WHERE p.id=$1 AND p.status='approved' AND s.visibility='online'", pg.t("publications"), pg.t("square_items")))
+    let value: Option<Option<sqlx::types::Json<crate::CollectionCover>>> = sqlx::query_scalar(&format!("SELECT NULLIF(COALESCE((SELECT v.snapshot->'cover' FROM {2} v JOIN {3} h USING(kind,content_id) WHERE v.content_id=p.id AND v.version=h.current_version AND v.kind=s.kind),p.cover),'null'::jsonb) FROM {} p JOIN {} s ON s.id=p.id WHERE p.id=$1 AND p.status='approved' AND s.visibility='online'", pg.t("publications"), pg.t("square_items"), pg.t("content_versions"), pg.t("content_heads")))
         .bind(id).fetch_optional(&pg.pool).await.map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     Ok(value.flatten().map(|v| v.0))
 }

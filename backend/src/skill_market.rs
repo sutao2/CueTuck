@@ -46,6 +46,8 @@ impl Pg {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Submission {
+    #[serde(default)]
+    revision: Option<crate::content_versions::RevisionRequest>,
     request_id: String,
     title: String,
     description: String,
@@ -81,6 +83,9 @@ pub async fn submit(
     let role = actor_lock(pg, &mut tx, &actor, &token, false).await?;
     let existing:Option<(String,Value,String,String,String,String)>=sqlx::query_as(&format!("SELECT id,bundle,title,description,category,license FROM {} WHERE author_email=$1 AND request_id=$2",pg.t("skill_publications"))).bind(&actor).bind(&body.request_id).fetch_optional(&mut *tx).await.map_err(db)?;
     if let Some((id, bundle, title, description, category, license)) = existing {
+        let prior:Option<Value>=sqlx::query_scalar(&format!("SELECT request->'revision' FROM {} WHERE kind='skill' AND submission_id=$1",pg.t("content_candidates")))
+            .bind(&id).fetch_optional(&mut *tx).await.map_err(db)?;
+        if prior != body.revision.as_ref().map(|r|json!(r)) {return Err(StatusCode::CONFLICT)}
         if bundle != json!(body.bundle)
             || title != body.title.trim()
             || description != body.description.trim()
@@ -118,6 +123,9 @@ pub async fn submit(
         }
     }
     let id = uuid::Uuid::new_v4().to_string();
+    if let Some(revision)=&body.revision {
+        pg.register_content_candidate(&mut tx,"skill",&id,&actor,revision,&json!({"revision":revision,"bundle":body.bundle,"title":body.title,"description":body.description,"license":body.license,"category":body.category})).await?;
+    }
     let digest = body.bundle.digest();
     sqlx::query(&format!("INSERT INTO {} (id,author_email,request_id,title,description,category,license,bundle,digest) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",pg.t("skill_publications"))).bind(&id).bind(&actor).bind(&body.request_id).bind(body.title.trim()).bind(body.description.trim()).bind(&body.category).bind(body.license.trim()).bind(json!(body.bundle)).bind(digest).execute(&mut *tx).await.map_err(db)?;
     let policy: Value = sqlx::query_scalar(&format!("SELECT data FROM {} WHERE id=1 FOR SHARE", pg.t("moderation_policy"))).fetch_one(&mut *tx).await.map_err(db)?;
@@ -162,7 +170,7 @@ async fn listing(
         return Err(StatusCode::BAD_REQUEST);
     }
     let pg = state.db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
-    let result:Value=sqlx::query_scalar(&format!("WITH available AS (SELECT p.*,a.display_name FROM {} p JOIN {} a ON a.email=p.author_email WHERE ($1='admin' OR ($1='mine' AND p.author_email=$2) OR ($1='public' AND p.status='approved' AND NOT a.disabled))), filtered AS (SELECT * FROM available WHERE ($3='' OR category=$3) AND ($4='' OR strpos(lower(title||' '||description||' '||(bundle->>'name')),lower($4))>0) AND ($6='' OR status=$6)), page AS (SELECT * FROM filtered ORDER BY created_at DESC,id LIMIT 24 OFFSET $5) SELECT jsonb_build_object('items',COALESCE((SELECT jsonb_agg({} ORDER BY p.created_at DESC,p.id) FROM page p JOIN {} a ON a.email=p.author_email),'[]'::jsonb),'total',(SELECT count(*) FROM filtered),'offset',$5::bigint,'category_counts',COALESCE((SELECT jsonb_object_agg(category,n) FROM (SELECT category,count(*) n FROM available GROUP BY category) c),'{{}}'::jsonb))",pg.t("skill_publications"),pg.t("accounts"),summary(),pg.t("accounts"))).bind(mode).bind(actor).bind(&q.category).bind(q.q.trim()).bind(q.offset).bind(&q.status).fetch_one(&pg.pool).await.map_err(db)?;
+    let result:Value=sqlx::query_scalar(&format!("WITH available AS (SELECT p.*,a.display_name FROM {} p JOIN {} a ON a.email=p.author_email WHERE ($1='admin' OR ($1='mine' AND p.author_email=$2) OR ($1='public' AND p.status='approved' AND NOT a.disabled AND NOT EXISTS(SELECT 1 FROM {4} c WHERE c.kind='skill' AND c.submission_id=p.id)))), filtered AS (SELECT * FROM available WHERE ($3='' OR category=$3) AND ($4='' OR strpos(lower(title||' '||description||' '||(bundle->>'name')),lower($4))>0) AND ($6='' OR status=$6)), page AS (SELECT * FROM filtered ORDER BY created_at DESC,id LIMIT 24 OFFSET $5) SELECT jsonb_build_object('items',COALESCE((SELECT jsonb_agg({} ORDER BY p.created_at DESC,p.id) FROM page p JOIN {} a ON a.email=p.author_email),'[]'::jsonb),'total',(SELECT count(*) FROM filtered),'offset',$5::bigint,'category_counts',COALESCE((SELECT jsonb_object_agg(category,n) FROM (SELECT category,count(*) n FROM available GROUP BY category) c),'{{}}'::jsonb))",pg.t("skill_publications"),pg.t("accounts"),summary(),pg.t("accounts"),pg.t("content_candidates"))).bind(mode).bind(actor).bind(&q.category).bind(q.q.trim()).bind(q.offset).bind(&q.status).fetch_one(&pg.pool).await.map_err(db)?;
     Ok(Json(result))
 }
 pub async fn browse(
@@ -197,11 +205,13 @@ async fn visible(state: &AppState, headers: &HeaderMap, id: &str) -> Result<Valu
     let mut value: Value = row.get(0);
     let author: String = row.get(1);
     let disabled: bool = row.get(4);
-    let public = value["status"] == "approved" && !disabled && state.square_public().await?;
+    let root_available:bool=sqlx::query_scalar(&format!("SELECT NOT EXISTS(SELECT 1 FROM {} c JOIN {} p ON p.id=c.content_id WHERE c.kind='skill' AND c.submission_id=$1 AND p.status<>'approved')",pg.t("content_candidates"),pg.t("skill_publications")))
+        .bind(id).fetch_one(&pg.pool).await.map_err(db)?;
+    let public = value["status"] == "approved" && !disabled && root_available && state.square_public().await?;
     if !public {
         let actor = require_user(state, headers).await?;
         let staff = crate::admin_users::staff(&state.role_of(&actor).await?);
-        if actor != author && !staff && !(value["status"] == "approved" && !disabled) {
+        if actor != author && !staff && !(value["status"] == "approved" && !disabled && root_available) {
             return Err(StatusCode::NOT_FOUND);
         }
     }
@@ -315,6 +325,7 @@ async fn transition(
     .execute(&mut *tx)
     .await
     .map_err(db)?;
+    if status=="approved" {pg.publish_skill_revision(&mut tx,&id).await?;}
     audit(
         pg,
         &mut tx,
@@ -374,6 +385,43 @@ mod tests {
     }
     fn submission() -> Value {
         json!({"request_id":uuid::Uuid::new_v4().to_string(),"title":"代码审查","description":"审阅变更","category":"development","license":"MIT","confirm_public":true,"bundle":{"name":"code-review","files":[{"path":"SKILL.md","content":STANDARD.encode("---\nname: code-review\n---\n# Review"),"executable":false},{"path":"scripts/check.sh","content":STANDARD.encode("echo test"),"executable":true}]}})
+    }
+    #[tokio::test]
+    async fn community_updates_preserve_public_id_and_reject_stale_approvals() {
+        let s=state().await;
+        let author=account(&s,"author@versions.local","owner").await;
+        let other=account(&s,"other@versions.local","user").await;
+        let first=submission();
+        let (status,created)=request(&s,"POST","/v1/skills",&author,first.clone()).await;
+        assert_eq!(status,StatusCode::OK);
+        let id=created["id"].as_str().unwrap();
+        let decision=json!({"status":"approved","reason":"checked","expected_status":"pending"});
+        let approve=format!("/v1/admin/skills/{id}/review");
+        assert_eq!(request(&s,"POST",&approve,&author,decision.clone()).await.0,StatusCode::OK);
+        let mut update=first.clone();
+        update["request_id"]=json!(uuid::Uuid::new_v4().to_string());
+        update["title"]=json!("Updated title");
+        update["revision"]=json!({"content_id":id,"base_version":1,"change_note":"Improve instructions","request_id":update["request_id"]});
+        assert_eq!(request(&s,"POST","/v1/skills",&other,update.clone()).await.0,StatusCode::FORBIDDEN);
+        let (status,candidate)=request(&s,"POST","/v1/skills",&author,update.clone()).await;
+        assert_eq!(status,StatusCode::OK);
+        let current=format!("/v1/skills/{id}");
+        assert_eq!(request(&s,"GET",&current,"",json!(null)).await.1["title"],first["title"]);
+        let mut second=update.clone();second["request_id"]=json!(uuid::Uuid::new_v4().to_string());second["revision"]["request_id"]=second["request_id"].clone();
+        let second=request(&s,"POST","/v1/skills",&author,second).await.1;
+        let path=format!("/v1/admin/skills/{}/review",candidate["id"].as_str().unwrap());
+        assert_eq!(request(&s,"POST",&path,&author,decision.clone()).await.0,StatusCode::OK);
+        assert_eq!(request(&s,"GET",&current,"",json!(null)).await.1["title"],"Updated title");
+        assert_eq!(request(&s,"POST","/v1/skills",&author,update.clone()).await.1["id"],candidate["id"]);
+        update["revision"]["base_version"]=json!(2);
+        assert_eq!(request(&s,"POST","/v1/skills",&author,update).await.0,StatusCode::CONFLICT);
+        let path=format!("/v1/admin/skills/{}/review",second["id"].as_str().unwrap());
+        assert_eq!(request(&s,"POST",&path,&author,decision).await.0,StatusCode::CONFLICT);
+        let history=request(&s,"GET",&format!("/v1/content/skill/{id}/versions/1"),"",json!(null)).await;
+        assert_eq!(history.1["snapshot"]["title"],first["title"]);
+        assert_eq!(request(&s,"GET","/v1/skills","",json!(null)).await.1["total"],1);
+        let pg=s.db.as_ref().unwrap();pg.init_content_versions().await.unwrap();
+        let count:i64=sqlx::query_scalar(&format!("SELECT count(*) FROM {} WHERE kind='skill'",pg.t("content_heads"))).fetch_one(&pg.pool).await.unwrap();assert_eq!(count,1);
     }
     #[tokio::test]
     async fn publication_review_install_visibility_and_idempotency() {

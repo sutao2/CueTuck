@@ -85,6 +85,7 @@ pub(crate) async fn finish(pg:&Pg,id:&str,claim:&str,initial:&Value,revision:i64
     let reasons=if decision==Some("rejected"){admin_ai::rejection_reasons(runs)}else{vec![]};
     let reason=if decision==Some("approved"){"AI 审核通过".into()}else{reasons.join("；")};
     let moderation=json!({"policy_revision":policy.revision,"decision":decision.unwrap_or("manual"),"ai":{"revision":revision,"runs":runs,"error":error},"reasons":reasons});
+    if decision==Some("approved") {pg.publish_skill_revision(&mut tx,id).await?;}
     if let Some(status)=decision {
         let history=json!([{"status":status,"reason":reason,"source":"ai","at":chrono::Utc::now()}]);
         sqlx::query(&format!("UPDATE {} SET status=$2,reason=$3,history=history||$4::jsonb WHERE id=$1",pg.t("skill_publications"))).bind(id).bind(status).bind(&reason).bind(history).execute(&mut *tx).await.map_err(db)?;

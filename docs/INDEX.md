@@ -7,7 +7,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
 | [plans/2026-10-15-content-versioning.md](plans/2026-10-15-content-versioning.md) | 进行中 | 内容版本和更新 | 分阶段补齐作者更新、审核、下载追踪及安全替换 |
-| [specs/content-versions/spec.md](specs/content-versions/spec.md) | 目标，分阶段实施 | 修改内容更新行为 | 固定身份、不可变版本、冲突与备份合同 |
+| [specs/content-versions/spec.md](specs/content-versions/spec.md) | 目标，分阶段实施 | 修改内容更新行为 | 固定身份、不可变版本、审核接口及本地更新目标 |
 | [plans/2026-10-15-beta33-release.md](plans/2026-10-15-beta33-release.md) | 已发布部署 | 发布合集预览与 AI 输出修复 | 双平台同源构建、更新及官网验收 |
 | [plans/2026-10-15-ai-optimization-output.md](plans/2026-10-15-ai-optimization-output.md) | 已随 beta.33 发布 | AI 结果混入解释 | 结构化正文与格式校验 |
 | [plans/2026-10-15-collection-cover-preview.md](plans/2026-10-15-collection-cover-preview.md) | 已随 beta.33 发布 | 合集图片无法预览 | 本地封面大图入口，保留成员关联边界 |

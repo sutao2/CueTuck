@@ -86,6 +86,10 @@ impl Pg {
         publication: &Publication,
         token: &str,
     ) -> Result<Publication, StatusCode> {
+        self.moderate_versioned_publication(publication,token,None).await
+    }
+    pub(crate) async fn moderate_versioned_publication(&self, publication: &Publication, token: &str,
+        revision: Option<&crate::content_versions::RevisionRequest>) -> Result<Publication,StatusCode> {
         let author = publication
             .author_email
             .as_deref()
@@ -93,6 +97,13 @@ impl Pg {
         let mut tx = self.pool.begin().await.map_err(db_error)?;
         self.check_publishing(&mut tx).await?;
         let role = actor_lock(self, &mut tx, author, token, false).await?;
+        if let Some(revision)=revision {
+            let request=serde_json::json!({"publication":publication,"revision":revision});
+            self.register_content_candidate(&mut tx,&publication.kind,&publication.id,author,revision,&request).await?;
+            if let Some(row)=sqlx::query(&format!("SELECT * FROM {} WHERE id=$1",self.t("publications"))).bind(&publication.id).fetch_optional(&mut *tx).await.map_err(db_error)? {
+                return Ok(Self::publication_from_row(&row));
+            }
+        }
         let data: Value = sqlx::query_scalar(&format!(
             "SELECT data FROM {} WHERE id=1 FOR SHARE",
             self.t("moderation_policy")
@@ -146,10 +157,7 @@ impl Pg {
             sqlx::query(&format!("INSERT INTO {} (publication_id) VALUES ($1) ON CONFLICT DO NOTHING",self.t("ai_jobs"))).bind(&result.id).execute(&mut *tx).await.map_err(db_error)?;
         }
         if result.status == "approved" {
-            let item = result
-                .square_item()
-                .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
-            sqlx::query(&format!("INSERT INTO {} (id,title,kind,excerpt,model,member_count,content,category_id,members,sort_index) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,COALESCE((SELECT max(sort_index)+1 FROM {0}),0))",self.t("square_items"))).bind(&item.id).bind(&item.title).bind(&item.kind).bind(&item.excerpt).bind(&item.model).bind(item.member_count).bind(&item.content).bind(&item.category_id).bind(json!(item.members)).execute(&mut *tx).await.map_err(db_error)?;
+            self.publish_prompt_revision(&mut tx,&result).await?;
             sqlx::query(&format!("INSERT INTO {} (publication_id,actor_email,status,reason) VALUES ($1,'system:local-rules','approved',$2)",self.t("review_events"))).bind(&result.id).bind("按站点策略由本地规则自动通过（不是 AI 安全保证）").execute(&mut *tx).await.map_err(db_error)?;
         }
         audit(

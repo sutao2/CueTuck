@@ -777,10 +777,7 @@ impl Pg {
         };
         if approved {
             result.status = "approved".into();
-            let item = result
-                .square_item()
-                .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
-            sqlx::query(&format!("INSERT INTO {} (id,title,kind,excerpt,model,member_count,content,category_id,members,sort_index) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,COALESCE((SELECT max(sort_index)+1 FROM {0}),0))",self.t("square_items"))).bind(&item.id).bind(&item.title).bind(&item.kind).bind(&item.excerpt).bind(&item.model).bind(item.member_count).bind(&item.content).bind(&item.category_id).bind(json!(item.members)).execute(&mut *tx).await.map_err(db_error)?;
+            self.publish_prompt_revision(&mut tx,&result).await?;
             sqlx::query(&format!("INSERT INTO {} (publication_id,actor_email,status,reason) VALUES ($1,'system:ai','approved',$2)",self.t("review_events"))).bind(&result.id).bind(format!("按站点策略及 AI 配置版本 {revision} 自动通过")).execute(&mut *tx).await.map_err(db_error)?;
         }
         if rejected {

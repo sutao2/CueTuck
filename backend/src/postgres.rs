@@ -824,17 +824,8 @@ impl Pg {
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
         let publication = Self::publication_from_row(&row);
-        if status == "approved" {
-            if let Some(mut item) = publication.square_item() {
-                self.resolve_catalog_item(&mut transaction, &mut item).await?;
-                sqlx::query(&format!(
-                    "INSERT INTO {} (id, title, kind, excerpt, model, member_count, content, category_id, members, sort_index)
-                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, COALESCE((SELECT MAX(sort_index)+1 FROM {0}), 0)) ON CONFLICT(id) DO NOTHING",
-                    self.t("square_items")))
-                    .bind(&item.id).bind(&item.title).bind(&item.kind).bind(&item.excerpt).bind(&item.model)
-                    .bind(item.member_count).bind(&item.content).bind(&item.category_id).bind(sqlx::types::Json(&item.members))
-                    .execute(&mut *transaction).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            }
+        if status == "approved" && previous == "pending" {
+            self.publish_prompt_revision(&mut transaction, &publication).await?;
         }
         if previous == "pending" {
             if let Some((email, _)) = actor {

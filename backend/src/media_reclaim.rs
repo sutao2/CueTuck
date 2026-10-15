@@ -23,7 +23,8 @@ fn eligible(pg: &Pg) -> String {
         AND m.id ~ '^media\.[0-9a-f]{{8}}(-[0-9a-f]{{4}}){{3}}-[0-9a-f]{{12}}$' AND m.object_key='promptark/'||m.id
         AND (m.deleting OR m.last_used_at < now()-interval '7 days')
         AND NOT EXISTS (SELECT 1 FROM {} l, jsonb_array_elements(COALESCE(l.payload::jsonb->'asset_refs','[]'::jsonb)) r WHERE r->>'media_id'=m.id)
-        AND NOT EXISTS (SELECT 1 FROM {} p, jsonb_array_elements(p.asset_refs) r WHERE r->>'media_id'=m.id)"#,pg.t("library_changes"),pg.t("publications"))
+        AND NOT EXISTS (SELECT 1 FROM {} p, jsonb_array_elements(p.asset_refs) r WHERE r->>'media_id'=m.id)
+        AND NOT EXISTS (SELECT 1 FROM {} v, jsonb_array_elements(COALESCE(v.snapshot->'asset_refs','[]'::jsonb)) r WHERE r->>'media_id'=m.id)"#,pg.t("library_changes"),pg.t("publications"),pg.t("content_versions"))
 }
 pub async fn list(State(state): State<AppState>, headers: HeaderMap) -> Result<Json<Value>, StatusCode> {
     crate::require_configuration_admin(&state,&headers).await?;

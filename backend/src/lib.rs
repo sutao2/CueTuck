@@ -171,6 +171,8 @@ pub struct SessionResponse {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PublishedPrompt {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub member_id: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub asset_ids: Vec<String>,
     pub title: String,
@@ -246,6 +248,8 @@ impl CollectionCover {
 
 #[derive(Deserialize)]
 pub struct PublicationRequest {
+    #[serde(default)]
+    pub revision: Option<content_versions::RevisionRequest>,
     #[serde(default)]
     pub cover: Option<CollectionCover>,
     #[serde(default)]
@@ -478,6 +482,8 @@ pub fn app(state: AppState) -> Router {
         .route("/v1/square/items/:id/assets/:asset_id", get(media::public_asset))
         .route("/v1/admin/publications/:id/assets/:asset_id", get(media::review_asset))
         .route("/v1/publications/mine", get(list_my_publications))
+        .route("/v1/content/:kind/:id/versions", get(content_versions::history))
+        .route("/v1/content/:kind/:id/versions/:version", get(content_versions::snapshot))
         .route("/v1/me", get(me::get_me).put(me::put_me))
         .route("/v1/square/catalog", get(admin_catalog::public))
         .route("/v1/admin/catalog/:kind", get(admin_catalog::list).post(admin_catalog::create))
@@ -761,10 +767,12 @@ async fn create_publication(
                 || (state.db.is_none() && member.category_id.as_deref().is_some_and(|id| system_category(id).is_none()))))) {
         return Err(StatusCode::BAD_REQUEST);
     }
+    let mut member_ids=std::collections::HashSet::new();
+    if body.members.iter().filter_map(|m|m.member_id.as_deref()).any(|id|id.is_empty() || id.len()>128 || !member_ids.insert(id)) {return Err(StatusCode::BAD_REQUEST)}
     let publication = Publication {
         cover: body.cover,
         asset_refs: body.asset_refs,
-        id: format!("pub.{}", Uuid::new_v4()),
+        id: body.revision.as_ref().map(|r|format!("pub.update.{}",r.request_id)).unwrap_or_else(||format!("pub.{}", Uuid::new_v4())),
         source_id,
         status: "pending".into(),
         title: body.title.filter(|value| !value.trim().is_empty()),
@@ -786,10 +794,11 @@ async fn create_publication(
     }
     if !publication.asset_refs.is_empty() && state.db.is_none() { return Err(StatusCode::SERVICE_UNAVAILABLE); }
     if let Some(pg)=&state.db {
-        let publication=pg.moderate_publication(&publication,&bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?).await?;
+        let publication=pg.moderate_versioned_publication(&publication,&bearer_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?,body.revision.as_ref()).await?;
         // The snapshot is already durable. A failed external check must not turn a successful submission into a retry/duplicate.
         return Ok(Json(publication));
     }
+    if body.revision.is_some() {return Err(StatusCode::SERVICE_UNAVAILABLE)}
     state.insert_publication(&publication).await?;
     Ok(Json(publication))
 }
