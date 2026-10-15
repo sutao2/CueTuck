@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-15-beta33-release.md](plans/2026-10-15-beta33-release.md) | 进行中 | 发布合集预览与 AI 输出修复 | 双平台同源构建、更新及官网验收 |
 | [plans/2026-10-15-ai-optimization-output.md](plans/2026-10-15-ai-optimization-output.md) | 已实现，未发布 | AI 结果混入解释 | 结构化正文与格式校验 |
 | [plans/2026-10-15-collection-cover-preview.md](plans/2026-10-15-collection-cover-preview.md) | 已实现，未发布 | 合集图片无法预览 | 本地封面大图入口，保留成员关联边界 |
 | [plans/2026-10-15-beta32-release.md](plans/2026-10-15-beta32-release.md) | 已发布部署 | 发布 Skill 许可选择 | 双平台同源构建、更新及官网验收 |
