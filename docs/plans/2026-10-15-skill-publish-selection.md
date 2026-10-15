@@ -14,6 +14,6 @@
 
 ## 状态
 
-已实现，未发布。
+已随 [beta.31](2026-10-15-beta31-release.md) 发布。
 
 选择框空值断言修复前失败；修复后普通详情、已有安装预览、切换同名不同路径及公开确认回归通过。SkillsPage / SkillCommunity 共 34 项测试通过，桌面生产构建与 docs-check 通过。尚未在 Windows/macOS 原生窗口实测。
