@@ -52,6 +52,18 @@ const tauriVersion = JSON.parse(
 ).version;
 
 describe("WorkbenchShell", () => {
+  it('shows downloaded collections without duplicating members in the top-level library', async () => {
+    const collection = await createLocalCollection({ title: '下载的合集' });
+    const member = await createLocalPrompt({ title: '合集下载成员', content: '原文', source: 'downloaded' });
+    await addPromptToCollection(member.id, collection.id);
+    const standalone = await createLocalPrompt({ title: '原有独立提示词', content: '独立' });
+    await addPromptToCollection(standalone.id, collection.id);
+    const w = mount(WorkbenchShell); await flushPromises();
+    expect(w.findAll('.prompt-card h3').map(n => n.text())).toEqual(expect.arrayContaining(['下载的合集', '原有独立提示词']));
+    expect(w.findAll('.prompt-card h3').map(n => n.text())).not.toContain('合集下载成员');
+    expect((await listLocalPrompts()).some(p => p.id === member.id)).toBe(true);
+    w.unmount();
+  });
   it('shows full square category counts including child and disabled-child assignments without counting loaded cards', async () => {
     setCatalogTransport(async () => ({ categories: [
       { id: 'root', name: '测试大分类', parent_id: null },

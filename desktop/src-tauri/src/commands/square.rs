@@ -25,6 +25,8 @@ pub struct SquareContentResponse {
     #[serde(default)]
     members: Vec<serde_json::Value>,
     #[serde(default)]
+    cover: Option<serde_json::Value>,
+    #[serde(default)]
     asset_refs: Vec<super::media::Reference>,
 }
 
@@ -242,6 +244,13 @@ pub async fn square_translations(id:String,target:Option<String>,access_token:Op
 #[cfg(test)]
 mod publisher_tests {
     use super::*;
+    #[test]
+    fn collection_content_preserves_cover_manifest() {
+        let payload=serde_json::json!({"id":"collection","title":"Collection","content":"","category_id":null,"model":null,"kind":"collection","members":[{"title":"Member","content":"Body"}],"cover":{"layout":"grid","asset_ids":["cover-id"]}});
+        let response:SquareContentResponse=serde_json::from_value(payload.clone()).unwrap();
+        assert_eq!(serde_json::to_value(response).unwrap()["cover"],payload["cover"]);
+    }
+
     #[test]
     fn detail_preserves_public_publisher_and_accepts_older_servers() {
         let mut payload=serde_json::json!({"id":"item","title":"Title","content":"body","category_id":null,"model":null});

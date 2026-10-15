@@ -1957,9 +1957,11 @@ async function reloadPrompts() {
     listLocalCollections({ query: "", categoryId: null }),
   ]);
   if (request !== localRequest || space.value !== "local") return;
-  prompts.value = filteredPrompts;
+  const collectionIds = new Set(allCollections.map(collection => collection.id));
+  const standalone = prompt => prompt.source !== 'downloaded' || !collectionIds.has(prompt.collection_id);
+  prompts.value = filteredPrompts.filter(standalone);
   collections.value = filteredCollections;
-  allLocalItems.value = [...allPrompts, ...allCollections];
+  allLocalItems.value = [...allPrompts.filter(standalone), ...allCollections];
   downloadedIds.value = [...new Set(allPrompts.map(row => row.remote_id).filter(Boolean))];
   emit("library-changed", allPrompts.length);
 }
