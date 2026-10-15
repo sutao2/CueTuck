@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-15-skill-publish-selection.md](plans/2026-10-15-skill-publish-selection.md) | 已实现，未发布 | 本机 Skill 详情发布 | 当前安装路径与发布选择框同步 |
 | [plans/2026-10-15-prompt-reading-collection-download.md](plans/2026-10-15-prompt-reading-collection-download.md) | 已实现，未发布 | Markdown 详情和合集下载 | 安全阅读、封面传递与本地顶层成员展示 |
 | [plans/2026-10-12-beta30-release.md](plans/2026-10-12-beta30-release.md) | 已发布部署 | 发布本机登录和自动恢复 | 双平台同源构建、签名更新、官网及首次重新登录说明 |
 | [plans/2026-10-12-session-recovery.md](plans/2026-10-12-session-recovery.md) | 已随 beta.30 发布 | 登录续期和联网恢复 | 明确 401 才续期重试，联网恢复与错误区分 |

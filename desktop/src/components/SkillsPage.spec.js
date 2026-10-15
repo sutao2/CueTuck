@@ -161,16 +161,36 @@ it('shows only discovery and installation actions for GitHub sources',async()=>{
  await w.get('.skills-back').trigger('click');await flushPromises();await click('社区广场');expect(button('创建 Skill')).toBeTruthy();expect(button('发布到社区')).toBeTruthy();
 });
 
-it('publishes from a versioned local directory with the exported portable name and original display name',async()=>{
+it.each([false,true])('publishes the current versioned local directory with selection preserved (prepared: %s)',async(alreadyPrepared)=>{
  setSessionTransport(async()=>({access_token:'test',email:'author@test'}));await loginSession({email:'author@test',password:'test'});
  snapshot.skills[0].path='C:\\Users\\admin\\.agents\\skills\\1password-1.0.1';
  prepared={...prepared,folder_name:'1password-1.0.1',package:{...packageData,name:'1password',license:'MIT'}};
  const bundle={name:'1password',files:[{path:'SKILL.md',content:'dGVzdA==',executable:false}]};
- const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='export_bundle'?bundle:base(r));
+ const base=transport.getMockImplementation();transport.mockImplementation(r=>r.action==='export_bundle'?bundle:r.action==='detail'?{package:prepared.package,modified:false}:base(r));
  const submit=vi.fn(async()=>({id:'one',status:'pending'}));setSkillMarketTransport(async(action,args)=>action==='submit'?submit(args.body):{items:[],total:0,category_counts:{}});
- await mountPage({mode:'local'});await w.get('.skills-list-row').trigger('click');await flushPromises();await click('发布到社区');
+ await mountPage({mode:'local'});await w.get('.skills-list-row').trigger('click');await flushPromises();
+ if(alreadyPrepared){await click('安装到…');await w.get('[aria-label="关闭安装预览"]').trigger('click');await flushPromises();}
+ await click('发布到社区');
  expect(transport).toHaveBeenCalledWith(expect.objectContaining({action:'prepare_local',path:snapshot.skills[0].path}),expect.anything());
  expect(w.find('[role="alert"]').exists()).toBe(false);expect(w.text()).toContain('已选择 1password');
+ expect(w.get('.skill-authoring .searchable-select').element.value).toBe(snapshot.skills[0].path);
+ expect(w.get('.skill-authoring .searchable-select').text()).not.toContain('搜索并选择本机 Skill');
  expect(button('提交审核').attributes('disabled')).toBeDefined();await w.get('.skill-authoring input[type=checkbox]').setValue(true);await click('提交审核');
  expect(submit).toHaveBeenCalledWith(expect.objectContaining({title:'1password',bundle,confirm_public:true}));resetMemorySession();
+});
+
+it('replaces the carried local Skill with another selected path and requires fresh consent',async()=>{
+ setSessionTransport(async()=>({access_token:'test',email:'author@test'}));await loginSession({email:'author@test',password:'test'});
+ const base=transport.getMockImplementation();
+ transport.mockImplementation(r=>r.action==='export_bundle'?{name:'example',files:[]}:base(r));
+ await mountPage({mode:'local'});await w.findAll('.skills-list-row')[0].trigger('click');await flushPromises();await click('发布到社区');
+ await w.get('.skill-authoring input[type=checkbox]').setValue(true);
+ const select=w.findAllComponents({name:'SearchableSelect'})[0];
+ const replacement=snapshot.skills[1].path;
+ select.vm.$emit('update:modelValue',replacement);await flushPromises();await click('选择此 Skill');
+ expect(transport).toHaveBeenCalledWith(expect.objectContaining({action:'prepare_local',path:replacement}),expect.anything());
+ expect(w.get('.skill-authoring .searchable-select').element.value).toBe(replacement);
+ expect(w.get('.skill-authoring input[type=checkbox]').element.checked).toBe(false);
+ expect(button('提交审核').attributes('disabled')).toBeDefined();
+ resetMemorySession();
 });
