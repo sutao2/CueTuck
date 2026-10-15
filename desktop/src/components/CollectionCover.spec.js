@@ -20,7 +20,8 @@ it.each(['single', 'grid'])('opens the selected local %s cover and clears stale 
   w.unmount();
 });
 it('keeps local card covers as navigation thumbnails without preview buttons', () => {
-  const w = mount(CollectionCover, { props: { type: 'grid', json: '["image.png"]', variant: 'card' } });
+  const w = mount(CollectionCover, { props: { type: 'grid', json: '["image.png"]', variant: 'card' }, attrs: { 'data-testid': 'parent-cover', class: 'parent-cover' } });
+  expect(w.get('[data-testid=parent-cover]').classes()).toContain('parent-cover');
   expect(w.findAll('img')).toHaveLength(1);
   expect(w.findAll('.cover-preview')).toHaveLength(0);
   expect(w.findAll('i')).toHaveLength(9);

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="type !== 'none' && (urls.length || files.length)" class="collection-cover" :class="[type === 'grid' ? 'collection-cover-grid' : 'collection-cover-single', `collection-cover-${variant}`]" :data-testid="type === 'grid' ? 'cover-grid' : 'cover-single'" :aria-label="tr('合集封面')">
+  <div v-if="type !== 'none' && (urls.length || files.length)" class="collection-cover" :class="[type === 'grid' ? 'collection-cover-grid' : 'collection-cover-single', `collection-cover-${variant}`]" :data-testid="type === 'grid' ? 'cover-grid' : 'cover-single'" :aria-label="tr('合集封面')" v-bind="$attrs">
     <i v-for="(src, index) in cells" :key="index" :class="{ filled: Boolean(src) }">
       <PublishedImage v-if="files[index]" :item-id="itemId" :file="files[index]" />
       <button v-else-if="src && variant === 'detail'" type="button" class="cover-preview" :aria-label="tr('预览图片 {0}', [index + 1])" @click.stop="preview = src"><img :src="src" alt="" loading="lazy" decoding="async"></button>
@@ -14,6 +14,7 @@ import PublishedImage from './PublishedImage.vue';
 import { computed, ref, watch } from 'vue';
 import ImageViewer from './ImageViewer.vue';
 import { parseCoverUrls } from '../lib/cover.js';
+defineOptions({ inheritAttrs: false });
 const props = defineProps({ type: { type: String, default: 'none' }, json: String, itemId: String, files: { type: Array, default: () => [] }, variant: { type: String, default: 'detail' } });
 const preview = ref('');
 watch(() => [props.json, props.type, props.itemId, props.variant], () => { preview.value = ''; });
