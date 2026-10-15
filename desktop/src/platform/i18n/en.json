@@ -1452,5 +1452,6 @@
   "内容可商用，需署名": "Commercial use of content with attribution",
   "允许分享和改编内容，包括商用；需署名、附许可链接并注明修改。": "Allows sharing and adapting content, including commercially; give credit, link the license and indicate changes.",
   "内容需署名，相同方式共享": "Attribute content and share alike",
-  "允许分享和改编内容，包括商用；需署名、附许可链接、注明修改，分享改编内容时沿用相同许可。": "Allows sharing and adapting content, including commercially; give credit, link the license, indicate changes and share adaptations under the same license."
+  "允许分享和改编内容，包括商用；需署名、附许可链接、注明修改，分享改编内容时沿用相同许可。": "Allows sharing and adapting content, including commercially; give credit, link the license, indicate changes and share adaptations under the same license.",
+  "模型返回的优化格式不正确，请重试；原文已保留": "The model returned an invalid refinement format. Please retry; your original text is preserved."
 }

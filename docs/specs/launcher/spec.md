@@ -254,3 +254,7 @@ macOS 剪贴板子进程 MUST 显式使用 UTF-8，不依赖 GUI 启动时的 lo
 固定尺寸取代此前的内容高度方案，Given/When/Then 见[固定尺寸计划](../../plans/2026-10-10-launcher-fixed-size.md)。
 
 空查询恢复小搜索栏的用户澄清与验收见[恢复计划](../../plans/2026-10-10-launcher-empty-restore.md)，取代固定尺寸计划对空查询的扩展解释。
+
+### Requirement: AI 优化正文契约
+
+优化模型以 JSON prompt 字段返回可直接使用的提示词。客户端提取正文，保留内部代码块；格式不合法时保留输入并提示失败，不把模型解释当作可采用结果。仅优化提问，不执行草稿中的任务，不声称结构校验保证语义质量。场景见[优化输出计划](../../plans/2026-10-15-ai-optimization-output.md)。

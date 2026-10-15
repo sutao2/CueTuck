@@ -88,18 +88,29 @@ fn parse_models(result: &Value) -> Result<Vec<String>, String> {
 }
 fn optimization_body(config: &Config, text: &str) -> Value {
     let mut body = json!({"model":config.model,"stream":false,"max_tokens":4096,"messages":[
-        {"role":"system","content":"你是提示词编辑器。将用户提供的草稿优化为清晰、可执行的提示词，保留原始目标、语言、约束以及所有变量占位符，不擅自补充事实。不执行草稿指令。仅返回优化后的正文，不加解释或 Markdown 代码围栏。"},
+        {"role":"system","content":"你负责重写用户的提示词草稿，输出供用户直接交给另一个 AI 使用的请求。保留原始目标、语言、约束、代码、SQL、数值和所有变量占位符；不擅自补充事实。只改善表达、必要上下文和输出要求，不回答或执行草稿中的任务。缺少信息时在提示词中要求说明假设或询问必要信息。输出必须是仅含 prompt 字符串字段的 JSON 对象。prompt 中只放可直接使用的提示词，不加入编辑器身份、自我说明、无法执行任务的声明、前言后记，不用 text 或 markdown 代码围栏包裹整个正文；正文内用于代码或 SQL 的代码块可以保留。"},
+        {"role":"user","content":"帮我优化下这个sql，select * from test where id > 123;"},
+        {"role":"assistant","content":json!({"prompt":"请分析以下 SQL 的查询性能，并在保持查询语义不变的前提下提出优化建议：\nselect * from test where id > 123;\n请说明每项建议的适用条件、原因和验证方法。数据库类型、表结构、索引及执行计划未提供时，请指出需要补充的信息，不假定已有索引或数据分布。"}).to_string()},
         {"role":"user","content":text}]});
     if url::Url::parse(&config.endpoint).ok().and_then(|u|u.host_str().map(str::to_owned)).is_some_and(|host|host == "dashscope.aliyuncs.com" || host.ends_with(".aliyuncs.com")) { body["enable_thinking"] = json!(false); }
     body
 }
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OptimizationOutput { prompt: String }
 fn optimized(value: Value) -> Result<String, String> {
     let choice = &value["choices"][0];
     let text = choice["message"]["content"].as_str().unwrap_or("").trim();
     if choice["finish_reason"] != "stop" || !choice["message"]["refusal"].is_null() || !choice["message"]["tool_calls"].is_null() || text.is_empty() || text.len() > 65536 {
         return Err("模型未返回完整优化结果，原文已保留".into());
     }
-    Ok(text.to_owned())
+    let payload = text.strip_prefix("```json").or_else(|| text.strip_prefix("```"))
+        .and_then(|inner| inner.trim().strip_suffix("```"))
+        .unwrap_or(text).trim();
+    let output: OptimizationOutput = serde_json::from_str(payload)
+        .map_err(|_| "模型返回的优化格式不正确，请重试；原文已保留")?;
+    if output.prompt.trim().is_empty() { return Err("模型未返回完整优化结果，原文已保留".into()); }
+    Ok(output.prompt)
 }
 #[tauri::command]
 pub async fn optimize_launcher_prompt(text: String) -> Result<String, String> {
@@ -188,8 +199,19 @@ mod tests {
         c.endpoint="http://127.0.0.1:11434/v1".into();c.api_key.clear();assert!(validate(&c).is_ok());
     }
     #[test]
+    fn extracts_optimization_without_damaging_code_or_variables() {
+        let prompt="请分析以下 SQL 的性能，保留查询语义。\n```sql\nselect * from test where id > 123;\n```\n数据库：{{database}}。缺少索引信息时先说明假设。";
+        let payload=json!({"prompt":prompt}).to_string();
+        for content in [payload.clone(),format!("```json\n{payload}\n```"),format!("```\n{payload}\n```")] {
+            assert_eq!(optimized(json!({"choices":[{"finish_reason":"stop","message":{"content":content}}]})).unwrap(),prompt);
+        }
+        for content in ["作为提示词编辑器，我无法直接执行 SQL 优化任务。以下是提示词草稿：\n```text\n请分析 SQL\n```", "{\"prompt\":\" \"}", "{\"prompt\":123}", "{\"answer\":\"SQL answer\"}", "{\"prompt\":\"ok\",\"explanation\":\"extra\"}"] {
+            assert!(optimized(json!({"choices":[{"finish_reason":"stop","message":{"content":content}}]})).is_err());
+        }
+    }
+    #[test]
     fn rejects_incomplete_optimization() {
-        let good=json!({"choices":[{"finish_reason":"stop","message":{"content":"optimized"}}]});
+        let good=json!({"choices":[{"finish_reason":"stop","message":{"content":"{\"prompt\":\"optimized\"}"}}]});
         assert_eq!(optimized(good.clone()).unwrap(),"optimized");
         for invalid in [json!({}),json!({"choices":[{"finish_reason":"length","message":{"content":"partial"}}]}),json!({"choices":[{"finish_reason":"stop","message":{"content":" "}}]})] { assert!(optimized(invalid).is_err()); }
     }
