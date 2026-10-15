@@ -59,7 +59,7 @@ it('keeps English selected in details when using and returning from variable ent
   await w.get('[data-testid="use-next"]').trigger('click');
   expect(w.get('[data-testid="use-preview"]').text()).toBe('Write for Alice.');
   await w.get('[data-testid="use-modal"] [aria-label="返回"]').trigger('click'); await flushPromises();
-  expect(w.get('[data-testid="square-detail-content"]').text()).toBe(original);
+  expect(w.get('[data-testid="square-detail-content"] .markdown-body').text()).toBe(original);
 });
 
 it('honors the original-language list preference', async () => {

@@ -11,7 +11,7 @@ it('shows original reference images with attribution without replacing prompt co
   expect(w.get('.reference-credit').text()).toContain('CC BY 4.0');
   expect(w.find('.detail-example-button').exists()).toBe(false);
   await w.get('.gallery-stage img').trigger('error');
-  expect(w.get('[data-testid="square-detail-content"]').text()).toBe('原始正文');
+  expect(w.get('[data-testid="square-detail-content"] .markdown-body').text()).toBe('原始正文');
   expect(w.get('[data-testid="square-detail-download"]').attributes('disabled')).toBeUndefined();
 });
 it('does not offer unrelated example images in real content', async () => {
@@ -19,7 +19,7 @@ it('does not offer unrelated example images in real content', async () => {
   expect(w.find('.detail-example-button').exists()).toBe(false);
   await w.get('[data-testid="square-detail-download"]').trigger('click');
   expect(w.emitted('download')[0]).toEqual([]);
-  expect(w.get('[data-testid="square-detail-content"]').text()).toBe('真实正文');
+  expect(w.get('[data-testid="square-detail-content"] .markdown-body').text()).toBe('真实正文');
   expect(w.find('[aria-modal]').exists()).toBe(false);
 });
 it('switches previews, retries failures and resets when the item changes', async () => {

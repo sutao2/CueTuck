@@ -10,6 +10,7 @@ import SettingsModal from "./SettingsModal.vue";
 import {
   createLocalCollection,
   addPromptToCollection,
+  removePromptFromCollection,
   createLocalPrompt,
   listLocalPrompts,
   resetMemoryLibrary,
@@ -62,6 +63,9 @@ describe("WorkbenchShell", () => {
     expect(w.findAll('.prompt-card h3').map(n => n.text())).toEqual(expect.arrayContaining(['下载的合集', '原有独立提示词']));
     expect(w.findAll('.prompt-card h3').map(n => n.text())).not.toContain('合集下载成员');
     expect((await listLocalPrompts()).some(p => p.id === member.id)).toBe(true);
+    await removePromptFromCollection(member.id, collection.id);
+    await w.get('.inline-search input').setValue('合集下载成员'); await flushPromises();
+    expect(w.findAll('.prompt-card h3').map(n => n.text())).toContain('合集下载成员');
     w.unmount();
   });
   it('shows full square category counts including child and disabled-child assignments without counting loaded cards', async () => {
@@ -262,7 +266,7 @@ describe("WorkbenchShell", () => {
     expect(w.get('[data-testid="square-detail"]').text()).toContain("读取详情失败");
     await w.get('[data-testid="square-detail-retry"]').trigger("click");
     await flushPromises();
-    expect(w.get('[data-testid="square-detail-content"]').text()).toBe("完整{{正文}}");
+    expect(w.get('[data-testid="square-detail-content"] .markdown-body').text()).toBe("完整{{正文}}");
     expect(await listLocalPrompts()).toHaveLength(0);
     expect(stats).not.toHaveBeenCalled();
     await w.get('[data-testid="square-detail-download"]').trigger("click");

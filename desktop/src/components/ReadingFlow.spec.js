@@ -68,7 +68,7 @@ it('bounds card text while searching, reading and editing the full original', as
   expect(Array.from(excerpt)).toHaveLength(241);
   expect(excerpt).toBe('写'.repeat(239) + '😀…');
   await w.get('.prompt-title').trigger('click');
-  expect(w.get('.reading-content').text()).toBe(content);
+  expect(w.get('.markdown-body').text()).toBe(content);
   await w.get('[data-testid=detail-edit]').trigger('click');
   expect(w.get('[data-testid=prompt-editor] textarea').element.value).toBe(content);
 });

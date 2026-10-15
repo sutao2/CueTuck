@@ -16,4 +16,11 @@
 
 ## 验收
 
-进行中。
+已实现，未发布。
+
+- 公开读取截图中的 17 成员合集（`pub.5d9e34bc-7c43-4fa3-9ab4-d2460da99165`），确认九张图片均为 cover manifest 所引用，成员没有附件。原生响应结构漏掉 cover；新增序列化测试先失败（Null 对预期 cover），补字段后通过，兼容旧服务无 cover。
+- 顶层重复成员测试先失败后通过；下载成员在有效合集内不独立出现，原有 local 成员展示不变，移出后重新显示。全库接口和下载识别保持原样，未删除或迁移已有数据。
+- Markdown 使用固定版本 marked/DOMPurify，默认预览可切原文；原始 HTML 作为文字、远程图片只显示替代文本、危险链接无可点击地址。测试覆盖表格、代码、列表、变量、显示切换与使用仍传原始 Markdown。
+- 最终前端门禁通过：桌面 704、网页 33、管理台 106 项测试，三端构建、文档/API/工具检查通过，日志 `output/verification/run-mAFnbp`。原生 square 响应 2 项测试通过。
+- Playwright 检查 1000×900 浅色及 460×800 深色；表格内部滚动、页面无横向溢出、切原文保留变量。实际工作台内存库验证顶层 1 合集 + 1 独立项、合集仍有 3 个成员，成员详情渲染 Markdown。
+- 截图在 `output/playwright/markdown-reading-*.png`、`collection-top-level.png`、`collection-member-markdown.png`。未写线上合集或真实用户本地库；原生修复尚未经新双平台安装包端到端下载验收，本轮未部署。

@@ -36,11 +36,11 @@
             <article v-for="(member, index) in item.members" :key="index" data-testid="square-detail-member">
               <div class="member-heading"><h3>{{ member.title }}</h3><button type="button" class="button" data-testid="square-member-use" :disabled="useBusy || !(memberTranslations[index] || member.content)?.trim()" @click="$emit('use', { ...member, content: memberTranslations[index] || member.content, remote: true, asset_count: 0 })">{{ tr('使用') }}</button></div>
               <p v-if="member.model">{{ member.model }}</p>
-              <PromptLanguage :text="member.content" :square-id="item.id" :initial-versions="item.translations || {}" :member-index="index" :default-language="defaultLanguage" @change="memberTranslations[index] = $event" /><pre class="square-body">{{ memberTranslations[index] || member.content }}</pre>
+              <PromptLanguage :text="member.content" :square-id="item.id" :initial-versions="item.translations || {}" :member-index="index" :default-language="defaultLanguage" @change="memberTranslations[index] = $event" /><PromptContent :text="memberTranslations[index] || member.content" />
               <PublishedAttachments :item-id="item.id" :references="(item.asset_refs || []).filter(file => member.asset_ids?.includes(file.id))" />
             </article>
           </template>
-          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" :initial-versions="item.translations || {}" :default-language="defaultLanguage" @change="translated = $event" /><pre class="square-body" data-testid="square-detail-content">{{ translated || item.content || tr('还没有正文') }}</pre></template>
+          <template v-else><PromptLanguage :text="item.content" :square-id="item.id" :initial-versions="item.translations || {}" :default-language="defaultLanguage" @change="translated = $event" /><PromptContent data-testid="square-detail-content" :text="translated || item.content || tr('还没有正文')" /></template>
           <PublishedAttachments v-if="item.kind !== 'collection'" :item-id="item.id" :references="item.asset_refs || []" />
           </section>
           <aside v-if="sourceImages.length || publishedImages.length || item.reference" class="detail-media" :aria-label="tr('参考资料')">
@@ -83,6 +83,7 @@ import PublishedImage from "./PublishedImage.vue";
 import PublishedAttachments from './PublishedAttachments.vue';
 import ImageViewer from './ImageViewer.vue';
 import PromptLanguage from './PromptLanguage.vue';
+import PromptContent from './PromptContent.vue';
 import { computed, ref, watch } from 'vue';
 import { referenceImages, referenceLink } from '../lib/squareReference.js';
 const props = defineProps({
@@ -118,7 +119,6 @@ watch(() => props.item.id, () => { largeImage.value=null; translated.value=''; m
 .published-gallery :deep(.published-image) { height: 200px; border-radius: 10px; }
 .published-gallery :deep(.published-image img) { object-fit: contain; }
 .published-gallery .single-image :deep(.published-image) { height: auto; aspect-ratio: 16 / 9; max-height: 420px; }
-.square-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
 .square-reading-page { overflow: hidden; container-type: inline-size; }
 .detail-scroll { overflow-y: auto; padding: 24px max(28px, calc((100% - 1120px) / 2)) 48px; min-height: 0; }
 .detail-navigation { margin-bottom: 22px; }
@@ -137,7 +137,6 @@ watch(() => props.item.id, () => { largeImage.value=null; translated.value=''; m
 .member-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: 8px; position: sticky; top: -24px; z-index: 5; background: var(--surface); padding: 12px 0; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
 .detail-section-label { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 12px; }
-.detail-content .square-body { margin: 0; padding: 0; border: 0; background: transparent; font-size: 14px; line-height: 1.9; }
 .reference-credit { color: var(--muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
 .reference-credit a { color: inherit; }
 .gallery-label { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11px; margin-bottom: 10px; }

@@ -1436,5 +1436,6 @@
   "本机配置文件": "Local configuration file",
   "网络连接失败，联网后将自动恢复登录": "Connection failed. Your session will restore when you reconnect.",
   "本机登录配置不可用，请重新登录或检查文件权限": "Local login configuration is unavailable. Sign in again or check file permissions.",
-  "登录暂未恢复，服务暂时不可用，请稍后重试": "The service is temporarily unavailable. Retry restoring your session later."
+  "登录暂未恢复，服务暂时不可用，请稍后重试": "The service is temporarily unavailable. Retry restoring your session later.",
+  "正文显示方式": "Content display"
 }
