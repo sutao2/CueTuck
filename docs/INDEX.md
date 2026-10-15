@@ -6,8 +6,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-10-15-beta32-release.md](plans/2026-10-15-beta32-release.md) | 进行中 | 发布 Skill 许可选择 | 双平台同源构建、更新及官网验收 |
-| [plans/2026-10-15-skill-license-select.md](plans/2026-10-15-skill-license-select.md) | 已实现，未发布 | Skill 发布许可 | 常用许可下拉选择、简述与原许可保留 |
+| [plans/2026-10-15-beta32-release.md](plans/2026-10-15-beta32-release.md) | 已发布部署 | 发布 Skill 许可选择 | 双平台同源构建、更新及官网验收 |
+| [plans/2026-10-15-skill-license-select.md](plans/2026-10-15-skill-license-select.md) | 已随 beta.32 发布 | Skill 发布许可 | 常用许可下拉选择、简述与原许可保留 |
 | [plans/2026-10-15-beta31-release.md](plans/2026-10-15-beta31-release.md) | 已发布部署 | 发布阅读、合集与 Skill 修复 | 双平台同源构建、更新及官网验证 |
 | [plans/2026-10-15-skill-publish-selection.md](plans/2026-10-15-skill-publish-selection.md) | 已随 beta.31 发布 | 本机 Skill 详情发布 | 当前安装路径与发布选择框同步 |
 | [plans/2026-10-15-prompt-reading-collection-download.md](plans/2026-10-15-prompt-reading-collection-download.md) | 已随 beta.31 发布 | Markdown 详情和合集下载 | 安全阅读、封面传递与本地顶层成员展示 |

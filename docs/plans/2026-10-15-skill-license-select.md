@@ -18,6 +18,6 @@
 
 ## 状态
 
-已实现，未发布。
+已随 [beta.32](2026-10-15-beta32-release.md) 发布。
 
 SkillsPage、SkillCommunity 与 SearchableSelect 共 41 项测试通过，桌面生产构建、docs-check 和 diff 检查通过。覆盖空许可不自动授权、五种选项及说明、非预置原许可切换保留、许可变更重置公开确认、实际提交值与文件包保持。中英文文案已补齐，未进行双平台原生窗口实测。
