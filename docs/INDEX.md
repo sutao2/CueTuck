@@ -236,7 +236,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [specs/billing/spec.md](specs/billing/spec.md) | 目标 | 做预发账单或兑换 | 独立持久化模拟订单/权益、测试码与真实权益隔离 |
 | [specs/documentation/spec.md](specs/documentation/spec.md) | 现行 | 改 docs-check、索引或合同检查 | 结构检查与真实路由对照边界 |
 | [reference/test-gates.md](reference/test-gates.md) | 现行 | 加测试或 CI | 已接入检查及覆盖率/Testcontainers 未落实要求 |
-| [reference/openapi/square.yaml](reference/openapi/square.yaml) | 现行 | 改广场 API 时 | 广场 / 登录 / 发布 / Skills / 翻译合同 |
+| [reference/openapi/square.yaml](reference/openapi/square.yaml) | 现行 | 改广场 API 时 | 广场 / 登录 / 发布 / Skills / 翻译及内容版本合同 |
 | [reference/openapi/admin.yaml](reference/openapi/admin.yaml) | 现行 | 改管理 API 时 | /v1/admin；含 Skill 审核、翻译与模型发现 |
 | [reference/quality.md](reference/quality.md) | 现行 | 评审标准含糊时 | 质量约定 |
 | [how-to/local-dev.md](how-to/local-dev.md) | 现行 | 想在本机验证 | npm test / npm run dev / tauri dev / 备份恢复 |

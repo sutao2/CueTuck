@@ -1498,5 +1498,6 @@
   "已是当前广场版本；本地修改会保留。": "Already on the current published version. Local edits are preserved.",
   "未关联广场版本；可从广场选择新版，比较后备份安装。": "No linked published version. Select a version in the marketplace, then compare and back up before installing.",
   "撤回更新": "Withdraw update",
-  "确认撤回这次待审核更新？当前公开版本保持不变。": "Withdraw this pending update? The current public version will remain unchanged."
+  "确认撤回这次待审核更新？当前公开版本保持不变。": "Withdraw this pending update? The current public version will remain unchanged.",
+  "已撤回": "Withdrawn"
 }
