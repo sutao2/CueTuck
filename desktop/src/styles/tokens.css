@@ -136,3 +136,5 @@ body.host-windows.launcher-page #app,
 body.host-windows.launcher-page .launcher-canvas {
   background: var(--surface);
 }
+
+.content-update-badge { display: inline-flex; align-items: center; padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--text); color: var(--surface, #fff); font-size: 11px; font-weight: 600; line-height: 1.5; white-space: nowrap; }

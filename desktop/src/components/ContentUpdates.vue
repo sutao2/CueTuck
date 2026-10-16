@@ -18,7 +18,7 @@
    </template>
    <template v-else>
     <p v-if="!busy&&!rows.length">{{ tab==='backups' ? tr('还没有更新前备份。') : tr('没有可检查的下载内容。社区 Skill 请在对应安装位置检查更新。') }}</p>
-    <article v-for="row in rows" :key="row.local_id||row.id" class="update-row"><div><strong>{{ row.title }}</strong><p>{{ row.kind==='collection'?tr('合集'):tr('提示词') }} · {{ tab==='backups' ? new Date(Number(row.saved_at)).toLocaleString() : row.version ? `已下载 v${row.version}` : tr('版本未知') }}</p></div><button class="button" :disabled="busy" @click="tab==='backups'?restore(row):check(row)">{{ tab==='backups'?tr('恢复为副本'):tr('检查更新') }}</button></article>
+    <article v-for="row in rows" :key="row.local_id||row.id" class="update-row"><div><strong>{{ row.title }}</strong> <span v-if="tab==='downloads' && badges[`${row.kind}:${row.local_id}`]" class="content-update-badge">{{ tr('有新版') }} · v{{ badges[`${row.kind}:${row.local_id}`] }}</span><p>{{ row.kind==='collection'?tr('合集'):tr('提示词') }} · {{ tab==='backups' ? new Date(Number(row.saved_at)).toLocaleString() : row.version ? `已下载 v${row.version}` : tr('版本未知') }}</p></div><button class="button" :disabled="busy" @click="tab==='backups'?restore(row):check(row)">{{ tab==='backups'?tr('恢复为副本'):tr('检查更新') }}</button></article>
    </template>
   </div>
  </section>
@@ -28,6 +28,7 @@ import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref, onMounted } from 'vue';
 import { vPageFocus } from '../lib/pageFocus.js';
 import { contentVersions, localContentUpdate, prepareVersionDownload } from '../platform/contentVersions.js';
+const props=defineProps({initialKey:{type:String,default:''},badges:{type:Object,default:()=>({})}});
 const emit=defineEmits(['close','changed','busy']);
 const rows=ref([]),tab=ref('downloads'),busy=ref(false),error=ref(''),notice=ref(''),selected=ref(null),preview=ref(null),latest=ref(null),confirmReplace=ref(false);
 function close(){if(!busy.value)emit('close');}
@@ -39,7 +40,7 @@ async function apply(replace){await run(async()=>{const payload=await prepareVer
 async function restore(row){await run(async()=>{await localContentUpdate({action:'restore_copy',id:row.id});notice.value='已恢复为新副本，当前内容保持不变。';emit('changed');});}
 function readable(data){return [data.root.title,data.root.content,...(data.members||[]).map(m=>`${m.title}\n${m.content}`)].filter(Boolean).join('\n\n');}
 function readableRemote(data){return [data.title,data.content,...(data.members||[]).map(m=>`${m.title}\n${m.content}`)].filter(Boolean).join('\n\n');}
-onMounted(load);
+onMounted(async()=>{await load();const row=rows.value.find(row=>`${row.kind}:${row.local_id}`===props.initialKey);if(row)await check(row);});
 </script>
 <style scoped>
 .tabs,.actions{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}.update-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}p{color:var(--muted);line-height:1.7}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:16px}.comparison section,.confirm{padding:16px;border:1px solid var(--line);border-radius:14px;min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;font:inherit;line-height:1.7}.warning{color:var(--text)}@media(max-width:700px){.comparison{grid-template-columns:1fr}}

@@ -166,7 +166,7 @@
             </div>
           </div>
           <div class="content-actions" :inert="batchBusy ? '' : undefined">
-            <button v-if="space === 'local' && nativeDownloads" class="button ghost-button" @click="contentUpdatesOpen=true">{{ tr("下载更新") }}</button>
+            <button v-if="space === 'local' && nativeDownloads" class="button ghost-button" @click="openContentUpdates()">{{ tr("下载更新") }} <span v-if="Object.keys(contentBadges).length" class="content-update-badge">{{ Object.keys(contentBadges).length }}</span></button>
             <button v-if="space === 'local' && prompts.length" type="button" class="button ghost-button" data-testid="select-prompts" @click="selecting = !selecting; selectedPrompts = []">{{ selecting ? tr('取消多选') : tr('批量整理') }}</button>
             <button v-if="space === 'square' && sortTab === '推荐' && dismissedRecommendations.length" type="button" class="button ghost-button" @click="restoreRecommendations">{{ tr('恢复推荐偏好') }}</button>
             <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="refreshSquare"><AppIcon name="refresh" />{{ sortTab === '推荐' ? (!squareLoading && !squareItems.length && recentRecommendations.length ? tr('重新浏览') : tr('换一批')) : t("refresh") }}</button>
@@ -288,7 +288,8 @@
               <label v-if="selecting && space === 'local' && item.kind === 'prompt'" class="card-selection" @click.stop>
                 <input type="checkbox" :checked="selectedPrompts.includes(item.id)" :aria-label="tr('选择 {0}', [item.title])" :data-select-prompt="item.id" @change="selectPrompt(item.id)" />{{ tr('选择') }} </label>
               <div class="card-top">
-                <span v-if="space !== 'square' || item.kind === 'collection'" class="type-badge"><AppIcon :name="item.kind === 'collection' ? 'folder' : 'file'" />{{ item.kind === "collection" ? tr('合集') : space === "square" ? tr('广场') : item.source === 'downloaded' ? tr('已下载') : tr('提示词') }}</span>
+                <button v-if="space === 'local' && contentBadges[localUpdateKey({kind:item.kind||'prompt',local_id:item.id})]" class="content-update-badge" @click.stop="openContentUpdates(item)">{{ tr('有新版') }}</button>
+                  <span v-if="space !== 'square' || item.kind === 'collection'" class="type-badge"><AppIcon :name="item.kind === 'collection' ? 'folder' : 'file'" />{{ item.kind === "collection" ? tr('合集') : space === "square" ? tr('广场') : item.source === 'downloaded' ? tr('已下载') : tr('提示词') }}</span>
                 <span v-if="cardCategory(item)" class="card-category" :title="cardCategory(item)">{{ cardCategory(item) }}</span>
                 <span v-if="showModelTags && item.model" class="model-tag" data-testid="model-tag">{{ item.model }}</span>
               </div>
@@ -405,7 +406,7 @@
       @save="savePrompt"
       @remove="removePrompt"
     />
-    <ContentUpdates v-if="contentUpdatesOpen" @close="contentUpdatesOpen=false" @busy="contentUpdatesBusy=$event" @changed="refreshOperationView" />
+    <ContentUpdates v-if="contentUpdatesOpen" :initial-key="contentUpdateSelection" :badges="contentBadges" @close="contentUpdatesOpen=false" @busy="contentUpdatesBusy=$event" @changed="refreshOperationView" />
     <MyPublications v-if="publicationsOpen" v-show="!loginReason" :session="session" :initial-kind="contentKind==='skills'?'skills':'prompts'" @busy="publicationsBusy=$event" @update="openPublishedUpdate" @cancel="publicationsOpen = false" @login="openLogin('查看我的发布')" />
     <LocalPromptDetail v-if="reading" :key="reading.id" v-show="!editing && !using && !loginReason"
       :prompt="reading" @cancel="reading = null" @edit="editing = reading" @use="startUse($event)" />
@@ -664,6 +665,7 @@ onUnmounted(() => stopUpdateChecks?.());
 import SquareDetailModal from "./SquareDetailModal.vue";
 import MyPublications from './MyPublications.vue';
 import ContentUpdates from './ContentUpdates.vue';
+import { useContentUpdateBadges, localUpdateKey } from '../platform/contentUpdateBadges.js';
 import { contentVersions, localContentUpdate } from '../platform/contentVersions.js';
 import BatchOrganize from './BatchOrganize.vue';
 import LocalPromptDetail from './LocalPromptDetail.vue';
@@ -850,6 +852,10 @@ const editing = ref(null);
 const reading = ref(null);
 const contentUpdatesOpen=ref(false),contentUpdatesBusy=ref(false);
 const nativeDownloads=Boolean(window.__TAURI_INTERNALS__);
+const contentUpdateSelection=ref('');
+const {badges:contentBadges,refresh:refreshContentBadges}=useContentUpdateBadges(async()=>nativeDownloads ? await localContentUpdate({action:'list'}) : []);
+function openContentUpdates(item){contentUpdateSelection.value=item ? localUpdateKey({kind:item.kind||'prompt',local_id:item.id}) : '';contentUpdatesOpen.value=true;}
+
 const publicationsOpen = ref(false), publicationsBusy=ref(false);
 const selecting = ref(false), selectedPrompts = ref([]), batchBusy = ref(false);
 const selectedRows = computed(() => prompts.value.filter(p => selectedPrompts.value.includes(p.id)));
@@ -1991,6 +1997,7 @@ async function reloadPrompts() {
   collections.value = filteredCollections;
   allLocalItems.value = [...allPrompts.filter(standalone), ...allCollections];
   downloadedIds.value = [...new Set(allPrompts.map(row => row.remote_id).filter(Boolean))];
+  void refreshContentBadges();
   emit("library-changed", allPrompts.length);
 }
 

@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-10-16-content-update-badges.md](plans/2026-10-16-content-update-badges.md) | 已实施，待发布 | 下载内容新版提醒 | 只读检查、列表角标与手动确认更新 |
 | [plans/2026-10-16-beta34-release.md](plans/2026-10-16-beta34-release.md) | 已发布部署 | 发布内容版本管理 | 双平台与容器构建验收、数据库备份迁移与签名更新 |
 | [plans/2026-10-15-content-versioning.md](plans/2026-10-15-content-versioning.md) | 已随 beta.34 发布 | 内容版本和更新 | 作者更新、审核、下载追踪及安全替换回归证据 |
 | [specs/content-versions/spec.md](specs/content-versions/spec.md) | 现行 | 修改内容更新行为 | 固定身份、审核更新、来源追踪、事务备份与合集关联 |

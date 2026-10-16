@@ -1,3 +1,4 @@
+import * as contentVersions from '../platform/contentVersions.js';
 import {mount,flushPromises} from '@vue/test-utils';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import SkillsPage from './SkillsPage.vue';
@@ -221,4 +222,21 @@ it.each(['未知','Custom team license'])('explains publishing license choices a
  }
  await w.get('.skill-authoring input[type=checkbox]').setValue(true);await click('提交审核');
  expect(submit).toHaveBeenCalledWith(expect.objectContaining({license:license==='未知'?'Apache-2.0':license,bundle}));resetMemorySession();
+});
+
+it('shows community update badges per installation without preparing or installing files',async()=>{
+ const versions=vi.spyOn(contentVersions,'contentVersions').mockResolvedValue({current_version:2});
+ snapshot.skills[0].community={id:'community-skill',version:1};
+ snapshot.skills[1].community={id:'community-skill',version:2};
+ await mountPage();
+ const rows=w.findAll('.skills-list-row');
+ expect(rows[0].text()).toContain('有新版');expect(rows[1].text()).not.toContain('有新版');
+ expect(versions).toHaveBeenCalledTimes(1);
+ expect(versions).toHaveBeenCalledWith('skill','community-skill');
+ await rows[0].trigger('click');await flushPromises();
+ expect(w.get('.skills-root').text()).toContain('有新版');
+ expect(transport.mock.calls.every(([r])=>['snapshot','detail'].includes(r.action))).toBe(true);
+ snapshot.skills[0].community.version=2;
+ await w.get('.skills-back').trigger('click');await flushPromises();await click('刷新');
+ expect(w.findAll('.skills-list-row').every(row=>!row.text().includes('有新版'))).toBe(true);
 });
