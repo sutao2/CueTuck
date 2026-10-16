@@ -10,6 +10,9 @@ const openapiPath = resolve(
 );
 
 const REQUIRED = [
+  { method: "GET", path: "/v1/content/{kind}/{id}/versions", auth: "none" },
+  { method: "GET", path: "/v1/content/{kind}/{id}/versions/{version}", auth: "none" },
+  { method: "POST", path: "/v1/publications/{id}/withdraw", auth: "user" },
   { method: "GET", path: "/v1/skills", auth: "none" },
   { method: "POST", path: "/v1/skills", auth: "user" },
   { method: "GET", path: "/v1/skills/mine", auth: "user" },
