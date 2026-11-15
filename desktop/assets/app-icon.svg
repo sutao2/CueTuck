@@ -1,14 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="tile" x2="1" y2="1" gradientUnits="objectBoundingBox">
-      <stop stop-color="#245f60"/><stop offset="1" stop-color="#123a42"/>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6255da"/>
+      <stop offset="1" stop-color="#302966"/>
     </linearGradient>
   </defs>
   <rect x="24" y="24" width="464" height="464" rx="106" fill="url(#tile)"/>
-  <g transform="rotate(-9 245 238)">
-    <rect x="124" y="112" width="224" height="243" rx="26" fill="#8dc6b6"/>
-  </g>
-  <rect x="165" y="123" width="218" height="231" rx="24" fill="#fcfaf0"/>
-  <path d="M201 167h118m-118 32h76" fill="none" stroke="#63978f" stroke-width="13" stroke-linecap="round"/>
-  <path d="M109 244h83c13 0 19 5 26 15l10 13c6 8 13 12 23 12h24c11 0 19-4 25-13l10-14c6-9 14-13 25-13h68l-15 104c-3 25-17 40-42 40H165c-24 0-39-14-43-39z" fill="#d4ecdd" stroke="#18494b" stroke-width="13" stroke-linejoin="round"/>
+  <rect x="112" y="133" width="211" height="244" rx="30" transform="rotate(-12 217 255)" fill="#aaa7ff"/>
+  <rect x="169" y="113" width="215" height="263" rx="30" fill="#fffaff"/>
+  <path d="M280 113h54v84l-27-16-27 16z" fill="#7964e4"/>
+  <path d="M211 269h116m-116 35h76" fill="none" stroke="#5a4ca9" stroke-width="16" stroke-linecap="round"/>
 </svg>
