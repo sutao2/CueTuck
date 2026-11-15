@@ -7,6 +7,9 @@
 <script setup>
 defineProps({ name: { type: String, default: "library" } });
 const paths = {
+  eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
+  "eye-off": "M3 3l18 18M10 5.2c.6-.1 1.3-.2 2-.2 6.5 0 10 7 10 7a19 19 0 0 1-3 3.9M6 6.5A19 19 0 0 0 2 12s3.5 7 10 7c2 0 3.7-.6 5.1-1.4",
+  more: "M4 12h1m6 0h1m6 0h1",
   lock: "M6 10h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM8 10V7a4 4 0 0 1 8 0v3M12 14v3",
   unlock: "M6 10h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM8 10V7a4 4 0 0 1 7.8-1.2M12 14v3",
   copy: "M9 8h11v13H9zM15 5V3H4v13h2",

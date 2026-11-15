@@ -14,11 +14,13 @@ it('does not fetch a saved password when searching, editing its name, or cancell
  const request=vi.spyOn(clips,'clipRequest').mockResolvedValue(null);
  wrapper=mount(QuickClips);await flushPromises();
  const button=t=>wrapper.findAll('button').find(b=>b.text()===t);
+ await wrapper.get('[aria-expanded=false][aria-label*="更多操作"]').trigger('click');
  await button('编辑').trigger('click');
  expect(wrapper.get('input[type=password]').element.value).toBe('');
  await wrapper.get('form input[autocomplete=off]').setValue('Other');
  await wrapper.get('form').trigger('submit');await flushPromises();
  expect(request.mock.calls).toEqual([[{action:'save',id:'saved',kind:'password',title:'Other',value:null,category_id:''}]]);
+ await wrapper.get('[aria-expanded=false][aria-label*="更多操作"]').trigger('click');
  await button('删除').trigger('click');await button('取消').trigger('click');expect(request).toHaveBeenCalledTimes(1);
 });
 it('selecting a clip in the launcher copies by ID without updating recent prompt text',async()=>{
@@ -93,4 +95,21 @@ it('creates a sidebar group and requires confirmation before removing it',async(
  expect(req).toHaveBeenCalledTimes(1);expect(wrapper.text()).toContain('移至未分类');
  await wrapper.get('form').trigger('submit');await flushPromises();
  expect(req).toHaveBeenCalledWith({action:'delete_category',id:'work'});expect(wrapper.emitted('select').at(-1)).toEqual(['']);
+});
+
+it('keeps copy accessible and dismisses secondary actions on Escape or an outside click',async()=>{
+ vi.spyOn(clips,'findClips').mockResolvedValue([{id:'one',title:'Site',kind:'url',content:'https://example.test'}]);
+ const request=vi.spyOn(clips,'clipRequest');
+ wrapper=mount(QuickClips,{attachTo:document.body});await flushPromises();
+ const more=wrapper.get('.row-more > button');
+ expect(wrapper.find('.more-items').exists()).toBe(false);
+ expect(wrapper.get('[title=复制]').exists()).toBe(true);
+ await more.trigger('click');
+ await wrapper.get('.more-items button').trigger('keydown',{key:'Escape'});
+ expect(more.attributes('aria-expanded')).toBe('false');
+ expect(document.activeElement).toBe(more.element);
+ await more.trigger('click');
+ await wrapper.get('[type=search]').trigger('pointerdown');
+ expect(wrapper.find('.more-items').exists()).toBe(false);
+ expect(request).not.toHaveBeenCalled();
 });
