@@ -67,13 +67,27 @@ function Click-Button([string[]]$Names) {
 
 function Fill-Password([string]$Name, [string]$Value) {
   $control = Wait-Control $Name $edit
+  if (-not $control.Current.IsPassword) { throw "Expected a protected input: $Name" }
+  $valuePattern = $null
+  if ($control.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$valuePattern) -and -not $valuePattern.Current.IsReadOnly) {
+    try {
+      $valuePattern.SetValue($Value)
+      return
+    } catch {
+      Write-Host "This protected input requires keyboard entry: $Name"
+    }
+  }
   [void][CueTuckLockFocus]::SetForegroundWindow($app.MainWindowHandle)
   $control.SetFocus()
-  if (-not $control.Current.HasKeyboardFocus -or [CueTuckLockFocus]::GetForegroundWindow() -ne $app.MainWindowHandle) {
-    throw "Password field did not receive focus: $Name"
+  for ($attempt=0; $attempt -lt 20; $attempt++) {
+    if ($control.Current.HasKeyboardFocus -and [CueTuckLockFocus]::GetForegroundWindow() -eq $app.MainWindowHandle) {
+      [System.Windows.Forms.SendKeys]::SendWait('^a')
+      [System.Windows.Forms.SendKeys]::SendWait($Value)
+      return
+    }
+    Start-Sleep -Milliseconds 100
   }
-  [System.Windows.Forms.SendKeys]::SendWait('^a')
-  [System.Windows.Forms.SendKeys]::SendWait($Value)
+  throw "Password field did not receive keyboard focus: $Name"
 }
 
 function Unlock([string]$Value) {
