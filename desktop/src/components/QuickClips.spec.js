@@ -42,3 +42,21 @@ it('copies from global clip search and clears that query before switching to an 
   expect(wrapper.get('input').element.value).toBe('');expect(remote).not.toHaveBeenCalled();
  }finally{delete window.__TAURI_INTERNALS__;}
 });
+it('reveals only on request and drops both visible and pending secrets on blur or timeout',async()=>{
+ vi.useFakeTimers();
+ vi.spyOn(clips,'findClips').mockResolvedValue([{id:'one',title:'Work',kind:'password',content:null}]);
+ const get=vi.spyOn(clips,'clipRequest').mockResolvedValue('test-secret');
+ const copy=vi.spyOn(clips,'copyClip').mockResolvedValue();
+ wrapper=mount(QuickClips);await flushPromises();
+ const reveal=()=>wrapper.findAll('button').find(b=>b.text()==='显示密码').trigger('click');
+ expect(get).not.toHaveBeenCalled();
+ await reveal();await flushPromises();expect(wrapper.text()).toContain('test-secret');
+ expect(copy).not.toHaveBeenCalled();await vi.advanceTimersByTimeAsync(15000);expect(wrapper.text()).not.toContain('test-secret');
+ let release;get.mockImplementationOnce(()=>new Promise(resolve=>{release=resolve;}));
+ await reveal();window.dispatchEvent(new Event('blur'));release('late-secret');await flushPromises();
+ expect(wrapper.text()).not.toContain('late-secret');
+ await reveal();await flushPromises();window.dispatchEvent(new Event('blur'));await flushPromises();
+ expect(wrapper.text()).not.toContain('test-secret');
+ await wrapper.findAll('button').find(b=>b.text()==='复制').trigger('click');await flushPromises();
+ expect(copy).toHaveBeenCalledWith('one');expect(wrapper.text()).not.toContain('test-secret');
+});

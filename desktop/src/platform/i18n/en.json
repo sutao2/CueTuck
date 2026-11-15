@@ -22,6 +22,8 @@
   "此设备当前未提供系统解锁。": "System unlock is currently unavailable on this device.",
   "保存更改": "Save changes",
   "立即锁定": "Lock now",
+  "显示密码": "Show password",
+  "隐藏密码": "Hide password",
   "无法读取应用锁状态": "Could not read app lock status",
   "两次输入的口令不一致": "The passwords do not match",
   "请先解锁应用": "Unlock the app first",
