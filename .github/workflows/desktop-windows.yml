@@ -14,6 +14,7 @@ on:
       - 'shared/**'
       - 'scripts/release-check*'
       - 'scripts/windows-chrome-smoke.ps1'
+      - 'scripts/windows-app-lock-smoke.mjs'
       - 'scripts/windows-portable.ps1'
       - 'LICENSE'
       - '.github/workflows/desktop-windows.yml'
@@ -81,6 +82,12 @@ jobs:
             if ($app.HasExited) { throw "Installed application exited early: $($app.ExitCode)" }
             Write-Host 'Installed x64 application remained running for 10 seconds.'
             if (Test-Path '../scripts/windows-chrome-smoke.ps1') { & ../scripts/windows-chrome-smoke.ps1 -App $app }
+            if (Test-Path '../scripts/windows-app-lock-smoke.mjs') {
+              if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
+              $app.WaitForExit()
+              node ../scripts/windows-app-lock-smoke.mjs (Join-Path $installDir 'cuetuck.exe')
+              if ($LASTEXITCODE -ne 0) { throw 'Installed app lock test failed' }
+            }
           } finally {
             if ($app -and -not $app.HasExited) { Stop-Process -Id $app.Id -Force }
             $uninstaller = Join-Path $installDir 'uninstall.exe'
