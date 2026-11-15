@@ -1,7 +1,8 @@
 // Test the installed NSIS binary on the disposable Windows Actions runner.
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -13,14 +14,18 @@ const password = randomUUID();
 const profile = await mkdtemp(join(process.env.RUNNER_TEMP, 'cuetuck-webview-'));
 let child, exited, browser;
 async function start() {
+  const reserve = createServer();
+  reserve.listen(0,'127.0.0.1');
+  await once(reserve,'listening');
+  const port = reserve.address().port;
+  await new Promise(resolve=>reserve.close(resolve));
   child = spawn(executable, [], { env: { ...process.env, WEBVIEW2_USER_DATA_FOLDER: profile,
-    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-address=127.0.0.1 --remote-debugging-port=0' } });
+    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-address=127.0.0.1 --remote-debugging-port=${port}` } });
   exited = once(child, 'exit');
   const deadline = Date.now()+60000;
   while (Date.now()<deadline && child.exitCode===null) {
     try {
-      const port = Number((await readFile(join(profile,'DevToolsActivePort'),'utf8')).split(/\r?\n/)[0]);
-      if (port) browser = await chromium.connectOverCDP('http://127.0.0.1:'+port, {timeout:2000});
+      browser = await chromium.connectOverCDP('http://127.0.0.1:'+port, {timeout:2000});
     } catch { await delay(250); continue; }
     if (browser) break;
   }

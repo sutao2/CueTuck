@@ -52,7 +52,22 @@ jobs:
       - name: Validate preview configuration
         run: node ../scripts/release-check.mjs --preview
       - name: Test Windows native code
-        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # The library test harness links the Tauri mock and menu stack but does not inherit the app EXE's Common Controls v6 manifest.
+          $meta = cargo metadata --locked --format-version 1 --manifest-path src-tauri/Cargo.toml | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cargo metadata failed' }
+          $buildCrate = $meta.packages | Where-Object name -eq 'tauri-build'
+          $manifest = Join-Path (Split-Path $buildCrate.manifest_path) 'src/windows-app-manifest.xml'
+          $mt = Get-ChildItem "${env:ProgramFiles(x86)}/Windows Kits/10/bin/*/x64/mt.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+          $messages = cargo test --locked --manifest-path src-tauri/Cargo.toml --no-run --message-format=json-render-diagnostics
+          if ($LASTEXITCODE -ne 0) { throw 'Could not build Windows tests' }
+          $testExe = $messages | ForEach-Object { $_ | ConvertFrom-Json } | Where-Object { $_.target.name -eq 'cuetuck_lib' -and $_.executable -and $_.profile.test } | Select-Object -ExpandProperty executable -Unique
+          if (@($testExe).Count -ne 1) { throw 'Expected one native library test executable' }
+          & $mt.FullName -nologo -manifest $manifest "-outputresource:$testExe;#1"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not embed application manifest in Windows test harness' }
+          cargo test --locked --manifest-path src-tauri/Cargo.toml
       - name: Build production-connected preview NSIS
         run: npx tauri build --bundles nsis --config src-tauri/tauri.preview.conf.json --ci
       - name: Package and smoke-test portable ZIP before installation
