@@ -20,6 +20,7 @@ on:
       - 'scripts/windows-chrome-smoke.ps1'
       - 'scripts/windows-app-lock-smoke.ps1'
       - 'scripts/windows-quick-clips-smoke.mjs'
+      - 'scripts/windows-legacy-clip-fixture.py'
       - 'scripts/windows-portable.ps1'
       - 'LICENSE'
       - '.github/workflows/desktop-windows.yml'
@@ -56,7 +57,14 @@ jobs:
           run-id: ${{ inputs.retest_run }}
           github-token: ${{ github.token }}
           path: candidate
-      - name: Exercise the installed application lock
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci --prefix desktop
+      - run: python scripts/windows-legacy-clip-fixture.py
+      - name: Exercise installed quick clips and application lock
         shell: pwsh
         run: |
           $files = @(Get-ChildItem candidate -Recurse -Filter '*-setup.exe')
@@ -65,7 +73,11 @@ jobs:
           $dir = Join-Path $env:RUNNER_TEMP 'cuetuck-retest'
           if ((Start-Process $files[0].FullName -ArgumentList @('/S',"/D=$dir") -Wait -PassThru).ExitCode -ne 0) { throw 'Installation failed' }
           $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--force-renderer-accessibility'
-          try { ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') }
+          try {
+            node scripts/windows-quick-clips-smoke.mjs (Join-Path $dir 'cuetuck.exe')
+            if ($LASTEXITCODE -ne 0) { throw 'Installed quick clip workflow failed' }
+            ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe')
+          }
           finally {
             if ((Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '/S' -Wait -PassThru).ExitCode -ne 0) { throw 'Uninstall failed' }
           }
@@ -135,16 +147,7 @@ jobs:
       - name: Build production-connected preview NSIS
         run: npx tauri build --bundles nsis --config src-tauri/tauri.preview.conf.json --ci
       - name: Seed a previous-version clip on the disposable runner
-        shell: python
-        run: |
-          import os, sqlite3
-          from pathlib import Path
-          path = Path(os.environ['APPDATA']) / 'app.promptark.desktop' / 'quick-clips.sqlite'
-          path.parent.mkdir(parents=True, exist_ok=True)
-          assert not path.exists(), 'Expected a fresh runner'
-          with sqlite3.connect(path) as db:
-              db.execute("CREATE TABLE clips(id TEXT PRIMARY KEY, kind TEXT NOT NULL, title TEXT NOT NULL, body TEXT, CHECK ((kind='password')=(body IS NULL)))")
-              db.execute("INSERT INTO clips VALUES ('legacy', 'text', 'Legacy clip', 'Legacy body')")
+        run: python ../scripts/windows-legacy-clip-fixture.py
       - name: Package and smoke-test portable ZIP before installation
         shell: pwsh
         run: ../scripts/windows-portable.ps1

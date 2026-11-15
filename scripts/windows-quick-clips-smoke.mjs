@@ -2,33 +2,38 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { readFile, mkdtemp } from 'node:fs/promises';
+import { mkdtemp } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { chromium } from '../desktop/node_modules/playwright-core/index.mjs';
 
 assert(process.platform === 'win32' && process.env.GITHUB_ACTIONS === 'true');
 const profile = await mkdtemp(join(process.env.RUNNER_TEMP, 'clip-webview-'));
+// WebView2 does not reliably write Chromium's DevToolsActivePort file.
+const reservation = createServer();
+reservation.listen(0, '127.0.0.1');
+await once(reservation, 'listening');
+const { port } = reservation.address();
+await new Promise(resolve => reservation.close(resolve));
+const endpoint = 'http://127.0.0.1:' + port;
 const env = { ...process.env, WEBVIEW2_USER_DATA_FOLDER: profile,
-  WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-address=127.0.0.1 --remote-debugging-port=0' };
+  WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-address=127.0.0.1 --remote-debugging-port=' + port };
 delete env.TAURI_SIGNING_PRIVATE_KEY;
 delete env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD;
 const app = spawn(process.argv[2], [], { env, stdio: 'inherit' });
 const stopped = once(app, 'exit');
 let browser;
 try {
-  let port;
-  for (let i = 0; i < 120 && !port; i++) {
+  let ready = false;
+  for (let i = 0; i < 120 && !ready; i++) {
     assert.equal(app.exitCode, null, 'Candidate closed before its main window appeared');
-    for (const path of [join(profile, 'DevToolsActivePort'), join(profile, 'EBWebView', 'DevToolsActivePort')]) {
-      const raw = await readFile(path, 'utf8').catch(() => '');
-      port = Number(raw.split(/\r?\n/)[0]);
-      if (port) break;
-    }
-    if (!port) await sleep(250);
+    ready = await fetch(endpoint + '/json/version', { signal: AbortSignal.timeout(1000) })
+      .then(res => res.ok).catch(() => false);
+    if (!ready) await sleep(250);
   }
-  assert(port, 'Installed WebView2 did not expose its isolated test session');
-  browser = await chromium.connectOverCDP('http://127.0.0.1:' + port);
+  assert(ready, 'Installed WebView2 did not open the assigned loopback port');
+  browser = await chromium.connectOverCDP(endpoint);
   const context = browser.contexts()[0];
   async function appPage(launcher) {
     for (let i = 0; i < 100; i++) {
