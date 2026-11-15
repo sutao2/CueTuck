@@ -13,6 +13,6 @@ for(const [platform,name] of Object.entries(assets)) {
  platforms[platform]={signature,url:`https://github.com/sutao2/CueTuck/releases/download/${tag}/${name}`};
 }
 writeFileSync(resolve(root,'latest.json'),JSON.stringify({ version,notes:readFileSync(resolve(root,'RELEASE_NOTES.txt'),'utf8'),pub_date:new Date().toISOString(),platforms },null,2)+'\n');
-const files=readdirSync(root).filter(name=>/\.(dmg|exe|gz|sig|json)$/.test(name)).sort();
+const files=readdirSync(root).filter(name=>/\.(dmg|exe|gz|sig|json|zip)$/.test(name)).sort();
 writeFileSync(resolve(root,'SHA256SUMS'),files.map(name=>`${createHash('sha256').update(readFileSync(resolve(root,name))).digest('hex')}  ${name}\n`).join(''));
 console.log(`Created signed-update manifest and hashes for ${Object.keys(platforms).join(', ')}`);
