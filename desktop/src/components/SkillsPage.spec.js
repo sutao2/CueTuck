@@ -240,3 +240,16 @@ it('shows community update badges per installation without preparing or installi
  await w.get('.skills-back').trigger('click');await flushPromises();await click('刷新');
  expect(w.findAll('.skills-list-row').every(row=>!row.text().includes('有新版'))).toBe(true);
 });
+
+it('filters to pending Skill updates and skips one installation without preparing a package',async()=>{
+ const versions=vi.spyOn(contentVersions,'contentVersions').mockResolvedValue({current_version:4});
+ snapshot.skills[0].community={id:'skip-ui',version:1};
+ await mountPage();
+ const filter=w.findAll('label').find(l=>l.text().includes('仅显示有新版的 Skill'));
+ await filter.get('input').setValue(true);expect(w.findAll('.skills-list-row')).toHaveLength(1);
+ await w.get('.skills-list-row').trigger('click');await flushPromises();
+ await click('跳过此版本');expect(w.get('.skills-root').text()).not.toContain('有新版');
+ expect(w.get('.skills-root').text()).toContain('检查更新');
+ expect(versions.mock.calls.every(call=>call.length===2)).toBe(true);
+ expect(transport.mock.calls.every(([r])=>['snapshot','detail'].includes(r.action))).toBe(true);
+});

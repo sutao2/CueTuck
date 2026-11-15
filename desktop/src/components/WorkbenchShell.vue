@@ -167,7 +167,7 @@
             </div>
           </div>
           <div class="content-actions" :inert="batchBusy ? '' : undefined">
-            <button v-if="space === 'local' && nativeDownloads" class="button ghost-button" @click="openContentUpdates()">{{ tr("下载更新") }} <span v-if="Object.keys(contentBadges).length" class="content-update-badge">{{ Object.keys(contentBadges).length }}</span></button>
+            <button v-if="space === 'local' && nativeDownloads" class="button ghost-button" @click="openContentUpdates()">{{ tr("内容更新") }} <span v-if="Object.keys(contentBadges).length" class="content-update-badge">{{ Object.keys(contentBadges).length }}</span></button>
             <button v-if="space === 'local' && prompts.length" type="button" class="button ghost-button" data-testid="select-prompts" @click="selecting = !selecting; selectedPrompts = []">{{ selecting ? tr('取消多选') : tr('批量整理') }}</button>
             <button v-if="space === 'square' && sortTab === '推荐' && dismissedRecommendations.length" type="button" class="button ghost-button" @click="restoreRecommendations">{{ tr('恢复推荐偏好') }}</button>
             <button v-if="space === 'square'" type="button" class="button ghost-button" :disabled="squareLoading" @click="refreshSquare"><AppIcon name="refresh" />{{ sortTab === '推荐' ? (!squareLoading && !squareItems.length && recentRecommendations.length ? tr('重新浏览') : tr('换一批')) : t("refresh") }}</button>
@@ -370,7 +370,7 @@
         </section>
       </main>
       <QuickClips v-if="contentKind==='clips' && !hasTaskPage" ref="clipsPage"/>
-      <SkillsPage v-if="skillsVisited" v-show="contentKind === 'skills' && !hasTaskPage" ref="skillsPage" :mode="skillsMode" :category="skillsCategories[skillsMode]" @categories="skillsCategorySummary[$event.mode] = $event" @busy="skillsBusy = $event"/>
+      <SkillsPage v-if="skillsVisited" v-show="contentKind === 'skills' && !hasTaskPage" ref="skillsPage" :active="contentKind==='skills' && !settingsOpen && !hasTaskPage" :mode="skillsMode" :category="skillsCategories[skillsMode]" @categories="skillsCategorySummary[$event.mode] = $event" @busy="skillsBusy = $event"/>
       <div v-show="hasTaskPage" class="task-host" data-testid="task-host">
     <section v-if="addingCategory" v-page-focus="closeCategoryDialog" class="workspace-page category-page" role="region" aria-labelledby="category-page-title">
       <header class="modal-header"><h2 id="category-page-title">{{ tr('新建分类') }}</h2><button type="button" class="page-back" :aria-label="tr('返回')" :disabled="categoryBusy" @click="closeCategoryDialog">{{ tr('← 返回') }}</button></header>
@@ -408,7 +408,7 @@
       @save="savePrompt"
       @remove="removePrompt"
     />
-    <ContentUpdates v-if="contentUpdatesOpen" :initial-key="contentUpdateSelection" :badges="contentBadges" @close="contentUpdatesOpen=false" @busy="contentUpdatesBusy=$event" @changed="refreshOperationView" />
+    <ContentUpdates v-if="contentUpdatesOpen" :initial-key="contentUpdateSelection" :badges="contentBadges" :skip-version="skipContentVersion" @close="contentUpdatesOpen=false" @busy="contentUpdatesBusy=$event" @changed="refreshOperationView" />
     <MyPublications v-if="publicationsOpen" v-show="!loginReason" :session="session" :initial-kind="contentKind==='skills'?'skills':'prompts'" @busy="publicationsBusy=$event" @update="openPublishedUpdate" @cancel="publicationsOpen = false" @login="openLogin('查看我的发布')" />
     <LocalPromptDetail v-if="reading" :key="reading.id" v-show="!editing && !using && !loginReason"
       :prompt="reading" @cancel="reading = null" @edit="editing = reading" @use="startUse($event)" />
@@ -857,7 +857,9 @@ const reading = ref(null);
 const contentUpdatesOpen=ref(false),contentUpdatesBusy=ref(false);
 const nativeDownloads=Boolean(window.__TAURI_INTERNALS__);
 const contentUpdateSelection=ref('');
-const {badges:contentBadges,refresh:refreshContentBadges}=useContentUpdateBadges(async()=>nativeDownloads ? await localContentUpdate({action:'list'}) : []);
+const {badges:contentBadges,refresh:refreshContentBadges,skipVersion:skipContentVersion}=useContentUpdateBadges(async()=>nativeDownloads ? await localContentUpdate({action:'list'}) : [],contentChecksActive);
+function contentChecksActive(){return nativeDownloads && contentKind.value==='prompts' && space.value==='local' && !settingsOpen.value && (contentUpdatesOpen.value || !hasTaskPage.value);}
+
 function openContentUpdates(item){contentUpdateSelection.value=item ? localUpdateKey({kind:item.kind||'prompt',local_id:item.id}) : '';contentUpdatesOpen.value=true;}
 
 const publicationsOpen = ref(false), publicationsBusy=ref(false);
@@ -1233,7 +1235,7 @@ function collapseAll() {
 
 function selectCategory(id) {
   selectedId.value = id;
-  return space.value === "square" ? loadSquare() : reloadPrompts();
+  return space.value === "square" ? loadSquare() : reloadPrompts(false);
 }
 
 function categoryCount(id) {
@@ -1682,7 +1684,7 @@ function scheduleSearch(event) {
   cancelSquare();
   ++squareRequest; ++localRequest;
   if (searchComposing || event?.isComposing) return;
-  if (space.value === 'local') { reloadPrompts(); return; }
+  if (space.value === 'local') { reloadPrompts(false); return; }
   squareLoading.value = true;
   if (!query.value.trim()) { loadSquare(); return; }
   searchTimer = setTimeout(() => loadSquare(), 250);
@@ -1984,7 +1986,7 @@ async function applyTheme(next, persist = true) {
   document.body.classList.toggle("theme-dark", dark.value);
 }
 
-async function reloadPrompts() {
+async function reloadPrompts(checkUpdates = true) {
   if (space.value !== "local") return;
   const request = ++localRequest;
   const filter = { query: query.value, categoryId: selectedId.value };
@@ -2001,7 +2003,7 @@ async function reloadPrompts() {
   collections.value = filteredCollections;
   allLocalItems.value = [...allPrompts.filter(standalone), ...allCollections];
   downloadedIds.value = [...new Set(allPrompts.map(row => row.remote_id).filter(Boolean))];
-  void refreshContentBadges();
+  if(checkUpdates) void refreshContentBadges();
   emit("library-changed", allPrompts.length);
 }
 
@@ -2287,6 +2289,7 @@ onMounted(async () => {
     });
   }
 });
+watch(contentChecksActive,active=>{if(active)void refreshContentBadges();});
 </script>
 
 <style scoped>

@@ -20,3 +20,11 @@ it('opens the exact badged collection for comparison without downloading or appl
  expect(service.prepareVersionDownload).not.toHaveBeenCalled();
  expect(service.localContentUpdate.mock.calls.every(([r])=>['list','preview'].includes(r.action))).toBe(true);
 });
+it('puts available updates first and skips directly without fetching or applying them',async()=>{
+ const other={...row,local_id:'other',kind:'collection',title:'Updated collection'};
+ service.localContentUpdate.mockResolvedValue([row,other]);
+ const skip=vi.fn();wrapper=mount(ContentUpdates,{props:{badges:{'collection:other':2},skipVersion:skip}});await flushPromises();
+ const first=wrapper.get('.update-row');expect(first.text()).toContain('Updated collection');expect(first.text()).toContain('比较新版');
+ await click('跳过此版本');expect(skip).toHaveBeenCalledWith(other,2);
+ expect(service.contentVersions).not.toHaveBeenCalled();expect(service.localContentUpdate.mock.calls.map(([r])=>r.action)).toEqual(['list']);
+});

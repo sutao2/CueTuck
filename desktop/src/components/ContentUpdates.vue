@@ -14,11 +14,12 @@
     <div v-if="latest" class="comparison"><section><h4>{{ tr("当前本地") }}</h4><pre>{{ readable(preview.local) }}</pre></section><section><h4>{{ tr("广场新版") }}</h4><pre>{{ readableRemote(latest.snapshot) }}</pre></section></div>
     <details v-if="preview?.origin"><summary>{{ tr("查看下载时的原始版本") }}</summary><pre>{{ readableRemote(preview.origin.remote) }}</pre></details>
     <div class="actions"><button class="button" :disabled="busy" @click="selected=null">{{ tr("保留本地") }}</button><button class="button" :disabled="busy||!latest" @click="apply(false)">{{ tr("保留本地并另存新版") }}</button><button class="button primary-button" :disabled="busy||!canReplace" @click="confirmReplace=true">{{ tr("备份后替换") }}</button></div>
+    <button v-if="!confirmReplace && selected.version && latest?.version>selected.version && badgeFor(selected)" class="button ghost-button" :disabled="busy" @click="skip(selected,latest.version)">{{ tr('跳过此版本') }}</button>
     <div v-if="confirmReplace" class="confirm"><p>{{ tr("确认用广场 v") }}{{ latest.version }} {{ tr("替换当前内容？当前完整内容会保存在“更新前备份”，可恢复为副本。") }}</p><button class="button" :disabled="busy" @click="confirmReplace=false">{{ tr("取消") }}</button><button class="button primary-button" :disabled="busy" @click="apply(true)">{{ tr("确认备份并替换") }}</button></div>
    </template>
    <template v-else>
     <p v-if="!busy&&!rows.length">{{ tab==='backups' ? tr('还没有更新前备份。') : tr('没有可检查的下载内容。社区 Skill 请在对应安装位置检查更新。') }}</p>
-    <article v-for="row in rows" :key="row.local_id||row.id" class="update-row"><div><strong>{{ row.title }}</strong> <span v-if="tab==='downloads' && badges[`${row.kind}:${row.local_id}`]" class="content-update-badge">{{ tr('有新版') }} · v{{ badges[`${row.kind}:${row.local_id}`] }}</span><p>{{ row.kind==='collection'?tr('合集'):tr('提示词') }} · {{ tab==='backups' ? new Date(Number(row.saved_at)).toLocaleString() : row.version ? `已下载 v${row.version}` : tr('版本未知') }}</p></div><button class="button" :disabled="busy" @click="tab==='backups'?restore(row):check(row)">{{ tab==='backups'?tr('恢复为副本'):tr('检查更新') }}</button></article>
+    <article v-for="row in orderedRows" :key="row.local_id||row.id" class="update-row"><div><strong>{{ row.title }}</strong> <span v-if="tab==='downloads' && badgeFor(row)" class="content-update-badge">{{ tr('有新版') }} · v{{ badgeFor(row) }}</span><p>{{ row.kind==='collection'?tr('合集'):tr('提示词') }} · {{ tab==='backups' ? new Date(Number(row.saved_at)).toLocaleString() : row.version ? `已下载 v${row.version}` : tr('版本未知') }}</p></div><div class="row-actions"><button v-if="tab==='downloads' && badgeFor(row)" class="button ghost-button" :disabled="busy" @click="skip(row,badgeFor(row))">{{ tr('跳过此版本') }}</button><button class="button" :disabled="busy" @click="tab==='backups'?restore(row):check(row)">{{ tab==='backups'?tr('恢复为副本'):badgeFor(row)?tr('比较新版'):tr('检查更新') }}</button></div></article>
    </template>
   </div>
  </section>
@@ -28,9 +29,12 @@ import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref, onMounted } from 'vue';
 import { vPageFocus } from '../lib/pageFocus.js';
 import { contentVersions, localContentUpdate, prepareVersionDownload } from '../platform/contentVersions.js';
-const props=defineProps({initialKey:{type:String,default:''},badges:{type:Object,default:()=>({})}});
+const props=defineProps({initialKey:{type:String,default:''},badges:{type:Object,default:()=>({})},skipVersion:Function});
 const emit=defineEmits(['close','changed','busy']);
 const rows=ref([]),tab=ref('downloads'),busy=ref(false),error=ref(''),notice=ref(''),selected=ref(null),preview=ref(null),latest=ref(null),confirmReplace=ref(false);
+const badgeFor=row=>props.badges[`${row.kind}:${row.local_id}`];
+const orderedRows=computed(()=>tab.value==='backups'?rows.value:[...rows.value].sort((a,b)=>Number(Boolean(badgeFor(b)))-Number(Boolean(badgeFor(a)))));
+function skip(row,version){try{props.skipVersion(row,version);notice.value='已跳过此版本，仍可手动检查更新。';selected.value=null;error.value='';}catch{error.value='无法保存提醒偏好';}}
 function close(){if(!busy.value)emit('close');}
 async function run(work){if(busy.value)return;busy.value=true;emit('busy',true);error.value='';try{await work();}catch(e){error.value=String(e.message||e);}finally{busy.value=false;emit('busy',false);}}
 async function load(){await run(async()=>{rows.value=await localContentUpdate({action:tab.value==='backups'?'backups':'list'});});}
@@ -43,5 +47,5 @@ function readableRemote(data){return [data.title,data.content,...(data.members||
 onMounted(async()=>{await load();const row=rows.value.find(row=>`${row.kind}:${row.local_id}`===props.initialKey);if(row)await check(row);});
 </script>
 <style scoped>
-.tabs,.actions{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}.update-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}p{color:var(--muted);line-height:1.7}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:16px}.comparison section,.confirm{padding:16px;border:1px solid var(--line);border-radius:14px;min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;font:inherit;line-height:1.7}.warning{color:var(--text)}@media(max-width:700px){.comparison{grid-template-columns:1fr}}
+.row-actions{display:flex;flex-wrap:wrap;gap:8px}.tabs,.actions{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}.update-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}p{color:var(--muted);line-height:1.7}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:16px}.comparison section,.confirm{padding:16px;border:1px solid var(--line);border-radius:14px;min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;font:inherit;line-height:1.7}.warning{color:var(--text)}@media(max-width:700px){.comparison{grid-template-columns:1fr}}
 </style>

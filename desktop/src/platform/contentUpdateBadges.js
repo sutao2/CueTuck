@@ -8,15 +8,24 @@ const sourceKey = row => `${row.kind}:${row.remote_id}`;
 export const localUpdateKey = row => `${row.kind}:${row.local_id}`;
 export const skillUpdateKey = item => `${item.root_id}:${item.path}`;
 export function skillUpdateRows(skills) {
-  return skills.filter(item => item.community).map(item => ({
+  return skills.filter(item => item.community && !item.readonly).map(item => ({
     kind: 'skill', remote_id: item.community.id, version: item.community.version,
     key: skillUpdateKey(item),
   }));
 }
 
 // Only version summaries are read here. Downloading and applying stay in the confirmation flow.
-export function useContentUpdateBadges(loadRows) {
+export function useContentUpdateBadges(loadRows, enabled = () => true) {
   const badges = ref({});
+  const skipKey = row => 'cuetuck.skip-content-version:' + JSON.stringify([row.kind,row.remote_id,row.key || localUpdateKey(row)]);
+  function skipVersion(row, version) {
+    if (!Number.isInteger(version) || !(version > row.version)) return;
+    localStorage.setItem(skipKey(row), String(version));
+    const key = row.key || localUpdateKey(row);
+    if (badges.value[key] <= version) {
+      const next = {...badges.value}; delete next[key]; badges.value = next;
+    }
+  }
   const cache = new Map();
   let disposed = false, running = false, queued = false, generation = 0, timer, unsubscribe;
   async function refresh() {
@@ -24,9 +33,9 @@ export function useContentUpdateBadges(loadRows) {
     if (running) { queued = true; return; }
     running = true;
     const current = generation, token = getSession().accessToken;
-    const valid = () => !disposed && generation === current && getSession().accessToken === token;
+    const valid = () => !disposed && enabled() && generation === current && getSession().accessToken === token;
     try {
-      if (document.visibilityState === 'hidden' || navigator.onLine === false) return;
+      if (!enabled() || document.visibilityState === 'hidden' || navigator.onLine === false) return;
       if (await getLocalSetting('square_access') === '0') { badges.value = {}; cache.clear(); return; }
       const rows = (await loadRows()).filter(row => row.remote_id && Number.isInteger(row.version) && row.version > 0);
       if (!valid()) return;
@@ -49,7 +58,7 @@ export function useContentUpdateBadges(loadRows) {
           }
         }
       }));
-      if (valid()) badges.value = Object.fromEntries(rows.filter(row => versions.get(sourceKey(row)) > row.version)
+      if (valid()) badges.value = Object.fromEntries(rows.filter(row => versions.get(sourceKey(row)) > Math.max(row.version, Number(localStorage.getItem(skipKey(row))) || 0))
         .map(row => [row.key || localUpdateKey(row), versions.get(sourceKey(row))]));
     } catch { if (valid()) badges.value = {}; }
     finally {
@@ -72,5 +81,5 @@ export function useContentUpdateBadges(loadRows) {
     window.removeEventListener('online', wake);
     document.removeEventListener('visibilitychange', wake);
   });
-  return { badges, refresh };
+  return { badges, refresh, skipVersion };
 }

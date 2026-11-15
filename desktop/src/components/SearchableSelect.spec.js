@@ -1,4 +1,4 @@
-import { mount, flushPromises } from '@vue/test-utils';
+import { DOMWrapper, mount, flushPromises } from '@vue/test-utils';
 import { afterEach, expect, it, vi } from 'vitest';
 import Select from './SearchableSelect.vue';
 let w;
@@ -27,7 +27,7 @@ it('filters labels, preserves typed null and closes without changing on Escape',
  expect(document.querySelectorAll('[role=option]')).toHaveLength(1);
  document.querySelector('[role=option]').click(); await flushPromises();
  expect(w.emitted('update:modelValue')).toEqual([[null]]);
- await w.get('button').trigger('click'); document.querySelector('input').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await flushPromises();
+ await w.get('button').trigger('click'); await new DOMWrapper(document.querySelector('input')).trigger('keydown',{key:'Escape'}); await flushPromises();
  expect(w.emitted('update:modelValue')).toHaveLength(1); expect(document.activeElement).toBe(w.get('button').element);
 });
 it('supports keyboard selection, IME and empty results with bounded rendering', async () => {

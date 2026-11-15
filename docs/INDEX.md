@@ -12,7 +12,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-10-16-content-update-badges.md](plans/2026-10-16-content-update-badges.md) | 已随 beta.35 发布 | 下载内容新版提醒 | 只读检查、列表角标与手动确认更新 |
 | [plans/2026-10-16-beta34-release.md](plans/2026-10-16-beta34-release.md) | 已发布部署 | 发布内容版本管理 | 双平台与容器构建验收、数据库备份迁移与签名更新 |
 | [plans/2026-10-15-content-versioning.md](plans/2026-10-15-content-versioning.md) | 已随 beta.34 发布 | 内容版本和更新 | 作者更新、审核、下载追踪及安全替换回归证据 |
-| [specs/content-versions/spec.md](specs/content-versions/spec.md) | 现行 | 修改内容更新行为 | 固定身份、审核更新、来源追踪、事务备份与合集关联 |
+| [specs/content-versions/spec.md](specs/content-versions/spec.md) | 现行 | 修改内容更新行为 | 来源追踪、版本比较、按副本跳过提醒与事务备份 |
 | [plans/2026-10-15-beta33-release.md](plans/2026-10-15-beta33-release.md) | 已发布部署 | 发布合集预览与 AI 输出修复 | 双平台同源构建、更新及官网验收 |
 | [plans/2026-10-15-ai-optimization-output.md](plans/2026-10-15-ai-optimization-output.md) | 已随 beta.33 发布 | AI 结果混入解释 | 结构化正文与格式校验 |
 | [plans/2026-10-15-collection-cover-preview.md](plans/2026-10-15-collection-cover-preview.md) | 已随 beta.33 发布 | 合集图片无法预览 | 本地封面大图入口，保留成员关联边界 |

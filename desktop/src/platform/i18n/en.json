@@ -1,4 +1,10 @@
 {
+  "仅显示有新版的 Skill": "Only Skills with updates",
+  "内容更新": "Content updates",
+  "比较新版": "Compare update",
+  "跳过此版本": "Skip this version",
+  "已跳过此版本，仍可手动检查更新。": "Skipped this version. You can still check for updates manually.",
+  "无法保存提醒偏好": "Could not save update preferences",
   "常用片段": "Saved clips",
   "只保存你主动添加的内容。用启动器搜索，按回车即可复制。": "Save only what you choose. Search in the launcher and press Enter to copy.",
   "添加片段": "Add clip",

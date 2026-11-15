@@ -7,9 +7,9 @@ vi.mock('./session.js', () => ({ getSession: () => ({ accessToken: service.token
 import { useContentUpdateBadges, skillUpdateRows } from './contentUpdateBadges.js';
 let wrapper, api, rows, loader;
 const prompt = { kind:'prompt',remote_id:'remote',local_id:'local',version:1 };
-async function start() {
+async function start(enabled) {
   loader = vi.fn(async () => rows);
-  wrapper = mount({ setup() { api = useContentUpdateBadges(loader); return {}; }, template:'<div />' });
+  wrapper = mount({ setup() { api = useContentUpdateBadges(loader,enabled); return {}; }, template:'<div />' });
   await flushPromises();
 }
 beforeEach(() => { vi.useFakeTimers(); rows=[{...prompt}]; service.token=null; service.setting.mockResolvedValue(null); service.versions.mockResolvedValue({current_version:2}); });
@@ -62,4 +62,23 @@ it('does not check while hidden or offline and cleans up listeners', async () =>
   const visibility=vi.spyOn(document,'visibilityState','get').mockReturnValue('hidden'); await api.refresh(); expect(service.versions).not.toHaveBeenCalled(); visibility.mockRestore();
   document.dispatchEvent(new Event('visibilitychange')); await flushPromises(); expect(service.versions).toHaveBeenCalledTimes(1);
   wrapper.unmount(); expect(service.listener).toBeNull(); await vi.advanceTimersByTimeAsync(300000); window.dispatchEvent(new Event('focus')); await flushPromises(); expect(service.versions).toHaveBeenCalledTimes(1);
+});
+it('skips only that source, copy and version across remounts, including separate Skill installations',async()=>{
+ const installations=skillUpdateRows([{root_id:'a',path:'/a',community:{id:'s',version:1}},{root_id:'b',path:'/b',community:{id:'s',version:1}},{root_id:'cache',path:'/cache',readonly:true,community:{id:'s',version:1}}]);
+ rows=[prompt,{...prompt,local_id:'other'},...installations];await start();
+ api.skipVersion(prompt,2);api.skipVersion(installations[0],2);
+ wrapper.unmount();await start();
+ expect(api.badges.value).toEqual({'prompt:other':2,'b:/b':2});
+ rows[0]={...prompt,remote_id:'different'};await api.refresh();expect(api.badges.value['prompt:local']).toBe(2);
+ rows[0]=prompt;service.versions.mockResolvedValue({current_version:3});await vi.advanceTimersByTimeAsync(300000);await flushPromises();
+ expect(api.badges.value).toEqual({'prompt:local':3,'prompt:other':3,'a:/a':3,'b:/b':3});
+ localStorage.clear();
+});
+
+it('does not request updates from inactive pages or publish a late result after leaving',async()=>{
+ let active=false,finish;
+ service.versions.mockImplementation(()=>new Promise(resolve=>{finish=resolve;}));
+ await start(()=>active);expect(loader).not.toHaveBeenCalled();
+ active=true;const refresh=api.refresh();await flushPromises();
+ active=false;finish({current_version:2});await refresh;expect(api.badges.value).toEqual({});
 });
