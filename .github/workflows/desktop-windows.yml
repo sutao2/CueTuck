@@ -79,6 +79,8 @@ jobs:
                 throw "Native test executable failed: $LASTEXITCODE"
               }
             }
+            & $testExe --exact commands::clips::tests::password_clip_roundtrip_in_system_store --ignored
+            if ($LASTEXITCODE -ne 0) { throw 'Windows credential store roundtrip failed' }
             cargo test --locked --doc
             if ($LASTEXITCODE -ne 0) { throw 'Windows doctests failed' }
           } finally { Pop-Location }
