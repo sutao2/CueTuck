@@ -1,12 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="tile" x1=".2" y1="0" x2=".8" y2="1"><stop stop-color="#424348"/><stop offset=".5" stop-color="#2a2b30"/><stop offset="1" stop-color="#17181c"/></linearGradient>
-    <radialGradient id="upper" cx=".32" cy=".22" r=".88"><stop stop-color="#fff2a2"/><stop offset=".4" stop-color="#ffce61"/><stop offset=".78" stop-color="#fca538"/><stop offset="1" stop-color="#e87822"/></radialGradient>
-    <linearGradient id="edge" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="#fff0a6"/><stop offset=".7" stop-color="#ffc269"/><stop offset="1" stop-color="#f79d4c"/></linearGradient>
-    <linearGradient id="lower" x1=".22" y1="0" x2=".8" y2="1"><stop stop-color="#f6a948"/><stop offset=".53" stop-color="#f38933"/><stop offset="1" stop-color="#c35928"/></linearGradient>
+    <linearGradient id="tile" x1=".1" y1="0" x2=".8" y2="1"><stop stop-color="#fff"/><stop offset=".6" stop-color="#f7f7fa"/><stop offset="1" stop-color="#e4e5eb"/></linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2=".35" y2="1"><stop stop-color="#444857"/><stop offset=".5" stop-color="#20222c"/><stop offset="1" stop-color="#101117"/></linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9295a9"/><stop offset=".45" stop-color="#666a80"/><stop offset="1" stop-color="#35394a"/></linearGradient>
   </defs>
-  <rect x="18" y="20" width="476" height="474" rx="111" fill="#111216"/><rect x="18" y="16" width="476" height="475" rx="111" fill="url(#tile)"/>
-  <path d="M116 283c-16-63 13-126 69-157 68-38 152-19 194 42 6 9 3 20-7 25L142 303c-11 6-23-1-26-20z" fill="url(#upper)"/>
-  <path d="M139 314l236-108c10-5 21 0 22 11 7 68-29 133-91 161-62 27-129 12-174-39-9-11-5-19 7-25z" fill="url(#lower)"/>
-  <path d="M137 314l237-109c6-3 12-3 17 1-56 36-162 86-254 119-6 2-8-6 0-11z" fill="url(#edge)"/>
+  <rect x="18" y="20" width="476" height="474" rx="111" fill="#bfc0c6"/><rect x="18" y="16" width="476" height="475" rx="111" fill="url(#tile)"/>
+  <g transform="rotate(-40 256 256)" fill="none" stroke-width="38">
+    <rect x="99" y="196" width="183" height="120" rx="59" stroke="url(#steel)"/>
+    <rect x="232" y="196" width="181" height="120" rx="59" stroke="url(#ink)"/>
+    <path d="M223 316c32 0 59-26 59-59" stroke="#f7f7fa" stroke-width="52"/>
+    <path d="M211 316h12c32 0 59-26 59-59" stroke="url(#steel)"/>
+  </g>
 </svg>
