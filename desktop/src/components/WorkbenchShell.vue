@@ -54,6 +54,7 @@
           </button>
         </div>
 
+        <div v-if="nativeDownloads" class="space-switch"><button type="button" class="space-tab" :class="{active:contentKind==='clips'}" @click="contentKind='clips'"><span class="nav-icon"><AppIcon name="copy"/></span><span>{{ tr('常用片段') }}</span></button></div>
         <p class="nav-group-label">Skills</p>
         <div class="space-switch" role="tablist" :aria-label="tr('Skills 空间')">
           <button type="button" class="space-tab" data-space="skills-square" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'square'" :class="{active:contentKind === 'skills' && skillsMode === 'square'}" @click="openSkills('square')"><span class="nav-icon"><AppIcon name="square"/></span><span>{{ tr('Skill 广场') }}</span></button>
@@ -368,6 +369,7 @@
           </template>
         </section>
       </main>
+      <QuickClips v-if="contentKind==='clips' && !hasTaskPage" ref="clipsPage"/>
       <SkillsPage v-if="skillsVisited" v-show="contentKind === 'skills' && !hasTaskPage" ref="skillsPage" :mode="skillsMode" :category="skillsCategories[skillsMode]" @categories="skillsCategorySummary[$event.mode] = $event" @busy="skillsBusy = $event"/>
       <div v-show="hasTaskPage" class="task-host" data-testid="task-host">
     <section v-if="addingCategory" v-page-focus="closeCategoryDialog" class="workspace-page category-page" role="region" aria-labelledby="category-page-title">
@@ -561,7 +563,7 @@
       <button type="button" :aria-label="tr('关闭提示')" @click="operationNotice = null">×</button>
     </div>
 
-    <GlobalSearch v-if="globalSearchOpen" @close="globalSearchOpen = false" @select="openGlobalResult" />
+    <GlobalSearch v-if="globalSearchOpen" :initial-scope="contentKind==='clips'?'clips':'local'" @copied="notifyOperation('已复制',true,'copy')" @close="globalSearchOpen = false" @select="openGlobalResult" />
 
     <SettingsModal
       :inert="globalSearchOpen ? '' : undefined"
@@ -664,6 +666,7 @@ onMounted(() => { stopUpdateChecks = startUpdateChecks(); });
 onUnmounted(() => stopUpdateChecks?.());
 import SquareDetailModal from "./SquareDetailModal.vue";
 import MyPublications from './MyPublications.vue';
+import QuickClips from './QuickClips.vue';
 import ContentUpdates from './ContentUpdates.vue';
 import { useContentUpdateBadges, localUpdateKey } from '../platform/contentUpdateBadges.js';
 import { contentVersions, localContentUpdate } from '../platform/contentVersions.js';
@@ -764,6 +767,7 @@ async function loadLauncherShortcut() {
 const emit = defineEmits(["open-launcher", "library-changed"]);
 
 const space = ref("local");
+const clipsPage=ref(null);
 const contentKind = ref("prompts"), skillsMode = ref("local"), skillsVisited = ref(false), skillsBusy = ref(false), skillsPage = ref(null);
 const skillsCategories = ref({local:'',square:''}), skillsCategorySummary = ref({local:null,square:null});
 function selectSkillCategory(id) { if (skillsBusy.value) return; if (skillsCategories.value[skillsMode.value] === id) skillsPage.value?.showList?.(); else skillsCategories.value[skillsMode.value] = id; }
@@ -830,7 +834,7 @@ function handleWorkbenchShortcut(event) {
   if (globalSkillResult.value || contentUpdatesOpen.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || loginReason.value || pendingPublish.value || squareDetail.value) return;
   if (event.key === ',') { event.preventDefault(); settingsOpen.value = true; return; }
   if (event.key.toLowerCase() === 'f' && !settingsOpen.value && !publishResume.value) {
-    event.preventDefault(); if (contentKind.value === 'skills') { skillsPage.value?.focusSearch?.(); } else { focusSearch(); } return;
+    event.preventDefault(); if (contentKind.value === 'skills') { skillsPage.value?.focusSearch?.(); } else if(contentKind.value==='clips'){clipsPage.value?.focusSearch();} else { focusSearch(); } return;
   }
   const target = event.target;
   if (event.key.toLowerCase() === 'b' && !settingsOpen.value && !target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
@@ -1162,7 +1166,7 @@ const emptyCopy = computed(() => {
   if (sortTab.value === '收藏') return space.value === 'local' ? tr('点击提示词的「···」选择收藏，在这里快速找到常用内容。') : tr('收藏喜欢的社区提示词后，可在这里再次找到。');
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
-const locationLabel = computed(() => contentKind.value === "skills" ? (skillsMode.value === "local" ? tr("本机 Skills") : tr("Skill 广场")) : (space.value === "square" ? t("square") : t("local")));
+const locationLabel = computed(() => contentKind.value === 'clips' ? tr('常用片段') : contentKind.value === "skills" ? (skillsMode.value === "local" ? tr("本机 Skills") : tr("Skill 广场")) : (space.value === "square" ? t("square") : t("local")));
 const hasTaskPage = computed(() => Boolean(globalSkillResult.value || contentUpdatesOpen.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
 const taskTitle = computed(() => contentUpdatesOpen.value ? '下载内容更新' : globalSkillResult.value ? globalSkillResult.value.item.title : publicationsOpen.value ? tr('我的发布') : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? tr('登录账号') : creating.value ? tr('新建') : editing.value ? tr('编辑') : using.value ? tr('使用提示词') : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? tr('发布到广场') : addingCategory.value ? tr('新建分类') : '');
 
@@ -1933,7 +1937,7 @@ function setSort(tab) {
 }
 
 function openSquare() {
-  if (contentKind.value === "skills") { contentKind.value = "prompts"; if (space.value === "square") return; }
+  if (contentKind.value !== "prompts") { contentKind.value = "prompts"; if (space.value === "square") return; }
   operationNote.value = '';
   cancelSearch(); ++localRequest;
   space.value = "square";
@@ -1945,7 +1949,7 @@ function openSquare() {
 }
 
 function openLocal() {
-  if (contentKind.value === "skills") { contentKind.value = "prompts"; if (space.value === "local") return; }
+  if (contentKind.value !== "prompts") { contentKind.value = "prompts"; if (space.value === "local") return; }
   operationNote.value = '';
   cancelSearch(); cancelSquare(); ++squareRequest;
   space.value = "local";

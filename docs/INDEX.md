@@ -6,6 +6,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-11-15-quick-clips.md](plans/2026-11-15-quick-clips.md) | 实施计划 | 常用片段与更新体验 | 独立片段库及按版本跳过提醒 |
+| [specs/quick-clips/spec.md](specs/quick-clips/spec.md) | 现行 | 保存和检索片段 | 主动保存、本机凭据与原样复制 |
 | [plans/2026-10-16-beta35-release.md](plans/2026-10-16-beta35-release.md) | 已发布 | 发布更新角标 | 同源双平台构建、签名安装、更新发现及官网入口 |
 | [plans/2026-10-16-content-update-badges.md](plans/2026-10-16-content-update-badges.md) | 已随 beta.35 发布 | 下载内容新版提醒 | 只读检查、列表角标与手动确认更新 |
 | [plans/2026-10-16-beta34-release.md](plans/2026-10-16-beta34-release.md) | 已发布部署 | 发布内容版本管理 | 双平台与容器构建验收、数据库备份迁移与签名更新 |

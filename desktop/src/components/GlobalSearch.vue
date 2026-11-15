@@ -6,13 +6,13 @@
         <button type="button" class="global-search-close" :aria-label="tr('关闭全局搜索')" @click="$emit('close')"><kbd>Esc</kbd></button>
       </header>
       <div class="global-search-scopes" role="group" :aria-label="tr('搜索范围')">
-        <button v-for="option in scopes" :key="option.id" type="button" :aria-pressed="scope === option.id" :data-search-scope="option.id" @click="scope = option.id">
+        <button v-for="option in scopes" :key="option.id" type="button" :aria-pressed="scope === option.id" :data-search-scope="option.id" @click="setScope(option.id)">
           <AppIcon :name="option.id === 'local' ? 'library' : 'globe'" />{{ tr(option.label) }}
         </button>
       </div>
       <div class="global-search-field">
         <AppIcon name="search" />
-        <input v-model="query" data-testid="global-search-input" data-dialog-autofocus type="search" role="combobox" :aria-label="tr('全局搜索关键词')" aria-autocomplete="list" aria-controls="global-search-results" :aria-expanded="results.length > 0" :aria-activedescendant="results.length ? `global-result-${active}` : undefined" :placeholder="scope === 'local' ? tr('搜索全部本地提示词和合集…') : scope.includes('skills') ? tr('搜索 Skill 名称或描述…') : tr('搜索广场标题、标签或作者…')" @keydown="onKeydown" @compositionstart="composing = true; schedule()" @compositionend="composing = false; schedule()" />
+        <input v-model="query" data-testid="global-search-input" data-dialog-autofocus type="search" role="combobox" :aria-label="tr('全局搜索关键词')" aria-autocomplete="list" aria-controls="global-search-results" :aria-expanded="results.length > 0" :aria-activedescendant="results.length ? `global-result-${active}` : undefined" :placeholder="scope === 'clips' ? tr('搜索名称或片段内容') : scope === 'local' ? tr('搜索全部本地提示词和合集…') : scope.includes('skills') ? tr('搜索 Skill 名称或描述…') : tr('搜索广场标题、标签或作者…')" @keydown="onKeydown" @compositionstart="composing = true; schedule()" @compositionend="composing = false; schedule()" />
       </div>
       <p class="global-search-summary" role="status" aria-live="polite">{{ tr(statusText) }}</p>
       <div v-if="error" class="global-search-empty" role="alert">
@@ -27,10 +27,10 @@
         <button v-for="(row, index) in results" :id="`global-result-${index}`" :key="row.item.id" type="button" role="option" tabindex="-1" :aria-selected="active === index" class="global-search-result" @click="choose(row)">
           <span class="global-search-kind"><AppIcon :name="row.item.kind === 'collection' ? 'folder' : 'file'" /></span>
           <span class="global-search-result-copy"><strong><SearchHighlight :text="row.item.title" :query="query" /></strong><small><SearchHighlight :text="row.excerpt || tr('暂无摘要')" :query="query" /></small></span>
-          <span class="global-search-type">{{ row.item.kind === 'skill' ? 'Skill' : row.item.kind === 'collection' ? tr('合集') : tr('提示词') }}</span>
+          <span class="global-search-type">{{ scope === 'clips' ? tr(clipTypes[row.item.kind]) : row.item.kind === 'skill' ? 'Skill' : row.item.kind === 'collection' ? tr('合集') : tr('提示词') }}</span>
         </button>
       </div>
-      <footer class="global-search-footer"><span><kbd>↑</kbd><kbd>↓</kbd> {{ tr('选择') }} <kbd>Enter</kbd> {{ tr('打开') }}</span><span>{{ tr(scopes.find(option => option.id === scope)?.label) + (scope === 'local' || scope === 'skills-local' ? tr(' · 无需联网') : tr(' · 联网搜索')) }}</span></footer>
+      <footer class="global-search-footer"><span><kbd>↑</kbd><kbd>↓</kbd> {{ tr('选择') }} <kbd>Enter</kbd> {{ scope==='clips' ? tr('复制') : tr('打开') }}</span><span>{{ tr(scopes.find(option => option.id === scope)?.label) + (scope === 'clips' || scope === 'local' || scope === 'skills-local' ? tr(' · 无需联网') : tr(' · 联网搜索')) }}</span></footer>
     </section>
   </div>
 </template>
@@ -41,15 +41,17 @@ import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import SearchHighlight from './SearchHighlight.vue';
 import AppIcon from './AppIcon.vue';
 import { skillsSupported, skillsRequest, groupSkills } from '../platform/skills.js';
+import {findClips,copyClip,clipTypes} from '../platform/quickClips.js';
 import { skillMarket } from '../platform/skillMarket.js';
 import { vDialogFocus } from '../lib/dialogFocus.js';
 import { getLocalSetting, listLocalCollections, listLocalPrompts } from '../platform/library.js';
 import { listSquarePage } from '../platform/square.js';
 import { applyQueuedFavorites } from '../platform/syncQueue.js';
 
-const emit = defineEmits(['close', 'select']);
-const scopes = [{ id: 'local', label: '本地库' }, { id: 'square', label: '提示词广场' }, ...(skillsSupported() ? [{ id: 'skills-local', label: '本机 Skills' }, { id: 'skills-square', label: '社区 Skills' }] : [])];
-const scope = ref('local'), query = ref(''), composing = ref(false);
+const emit = defineEmits(['close', 'select','copied']);
+const scopes = [{ id: 'local', label: '本地库' }, ...(window.__TAURI_INTERNALS__ ? [{id:'clips',label:'常用片段'}] : []), { id: 'square', label: '提示词广场' }, ...(skillsSupported() ? [{ id: 'skills-local', label: '本机 Skills' }, { id: 'skills-square', label: '社区 Skills' }] : [])];
+const props=defineProps({initialScope:{type:String,default:'local'}});
+const scope = ref(props.initialScope), query = ref(''), composing = ref(false);
 const results = ref([]), active = ref(0), total = ref(0), loading = ref(false), error = ref(''), blocked = ref(false);
 const resultList = ref(null);
 let timer, controller, request = 0;
@@ -65,6 +67,7 @@ function invalidate() {
   controller?.abort();
   return ++request;
 }
+function setScope(id){if(scope.value==='clips' && id!=='clips')query.value='';scope.value=id;}
 function schedule() {
   invalidate();
   results.value = []; total.value = 0; active.value = 0; error.value = ''; blocked.value = false;
@@ -82,7 +85,7 @@ async function search() {
     if (source === 'local') {
       const [prompts, collections] = await Promise.all([listLocalPrompts({ query: text, categoryId: null }), listLocalCollections({ query: text, categoryId: null })]);
       items = [...prompts.map(item => ({ ...item, kind: 'prompt' })), ...collections.map(item => ({ ...item, kind: 'collection' }))]; count = items.length;
-    } else if (source === 'skills-local') {
+    } else if(source==='clips'){items=await findClips(text);count=items.length;} else if (source === 'skills-local') {
       const snapshot = await skillsRequest({ action: 'snapshot' });
       items = groupSkills(snapshot.skills).filter(item => `${item.name} ${item.description || ''}`.toLowerCase().includes(text.toLowerCase())).map(item => ({ ...item, id: item.key, title: item.name, kind: 'skill' }));
       count = items.length;
@@ -110,7 +113,8 @@ async function search() {
     if (token === request) loading.value = false;
   }
 }
-function choose(row) {
+async function choose(row) {
+  if(scope.value==='clips'){try{await copyClip(row.item.id);emit('copied');emit('close');}catch(e){error.value=String(e.message||e);}return;}
   emit('select', { item: row.item, scope: scope.value });
 }
 async function onKeydown(event) {

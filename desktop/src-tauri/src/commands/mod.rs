@@ -15,3 +15,4 @@ pub mod skills;
 pub(super) fn ensure_authorized(status: reqwest::StatusCode) -> Result<(), String> {
     if status == reqwest::StatusCode::UNAUTHORIZED { Err("SESSION_EXPIRED".into()) } else { Ok(()) }
 }
+pub mod clips;

@@ -58,6 +58,7 @@ pub fn run() {
     }
     builder
         .invoke_handler(tauri::generate_handler![
+            commands::clips::quick_clip,
             commands::skills::skills_command,
             commands::skills::skill_market_request,
             commands::skills::skills_choose_directory,

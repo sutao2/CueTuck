@@ -26,7 +26,7 @@
             v-model="query"
             class="launcher-search"
             type="text"
-            :placeholder="tr('搜索提示词，或输入一个任务…')"
+            :placeholder="scope==='square' ? tr('广场搜索') : tr('搜索提示词或常用片段…')"
             role="combobox"
             aria-autocomplete="list"
             :aria-expanded="!isEmptySearch"
@@ -48,7 +48,7 @@
           <p v-if="feedback" role="status" data-testid="launcher-feedback" class="launcher-empty">{{ tr(feedback) }}</p>
           <p v-if="searching" role="status" class="launcher-empty">{{ tr('正在搜索…') }}</p>
           <div v-if="results.length">
-            <p class="group-title"><span>{{ scope === 'square' ? tr('广场搜索') : tr('本地提示词') }}</span></p>
+            <p class="group-title"><span>{{ scope === 'square' ? tr('广场搜索') : tr('本地结果') }}</span></p>
             <button
               v-for="(row, index) in results"
               :key="row.id"
@@ -72,7 +72,7 @@
               <span class="pill">{{ rowLabel(row) }}</span>
             </button>
           </div>
-          <p v-else-if="!searching && !feedback" class="launcher-empty">{{ tr('没有找到相关提示词') }}</p>
+          <p v-else-if="!searching && !feedback" class="launcher-empty">{{ scope==='square' ? tr('没有找到相关提示词') : tr('没有匹配的本地内容') }}</p>
           <div v-if="query.trim()" class="quick-actions" :aria-label="tr('输入快捷操作')">
             <p class="group-title">{{ tr('使用当前输入') }}</p>
             <button v-for="(action, index) in quickActions" :key="action.action" :aria-selected="selectedIndex === results.length + index" :id="`launcher-result-${results.length + index}`" type="button" role="option" tabindex="-1" class="result-row" :class="[action.action, {active: selectedIndex === results.length + index}]" :disabled="busy" @mousedown.prevent @click="runQuickAction(action.action)" @mousemove="selectWithPointer($event, results.length + index)">
@@ -156,6 +156,7 @@ import { tr, applyInterfaceLanguage } from './platform/interfaceLanguage.js';
 import AppIcon from './components/AppIcon.vue';
 import SearchHighlight from './components/SearchHighlight.vue';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import {findClips,copyClip,clipTypes} from './platform/quickClips.js';
 import { rankLauncherResults } from './lib/launcherRanking.js';
 import { listLocalFavoriteIds } from './platform/localFavorites.js';
 import { squarePromptForUse } from './lib/squarePromptUse.js';
@@ -233,9 +234,10 @@ async function searchCurrent(request) {
       const page = await listSquarePage({query:needle,signal:squareController.signal});
       rows = page.items.slice(0,20).map(row=>({...row,remote:true}));
     } else {
-      const [local, favorites] = await Promise.all([listLocalPrompts({ query: needle }), listLocalFavoriteIds()]);
+      const [local, favorites, clips] = await Promise.all([listLocalPrompts({ query: needle }), listLocalFavoriteIds(),
+        findClips(needle,launcherPreferences.value.resultLimit).catch(()=>{if(request===searchRequest)feedback.value='常用片段暂时无法读取';return [];})]);
       if (request !== searchRequest) return;
-      rows = rankLauncherResults(local, needle, favorites);
+      rows = rankLauncherResults([...local,...clips.map(row=>({...row,clip:true}))], needle, favorites);
     }
     if (request === searchRequest) results.value = rows.slice(0, launcherPreferences.value.resultLimit);
   } catch (error) {
@@ -289,6 +291,7 @@ watch(selectedIndex, async () => {
 });
 
 function rowLabel(row) {
+  if(row.clip)return tr(clipTypes[row.kind]);
   if (row.kind === 'collection') return tr('选择提示词');
   if (row.remote) return tr('使用');
   const count = extractVariables(row.content ?? '').length;
@@ -296,6 +299,7 @@ function rowLabel(row) {
 }
 
 function rowDesc(row) {
+  if(row.clip && row.kind==='password')return '••••••••';
   return String(row.summary || row.content || "")
     .replace(/^\s*(?:\[(?:system(?:\s*\/\s*prompt)?|prompt)\]|(?:system|prompt)\s*:)\s*/i, "")
     .replace(/\s+/g, " ")
@@ -332,6 +336,15 @@ async function viewSquareDetail(row) {
 
 async function activate(row, mode) {
   if (!row || busy.value) return;
+  if (row.clip) {
+    useBusy.value=true;
+    try {
+      await copyClip(row.id);feedback.value='已复制';
+      if(await getLocalSetting('close_launcher_after_use')!=='0'){await launcherCommand('hide_launcher');hidden=true;resetState();}
+    } catch(e){feedback.value=String(e.message||e);}
+    finally{useBusy.value=false;}
+    return;
+  }
   if (row.action) { await runQuickAction(row.action); return; }
   if (row.remote) {
     if (row.kind === 'collection') { await viewSquareDetail(row); return; }
