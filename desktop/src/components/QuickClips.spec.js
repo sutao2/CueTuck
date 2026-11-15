@@ -1,6 +1,8 @@
 import {mount,flushPromises} from '@vue/test-utils';
 import {expect,it,vi,afterEach} from 'vitest';
 import QuickClips from './QuickClips.vue';
+import ClipCategorySidebar from './ClipCategorySidebar.vue';
+import SearchableSelect from './SearchableSelect.vue';
 import Launcher from '../LauncherApp.vue';
 import * as clips from '../platform/quickClips.js';
 import * as library from '../platform/library.js';
@@ -14,9 +16,9 @@ it('does not fetch a saved password when searching, editing its name, or cancell
  const button=t=>wrapper.findAll('button').find(b=>b.text()===t);
  await button('编辑').trigger('click');
  expect(wrapper.get('input[type=password]').element.value).toBe('');
- await wrapper.get('form input:not([type=password])').setValue('Other');
+ await wrapper.get('form input[autocomplete=off]').setValue('Other');
  await wrapper.get('form').trigger('submit');await flushPromises();
- expect(request.mock.calls).toEqual([[{action:'save',id:'saved',kind:'password',title:'Other',value:null}]]);
+ expect(request.mock.calls).toEqual([[{action:'save',id:'saved',kind:'password',title:'Other',value:null,category_id:''}]]);
  await button('删除').trigger('click');await button('取消').trigger('click');expect(request).toHaveBeenCalledTimes(1);
 });
 it('selecting a clip in the launcher copies by ID without updating recent prompt text',async()=>{
@@ -59,4 +61,36 @@ it('reveals only on request and drops both visible and pending secrets on blur o
  expect(wrapper.text()).not.toContain('test-secret');
  await wrapper.findAll('button').find(b=>b.text()==='复制').trigger('click');await flushPromises();
  expect(copy).toHaveBeenCalledWith('one');expect(wrapper.text()).not.toContain('test-secret');
+});
+
+it('combines the active sidebar group with type and keyword and presets new clips',async()=>{
+ const find=vi.spyOn(clips,'findClips').mockResolvedValue([]);
+ const summary={categories:[{id:'work',name:'工作',count:1}],total:2,uncategorized:1};
+ vi.spyOn(clips,'clipCategories').mockResolvedValue(summary);
+ const save=vi.spyOn(clips,'clipRequest').mockResolvedValue('new');
+ wrapper=mount(QuickClips,{props:{category:'work'}});await flushPromises();
+ expect(wrapper.get('h1').text()).toBe('工作');
+ await wrapper.getComponent(SearchableSelect).vm.$emit('update:modelValue','url');
+ await wrapper.get('[type=search]').setValue('alpha');await flushPromises();
+ expect(find).toHaveBeenLastCalledWith('alpha',null,{kind:'url',category_id:'work'});
+ expect(wrapper.text()).toContain('没有匹配的片段');
+ await wrapper.findAll('button').find(b=>b.text()==='添加片段').trigger('click');
+ expect(wrapper.get('input[value=url]').element.checked).toBe(true);
+ await wrapper.get('input[autocomplete=off]').setValue('Site');
+ await wrapper.get('textarea').setValue('https://example.test');
+ await wrapper.get('form').trigger('submit');await flushPromises();
+ expect(save).toHaveBeenCalledWith({action:'save',id:null,title:'Site',kind:'url',value:'https://example.test',category_id:'work'});
+ expect(wrapper.emitted('categories').at(-1)[0]).toEqual(summary);
+});
+it('creates a sidebar group and requires confirmation before removing it',async()=>{
+ const req=vi.spyOn(clips,'clipRequest').mockResolvedValue('work');
+ wrapper=mount(ClipCategorySidebar,{props:{selected:'work',summary:{total:1,uncategorized:0,categories:[{id:'work',name:'工作',count:1}]}}});
+ await wrapper.get('[aria-label=新建分类]').trigger('click');
+ await wrapper.get('input').setValue('个人');await wrapper.get('form').trigger('submit');await flushPromises();
+ expect(req).toHaveBeenCalledWith({action:'create_category',name:'个人'});
+ await wrapper.get('[aria-label="管理分类 工作"]').trigger('click');
+ await wrapper.findAll('button').find(b=>b.text()==='删除').trigger('click');
+ expect(req).toHaveBeenCalledTimes(1);expect(wrapper.text()).toContain('移至未分类');
+ await wrapper.get('form').trigger('submit');await flushPromises();
+ expect(req).toHaveBeenCalledWith({action:'delete_category',id:'work'});expect(wrapper.emitted('select').at(-1)).toEqual(['']);
 });

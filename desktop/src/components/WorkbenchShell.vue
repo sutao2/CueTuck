@@ -60,6 +60,7 @@
           </button>
           <button type="button" class="space-tab" data-space="skills-square" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'square'" :class="{active:contentKind === 'skills' && skillsMode === 'square'}" @click="openSkills('square')"><span class="nav-icon"><AppIcon name="square"/></span><span>{{ tr('Skill 广场') }}</span></button>
         </div>
+        <ClipCategorySidebar v-if="contentKind==='clips'" :summary="clipSummary" :selected="clipCategory" :disabled="!!clipsPage?.editing || hasTaskPage" @select="clipCategory=$event" @changed="clipsPage?.refresh()" />
         <div v-show="contentKind === 'prompts'" class="sidebar-toolbar">
           <span>{{ space === "local" ? t("myCategories") : t("exploreCategories") }}</span>
           <div>
@@ -369,7 +370,7 @@
           </template>
         </section>
       </main>
-      <QuickClips v-if="contentKind==='clips' && !hasTaskPage" ref="clipsPage"/>
+      <QuickClips v-if="contentKind==='clips' && !hasTaskPage" ref="clipsPage" :category="clipCategory" :compact-nav="sidebarCollapsed" @categories="clipSummary=$event" @select-category="clipCategory=$event"/>
       <SkillsPage v-if="skillsVisited" v-show="contentKind === 'skills' && !hasTaskPage" ref="skillsPage" :active="contentKind==='skills' && !settingsOpen && !hasTaskPage" :mode="skillsMode" :category="skillsCategories[skillsMode]" @categories="skillsCategorySummary[$event.mode] = $event" @busy="skillsBusy = $event"/>
       <div v-show="hasTaskPage" class="task-host" data-testid="task-host">
     <section v-if="addingCategory" v-page-focus="closeCategoryDialog" class="workspace-page category-page" role="region" aria-labelledby="category-page-title">
@@ -667,6 +668,7 @@ onUnmounted(() => stopUpdateChecks?.());
 import SquareDetailModal from "./SquareDetailModal.vue";
 import MyPublications from './MyPublications.vue';
 import QuickClips from './QuickClips.vue';
+import ClipCategorySidebar from './ClipCategorySidebar.vue';
 import ContentUpdates from './ContentUpdates.vue';
 import { useContentUpdateBadges, localUpdateKey } from '../platform/contentUpdateBadges.js';
 import { contentVersions, localContentUpdate } from '../platform/contentVersions.js';
@@ -767,7 +769,7 @@ async function loadLauncherShortcut() {
 const emit = defineEmits(["open-launcher", "library-changed"]);
 
 const space = ref("local");
-const clipsPage=ref(null);
+const clipsPage=ref(null), clipCategory=ref(null), clipSummary=ref({categories:[],total:0,uncategorized:0});
 const contentKind = ref("prompts"), skillsMode = ref("local"), skillsVisited = ref(false), skillsBusy = ref(false), skillsPage = ref(null);
 const skillsCategories = ref({local:'',square:''}), skillsCategorySummary = ref({local:null,square:null});
 function selectSkillCategory(id) { if (skillsBusy.value) return; if (skillsCategories.value[skillsMode.value] === id) skillsPage.value?.showList?.(); else skillsCategories.value[skillsMode.value] = id; }
@@ -2277,6 +2279,7 @@ onMounted(async () => {
   await refreshFavorites();
   if (window.__TAURI_INTERNALS__) {
     const { listen } = await import("@tauri-apps/api/event");
+    extraLauncherUnlisteners.push(await listen('quick-clips-changed', () => clipsPage.value?.refresh()));
     extraLauncherUnlisteners.push(await listen('local-library-changed', () => { reloadPrompts().catch(() => {}); }));
     extraLauncherUnlisteners.push(await listen('launcher-navigate', ({payload}) => {
       const action = () => {
