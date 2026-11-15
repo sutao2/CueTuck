@@ -67,7 +67,21 @@ jobs:
           if (@($testExe).Count -ne 1) { throw 'Expected one native library test executable' }
           & $mt.FullName -nologo -manifest $manifest "-outputresource:$testExe;#1"
           if ($LASTEXITCODE -ne 0) { throw 'Could not embed application manifest in Windows test harness' }
-          cargo test --locked --manifest-path src-tauri/Cargo.toml
+          # Run these exact executables. A second cargo test can relink the test harness and discard the manifest.
+          $tests = $messages | ForEach-Object { $_ | ConvertFrom-Json } | Where-Object { $_.executable -and $_.profile.test } | Select-Object -ExpandProperty executable -Unique
+          Push-Location src-tauri
+          try {
+            foreach ($exe in $tests) {
+              Write-Host "Running $exe"
+              & $exe
+              if ($LASTEXITCODE -ne 0) {
+                Get-WinEvent -FilterHashtable @{LogName='System'; Id=26; StartTime=(Get-Date).AddMinutes(-5)} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Message
+                throw "Native test executable failed: $LASTEXITCODE"
+              }
+            }
+            cargo test --locked --doc
+            if ($LASTEXITCODE -ne 0) { throw 'Windows doctests failed' }
+          } finally { Pop-Location }
       - name: Build production-connected preview NSIS
         run: npx tauri build --bundles nsis --config src-tauri/tauri.preview.conf.json --ci
       - name: Package and smoke-test portable ZIP before installation
