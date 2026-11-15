@@ -52,7 +52,8 @@ async function submit(){
 </script>
 <style scoped>
 .mini-button svg{width:14px;height:14px;vertical-align:middle}
-.manage{flex:none;opacity:0}
+.tree-child-row{display:grid;grid-template-columns:minmax(0,1fr) 22px}
+.manage{opacity:0}
 .tree-child-row:hover .manage,.tree-child-row:focus-within .manage{opacity:1}
 .group-form{display:grid;gap:8px;padding:10px 6px;font-size:12px}
 .group-form label,.group-form input{display:block;width:100%}
