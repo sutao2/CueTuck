@@ -163,7 +163,7 @@ function render() {
   $('#footer').hidden=!['home','download'].includes(route);
   document.querySelectorAll('[data-nav]').forEach(a=>{ a.classList.toggle('active',a.dataset.nav===route); if(a.dataset.nav===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current'); });
   $('.nav-end .button').href='#download'; $('.nav-end .button').textContent='下载';
-  document.title=`${{home:'提示词启动器，一键唤起灵感',app:'提示词广场',skills:'Skill 广场',favorites:'本页暂存',drafts:'本页草稿',download:'下载'}[route]} · CueTuck 拾用`;
+  document.title=`${{home:'常用资料，随手取用',app:'提示词广场',skills:'Skill 广场',favorites:'本页暂存',drafts:'本页草稿',download:'下载'}[route]} · CueTuck`;
   if (!['home','download'].includes(route)) { fillDictionaries(); loadList(); }
   window.scrollTo(0,0);
 }

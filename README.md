@@ -2,7 +2,7 @@
   <img src="desktop/src/assets/app-icon.png" width="88" alt="CueTuck">
 </p>
 
-# CueTuck · 拾用
+# CueTuck
 
 **Your prompts, a shortcut away.**
 

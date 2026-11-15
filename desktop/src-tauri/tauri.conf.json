@@ -15,7 +15,7 @@
       {
         "label": "main",
         "dragDropEnabled": false,
-        "title": "拾用",
+        "title": "CueTuck",
         "width": 1100,
         "height": 720,
         "minWidth": 800,
@@ -30,7 +30,7 @@
       },
       {
         "label": "launcher",
-        "title": "拾用启动器",
+        "title": "CueTuck 启动器",
         "url": "launcher.html",
         "width": 620,
         "height": 64,

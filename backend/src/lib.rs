@@ -2295,7 +2295,7 @@ mod tests {
                 assert_eq!(response.headers()["referrer-policy"], "no-referrer");
                 let html = String::from_utf8(to_bytes(response.into_body(), usize::MAX).await.unwrap().to_vec()).unwrap();
                 assert!(html.contains("授权完成"));
-                assert!(html.contains("切回唤词"));
+                assert!(html.contains("切回 CueTuck"));
                 for sensitive in ["fixture-code", signed.as_str(), flow, "completion@promptark.local", "access_token", "refresh_token"] {
                     assert!(!html.contains(sensitive));
                 }

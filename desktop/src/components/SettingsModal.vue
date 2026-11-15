@@ -27,7 +27,7 @@
             <div class="settings-group">
             <p v-if="prefError" data-testid="pref-error">{{ tr(prefError) }}</p>
             <label class="setting-row">
-              <span class="setting-copy"><strong>{{ tr('开机启动') }}</strong><small>{{ tr('登录系统后自动打开拾用。') }}</small></span>
+              <span class="setting-copy"><strong>{{ tr('开机启动') }}</strong><small>{{ tr('登录系统后自动打开 CueTuck。') }}</small></span>
               <input
                 type="checkbox"
                 data-testid="launch-at-login"
