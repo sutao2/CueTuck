@@ -56,9 +56,23 @@ it('defers the first device request until foreground and unlocks only on confirm
   wrapper=mount(Gate,{slots:{default:workspace}});await flushPromises();
   expect(deviceRequests()).toBe(0);
   expect(wrapper.find('[data-private]').exists()).toBe(false);
+  expect(wrapper.find('input[type=password]').exists()).toBe(false);
+  expect(wrapper.get('.unlock-alternative').text()).toBe('使用解锁口令');
   deviceVerified=true;document.hasFocus.mockReturnValue(true);
   window.dispatchEvent(new Event('focus'));await flushPromises();
   expect(deviceRequests()).toBe(1);
+  expect(wrapper.get('[data-private]').exists()).toBe(true);
+});
+it('switches to the passphrase field on request and keeps that choice on refocus',async()=>{
+  document.hasFocus.mockReturnValue(false);
+  wrapper=mount(Gate,{attachTo:document.body,slots:{default:workspace}});await flushPromises();
+  await wrapper.get('.unlock-alternative').trigger('click');await flushPromises();
+  const input=wrapper.get('input[type=password]');
+  expect(document.activeElement).toBe(input.element);
+  document.hasFocus.mockReturnValue(true);
+  window.dispatchEvent(new Event('focus'));await flushPromises();
+  expect(deviceRequests()).toBe(0);
+  await input.setValue('correct-password');await wrapper.get('form').trigger('submit');await flushPromises();
   expect(wrapper.get('[data-private]').exists()).toBe(true);
 });
 it('allows an explicit retry after cancellation',async()=>{

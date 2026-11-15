@@ -6,11 +6,17 @@
       <img src="../assets/app-icon.png" alt="CueTuck" width="44" height="44">
       <template v-if="status?.locked">
         <h1>{{ tr('解锁工作台') }}</h1>
-        <button v-if="status.device && available" class="button" :class="{'primary-button':!passwordFirst}" :disabled="busy" @click="unlockWithDevice">{{ tr('使用 {0} 解锁', [deviceName]) }}</button>
-        <form @submit.prevent="perform({action:'unlock', password:current})">
-          <label>{{ tr('解锁口令') }}<input ref="unlockInput" v-model="current" @input="preferPassword" type="password" required autocomplete="current-password" :disabled="busy"></label>
-          <button class="button" :class="{'primary-button':!status.device || !available || passwordFirst}" :disabled="busy">{{ tr('解锁') }}</button>
-        </form>
+        <template v-if="status.device && !passwordFirst">
+          <button class="button primary-button" :disabled="busy || !available" @click="unlockWithDevice">{{ tr('使用 {0} 解锁', [deviceName]) }}</button>
+          <button type="button" class="unlock-alternative" :disabled="busy" @click="showPassword">{{ tr('使用解锁口令') }}</button>
+        </template>
+        <template v-else>
+          <form @submit.prevent="perform({action:'unlock', password:current})">
+            <label>{{ tr('解锁口令') }}<input ref="unlockInput" v-model="current" type="password" required autocomplete="current-password" :disabled="busy"></label>
+            <button class="button primary-button" :disabled="busy">{{ tr('解锁') }}</button>
+          </form>
+          <button v-if="status.device && available" type="button" class="unlock-alternative" :disabled="busy" @click="unlockWithDevice">{{ tr('使用 {0} 解锁', [deviceName]) }}</button>
+        </template>
       </template>
       <template v-else><h1>{{ tr('正在检查应用锁') }}</h1><button v-if="error" class="button" @click="initialize">{{ tr('重试') }}</button></template>
       <p v-if="error" role="alert">{{ tr(error) }}</p>
@@ -75,13 +81,14 @@ function cancelSettings(event) { if (busy.value) event.preventDefault(); else cl
 async function probeDevice() {
   try { available.value = await invoke('app_lock_device_available'); } catch { available.value=false; }
 }
-function preferPassword() {
+async function showPassword() {
   pendingDevice.value=false; passwordFirst.value=true;
+  await nextTick(); unlockInput.value?.focus();
 }
 async function unlockWithDevice() {
-  pendingDevice.value=false;
+  pendingDevice.value=false; passwordFirst.value=false; current.value='';
   await perform({action:'unlock_device'});
-  if (status.value?.locked) { preferPassword(); await nextTick(); unlockInput.value?.focus(); }
+  if (status.value?.locked) await showPassword();
 }
 function tryPreferredDevice() {
   if (pendingDevice.value && available.value && !busy.value && status.value?.locked && !document.hidden && document.hasFocus()) {
@@ -104,7 +111,7 @@ async function refresh() {
         available.value=false; passwordFirst.value=false; pendingDevice.value=next.device;
         if (next.device) await probeDevice();
         await nextTick();
-        if (!available.value && status.value?.locked) unlockInput.value?.focus();
+        if (!available.value && status.value?.locked) await showPassword();
       }
     }
   } catch {
@@ -164,6 +171,9 @@ onUnmounted(()=>{ disposed=true; ++revision; stop?.(); window.removeEventListene
 .lock-card,.lock-card form,.lock-dialog form,.lock-dialog label,.lock-card label { display:grid; gap:10px; }
 .lock-card h1,.lock-heading h2 { margin:0; color:var(--text); }
 .lock-card h1 { margin:8px 0; }
+.unlock-alternative { justify-self:end; padding:5px 2px; color:var(--muted); background:none; border:0; font:inherit; font-size:13px; cursor:pointer; }
+.unlock-alternative:hover,.unlock-alternative:focus-visible { color:var(--text); text-decoration:underline; }
+.unlock-alternative:disabled { cursor:default; opacity:.6; }
 .lock-dialog { padding:24px; border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow-menu); background:var(--surface); color:var(--text); }
 .lock-dialog::backdrop { background:rgba(0,0,0,.3); }
 .lock-heading { display:flex; justify-content:space-between; align-items:center; }
