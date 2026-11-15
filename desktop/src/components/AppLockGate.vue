@@ -2,24 +2,24 @@
   <slot v-if="!native || status && !status.locked" />
   <main v-else-if="!launcher" class="lock-page">
     <header data-tauri-drag-region><span v-if="status?.locked" class="lock-indicator" :class="{windows}" role="img" :aria-label="tr('已锁定')"><AppIcon name="lock" /></span><WindowsWindowControls v-if="windows" /></header>
-    <section class="lock-card">
-      <img src="../assets/app-icon.png" alt="CueTuck" width="44" height="44">
+    <section class="lock-card" aria-labelledby="unlock-title">
+      <img class="lock-brand" src="../assets/app-icon.png" alt="CueTuck" width="56" height="56">
+      <h1 id="unlock-title">{{ tr(status?.locked ? '解锁工作台' : '正在检查应用锁') }}</h1>
       <template v-if="status?.locked">
-        <h1>{{ tr('解锁工作台') }}</h1>
         <template v-if="status.device && !passwordFirst">
-          <button class="button primary-button" :disabled="busy || !available" @click="unlockWithDevice">{{ tr('使用 {0} 解锁', [deviceName]) }}</button>
+          <button class="button primary-button device-unlock" :disabled="busy || !available" @click="unlockWithDevice"><AppIcon name="unlock" />{{ tr('使用 {0} 解锁', [deviceName]) }}</button>
           <button type="button" class="unlock-alternative" :disabled="busy" @click="showPassword">{{ tr('使用解锁口令') }}</button>
         </template>
         <template v-else>
-          <form @submit.prevent="perform({action:'unlock', password:current})">
-            <label>{{ tr('解锁口令') }}<input ref="unlockInput" v-model="current" type="password" required autocomplete="current-password" :disabled="busy"></label>
-            <button class="button primary-button" :disabled="busy">{{ tr('解锁') }}</button>
+          <form class="unlock-entry" @submit.prevent="perform({action:'unlock', password:current})">
+            <input ref="unlockInput" v-model="current" type="password" required autocomplete="current-password" :aria-label="tr('解锁口令')" :placeholder="tr('解锁口令')" :aria-describedby="error ? 'unlock-error' : undefined" :disabled="busy">
+            <button class="button primary-button" type="submit" :disabled="busy">{{ tr('解锁') }}</button>
           </form>
           <button v-if="status.device && available" type="button" class="unlock-alternative" :disabled="busy" @click="unlockWithDevice">{{ tr('使用 {0} 解锁', [deviceName]) }}</button>
         </template>
       </template>
-      <template v-else><h1>{{ tr('正在检查应用锁') }}</h1><button v-if="error" class="button" @click="initialize">{{ tr('重试') }}</button></template>
-      <p v-if="error" role="alert">{{ tr(error) }}</p>
+      <button v-else-if="error" class="button" @click="initialize">{{ tr('重试') }}</button>
+      <p v-if="error" id="unlock-error" role="alert">{{ tr(error) }}</p>
     </section>
   </main>
 
@@ -165,20 +165,33 @@ onUnmounted(()=>{ disposed=true; ++revision; stop?.(); window.removeEventListene
 </script>
 
 <style scoped>
-.lock-page { min-height:100vh; display:grid; place-items:center; background:var(--surface); color:var(--text); }
+.lock-page { height:100%; overflow:auto; display:flex; flex-direction:column; padding:calc(var(--titlebar-height) + 16px) 16px 32px; background:var(--sidebar); color:var(--text); }
 .lock-page header { position:fixed; inset:0 0 auto; height:var(--titlebar-height); }
-.lock-card,.lock-dialog { width:min(400px,calc(100vw - 32px)); }
-.lock-card,.lock-card form,.lock-dialog form,.lock-dialog label,.lock-card label { display:grid; gap:10px; }
-.lock-card h1,.lock-heading h2 { margin:0; color:var(--text); }
-.lock-card h1 { margin:8px 0; }
-.unlock-alternative { justify-self:end; padding:5px 2px; color:var(--muted); background:none; border:0; font:inherit; font-size:13px; cursor:pointer; }
+.lock-card { flex:none; display:grid; width:min(100%, 352px); margin:auto; padding:32px 24px; border:1px solid var(--line); border-radius:20px; background:var(--surface); box-shadow:0 2px 8px rgba(0,0,0,.04); }
+.lock-brand { justify-self:center; }
+.lock-card h1 { margin:12px 0 24px; color:var(--text); font-size:20px; font-weight:600; line-height:28px; text-align:center; text-wrap:balance; }
+.unlock-entry { display:flex; align-items:center; gap:4px; padding:4px; border:1px solid var(--control-border); border-radius:var(--radius-control); }
+.unlock-entry:focus-within { border-color:var(--muted); box-shadow:0 0 0 1px var(--muted); }
+@media (forced-colors:active) {
+  .unlock-entry:focus-within { outline:2px solid Highlight; }
+}
+.unlock-entry input { flex:1; min-width:0; padding:6px 8px; border:0; outline:0; background:transparent; color:var(--text); font:inherit; }
+.unlock-entry input::placeholder { color:var(--muted); }
+.unlock-entry .button { min-height:32px; padding:4px 12px; border-radius:8px; }
+.device-unlock { min-height:40px; gap:8px; border-radius:var(--radius-control); }
+.device-unlock .app-icon { width:16px; height:16px; flex:none; }
+.lock-card [role=alert] { margin:12px 0 0; font-size:13px; overflow-wrap:anywhere; }
+.lock-dialog { width:min(400px,calc(100vw - 32px)); }
+.lock-dialog form,.lock-dialog label { display:grid; gap:10px; }
+.lock-heading h2 { margin:0; color:var(--text); }
+.unlock-alternative { justify-self:end; margin-top:8px; padding:4px 2px; color:var(--muted); background:none; border:0; font:inherit; font-size:13px; cursor:pointer; }
 .unlock-alternative:hover,.unlock-alternative:focus-visible { color:var(--text); text-decoration:underline; }
 .unlock-alternative:disabled { cursor:default; opacity:.6; }
 .lock-dialog { padding:24px; border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow-menu); background:var(--surface); color:var(--text); }
 .lock-dialog::backdrop { background:rgba(0,0,0,.3); }
 .lock-heading { display:flex; justify-content:space-between; align-items:center; }
 .lock-dialog p { color:var(--muted); line-height:1.5; }
-.lock-card input,.lock-dialog :is(input,select) { width:100%; padding:9px; background:var(--surface); color:var(--text); border:1px solid var(--control-border); border-radius:var(--radius-control); font:inherit; }
+.lock-dialog :is(input,select) { width:100%; padding:9px; background:var(--surface); color:var(--text); border:1px solid var(--control-border); border-radius:var(--radius-control); font:inherit; }
 .lock-dialog label.device-choice { display:flex; align-items:center; }
 .lock-dialog .device-choice input { width:auto; }
 .lock-page [role=alert],.lock-dialog [role=alert] { color:var(--danger); }
@@ -186,6 +199,6 @@ onUnmounted(()=>{ disposed=true; ++revision; stop?.(); window.removeEventListene
 .lock-indicator.windows { right:148px; }
 .lock-indicator .app-icon { width:16px; height:16px; }
 .lock-dialog form { gap:14px; }
-.lock-dialog label,.lock-card label { gap:6px; font-size:13px; }
+.lock-dialog label { gap:6px; font-size:13px; }
 .lock-heading h2 { font-size:19px; }
 </style>
