@@ -13,12 +13,15 @@ public static class ChromeSmoke {
   [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr h);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int command);
 }
 '@
 $App.Refresh()
 $handle = $App.MainWindowHandle
 if ($handle -eq [IntPtr]::Zero) { throw 'Main window handle missing' }
+[void][ChromeSmoke]::ShowWindow($handle,9)
+[void][ChromeSmoke]::SetForegroundWindow($handle)
 $rect = New-Object ChromeSmoke+Rect
 $origin = New-Object ChromeSmoke+Point
 if (-not [ChromeSmoke]::GetWindowRect($handle,[ref]$rect) -or -not [ChromeSmoke]::ClientToScreen($handle,[ref]$origin)) { throw 'Window geometry unavailable' }
@@ -29,6 +32,9 @@ function Invoke-WindowButton([string]$name) {
     $root = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
     $button = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$condition)
     if ($null -ne $button) {
+      Write-Host "Invoking $name on $($button.Current.ControlType.ProgrammaticName) ($($button.Current.FrameworkId)), enabled=$($button.Current.IsEnabled), offscreen=$($button.Current.IsOffscreen)."
+      if (-not $button.Current.IsEnabled -or $button.Current.IsOffscreen) { Start-Sleep -Milliseconds 200; continue }
+      $button.SetFocus()
       $pattern = $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
       $pattern.Invoke()
       return
