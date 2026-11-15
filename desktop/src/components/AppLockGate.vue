@@ -6,11 +6,11 @@
       <img src="../assets/app-icon.png" alt="CueTuck" width="44" height="44">
       <template v-if="status?.locked">
         <h1>{{ tr('解锁工作台') }}</h1>
+        <button v-if="status.device && available" class="button" :class="{'primary-button':!passwordFirst}" :disabled="busy" @click="unlockWithDevice">{{ tr('使用 {0} 解锁', [deviceName]) }}</button>
         <form @submit.prevent="perform({action:'unlock', password:current})">
-          <label>{{ tr('解锁口令') }}<input ref="unlockInput" v-model="current" type="password" required autocomplete="current-password" :disabled="busy"></label>
-          <button class="button primary-button" :disabled="busy">{{ tr('解锁') }}</button>
+          <label>{{ tr('解锁口令') }}<input ref="unlockInput" v-model="current" @input="preferPassword" type="password" required autocomplete="current-password" :disabled="busy"></label>
+          <button class="button" :class="{'primary-button':!status.device || !available || passwordFirst}" :disabled="busy">{{ tr('解锁') }}</button>
         </form>
-        <button v-if="status.device && available" class="button" :disabled="busy" @click="perform({action:'unlock_device'})">{{ tr('使用 {0} 解锁', [deviceName]) }}</button>
       </template>
       <template v-else><h1>{{ tr('正在检查应用锁') }}</h1><button v-if="error" class="button" @click="initialize">{{ tr('重试') }}</button></template>
       <p v-if="error" role="alert">{{ tr(error) }}</p>
@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, provide, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { tr } from '../platform/interfaceLanguage.js';
@@ -67,6 +67,7 @@ const actions = computed(()=>[
   {value:'disable',label:tr('关闭应用锁')},
 ]);
 const unlockInput = ref(null), dialog = ref(null);
+const pendingDevice = ref(false), passwordFirst = ref(false);
 let stop, revision = 0, disposed = false;
 function clearForm() { current.value=''; password.value=''; confirmation.value=''; error.value=''; }
 function closeSettings() { dialog.value?.close(); manage.value=false; clearForm(); }
@@ -74,6 +75,20 @@ function cancelSettings(event) { if (busy.value) event.preventDefault(); else cl
 async function probeDevice() {
   try { available.value = await invoke('app_lock_device_available'); } catch { available.value=false; }
 }
+function preferPassword() {
+  pendingDevice.value=false; passwordFirst.value=true;
+}
+async function unlockWithDevice() {
+  pendingDevice.value=false;
+  await perform({action:'unlock_device'});
+  if (status.value?.locked) { preferPassword(); await nextTick(); unlockInput.value?.focus(); }
+}
+function tryPreferredDevice() {
+  if (pendingDevice.value && available.value && !busy.value && status.value?.locked && !document.hidden && document.hasFocus()) {
+    void unlockWithDevice();
+  }
+}
+watch([pendingDevice, available, busy], tryPreferredDevice, {flush:'post'});
 async function refresh() {
   const token = ++revision;
   try {
@@ -82,12 +97,14 @@ async function refresh() {
     if (token !== revision || disposed) return;
     const entering = next.locked && !status.value?.locked;
     status.value = next;
+    if (!next.locked) pendingDevice.value=false;
     if (entering) {
       closeSettings();
       if (!props.launcher) {
+        available.value=false; passwordFirst.value=false; pendingDevice.value=next.device;
+        if (next.device) await probeDevice();
         await nextTick();
-        unlockInput.value?.focus();
-        if (next.device) void probeDevice();
+        if (!available.value && status.value?.locked) unlockInput.value?.focus();
       }
     }
   } catch {
@@ -135,9 +152,9 @@ function saveSettings() {
 if (native && !props.launcher) provide('appLock', {
   enabled:computed(()=>Boolean(status.value?.enabled)), openSettings, lock:dirty=>dirty===true ? openSettings('discard') : perform({action:'lock'}),
 });
-onMounted(()=>{ if (native) { void initialize(); window.addEventListener('focus', onFocus); } });
-function onFocus() { if (stop) void refresh(); }
-onUnmounted(()=>{ disposed=true; ++revision; stop?.(); window.removeEventListener('focus',onFocus); });
+onMounted(()=>{ if (native) { void initialize(); window.addEventListener('focus', onFocus); document.addEventListener('visibilitychange', tryPreferredDevice); } });
+function onFocus() { if (stop) void refresh().then(tryPreferredDevice); }
+onUnmounted(()=>{ disposed=true; ++revision; stop?.(); window.removeEventListener('focus',onFocus); document.removeEventListener('visibilitychange',tryPreferredDevice); });
 </script>
 
 <style scoped>

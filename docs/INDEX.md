@@ -7,7 +7,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
 | [plans/2026-11-15-beta36-release.md](plans/2026-11-15-beta36-release.md) | 验收中 | 发布应用锁与常用片段 | 靛蓝品牌图标、双平台安装包、口令和设备解锁验收 |
-| [specs/app-lock/spec.md](specs/app-lock/spec.md) | 现行 | 桌面解锁与本机访问 | 设置中的应用锁、顶栏锁定和设备验证 |
+| [specs/app-lock/spec.md](specs/app-lock/spec.md) | 现行 | 桌面解锁与本机访问 | 设置中的应用锁、顶栏锁定和优先设备解锁 |
 | [plans/2026-11-15-app-lock.md](plans/2026-11-15-app-lock.md) | 已实施 | 修改应用解锁与本机导航 | 口令、设备验证与密码片段验收 |
 | [plans/2026-11-15-quick-clips.md](plans/2026-11-15-quick-clips.md) | 实施计划 | 常用片段与更新体验 | 独立片段库及按版本跳过提醒 |
 | [specs/quick-clips/spec.md](specs/quick-clips/spec.md) | 现行 | 保存和检索片段 | 主动保存、按需显示密码与原样复制 |

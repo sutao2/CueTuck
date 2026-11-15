@@ -237,6 +237,47 @@ mod tests {
             text
         );
     }
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    #[test]
+    #[ignore = "requires a writable test-user credential store"]
+    fn password_clip_roundtrip_in_system_store() {
+        let mut database = Connection::open_in_memory().unwrap();
+        let value = uuid::Uuid::new_v4().to_string();
+        let saved = run(
+            &mut database,
+            Request::Save {
+                id: None,
+                kind: "password".into(),
+                title: "QA".into(),
+                value: Some(value.clone()),
+            },
+            credential,
+        )
+        .unwrap();
+        let id = saved.as_str().unwrap().to_owned();
+        let value_read = run(
+            &mut database,
+            Request::CopyValue { id: id.clone() },
+            credential,
+        );
+        let body: Option<String> = database
+            .query_row("SELECT body FROM clips WHERE id=?1", [&id], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        run(
+            &mut database,
+            Request::Delete { id: id.clone() },
+            credential,
+        )
+        .unwrap();
+        assert!(matches!(
+            credential(&id).unwrap().get_password(),
+            Err(keyring::Error::NoEntry)
+        ));
+        assert!(body.is_none());
+        assert!(value_read.unwrap().as_str() == Some(&value));
+    }
     #[test]
     fn credentials_fail_closed_and_search_never_reads_a_secret() {
         let mut c = Connection::open_in_memory().unwrap();
