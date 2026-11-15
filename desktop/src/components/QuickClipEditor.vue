@@ -66,7 +66,7 @@ async function save(){
     const id=await clipRequest({action:'save',id:props.initial.id || null,kind:kind.value,title:title.value.trim(),
       value:kind.value==='password' && props.initial.id && !value.value ? null : value.value,category_id:category.value});
     value.value='';
-    emit('saved',{id,kind:kind.value,category_id:category.value});
+    emit('saved',{id,title:title.value.trim(),kind:kind.value,category_id:category.value});
   }catch(e){error.value=String(e.message || e);}
   finally{busy.value=false;emit('busy',false);}
 }

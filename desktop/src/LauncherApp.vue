@@ -13,6 +13,7 @@
         'host-windows': host === 'windows',
         'is-collapsed': isEmptySearch,
         'is-fill': step === 'fill',
+        'is-clip': step === 'clip',
         'is-search': step === 'search',
       }"
       data-testid="launcher-chrome"
@@ -38,6 +39,7 @@
           />
           <span class="launcher-window-tools">
             <button v-if="scope === 'square'" class="pill" type="button" @click="scope = 'local'">{{ tr('返回本地') }}</button><span v-else class="pill">{{ tr('本地') }}</span>
+            <button v-if="scope==='local' && !query.trim()" class="launcher-close-btn clip-add" type="button" :aria-label="tr('创建常用片段')" :title="tr('创建常用片段')" :disabled="busy" @click="openClip"><AppIcon name="plus"/></button>
             <button class="launcher-close-btn" type="button" :title="tr('关闭 (Esc)')" :disabled="busy" @click="resetAndHide">
               Esc
             </button>
@@ -64,7 +66,7 @@
               @click="activate(row, 'default')"
               @mousemove="selectWithPointer($event, index)"
             >
-              <span class="result-icon"><AppIcon :name="row.kind === 'collection' ? 'folder' : 'file'" /></span>
+              <span class="result-icon"><AppIcon :name="row.clip ? clipIcons[row.kind] : row.kind === 'collection' ? 'folder' : 'file'" /></span>
               <span class="result-copy">
                 <span class="row-title" :title="row.title"><SearchHighlight :text="row.title" :query="query" /></span>
                 <span class="row-desc" :title="rowDesc(row)">{{ rowDesc(row) }}</span>
@@ -92,6 +94,12 @@
             <button v-if="scope === 'square' && searchRows[selectedIndex]?.remote" type="button" class="search-action" :disabled="busy" @click="viewSquareDetail(searchRows[selectedIndex])">{{ tr('查看详情') }}</button>
           </div>
         </footer>
+      </template>
+
+      <template v-else-if="step === 'clip'">
+        <header class="launcher-search-wrap"><AppIcon name="copy" class="search-symbol"/><span class="row-title">{{ tr('创建常用片段') }}</span></header>
+        <QuickClipEditor :initial="clipDraft" :groups="clipGroups" @busy="actionBusy=$event" @cancel="cancelClip" @saved="clipSaved"/>
+        <p v-if="clipGroupError" class="clip-warning" role="alert">{{ tr(clipGroupError) }}</p>
       </template>
 
       <template v-else-if="step === 'draft'">
@@ -155,8 +163,9 @@
 import { tr, applyInterfaceLanguage } from './platform/interfaceLanguage.js';
 import AppIcon from './components/AppIcon.vue';
 import SearchHighlight from './components/SearchHighlight.vue';
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import {findClips,copyClip,clipTypes} from './platform/quickClips.js';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from "vue";
+import QuickClipEditor from './components/QuickClipEditor.vue';
+import {findClips,copyClip,clipTypes,clipIcons,clipCategories} from './platform/quickClips.js';
 import { rankLauncherResults } from './lib/launcherRanking.js';
 import { listLocalFavoriteIds } from './platform/localFavorites.js';
 import { squarePromptForUse } from './lib/squarePromptUse.js';
@@ -200,10 +209,12 @@ const selectionBusy = ref(false);
 const actionBusy = ref(false);
 const busy = computed(() => useBusy.value || selectionBusy.value || actionBusy.value);
 const scope = ref('local'), draftTitle = ref(''), draftContent = ref(''), optimizedDraft = ref(false), draftTitleEl = ref(null);
+const clipDraft=shallowRef(null),clipGroups=ref([]),clipGroupError=ref('');
 const quickActions = computed(() => query.value.trim() ? [
   {action:'create',title:'创建提示词',icon:'plus'},
   {action:'optimize',title:'AI 优化提示词',icon:'sparkles'},
   {action:'square',title:'搜索提示词广场',icon:'search'},
+  ...(scope.value==='local' ? [{action:'clip',title:'创建常用片段',icon:'copy'}] : []),
 ] : []);
 const searchRows = computed(() => [...results.value, ...quickActions.value]);
 let searchTimer, squareController;
@@ -255,8 +266,40 @@ async function openDestination(destination, id) {
   if (!window.__TAURI_INTERNALS__) throw new Error('请在桌面客户端打开此页面');
   await invokeCommand('open_launcher_destination',{destination,id:id||null});
 }
+async function openClip() {
+  if(busy.value || scope.value!=='local')return;
+  const text=query.value;
+  const draft={kind:/^https?:\/\/[^\s]+$/i.test(text.trim()) ? 'url' : 'text',content:text};
+  clipDraft.value=draft;
+  clipGroups.value=[];
+  clipGroupError.value='';
+  step.value='clip';
+  try{
+    const summary=await clipCategories();
+    if(clipDraft.value===draft)clipGroups.value=summary.categories;
+  }catch(e){if(clipDraft.value===draft)clipGroupError.value=String(e.message || e);}
+}
+function cancelClip(){
+  clipDraft.value=null;
+  backToSearch();
+}
+async function clipSaved(item){
+  clipDraft.value=null;
+  step.value='search';
+  const changed=query.value!==item.title;
+  query.value=item.title;
+  await nextTick();
+  if(!changed)await searchCurrent(++searchRequest);
+  feedback.value='片段已保存';
+  if(window.__TAURI_INTERNALS__){
+    try{const {emit}=await import('@tauri-apps/api/event');await emit('quick-clips-changed');}
+    catch{feedback.value='已保存到本地；主窗口请刷新查看。';}
+  }
+  await focusCurrent();
+}
 async function runQuickAction(action) {
   if (busy.value || !query.value.trim()) return;
+  if (action === 'clip') { await openClip();return; }
   if (action === 'create') { draftTitle.value=query.value.trim().split('\n')[0].slice(0,80);draftContent.value=query.value;optimizedDraft.value=false;step.value='draft';await nextTick();draftTitleEl.value?.focus();return; }
   if (action === 'square') { if(scope.value==='square') {clearTimeout(searchTimer);squareController?.abort();searching.value=true;searchCurrent(++searchRequest);} else scope.value='square';return; }
   actionBusy.value=true;
@@ -313,7 +356,10 @@ function onSearchKey(event) {
     move: (delta) => {
       const count = searchRows.value.length;
       if (!count) return;
-      selectedIndex.value = ((selectedIndex.value + delta) % count + count) % count;
+      const next = selectedIndex.value + delta;
+      selectedIndex.value = Math.abs(delta) > 1
+        ? Math.max(0, Math.min(next, count - 1))
+        : (next + count) % count;
     },
     moveTo: (index) => {
       selectedIndex.value = Math.max(0, Math.min(index, searchRows.value.length - 1));
@@ -398,7 +444,8 @@ function onCanvasKey(event) {
     event.preventDefault();
     event.stopPropagation();
     if (event.repeat || busy.value) return;
-    if (event.key === "Escape") resetAndHide();
+    if (event.key === "Escape" && step.value === "clip") cancelClip();
+    else if (event.key === "Escape") resetAndHide();
     else copyRendered();
   } else if (event.key === "Enter" && event.repeat) event.preventDefault();
 }
@@ -416,7 +463,7 @@ function onVariableKey(event, index) {
 function startDragFromChrome(event) {
   if (event.button !== 0) return;
   const interactive = event.target.closest(
-    "input, textarea, select, button, a, .launcher-list, .launcher-foot, .result-row",
+    "input, textarea, select, button, a, .clip-editor, .launcher-list, .launcher-foot, .result-row",
   );
   if (!interactive) startDraggingLauncher();
 }
@@ -494,6 +541,7 @@ function onFocus() {
 }
 
 function resetState() {
+  clipDraft.value=null;clipGroups.value=[];clipGroupError.value='';
   clearTimeout(blurTimer);
   searchRequest += 1; clearTimeout(searchTimer); squareController?.abort(); scope.value='local'; draftContent.value='';draftTitle.value='';
   searching.value = false;
@@ -617,6 +665,10 @@ body.theme-dark .launcher-stage.host-windows {
 .launcher-stage.host-windows .launcher-foot {
   background: transparent;
 }
+.launcher-stage.is-clip {grid-template-rows:auto minmax(0,1fr) auto}
+.is-clip .launcher-search-wrap {min-height:48px}
+.clip-warning{margin:0;padding:4px 16px;color:var(--danger);font-size:12px}
+.clip-add svg{width:14px;height:14px;vertical-align:middle}
 .launcher-stage.is-collapsed { grid-template-rows: 1fr; }
 .launcher-stage.is-collapsed .launcher-search-wrap { border-bottom: 0; }
 .launcher-stage.is-fill {

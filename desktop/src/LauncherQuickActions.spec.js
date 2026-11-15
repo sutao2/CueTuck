@@ -98,3 +98,32 @@ it('offers viewing the selected remote result without using or fetching its cont
  expect(navigate).toHaveBeenCalledWith('open_launcher_destination',{destination:'square-detail',id:'remote'});
  expect(content).not.toHaveBeenCalled();
 });
+
+it('opens from an empty launcher and cancels without saving or exposing a password',async()=>{
+ const clips=await import('./platform/quickClips.js');
+ const req=vi.spyOn(clips,'clipRequest');
+ const w=mount(Launcher);await flushPromises();
+ await w.get('[aria-label="创建常用片段"]').trigger('click');await flushPromises();
+ await w.get('input[value=password]').setValue();
+ await w.get('input[type=password]').setValue('fixture only');
+ await w.get('input[type=password]').trigger('keydown',{key:'Escape'});await flushPromises();
+ expect(w.get('[role=combobox]').element.value).toBe('');
+ expect(w.find('form').exists()).toBe(false);expect(req).not.toHaveBeenCalled();
+});
+it('creates a categorized URL in the launcher without writing a prompt or copying it',async()=>{
+ const clips=await import('./platform/quickClips.js');
+ vi.spyOn(clips,'clipCategories').mockResolvedValue({categories:[{id:'work',name:'Work'}]});
+ const save=vi.spyOn(clips,'clipRequest').mockResolvedValue('new');
+ const clipboard=vi.fn();Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:clipboard}});
+ const w=mount(Launcher);await flushPromises();
+ await w.get('[role=combobox]').setValue('https://example.test');await flushPromises();
+ await action(w,'创建常用片段').trigger('click');await flushPromises();
+ expect(w.get('input[value=url]').element.checked).toBe(true);expect(w.get('textarea').element.value).toBe('https://example.test');
+ await w.get('input[autocomplete=off]').setValue('Work site');
+ await w.get('.searchable-select').trigger('click');
+ document.querySelector('[role=listbox] [role=option]:last-child').click();
+ await w.get('form').trigger('submit');await flushPromises();
+ expect(save).toHaveBeenCalledExactlyOnceWith({action:'save',id:null,title:'Work site',kind:'url',value:'https://example.test',category_id:'work'});
+ expect(w.get('[role=combobox]').element.value).toBe('Work site');
+ expect(clipboard).not.toHaveBeenCalled();expect(await library.listLocalPrompts({query:''})).toHaveLength(0);
+});

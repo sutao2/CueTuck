@@ -92,7 +92,7 @@ describe("LauncherApp", () => {
     await flushPromises();
     expect(resize).toHaveBeenLastCalledWith('expanded');
     expect(w.get('main').element.style.height).toBe('420px');
-    expect(w.findAll('[role="option"]')).toHaveLength(3);
+    expect(w.findAll('[role="option"]')).toHaveLength(4);
     await w.get('input').setValue('');
     await flushPromises();
     expect(w.get('main').element.style.height).toBe('64px');
