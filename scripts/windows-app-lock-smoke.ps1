@@ -1,5 +1,5 @@
 # Exercise the signed candidate through WebView2's native accessibility interface.
-param([Parameter(Mandatory=$true)][string]$Executable)
+param([Parameter(Mandatory=$true)][string]$Executable, [switch]$WithQuickClips)
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Requires a disposable Windows Actions runner' }
 Add-Type -AssemblyName UIAutomationClient
@@ -107,6 +107,7 @@ function Unlock([string]$Value) {
 $settings = @('设置 ›','设置')
 try {
   Start-Candidate
+  if ($WithQuickClips) { & "$PSScriptRoot/windows-quick-clips-smoke.ps1" -App $app }
   Click-Button $settings
   # An early WebView2 invoke can be dropped during the first foreground activation.
   for ($attempt=0; $attempt -lt 12; $attempt++) {

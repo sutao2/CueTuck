@@ -19,7 +19,7 @@ on:
       - 'scripts/release-check*'
       - 'scripts/windows-chrome-smoke.ps1'
       - 'scripts/windows-app-lock-smoke.ps1'
-      - 'scripts/windows-quick-clips-smoke.mjs'
+      - 'scripts/windows-quick-clips-smoke.ps1'
       - 'scripts/windows-legacy-clip-fixture.py'
       - 'scripts/windows-portable.ps1'
       - 'LICENSE'
@@ -57,12 +57,6 @@ jobs:
           run-id: ${{ inputs.retest_run }}
           github-token: ${{ github.token }}
           path: candidate
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: desktop/package-lock.json
-      - run: npm ci --prefix desktop
       - run: python scripts/windows-legacy-clip-fixture.py
       - name: Exercise installed quick clips and application lock
         shell: pwsh
@@ -74,9 +68,7 @@ jobs:
           if ((Start-Process $files[0].FullName -ArgumentList @('/S',"/D=$dir") -Wait -PassThru).ExitCode -ne 0) { throw 'Installation failed' }
           $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--force-renderer-accessibility'
           try {
-            node scripts/windows-quick-clips-smoke.mjs (Join-Path $dir 'cuetuck.exe')
-            if ($LASTEXITCODE -ne 0) { throw 'Installed quick clip workflow failed' }
-            ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe')
+            ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') -WithQuickClips
           }
           finally {
             if ((Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '/S' -Wait -PassThru).ExitCode -ne 0) { throw 'Uninstall failed' }
@@ -181,9 +173,7 @@ jobs:
             if (Test-Path '../scripts/windows-app-lock-smoke.ps1') {
               if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
               $app.WaitForExit()
-              node ../scripts/windows-quick-clips-smoke.mjs (Join-Path $installDir 'cuetuck.exe')
-              if ($LASTEXITCODE -ne 0) { throw 'Installed quick clip workflow failed' }
-              & ../scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $installDir 'cuetuck.exe')
+              & ../scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $installDir 'cuetuck.exe') -WithQuickClips
             }
           } finally {
             if ($app -and -not $app.HasExited) { Stop-Process -Id $app.Id -Force }
