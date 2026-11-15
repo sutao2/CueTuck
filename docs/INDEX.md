@@ -9,8 +9,8 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/2026-11-15-beta36-release.md](plans/2026-11-15-beta36-release.md) | 已发布 | 发布应用锁与常用片段 | 双平台口令与 Touch ID 已验，Windows Hello 真机待验，官网及更新通道已核验 |
 | [specs/app-lock/spec.md](specs/app-lock/spec.md) | 现行 | 桌面解锁与本机访问 | 设置中的应用锁、顶栏锁定、居中解锁面板与设备优先验证 |
 | [plans/2026-11-15-app-lock.md](plans/2026-11-15-app-lock.md) | 已实施 | 修改应用解锁与本机导航 | 口令、设备验证与密码片段验收 |
-| [plans/2026-11-15-quick-clips.md](plans/2026-11-15-quick-clips.md) | 实施计划 | 常用片段与更新体验 | 独立片段库及按版本跳过提醒 |
-| [specs/quick-clips/spec.md](specs/quick-clips/spec.md) | 现行 | 保存和检索片段 | 主动保存、按需显示密码与原样复制 |
+| [plans/2026-11-15-quick-clips.md](plans/2026-11-15-quick-clips.md) | 实施计划 | 常用片段与更新体验 | 片段分类、工作台与启动器编辑计划及按版本跳过提醒 |
+| [specs/quick-clips/spec.md](specs/quick-clips/spec.md) | 现行 | 保存和检索片段 | 分类整理、组合筛选、按需显示密码与原样复制 |
 | [plans/2026-10-16-beta35-release.md](plans/2026-10-16-beta35-release.md) | 已发布 | 发布更新角标 | 同源双平台构建、签名安装、更新发现及官网入口 |
 | [plans/2026-10-16-content-update-badges.md](plans/2026-10-16-content-update-badges.md) | 已随 beta.35 发布 | 下载内容新版提醒 | 只读检查、列表角标与手动确认更新 |
 | [plans/2026-10-16-beta34-release.md](plans/2026-10-16-beta34-release.md) | 已发布部署 | 发布内容版本管理 | 双平台与容器构建验收、数据库备份迁移与签名更新 |

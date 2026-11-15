@@ -10,12 +10,26 @@ pub enum Request {
     Search {
         query: String,
         limit: Option<u32>,
+        kind: Option<String>,
+        category_id: Option<String>,
     },
     Save {
         id: Option<String>,
         kind: String,
         title: String,
         value: Option<String>,
+        category_id: Option<String>,
+    },
+    Categories,
+    CreateCategory {
+        name: String,
+    },
+    RenameCategory {
+        id: String,
+        name: String,
+    },
+    DeleteCategory {
+        id: String,
     },
     CopyValue {
         id: String,
@@ -63,22 +77,98 @@ fn db(_: rusqlite::Error) -> String {
     "无法读写本机片段库".into()
 }
 
+fn category_name(name: &str) -> Result<&str, String> {
+    let name = name.trim();
+    if name.is_empty() || name.chars().count() > 60 {
+        return Err("分类名称须为 1 至 60 个字符".into());
+    }
+    Ok(name)
+}
+
 fn run(
     c: &mut Connection,
     request: Request,
     entry: impl Fn(&str) -> Result<keyring::Entry, String>,
 ) -> Result<Value, String> {
     c.execute_batch(
-        "CREATE TABLE IF NOT EXISTS clips (
+        "PRAGMA foreign_keys = ON;
+        CREATE TABLE IF NOT EXISTS clips (
         id TEXT PRIMARY KEY, kind TEXT NOT NULL, title TEXT NOT NULL, body TEXT,
-        CHECK ((kind='password') = (body IS NULL)))",
+        CHECK ((kind='password') = (body IS NULL)));
+        CREATE TABLE IF NOT EXISTS clip_categories (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE UNIQUE);
+        CREATE TABLE IF NOT EXISTS clip_membership (
+            clip_id TEXT PRIMARY KEY REFERENCES clips(id) ON DELETE CASCADE,
+            category_id TEXT NOT NULL REFERENCES clip_categories(id) ON DELETE CASCADE);
+        CREATE INDEX IF NOT EXISTS clip_membership_category ON clip_membership(category_id)",
     )
     .map_err(db)?;
     match request {
-        Request::Search { query, limit } => {
-            let mut stmt=c.prepare("SELECT id,kind,title,body FROM clips WHERE instr(lower(title),lower(?1))>0 OR instr(lower(body),lower(?1))>0 ORDER BY CASE WHEN lower(title)=lower(?1) THEN 0 WHEN instr(lower(title),lower(?1))=1 THEN 1 WHEN instr(lower(title),lower(?1))>0 THEN 2 ELSE 3 END, rowid DESC LIMIT ?2").map_err(db)?;
-            let rows=stmt.query_map(params![query.trim(),limit.map(i64::from).unwrap_or(-1)],|r| Ok(json!({
-                "id":r.get::<_,String>(0)?,"kind":r.get::<_,String>(1)?,"title":r.get::<_,String>(2)?,"content":r.get::<_,Option<String>>(3)?
+        Request::Categories => {
+            let tx = c.transaction().map_err(db)?;
+            let categories = tx.prepare(
+                "SELECT c.id, c.name, count(m.clip_id) FROM clip_categories c
+                 LEFT JOIN clip_membership m ON m.category_id=c.id GROUP BY c.id ORDER BY c.name"
+            ).map_err(db)?.query_map([], |r| Ok(json!({
+                "id":r.get::<_,String>(0)?, "name":r.get::<_,String>(1)?, "count":r.get::<_,i64>(2)?
+            }))).map_err(db)?.collect::<Result<Vec<_>,_>>().map_err(db)?;
+            let (total, uncategorized): (i64, i64) = tx
+                .query_row(
+                    "SELECT count(*), count(*)-count(m.category_id) FROM clips c
+                 LEFT JOIN clip_membership m ON m.clip_id=c.id",
+                    [],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+                .map_err(db)?;
+            Ok(json!({"categories":categories,"total":total,"uncategorized":uncategorized}))
+        }
+        Request::CreateCategory { name } => {
+            let id = uuid::Uuid::new_v4().to_string();
+            let changed = c
+                .execute(
+                    "INSERT OR IGNORE INTO clip_categories(id,name) VALUES (?1,?2)",
+                    params![id, category_name(&name)?],
+                )
+                .map_err(db)?;
+            if changed == 0 {
+                return Err("分类名称已存在".into());
+            }
+            Ok(json!(id))
+        }
+        Request::RenameCategory { id, name } => {
+            let changed = c
+                .execute(
+                    "UPDATE OR IGNORE clip_categories SET name=?1 WHERE id=?2",
+                    params![category_name(&name)?, id],
+                )
+                .map_err(db)?;
+            if changed == 0 {
+                return Err("分类不存在或名称已被使用".into());
+            }
+            Ok(Value::Null)
+        }
+        Request::DeleteCategory { id } => {
+            c.execute("DELETE FROM clip_categories WHERE id=?1", [id])
+                .map_err(db)?;
+            Ok(Value::Null)
+        }
+        Request::Search {
+            query,
+            limit,
+            kind,
+            category_id,
+        } => {
+            let mut stmt = c.prepare(
+                "SELECT c.id,c.kind,c.title,c.body,m.category_id FROM clips c
+                 LEFT JOIN clip_membership m ON m.clip_id=c.id
+                 WHERE (?3 IS NULL OR c.kind=?3) AND (?4 IS NULL OR coalesce(m.category_id,'')=?4)
+                 AND (instr(lower(title),lower(?1))>0 OR instr(lower(body),lower(?1))>0)
+                 ORDER BY CASE WHEN lower(title)=lower(?1) THEN 0 WHEN instr(lower(title),lower(?1))=1 THEN 1
+                 WHEN instr(lower(title),lower(?1))>0 THEN 2 ELSE 3 END, c.rowid DESC LIMIT ?2"
+            ).map_err(db)?;
+            let rows = stmt.query_map(params![query.trim(),limit.map(i64::from).unwrap_or(-1),kind,category_id], |r| Ok(json!({
+                "id":r.get::<_,String>(0)?,"kind":r.get::<_,String>(1)?,"title":r.get::<_,String>(2)?,
+                "content":r.get::<_,Option<String>>(3)?,"category_id":r.get::<_,Option<String>>(4)?
             }))).map_err(db)?.collect::<Result<Vec<_>,_>>().map_err(db)?;
             Ok(json!(rows))
         }
@@ -87,6 +177,7 @@ fn run(
             kind,
             title,
             value,
+            category_id,
         } => {
             if !matches!(
                 kind.as_str(),
@@ -128,6 +219,24 @@ fn run(
                 .map_err(db)?;
                 id
             };
+            if let Some(category) = category_id {
+                if category.is_empty() {
+                    tx.execute("DELETE FROM clip_membership WHERE clip_id=?1", [&id])
+                        .map_err(db)?;
+                } else {
+                    let changed = tx
+                        .execute(
+                            "INSERT INTO clip_membership(clip_id,category_id)
+                         SELECT ?1,id FROM clip_categories WHERE id=?2
+                         ON CONFLICT(clip_id) DO UPDATE SET category_id=excluded.category_id",
+                            params![id, category],
+                        )
+                        .map_err(db)?;
+                    if changed == 0 {
+                        return Err("分类已删除，请重新选择".into());
+                    }
+                }
+            }
             if secret {
                 if let Some(value) = value {
                     entry(&id)?.set_password(&value).map_err(credential_error)?;
@@ -205,6 +314,7 @@ mod tests {
         let id = run(
             &mut c,
             Request::Save {
+                category_id: None,
                 id: None,
                 kind: "template".into(),
                 title: "Site".into(),
@@ -218,6 +328,8 @@ mod tests {
         let rows = run(
             &mut c,
             Request::Search {
+                category_id: None,
+                kind: None,
                 query: "EXAMPLE".into(),
                 limit: None,
             },
@@ -237,6 +349,75 @@ mod tests {
             text
         );
     }
+    #[test]
+    fn legacy_clips_can_be_organized_without_reading_or_losing_secrets() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("quick-clips.sqlite");
+        let c = Connection::open(&path).unwrap();
+        c.execute_batch("CREATE TABLE clips(id TEXT PRIMARY KEY, kind TEXT NOT NULL, title TEXT NOT NULL,
+            body TEXT, CHECK ((kind='password') = (body IS NULL)));
+            INSERT INTO clips VALUES ('pw','password','Work login',NULL), ('url','url','Work site','https://example.invalid');").unwrap();
+        drop(c);
+        let mut c = Connection::open(&path).unwrap();
+        let mut call = |req: Value| {
+            run(&mut c, serde_json::from_value(req).unwrap(), |_| {
+                panic!("unexpected credential access")
+            })
+        };
+        assert_eq!(
+            call(json!({"action":"categories"})).unwrap()["uncategorized"],
+            2
+        );
+        let group = call(json!({"action":"create_category","name":" Work "})).unwrap();
+        assert!(call(json!({"action":"create_category","name":"work"})).is_err());
+        let mut edit = json!({"action":"save","id":"pw","kind":"password","title":"Work login"});
+        edit["category_id"] = group.clone();
+        call(edit.clone()).unwrap();
+        edit.as_object_mut().unwrap().remove("category_id");
+        call(edit.clone()).unwrap();
+        let search = |category: Value, kind: &str, query: &str| json!({"action":"search","category_id":category,"kind":kind,"query":query});
+        assert_eq!(
+            call(search(group.clone(), "password", "work")).unwrap()[0]["id"],
+            "pw"
+        );
+        assert_eq!(
+            call(search(group.clone(), "url", "work")).unwrap(),
+            json!([])
+        );
+        assert_eq!(
+            call(search(group.clone(), "password", "absent")).unwrap(),
+            json!([])
+        );
+        assert_eq!(
+            call(search(json!(""), "url", "example")).unwrap()[0]["id"],
+            "url"
+        );
+        edit["category_id"] = json!("missing");
+        assert!(call(edit.clone()).is_err());
+        call(json!({"action":"rename_category","id":group,"name":"Office"})).unwrap();
+        let summary = call(json!({"action":"categories"})).unwrap();
+        assert_eq!(
+            summary,
+            json!({"total":2,"uncategorized":1,"categories":[{"id":group,"name":"Office","count":1}]})
+        );
+        edit["category_id"] = json!("");
+        call(edit.clone()).unwrap();
+        assert_eq!(
+            call(search(json!(""), "password", "work")).unwrap()[0]["id"],
+            "pw"
+        );
+        edit["category_id"] = group.clone();
+        call(edit).unwrap();
+        call(json!({"action":"delete_category","id":group})).unwrap();
+        assert_eq!(
+            call(json!({"action":"categories"})).unwrap()["uncategorized"],
+            2
+        );
+        assert_eq!(
+            call(search(json!(""), "password", "work")).unwrap()[0]["content"],
+            Value::Null
+        );
+    }
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     #[test]
     #[ignore = "requires a writable test-user credential store"]
@@ -246,6 +427,7 @@ mod tests {
         let saved = run(
             &mut database,
             Request::Save {
+                category_id: None,
                 id: None,
                 kind: "password".into(),
                 title: "QA".into(),
@@ -282,6 +464,7 @@ mod tests {
     fn credentials_fail_closed_and_search_never_reads_a_secret() {
         let mut c = Connection::open_in_memory().unwrap();
         let save = || Request::Save {
+            category_id: None,
             id: None,
             kind: "password".into(),
             title: "Work".into(),
@@ -289,6 +472,8 @@ mod tests {
         };
         assert!(run(&mut c, save(), |_| Err("denied".into())).is_err());
         let search = |q: &str| Request::Search {
+            category_id: None,
+            kind: None,
             query: q.into(),
             limit: None,
         };
