@@ -6,7 +6,7 @@ export const interfaceLanguage = ref('zh');
 export function applyInterfaceLanguage(value) {
   interfaceLanguage.value = value === 'en' ? 'en' : 'zh';
   document.documentElement.lang = interfaceLanguage.value === 'en' ? 'en' : 'zh-CN';
-  document.title = interfaceLanguage.value === 'en' ? 'CueTuck' : '唤词';
+  document.title = interfaceLanguage.value === 'en' ? 'CueTuck' : '拾用';
 }
 
 const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

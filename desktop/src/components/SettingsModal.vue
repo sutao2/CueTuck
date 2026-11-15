@@ -27,7 +27,7 @@
             <div class="settings-group">
             <p v-if="prefError" data-testid="pref-error">{{ tr(prefError) }}</p>
             <label class="setting-row">
-              <span class="setting-copy"><strong>{{ tr('开机启动') }}</strong><small>{{ tr('登录系统后自动打开唤词。') }}</small></span>
+              <span class="setting-copy"><strong>{{ tr('开机启动') }}</strong><small>{{ tr('登录系统后自动打开拾用。') }}</small></span>
               <input
                 type="checkbox"
                 data-testid="launch-at-login"
@@ -343,6 +343,10 @@
             <h3>{{ tr('隐私与安全') }}</h3>
             <p>{{ tr('了解数据的保存方式，管理统计与使用记录。') }}</p>
             <div class="settings-group">
+            <div v-if="appLock" class="setting-row">
+              <span class="setting-copy"><strong>{{ tr('应用锁') }}</strong><small>{{ tr(appLock.enabled.value ? '已启用 · 启动时需要解锁' : '使用口令或设备验证保护工作台') }}</small></span>
+              <button type="button" class="button" data-testid="manage-app-lock" @click="appLock.openSettings()">{{ tr(appLock.enabled.value ? '管理应用锁' : '设置应用锁') }}</button>
+            </div>
             <div class="setting-row">
               <span class="setting-copy"><strong>{{ tr('本地提示词默认不上传') }}</strong><small>{{ tr('未点发布不得把本地正文送出。') }}</small></span>
               <span class="setting-control">{{ tr('始终生效') }}</span>
@@ -430,7 +434,7 @@ import SearchableSelect from "./SearchableSelect.vue";
 import AppIcon from "./AppIcon.vue";
 import LauncherAiSettings from './LauncherAiSettings.vue';
 import { DEFAULT_LAUNCHER_PREFERENCES, LAUNCHER_PREFERENCES_KEY, readLauncherPreferences } from '../platform/launcherPreferences.js';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { uiText } from "../platform/uiStrings.js";
 import {
   applyLocalImport,
@@ -464,6 +468,7 @@ import { flushSyncQueue } from "../platform/syncQueue.js";
 import { updateState, refreshUpdate, defaultUpdateChannel } from "../platform/updates.js";
 import UpdateStatus from "./UpdateStatus.vue";
 
+const appLock = inject('appLock', null);
 const props = defineProps({
   theme: { type: String, default: "light" },
   host: { type: String, default: "macos" },
@@ -503,7 +508,7 @@ const searchKeywords = {
   shortcuts: '快捷键 按键 启动器 录入 keyboard launcher', sync: '同步 冲突 wifi 云 sync',
   models: '模型 默认 标签 变量 建议 model ai', data: '数据 备份 恢复 导入 导出 backup restore import export',
   network: '代理 广场 网络 智能体 MCP 接入 proxy network', appearance: '外观 主题 深色 浅色 语言 密度 theme language',
-  privacy: '隐私 统计 历史 安全 钥匙串 privacy history', updates: '更新 版本 下载 通道 update version',
+  privacy: '隐私 统计 历史 安全 钥匙串 应用锁 口令 指纹 Touch ID Windows Hello privacy history app lock password', updates: '更新 版本 下载 通道 update version',
 };
 const filteredPages = computed(() => {
   const terms = settingsQuery.value.trim().toLowerCase().split(/\s+/);

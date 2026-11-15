@@ -1,3 +1,4 @@
+import { selectOption } from '../test/selectOption.js';
 import { mount, flushPromises } from '@vue/test-utils';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import SettingsModal from './SettingsModal.vue';
@@ -73,9 +74,9 @@ it('summarizes own metrics and sorts by recorded downloads or current favorites'
   expect(w.get('[data-testid=publication-metrics]').text()).toContain('11');
   const titles = () => w.findAll('.publication-heading strong').map(n => n.text());
   expect(titles()).toEqual(['最新作品', '下载最多作品']);
-  await w.get('[aria-label="作品排序"]').setValue('download_count');
+  await selectOption(w,'publication-sort','download_count');
   expect(titles()[0]).toBe('下载最多作品');
-  await w.get('[aria-label="作品排序"]').setValue('favorite_count');
+  await selectOption(w,'publication-sort','favorite_count');
   expect(titles()[0]).toBe('最新作品');
 });
 

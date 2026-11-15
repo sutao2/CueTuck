@@ -44,8 +44,10 @@ async function stop() {
 }
 try {
   let page = await start();
-  const settings = p=>p.locator('.sidebar-bottom button').filter({hasText:'应用锁'});
+  const settings = p=>p.getByTestId('open-settings');
   await settings(page).click();
+  await page.locator('[data-settings-page=privacy]').click();
+  await page.getByTestId('manage-app-lock').click();
   const deviceAvailable = await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('app_lock_device_available'));
   if (deviceAvailable) await page.getByRole('checkbox',{name:/Windows Hello/}).waitFor();
   else if (await page.getByRole('checkbox',{name:/Windows Hello/}).count()) throw new Error('Hello offered on unavailable device');
@@ -53,6 +55,8 @@ try {
   await dialog.getByLabel(/新口令（/).fill(password);
   await dialog.getByLabel('再次输入新口令').fill(password);
   await dialog.getByRole('button',{name:'启用应用锁'}).click();
+  await dialog.waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'返回应用'}).click();
   await page.getByRole('button',{name:'立即锁定'}).click();
   const locked = p=>p.getByRole('heading',{name:'解锁工作台'});
   await locked(page).waitFor();

@@ -1,7 +1,7 @@
 <template>
   <slot v-if="!native || status && !status.locked" />
   <main v-else-if="!launcher" class="lock-page">
-    <header data-tauri-drag-region><WindowsWindowControls v-if="windows" /></header>
+    <header data-tauri-drag-region><span v-if="status?.locked" class="lock-indicator" :class="{windows}" role="img" :aria-label="tr('已锁定')"><AppIcon name="lock" /></span><WindowsWindowControls v-if="windows" /></header>
     <section class="lock-card">
       <img src="../assets/app-icon.png" alt="CueTuck" width="44" height="44">
       <template v-if="status?.locked">
@@ -26,15 +26,11 @@
       <p v-if="error" role="alert">{{ tr(error) }}</p>
     </template>
     <template v-else>
-    <p>{{ tr('启用后，每次启动都需解锁。你也可以随时在侧栏锁定工作台。') }}</p>
+    <p>{{ tr('启动时需要解锁，也可以点击工作台右上角的小锁立即锁定。') }}</p>
     <p v-if="!status.enabled">{{ tr('请记住解锁口令。启用期间，本机 MCP 工具将暂停读取。') }}</p>
     <form @submit.prevent="saveSettings">
       <label v-if="status.enabled">{{ tr('操作') }}
-        <select v-model="mode" :disabled="busy" @change="clearForm">
-          <option value="change">{{ tr('更改解锁口令') }}</option>
-          <option v-if="available || status.device" value="device">{{ tr(status.device ? '关闭 {0} 解锁' : '启用 {0} 解锁', [deviceName]) }}</option>
-          <option value="disable">{{ tr('关闭应用锁') }}</option>
-        </select>
+        <SearchableSelect v-model="mode" :aria-label="tr('操作')" :options="actions" :searchable="false" :disabled="busy" @change="clearForm" />
       </label>
       <label v-if="status.enabled">{{ tr('当前口令') }}<input v-model="current" type="password" required autocomplete="current-password" :disabled="busy"></label>
       <template v-if="!status.enabled || mode==='change'">
@@ -55,6 +51,8 @@ import { computed, nextTick, onMounted, onUnmounted, provide, ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { tr } from '../platform/interfaceLanguage.js';
+import AppIcon from './AppIcon.vue';
+import SearchableSelect from './SearchableSelect.vue';
 import WindowsWindowControls from './WindowsWindowControls.vue';
 
 const props = defineProps({ launcher: Boolean });
@@ -63,6 +61,11 @@ const windows = /Windows/i.test(navigator.userAgent);
 const deviceName = windows ? 'Windows Hello' : 'Touch ID';
 const status = ref(null), available = ref(false), manage = ref(false), busy = ref(false), error = ref('');
 const current = ref(''), password = ref(''), confirmation = ref(''), mode = ref('change'), enableDevice = ref(false);
+const actions = computed(()=>[
+  {value:'change',label:tr('更改解锁口令')},
+  ...(available.value || status.value?.device ? [{value:'device',label:tr(status.value?.device ? '关闭 {0} 解锁' : '启用 {0} 解锁',[deviceName])}] : []),
+  {value:'disable',label:tr('关闭应用锁')},
+]);
 const unlockInput = ref(null), dialog = ref(null);
 let stop, revision = 0, disposed = false;
 function clearForm() { current.value=''; password.value=''; confirmation.value=''; error.value=''; }
@@ -140,11 +143,11 @@ onUnmounted(()=>{ disposed=true; ++revision; stop?.(); window.removeEventListene
 <style scoped>
 .lock-page { min-height:100vh; display:grid; place-items:center; background:var(--surface); color:var(--text); }
 .lock-page header { position:fixed; inset:0 0 auto; height:var(--titlebar-height); }
-.lock-card,.lock-dialog { width:min(360px,calc(100vw - 32px)); }
+.lock-card,.lock-dialog { width:min(400px,calc(100vw - 32px)); }
 .lock-card,.lock-card form,.lock-dialog form,.lock-dialog label,.lock-card label { display:grid; gap:10px; }
 .lock-card h1,.lock-heading h2 { margin:0; color:var(--text); }
 .lock-card h1 { margin:8px 0; }
-.lock-dialog { padding:22px; border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow-menu); background:var(--surface); color:var(--text); }
+.lock-dialog { padding:24px; border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow-menu); background:var(--surface); color:var(--text); }
 .lock-dialog::backdrop { background:rgba(0,0,0,.3); }
 .lock-heading { display:flex; justify-content:space-between; align-items:center; }
 .lock-dialog p { color:var(--muted); line-height:1.5; }
@@ -152,4 +155,10 @@ onUnmounted(()=>{ disposed=true; ++revision; stop?.(); window.removeEventListene
 .lock-dialog label.device-choice { display:flex; align-items:center; }
 .lock-dialog .device-choice input { width:auto; }
 .lock-page [role=alert],.lock-dialog [role=alert] { color:var(--danger); }
+.lock-indicator { position:absolute; right:18px; top:50%; transform:translateY(-50%); display:flex; color:var(--muted); }
+.lock-indicator.windows { right:148px; }
+.lock-indicator .app-icon { width:16px; height:16px; }
+.lock-dialog form { gap:14px; }
+.lock-dialog label,.lock-card label { gap:6px; font-size:13px; }
+.lock-heading h2 { font-size:19px; }
 </style>

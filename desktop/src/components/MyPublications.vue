@@ -17,7 +17,7 @@
       </div>
       <div class="publication-toolbar">
         <p class="use-hint">{{ tr('下载仅统计开启匿名上报后的成功下载；收藏为各作品当前收藏人数之和，非去重粉丝数。') }}</p>
-        <label>{{ tr('排序') }} <select v-model="sort" :aria-label="tr('作品排序')"><option value="latest">{{ tr('最新提交') }}</option><option value="download_count">{{ tr('下载最多') }}</option><option value="favorite_count">{{ tr('收藏最多') }}</option></select></label>
+        <label>{{ tr('排序') }} <SearchableSelect data-testid="publication-sort" v-model="sort" :aria-label="tr('作品排序')" :searchable="false" :options="[{value:'latest',label:tr('最新提交')},{value:'download_count',label:tr('下载最多')},{value:'favorite_count',label:tr('收藏最多')}]" /></label>
       </div>
       <p v-if="!rows.length">{{ tr('暂无投稿。可以从广场的发布入口提交本地提示词。') }}</p>
       <ul v-else class="publication-list">
@@ -39,6 +39,7 @@
   </section>
 </template>
 <script setup>
+import SearchableSelect from './SearchableSelect.vue';
 import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref, watch, onUnmounted } from 'vue';
 import SkillCommunity from './SkillCommunity.vue';

@@ -7,7 +7,9 @@
 <script setup>
 defineProps({ name: { type: String, default: "library" } });
 const paths = {
-  lock: "M5 10h14v11H5zM8 10V7a4 4 0 0 1 8 0v3M12 14v3",
+  lock: "M6 10h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM8 10V7a4 4 0 0 1 8 0v3M12 14v3",
+  unlock: "M6 10h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM8 10V7a4 4 0 0 1 7.8-1.2M12 14v3",
+  copy: "M9 8h11v13H9zM15 5V3H4v13h2",
   sparkles: "m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5zM20 2v4M18 4h4",
   skills: "M8 3h8v4h5v14H3V7h5zM8 3v4h8M8 12h8M8 16h5",
   close: "M6 6l12 12M6 18L18 6",

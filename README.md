@@ -2,7 +2,7 @@
   <img src="desktop/src/assets/app-icon.png" width="88" alt="CueTuck">
 </p>
 
-# CueTuck · 唤词
+# CueTuck · 拾用
 
 **Your prompts, a shortcut away.**
 
@@ -10,7 +10,7 @@
 
 **简体中文** · [English](docs/i18n/README.en.md) · [日本語](docs/i18n/README.ja.md) · [한국어](docs/i18n/README.ko.md) · [Español](docs/i18n/README.es.md) · [Français](docs/i18n/README.fr.md) · [Deutsch](docs/i18n/README.de.md)
 
-你的桌面提示词启动器。用一个全局快捷键唤起 CueTuck，搜索常用模板、填写变量、回车复制，再粘贴到正在使用的 AI 工具。提示词库、参考图片与 Skills 管理，让好用的工作方式随时可用。
+你的本地快捷资料夹。用全局快捷键查找自己保存的网址、账号、密码、模板和提示词，选中即可复制。提示词库、参考图片与 Skills 管理，让好用的工作方式随时可用。
 
 [官网](https://prompt.likh.cn/) · [下载预览版](https://github.com/sutao2/CueTuck/releases) · [使用与开发文档](docs/INDEX.md) · [反馈问题](https://github.com/sutao2/CueTuck/issues)
 

@@ -951,3 +951,26 @@ body[data-density="compact"] .app-shell .prompt-card.as-row { min-height: 52px; 
 @media (min-width: 601px) {
   html[lang="en"] .setting-row > .searchable-select { width: 220px; }
 }
+
+/* Workbench, settings and tools share the same compact window chrome. */
+.titlebar-right { gap: 4px; }
+.title-tool.title-lock { width: 28px; height: 26px; justify-content: center; padding: 0; border-radius: 6px; }
+.sidebar-brand-row { flex-basis: 48px; gap: 9px; }
+.sidebar-brand-row .brand-mark { width: 23px; height: 23px; border-radius: 6px; flex: none; }
+.sidebar-brand-row .brand-name { flex: 1; font-size: 15px; font-weight: 600; }
+.workspace .nav-group-label { margin-top: 14px; margin-bottom: 4px; }
+.workspace .space-tab { border-radius: 8px; }
+.app-shell select:not([multiple]),.lock-dialog select:not([multiple]) {
+  appearance: none; min-height: 36px; padding: 6px 32px 6px 12px; font: inherit;
+  color: var(--text); border: 1px solid var(--control-border); border-radius: 10px;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23888888' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 14px;
+}
+@media (forced-colors:active) { .app-shell select:not([multiple]) { appearance:auto; background-image:none; } }
+
+.app-shell .content-header h1,.app-shell .content-heading h1 { font-size:24px; font-weight:620; letter-spacing:-.035em; }
+.app-shell .title-tool { border-radius:7px; }
+.app-shell :is(.sidebar-toggle,.title-tool,.space-tab):focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
+
+.app-shell .content-area { border-top:1px solid var(--line); border-inline-start:1px solid var(--line); border-start-start-radius:12px; }
+.app-shell.sidebar-collapsed .content-area { border-inline-start:0; border-start-start-radius:0; }
+.content-header .toolbar { row-gap:8px; }

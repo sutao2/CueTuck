@@ -1,5 +1,5 @@
 const ZH = {
-  brand: "CueTuck · 唤词",
+  brand: "CueTuck · 拾用",
   search: "搜索",
   launcher: "启动器",
   login: "登录",

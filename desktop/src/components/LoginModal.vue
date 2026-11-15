@@ -3,7 +3,7 @@
       <header class="modal-header">
         <div>
           <div class="login-mark" aria-hidden="true"><AppIcon name="library" /></div>
-          <h2 id="login-title">{{ tr('登录唤词') }}</h2>
+          <h2 id="login-title">{{ tr('登录拾用') }}</h2>
           <p id="login-description" class="login-description" data-testid="login-reason">{{ reason && reason !== '登录' ? tr(reason) : tr('同步你的灵感，收藏与分享好用的提示词。') }}</p>
         </div>
         <button type="button" class="page-back" :aria-label="tr('返回')" :disabled="pending === 'email' || pending === 'identity'" @click="close">{{ tr('← 返回') }}</button>

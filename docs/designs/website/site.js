@@ -21,9 +21,9 @@ function sourceURL(item) { return `https://github.com/${item.repo}/blob/${item.c
 function home() { return `<div class="landing">
 <section class="launch-hero" aria-labelledby="hero-title">
   <div class="launch-copy">
-    <p class="launch-eyebrow">CueTuck · 你的桌面提示词启动器</p>
-    <h1 id="hero-title">好提示词，<br>随时为你所用。</h1>
-    <p class="launch-intro">一个快捷键，找到模板、填好变量、回车复制。<br>让每一次灵感，都有一个更好的起点。</p>
+    <p class="launch-eyebrow">CueTuck · 你的本地快捷资料夹</p>
+    <h1 id="hero-title">常用资料，<br>随手取用。</h1>
+    <p class="launch-intro">主动收好网址、账号、模板和提示词。<br>按快捷键搜索，回车复制到手头的应用。</p>
     <div class="launch-actions"><a class="button dark" href="#download">下载 CueTuck ${icon('arrow')}</a><a class="button secondary" href="#app">探索提示词广场</a></div>
     <p class="launch-meta">适用于 macOS 与 Windows <span aria-hidden="true">·</span> 本地优先，开源可用</p>
   </div>
@@ -50,7 +50,7 @@ function home() { return `<div class="landing">
   </div>
 </section>
 <section class="trust-strip" aria-label="产品原则"><article>${icon('folder')}<h3>你的内容，本地优先</h3><p>提示词保存在本机。日常搜索和整理，无需先登录账号。</p></article><article>${icon('spark')}<h3>模型，由你选择</h3><p>连接自己使用的 AI 服务，密钥保存在系统凭据库。</p></article><article>${icon('code')}<h3>开放，融入你的工具</h3><p>复制到常用 AI 软件，也可通过 MCP 让智能体读取本地提示词。</p></article></section>
-<section class="launch-end"><p class="launch-eyebrow">让下一次开始，更轻松。</p><h2>好提示词。<br>一个快捷键的距离。</h2><a class="button dark" href="#download">开始使用 CueTuck ${icon('arrow')}</a><a class="release-link" href="https://github.com/sutao2/CueTuck/releases/tag/v0.1.0-beta.35" target="_blank" rel="noopener">查看 v0.1.0-beta.35 更新说明 ↗</a></section>
+<section class="launch-end"><p class="launch-eyebrow">让下一次开始，更轻松。</p><h2>打开启动器，<br>取用常用资料。</h2><a class="button dark" href="#download">开始使用 CueTuck ${icon('arrow')}</a><a class="release-link" href="https://github.com/sutao2/CueTuck/releases/tag/v0.1.0-beta.35" target="_blank" rel="noopener">查看 v0.1.0-beta.35 更新说明 ↗</a></section>
 </div>`; }
 function downloads() { return `<section class="section download-section"><p class="launch-eyebrow">CueTuck for desktop</p><h1>好提示词，<br>就在你的桌面。</h1><p class="download-intro">下载 CueTuck，让常用的提示词随时就位。</p><div class="download-grid">${[['macOS','Apple Silicon · Apple 芯片','aarch64.dmg','DMG 安装包'],['Windows','Windows x64 · 64 位','x64-setup.exe','EXE 安装包']].map(([name,description,file,format])=>`<article class="download-card"><span class="platform-label">${name==='macOS'?'⌘':'⊞'}</span><h2>${name}</h2><p>${description}</p><a class="button dark" href="https://github.com/sutao2/CueTuck/releases/download/v0.1.0-beta.35/CueTuck_0.1.0-beta.35_${file}">下载 ${name} 版 ${icon('arrow')}</a><span class="download-format">${format} · v0.1.0-beta.35</span></article>`).join('')}</div><div class="download-details"><h3>开始之前</h3><p>当前为 beta 预览版，尚未完成 Apple 公证或 Windows 发布者签名，首次打开可能出现系统提示。</p><a class="text-link" href="https://github.com/sutao2/CueTuck/releases/tag/v0.1.0-beta.35" target="_blank" rel="noopener">发行说明与 SHA-256 校验文件 ${icon('arrow')}</a></div><a class="download-browser" href="#app">先看看提示词广场 ${icon('arrow')}</a></section>`; }
 function nameOf(id) { return catalog?.categories.find(c=>c.id===id)?.name || skillCategories.find(c=>c.id===id)?.name || '未分类'; }
@@ -163,7 +163,7 @@ function render() {
   $('#footer').hidden=!['home','download'].includes(route);
   document.querySelectorAll('[data-nav]').forEach(a=>{ a.classList.toggle('active',a.dataset.nav===route); if(a.dataset.nav===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current'); });
   $('.nav-end .button').href='#download'; $('.nav-end .button').textContent='下载';
-  document.title=`${{home:'提示词启动器，一键唤起灵感',app:'提示词广场',skills:'Skill 广场',favorites:'本页暂存',drafts:'本页草稿',download:'下载'}[route]} · CueTuck 唤词`;
+  document.title=`${{home:'提示词启动器，一键唤起灵感',app:'提示词广场',skills:'Skill 广场',favorites:'本页暂存',drafts:'本页草稿',download:'下载'}[route]} · CueTuck 拾用`;
   if (!['home','download'].includes(route)) { fillDictionaries(); loadList(); }
   window.scrollTo(0,0);
 }

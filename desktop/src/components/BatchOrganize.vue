@@ -4,7 +4,7 @@
       <strong role="status">{{ tr('已选') }} {{ prompts.length }} {{ tr('条') }}</strong>
       <button type="button" class="button" data-testid="select-page" :disabled="busy || !canSelectPage" @click="$emit('select-page')">{{ tr('选择本页') }}</button>
       <button type="button" class="button ghost-button" data-testid="clear-selection" :disabled="busy || !prompts.length" @click="$emit('clear-selection')">{{ tr('清空选择') }}</button>
-      <label>{{ tr('操作') }}<select v-model="mode" :disabled="busy"><option value="category">{{ tr('移动分类') }}</option><option value="collection">{{ tr('加入合集') }}</option></select></label>
+      <label>{{ tr('操作') }}<SearchableSelect v-model="mode" :disabled="busy" :aria-label="tr('操作')" :searchable="false" :options="[{value:'category',label:tr('移动分类')},{value:'collection',label:tr('加入合集')}]" /></label>
       <label v-if="mode === 'category'">{{ tr('目标分类') }}<SearchableSelect v-model="categoryId" :disabled="busy" data-testid="batch-category" :options="[{value:'',label:tr('未分类')}, ...groups.flatMap(group => [{value:group.id,label:categoryLabel(group)}, ...group.children.map(child => ({value:child.id,label:categoryLabel(group)+' / '+categoryLabel(child)}))])]" /></label>
       <label v-else>{{ tr('目标合集') }}<SearchableSelect v-model="collectionId" :disabled="busy" data-testid="batch-collection" :options="[{value:'',label:tr('选择合集')}, ...collections.map(item => ({value:item.id,label:item.title}))]" /></label>
       <button type="button" class="button primary-button" data-testid="apply-batch" :disabled="busy || !prompts.length || (mode === 'collection' && !collectionId)" @click="apply">{{ busy ? tr('正在整理…') : tr('应用到所选') }}</button>

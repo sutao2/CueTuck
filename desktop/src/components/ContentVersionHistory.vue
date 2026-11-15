@@ -2,12 +2,13 @@
  <section class="version-history">
   <header><h3>{{ tr("版本历史") }}</h3><button class="button" :disabled="busy" @click="emit('close')">{{ tr("关闭历史") }}</button></header>
   <p v-if="error" role="alert">{{ tr(error) }}</p><p v-if="notice" role="status">{{ tr(notice) }}</p>
-  <select v-model="selected" :disabled="busy" :aria-label="tr('查看版本')" @change="read"><option v-for="v in history?.versions||[]" :key="v.version" :value="v.version">v{{ v.version }} · {{ v.change_note||tr('首次发布') }} · {{ new Date(v.published_at).toLocaleDateString() }}</option></select>
+  <SearchableSelect data-testid="history-version" v-model="selected" :disabled="busy" :aria-label="tr('查看版本')" :searchable="false" :options="(history?.versions||[]).map(v=>({value:v.version,label:'v'+v.version+' · '+(v.change_note||tr('首次发布'))+' · '+new Date(v.published_at).toLocaleDateString()}))" @change="read" />
   <pre v-if="revision">{{ text }}</pre>
   <template v-if="author && revision && selected!==history.current_version"><p>{{ tr("恢复历史内容会提交一个新版本，审核通过后生效。") }}</p><label>{{ tr("更新说明") }}<textarea v-model="note" maxlength="2000" :disabled="busy" /></label><button class="button" :disabled="busy||!note.trim()" @click="restore">{{ tr("将此内容提交为新版本") }}</button></template>
  </section>
 </template>
 <script setup>
+import SearchableSelect from './SearchableSelect.vue';
 import { tr } from '../platform/interfaceLanguage.js';
 import { computed, ref, onMounted, watch } from 'vue';
 import { contentVersions } from '../platform/contentVersions.js';

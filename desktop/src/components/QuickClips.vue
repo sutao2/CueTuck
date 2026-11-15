@@ -1,16 +1,19 @@
 <template>
-  <main class="content-area clips-page">
-    <header class="clips-heading"><div><h1>{{ tr('常用片段') }}</h1><p>{{ tr('只保存你主动添加的内容。用启动器搜索，按回车即可复制。') }}</p></div>
+  <main class="content-area clips-page"><div class="clips-inner">
+    <header class="clips-heading"><div><h1>{{ tr(draft ? (draft.id ? '编辑片段' : '添加片段') : '常用片段') }}</h1><p v-if="!draft">{{ tr('只保存你主动添加的内容。用启动器搜索，按回车即可复制。') }}</p></div>
       <button v-if="!draft" class="button primary-button" @click="edit()">{{ tr('添加片段') }}</button>
     </header>
-    <p v-if="error" role="alert">{{ tr(error) }}</p><p v-if="notice" role="status">{{ tr(notice) }}</p>
+    <p v-if="error && !draft" role="alert">{{ tr(error) }}</p><p v-if="notice" role="status">{{ tr(notice) }}</p>
     <form v-if="draft" class="clip-form" @submit.prevent="save">
-      <label>{{ tr('类型') }}<select v-model="draft.kind" :disabled="!!draft.id || busy" @change="draft.value=''"><option v-for="(name,kind) in clipTypes" :value="kind" :key="kind">{{ tr(name) }}</option></select></label>
-      <label>{{ tr('名称') }}<input ref="titleInput" v-model="draft.title" required maxlength="120" :disabled="busy" autocomplete="off"></label>
+      <div class="clip-identity">
+        <label>{{ tr('名称') }}<input ref="titleInput" v-model="draft.title" required maxlength="120" :disabled="busy" autocomplete="off"></label>
+        <label>{{ tr('类型') }}<SearchableSelect v-model="draft.kind" :options="typeOptions" :aria-label="tr('类型')" :searchable="false" :disabled="!!draft.id || busy" @change="draft.value=''" /></label>
+      </div>
       <label v-if="draft.kind==='password'">{{ tr('密码') }}<input type="password" v-model="draft.value" :required="!draft.id" :disabled="busy" autocomplete="new-password"></label>
       <label v-else>{{ tr('内容') }}<textarea v-model="draft.value" required :disabled="busy" rows="5" /></label>
       <p v-if="draft.kind==='password'">{{ tr('密码存入系统凭据库，仅按名称搜索。编辑时留空保留原密码。') }}</p>
-      <div><button class="button primary-button" :disabled="busy">{{ tr('保存') }}</button> <button type="button" class="button" :disabled="busy" @click="draft=null;error=''">{{ tr('取消') }}</button></div>
+      <p v-if="error" class="clip-error" role="alert">{{ tr(error) }}</p>
+      <div class="clip-form-actions"><button class="button primary-button" :disabled="busy">{{ tr('保存') }}</button> <button type="button" class="button" :disabled="busy" @click="draft=null;error=''">{{ tr('取消') }}</button></div>
     </form>
     <template v-else>
       <input ref="searchInput" type="search" v-model="query" :placeholder="tr('搜索名称或片段内容')" :aria-label="tr('搜索常用片段')">
@@ -22,13 +25,15 @@
         </div>
       </article>
     </template>
-  </main>
+  </div></main>
 </template>
 <script setup>
 import {ref,watch,nextTick,onMounted,onUnmounted,computed} from 'vue';
+import SearchableSelect from './SearchableSelect.vue';
 import {clipTypes,clipRequest,findClips,copyClip} from '../platform/quickClips.js';
 import {tr} from '../platform/interfaceLanguage.js';
 const rows=ref([]),query=ref(''),draft=ref(null),busy=ref(false),error=ref(''),notice=ref(''),removing=ref(''),titleInput=ref(null),searchInput=ref(null);
+const typeOptions=computed(()=>Object.entries(clipTypes).map(([value,label])=>({value,label:tr(label)})));
 const visibleId=ref(''),visibleValue=ref('');
 let generation=0,revealSequence=0,hideTimer;
 function hidePassword(){
@@ -70,4 +75,14 @@ defineExpose({editing:computed(()=>Boolean(draft.value)),focusSearch:()=>searchI
 <style scoped>
 .clips-page{padding:24px 32px;overflow:auto}.clips-heading,.clip-row,.clip-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.clips-page p,.clips-page small{color:var(--muted)}.clip-row{padding:14px 0;border-bottom:1px solid var(--line)}.clip-row>div:first-child{min-width:0;flex:1}.clip-row strong,.clip-row p{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:4px 0}.clip-form,.clip-form label{display:grid;gap:8px}.clip-form{max-width:640px;gap:16px}.clips-page :is(input,select,textarea){box-sizing:border-box;border:1px solid var(--control-border);border-radius:var(--radius-control);background:var(--surface);color:var(--text);font:inherit;padding:10px;width:100%}
 .clip-row p.visible-secret{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font-code);color:var(--text)}
+
+.clips-inner{width:100%;max-width:880px;margin-inline:auto}
+.clips-heading{margin:0 0 22px;align-items:flex-start}.clips-heading h1{margin:0;font-size:24px;font-weight:620;letter-spacing:-.035em}.clips-heading p{margin:6px 0 0;font-size:13px;line-height:1.6}
+.clip-form{max-width:100%;padding:20px;border:1px solid var(--line);border-radius:var(--radius-panel);background:var(--surface);gap:18px}
+.clip-identity{display:grid;grid-template-columns:minmax(0,2fr) minmax(130px,1fr);gap:14px}
+.clip-form label{min-width:0;font-size:13px;font-weight:550}.clip-form input,.clip-form textarea{font-weight:400}
+.clip-form p{margin:0;font-size:12px;line-height:1.55}.clip-form .clip-error{color:var(--danger)}
+.clip-form-actions{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+.clips-page .clip-row{padding:14px 4px}.clip-actions{gap:6px}
+@media(max-width:760px){.clips-page{padding:18px}.clip-identity{grid-template-columns:1fr}.clip-form{padding:16px}}
 </style>

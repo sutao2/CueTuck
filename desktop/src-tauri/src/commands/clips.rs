@@ -32,6 +32,33 @@ fn credential(id: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new("CueTuck.quick-clips", id).map_err(|_| "无法访问系统凭据库".into())
 }
 
+fn credential_error(error: keyring::Error) -> String {
+    #[cfg(target_os = "macos")]
+    if let keyring::Error::NoStorageAccess(cause) | keyring::Error::PlatformFailure(cause) = &error
+    {
+        if let Some(err) = cause.downcast_ref::<security_framework::base::Error>() {
+            return match err.code() {
+                -25307 | -25294 => {
+                    "当前用户没有默认钥匙串。请在“钥匙串访问”中设置默认登录钥匙串，再重试。".into()
+                }
+                -128 => "已取消钥匙串授权，可重试。".into(),
+                -25308 | -25293 => {
+                    "钥匙串已锁定或访问被拒绝。请解锁登录钥匙串并允许访问，再重试。".into()
+                }
+                code => format!("钥匙串操作失败（系统代码 {code}）"),
+            };
+        }
+    }
+    match error {
+        keyring::Error::TooLong(_, _) => "密码超过系统凭据库的长度限制".into(),
+        keyring::Error::NoEntry => "系统凭据库中找不到此密码，请编辑片段重新保存。".into(),
+        keyring::Error::NoStorageAccess(_) => {
+            "当前登录会话无法访问系统凭据库，请解锁系统后重试。".into()
+        }
+        _ => "系统凭据库操作失败，请重试。".into(),
+    }
+}
+
 fn db(_: rusqlite::Error) -> String {
     "无法读写本机片段库".into()
 }
@@ -103,9 +130,7 @@ fn run(
             };
             if secret {
                 if let Some(value) = value {
-                    entry(&id)?
-                        .set_password(&value)
-                        .map_err(|_| "密码未保存，请检查系统凭据库授权")?;
+                    entry(&id)?.set_password(&value).map_err(credential_error)?;
                 }
             }
             tx.commit().map_err(db)?;
@@ -117,9 +142,7 @@ fn run(
                 .map_err(db)?;
             Ok(json!(match body {
                 Some(value) => value,
-                None => entry(&id)?
-                    .get_password()
-                    .map_err(|_| "无法读取密码，请检查系统凭据库授权")?,
+                None => entry(&id)?.get_password().map_err(credential_error)?,
             }))
         }
         Request::Delete { id } => {
@@ -134,7 +157,7 @@ fn run(
             if kind == "password" {
                 match entry(&id)?.delete_credential() {
                     Ok(()) | Err(keyring::Error::NoEntry) => (),
-                    Err(_) => return Err("密码未删除，请检查系统凭据库授权".into()),
+                    Err(error) => return Err(credential_error(error)),
                 }
             }
             tx.commit().map_err(db)?;
@@ -161,6 +184,18 @@ pub async fn quick_clip(app: AppHandle, request: Request) -> Result<Value, Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn default_keychain_missing_is_distinct_from_refused_access() {
+        let error = |code| {
+            keyring::Error::PlatformFailure(Box::new(security_framework::base::Error::from_code(
+                code,
+            )))
+        };
+        assert!(credential_error(error(-25307)).contains("没有默认钥匙串"));
+        assert!(credential_error(error(-128)).contains("已取消"));
+        assert!(credential_error(error(-25293)).contains("拒绝"));
+    }
     #[test]
     fn persisted_templates_search_and_copy_verbatim() {
         let dir = tempfile::tempdir().unwrap();

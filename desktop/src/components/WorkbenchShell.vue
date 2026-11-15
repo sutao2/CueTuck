@@ -20,13 +20,14 @@
         <button type="button" class="title-tool" data-testid="titlebar-search" :title="tr('全局搜索 {0}', [globalSearchShortcutLabel])" :disabled="globalSearchBlocked" @click="openGlobalSearch">
           <AppIcon name="search" /><span>{{ tr('全局搜索') }}</span><kbd>{{ globalSearchShortcutLabel }}</kbd>
         </button>
+        <button v-if="appLock?.enabled.value" type="button" data-testid="titlebar-lock" class="title-tool title-lock" :title="tr('立即锁定')" :aria-label="tr('立即锁定')" :disabled="globalSearchBlocked" @click="navigateTo(() => appLock.lock(Boolean(clipsPage?.editing)))"><AppIcon name="unlock" /></button>
       </div>
     </header>
 
     <div v-show="!settingsOpen || Boolean(loginReason)" class="workspace" :inert="globalSearchOpen ? '' : undefined">
       <aside v-show="!sidebarCollapsed" id="workbench-sidebar" data-region="sidebar" class="sidebar" @click.capture="guardSidebarNavigation">
         <div class="sidebar-brand-row">
-          <span class="brand-name">{{ t("brand") }}</span>
+          <img class="brand-mark" src="../assets/app-icon.png" alt=""><span class="brand-name">{{ t("brand") }}</span>
         </div>
         <p class="nav-group-label">{{ tr('我的工作台') }}</p>
         <div class="space-switch" role="tablist" :aria-label="tr('我的工作台')">
@@ -127,8 +128,6 @@
         </nav>
 
         <div class="sidebar-bottom">
-          <button v-if="appLock" type="button" @click="appLock.openSettings()"><AppIcon name="lock"/><span>{{ tr('应用锁') }}</span><span class="sidebar-bottom-action">›</span></button>
-          <button v-if="appLock?.enabled.value" type="button" @click="appLock.lock(Boolean(clipsPage?.editing))"><AppIcon name="lock"/><span>{{ tr('立即锁定') }}</span></button>
           <button v-if="session.loggedIn" type="button" data-testid="open-publications" @click="publicationsOpen = true"><AppIcon name="file" /><span>{{ tr('我的发布') }}</span><span class="sidebar-bottom-action">›</span></button>
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
             <AppIcon name="settings" /><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
