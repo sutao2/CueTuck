@@ -187,13 +187,11 @@ defineExpose({editing:computed(()=>Boolean(draft.value)),focusSearch:()=>searchI
 .clips-heading svg,.search svg{width:15px;height:15px;flex:none}
 .back,.quiet,.confirm-delete{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:12px}
 .back{margin:0 0 10px;padding:2px 0}.back:hover,.quiet:hover{color:var(--text)}
-.clip-toolbar{display:flex;align-items:center;min-height:40px;gap:2px;padding:3px 5px 3px 12px;background:var(--surface-secondary);border-radius:11px;margin-bottom:14px}
-.search{flex:1 1 130px;display:flex;align-items:center;gap:9px;min-width:0;color:var(--muted)}
-.search input{background:transparent;border:0;color:var(--text);height:32px;min-width:0;width:100%;outline:none;font-size:13px}
-.clip-toolbar:has(.search input:focus-visible){outline:2px solid var(--focus);outline-offset:2px}
-.clip-toolbar :deep(.searchable-select){height:30px;min-height:30px;min-width:92px;width:auto;max-width:150px;border:0;border-radius:7px;background:transparent;padding:4px 8px;color:var(--muted);gap:8px}
-.clip-toolbar :deep(.searchable-select:hover),.clip-toolbar :deep(.searchable-select[aria-expanded=true]){background:var(--hover);color:var(--text)}
-.search::after{content:"";width:1px;height:16px;background:var(--line-strong);margin-right:3px}
+.clip-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.search{flex:1 1 130px;display:flex;align-items:center;gap:9px;min-width:0;height:38px;padding:0 12px;border-radius:10px;background:var(--surface-secondary);color:var(--muted)}
+.search input{flex:1;background:transparent;border:0;color:var(--text);height:100%;min-width:0;outline:none;font-size:13px}
+.search:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:2px}
+.clip-toolbar :deep(.searchable-select){height:38px;min-width:104px;width:auto;max-width:160px}
 .clip-row{position:relative;display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line)}
 .clip-row:last-of-type{border-bottom-color:transparent}
 .kind-icon{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:9px;background:var(--surface-secondary);color:var(--muted)}
@@ -217,5 +215,5 @@ defineExpose({editing:computed(()=>Boolean(draft.value)),focusSearch:()=>searchI
 .more-items button:hover,.more-items button:focus-visible{background:var(--hover)}.more-items .delete,.confirm-delete,.error{color:var(--danger)}
 .empty{display:grid;justify-items:center;gap:8px;text-align:center;padding:42px 12px}.empty svg{width:23px;height:23px;color:var(--muted)}.empty p{margin:0;color:var(--muted);font-size:13px}
 .notice{position:sticky;bottom:10px;width:fit-content;margin:10px auto 0;padding:5px 14px;background:var(--popover);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-menu)}
-@container(max-width:470px){.row-category{display:none}.clip-row{gap:8px}.clip-toolbar.compact{flex-wrap:wrap}.clip-toolbar.compact .search{flex-basis:100%}.clip-toolbar.compact .search::after{display:none}}
+@container(max-width:470px){.row-category{display:none}.clip-row{gap:8px}.clip-toolbar.compact{flex-wrap:wrap}.clip-toolbar.compact .search{flex-basis:100%}}
 </style>
