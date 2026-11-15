@@ -25,7 +25,7 @@
   </main>
 </template>
 <script setup>
-import {ref,watch,nextTick} from 'vue';
+import {ref,watch,nextTick,computed} from 'vue';
 import {clipTypes,clipRequest,findClips,copyClip} from '../platform/quickClips.js';
 import {tr} from '../platform/interfaceLanguage.js';
 const rows=ref([]),query=ref(''),draft=ref(null),busy=ref(false),error=ref(''),notice=ref(''),removing=ref(''),titleInput=ref(null),searchInput=ref(null);
@@ -41,7 +41,7 @@ async function act(fn){if(busy.value)return;busy.value=true;error.value='';notic
 function save(){return act(async()=>{const d=draft.value;await clipRequest({action:'save',...d,value:d.kind==='password'&&d.id&&!d.value?null:d.value});draft.value=null;query.value='';await load();notice.value='已保存';});}
 function copy(row){return act(async()=>{await copyClip(row.id);notice.value='已复制';});}
 function remove(row){return act(async()=>{await clipRequest({action:'delete',id:row.id});removing.value='';await load();notice.value='已删除';});}
-defineExpose({focusSearch:()=>searchInput.value?.focus()});
+defineExpose({editing:computed(()=>Boolean(draft.value)),focusSearch:()=>searchInput.value?.focus()});
 </script>
 <style scoped>
 .clips-page{padding:24px 32px;overflow:auto}.clips-heading,.clip-row,.clip-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.clips-page p,.clips-page small{color:var(--muted)}.clip-row{padding:14px 0;border-bottom:1px solid var(--line)}.clip-row>div:first-child{min-width:0;flex:1}.clip-row strong,.clip-row p{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:4px 0}.clip-form,.clip-form label{display:grid;gap:8px}.clip-form{max-width:640px;gap:16px}.clips-page :is(input,select,textarea){box-sizing:border-box;border:1px solid var(--control-border);border-radius:var(--radius-control);background:var(--surface);color:var(--text);font:inherit;padding:10px;width:100%}

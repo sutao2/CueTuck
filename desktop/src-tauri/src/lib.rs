@@ -4,6 +4,7 @@ mod prompt_search;
 mod skill_bundle;
 #[path = "../../../shared/translation.rs"]
 mod prompt_translation;
+mod app_lock;
 mod commands;
 mod skills;
 mod api_config;
@@ -57,7 +58,10 @@ pub fn run() {
         builder = builder.manage(commands::launcher::PreviousApplication::default());
     }
     builder
-        .invoke_handler(tauri::generate_handler![
+        .invoke_handler(|invoke| app_lock::dispatch(invoke, tauri::generate_handler![
+            app_lock::app_lock_status,
+            app_lock::app_lock_action,
+            app_lock::app_lock_device_available,
             commands::clips::quick_clip,
             commands::skills::skills_command,
             commands::skills::skill_market_request,
@@ -175,8 +179,9 @@ pub fn run() {
             commands::square::put_favorite,
             commands::square::delete_favorite,
             commands::square::list_favorites,
-        ])
+        ]))
         .setup(|app| {
+            app.manage(app_lock::AppLock::load(app.path().app_data_dir()?)?);
             let database = app.state::<LocalDatabase>();
             if let Ok(dir) = app.path().app_data_dir() {
                 if database.initialize(&dir).is_ok() {

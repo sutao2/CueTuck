@@ -1,0 +1,85 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { flushPromises, mount } from '@vue/test-utils';
+import { defineComponent, inject } from 'vue';
+import Gate from './AppLockGate.vue';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+
+vi.mock('@tauri-apps/api/core',()=>({invoke:vi.fn()}));
+vi.mock('@tauri-apps/api/event',()=>({listen:vi.fn()}));
+let state, changed, wrapper;
+const workspace=defineComponent({
+  setup:()=>({lock:inject('appLock',null)}),
+  template:'<section data-private><button v-if="lock" @click="lock.openSettings">settings</button><button v-if="lock" @click="lock.lock(true)">dirty</button><button v-if="lock" @click="lock.lock()">lock</button></section>',
+});
+beforeEach(()=>{
+  HTMLDialogElement.prototype.showModal ??= function(){ this.open=true; };
+  HTMLDialogElement.prototype.close ??= function(){ this.open=false; };
+  window.__TAURI_INTERNALS__={};
+  state={enabled:true,locked:true,device:true};
+  listen.mockImplementation(async(_,callback)=>{changed=callback;return ()=>{};});
+  invoke.mockImplementation(async(cmd,{request}={})=>{
+    if(cmd==='app_lock_status')return {...state};
+    if(cmd==='app_lock_device_available')return true;
+    if(cmd==='app_lock_action'){
+      if(request.action==='unlock' && request.password!=='correct-password')throw new Error('解锁口令不正确');
+      if(request.action==='unlock_device')throw new Error('设备验证未完成，可使用解锁口令');
+      if(request.action==='unlock')state.locked=false;
+      if(request.action==='lock')state.locked=true;
+      if(request.action==='enable')state.enabled=true;
+      await changed();
+    }
+  });
+});
+afterEach(()=>{wrapper?.unmount();delete window.__TAURI_INTERNALS__;vi.resetAllMocks();});
+it('only mounts private content after a successful unlock and removes it on manual lock',async()=>{
+  wrapper=mount(Gate,{slots:{default:workspace}});
+  expect(wrapper.find('[data-private]').exists()).toBe(false);
+  await flushPromises();
+  await wrapper.get('section > button').trigger('click');await flushPromises();
+  expect(wrapper.get('[role=alert]').text()).toContain('设备验证未完成');
+  await wrapper.get('input').setValue('wrong');await wrapper.get('form').trigger('submit');await flushPromises();
+  expect(wrapper.find('[data-private]').exists()).toBe(false);
+  expect(wrapper.get('input').element.value).toBe('');
+  await wrapper.get('input').setValue('correct-password');await wrapper.get('form').trigger('submit');await flushPromises();
+  expect(wrapper.get('[data-private]').exists()).toBe(true);
+  await wrapper.get('[data-private] button:last-child').trigger('click');await flushPromises();
+  expect(wrapper.find('[data-private]').exists()).toBe(false);
+});
+it('keeps both failed reads and a stale unlock response out of the launcher',async()=>{
+  invoke.mockRejectedValueOnce(new Error('offline'));
+  wrapper=mount(Gate,{props:{launcher:true},slots:{default:workspace}});await flushPromises();
+  expect(wrapper.find('[data-private]').exists()).toBe(false);
+  let release;
+  invoke.mockImplementationOnce(()=>new Promise(resolve=>{release=resolve;}));
+  const pending=changed();await changed();release({locked:false});await pending;
+  expect(wrapper.find('[data-private]').exists()).toBe(false);
+  expect(wrapper.find('form').exists()).toBe(false);
+  state.locked=false;await changed();await flushPromises();expect(wrapper.get('[data-private]').exists()).toBe(true);
+});
+it('checks confirmation before enabling and clears the password fields after saving',async()=>{
+  state={enabled:false,locked:false,device:false};
+  wrapper=mount(Gate,{slots:{default:workspace}});
+  await flushPromises();await wrapper.get('[data-private] button').trigger('click');await flushPromises();
+  const fields=wrapper.findAll('dialog input');
+  await fields[0].setValue('12345678');await fields[1].setValue('different');await wrapper.get('dialog form').trigger('submit');
+  expect(wrapper.get('[role=alert]').text()).toContain('不一致');
+  expect(invoke.mock.calls.some(([cmd])=>cmd==='app_lock_action')).toBe(false);
+  await wrapper.get('input[type=checkbox]').setValue(true);
+  await fields[1].setValue('12345678');await wrapper.get('dialog form').trigger('submit');await flushPromises();
+  expect(invoke).toHaveBeenCalledWith('app_lock_action',{request:{action:'enable',password:'12345678',device:true}});
+  expect(wrapper.find('dialog').exists()).toBe(false);
+});
+
+it('lets the user keep editing an unsaved clip before locking',async()=>{
+  state.locked=false;
+  wrapper=mount(Gate,{slots:{default:workspace}});await flushPromises();
+  await wrapper.get('[data-private] button:nth-child(2)').trigger('click');await flushPromises();
+  expect(wrapper.get('dialog').text()).toContain('片段尚未保存');
+  const button=text=>wrapper.findAll('button').find(b=>b.text()===text);
+  await button('继续编辑').trigger('click');
+  expect(wrapper.get('[data-private]').exists()).toBe(true);
+  await wrapper.get('[data-private] button:nth-child(2)').trigger('click');await flushPromises();
+  await button('丢弃并锁定').trigger('click');await flushPromises();
+  expect(wrapper.find('[data-private]').exists()).toBe(false);
+});

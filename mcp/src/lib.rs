@@ -168,6 +168,9 @@ fn dispatch(dir: &Path, params: &Value, square: Option<&square::Square>, search:
 }
 
 fn call_tool(dir: &Path, params: &Value, search: &mut SearchCache, cancel: Arc<AtomicBool>) -> Result<Value, String> {
+    if dir.join("app-lock.json").try_exists().map_err(|_| "无法验证应用锁状态")? {
+        return Err("应用锁已启用，本机 MCP 读取已暂停".into());
+    }
     let name = params
         .get("name")
         .and_then(Value::as_str)

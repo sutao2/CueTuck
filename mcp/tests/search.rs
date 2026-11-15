@@ -187,3 +187,23 @@ fn cancelled_search_does_not_poison_next_request() {
         .contains("取消"));
     assert!(!ids(&search(&mut cache, dir.path(), json!({}))).is_empty());
 }
+
+#[test]
+fn enabling_app_lock_blocks_live_mcp_clients_with_a_warm_search_cache() {
+    let dir = tempdir().unwrap();
+    let _db = seed(dir.path());
+    let mut cache = SearchCache::default();
+    let mut call = |name: &str| {
+        let args = if name == "search_prompts" {json!({"query":"写作"})} else {json!({"id":"exact"})};
+        promptark_mcp::handle_rpc_with_search(dir.path(), &json!({
+        "jsonrpc":"2.0", "id":1, "method":"tools/call", "params":{"name":name,"arguments":args}
+    }), None, &mut cache, Arc::new(AtomicBool::new(false))).unwrap()
+    };
+    assert!(call("search_prompts")["result"]["structuredContent"]["items"].is_array());
+    std::fs::write(dir.path().join("app-lock.json"), b"{}").unwrap();
+    for name in ["search_prompts","get_prompt","render_prompt"] {
+        let response=call(name);
+        assert!(response.to_string().contains("本机 MCP 读取已暂停"));
+        assert!(!response.to_string().contains("自然光"));
+    }
+}

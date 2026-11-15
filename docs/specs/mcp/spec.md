@@ -21,6 +21,8 @@
 - WHEN 宿主请求工具列表
 - THEN 包含 `search_prompts`、`get_prompt`、`render_prompt`
 
+本机读取还须满足[桌面应用锁](../app-lock/spec.md)的访问条件。
+
 ### Requirement: 只读本机库
 
 本地工具 MUST 针对 `PROMPTARK_LIBRARY_DIR` 下的 `promptark.sqlite`。MUST 忽略已软删条目。库文件不存在时 MUST 返回明确错误，MUST NOT 编造提示词。本地工具 MUST NOT 请求广场或管理 HTTP。

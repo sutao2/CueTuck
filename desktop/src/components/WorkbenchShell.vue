@@ -28,19 +28,8 @@
         <div class="sidebar-brand-row">
           <span class="brand-name">{{ t("brand") }}</span>
         </div>
-        <p class="nav-group-label">{{ tr('提示词') }}</p>
-        <div class="space-switch" role="tablist" :aria-label="tr('提示词空间')">
-          <button
-            type="button"
-            class="space-tab"
-            data-space="square"
-            role="tab"
-            :aria-selected="contentKind === 'prompts' && space === 'square'"
-            :class="{ active: contentKind === 'prompts' && space === 'square' }"
-            @click="openSquare"
-          >
-            <span class="nav-icon"><AppIcon name="square" /></span><span>{{ t("square") }}</span>
-          </button>
+        <p class="nav-group-label">{{ tr('我的工作台') }}</p>
+        <div class="space-switch" role="tablist" :aria-label="tr('我的工作台')">
           <button
             type="button"
             class="space-tab"
@@ -52,13 +41,23 @@
           >
             <span class="nav-icon"><AppIcon name="library" /></span><span>{{ t("local") }}</span>
           </button>
-        </div>
-
-        <div v-if="nativeDownloads" class="space-switch"><button type="button" class="space-tab" :class="{active:contentKind==='clips'}" @click="contentKind='clips'"><span class="nav-icon"><AppIcon name="copy"/></span><span>{{ tr('常用片段') }}</span></button></div>
-        <p class="nav-group-label">Skills</p>
-        <div class="space-switch" role="tablist" :aria-label="tr('Skills 空间')">
-          <button type="button" class="space-tab" data-space="skills-square" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'square'" :class="{active:contentKind === 'skills' && skillsMode === 'square'}" @click="openSkills('square')"><span class="nav-icon"><AppIcon name="square"/></span><span>{{ tr('Skill 广场') }}</span></button>
+          <button v-if="nativeDownloads" type="button" role="tab" data-space="clips" :aria-selected="contentKind==='clips'" class="space-tab" :class="{active:contentKind==='clips'}" @click="contentKind='clips'"><span class="nav-icon"><AppIcon name="copy"/></span><span>{{ tr('常用片段') }}</span></button>
           <button type="button" class="space-tab" data-space="skills-local" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'local'" :class="{active:contentKind === 'skills' && skillsMode === 'local'}" @click="openSkills('local')"><span class="nav-icon"><AppIcon name="skills"/></span><span>{{ tr('本机 Skills') }}</span></button>
+        </div>
+        <p class="nav-group-label">{{ tr('发现') }}</p>
+        <div class="space-switch" role="tablist" :aria-label="tr('发现')">
+          <button
+            type="button"
+            class="space-tab"
+            data-space="square"
+            role="tab"
+            :aria-selected="contentKind === 'prompts' && space === 'square'"
+            :class="{ active: contentKind === 'prompts' && space === 'square' }"
+            @click="openSquare"
+          >
+            <span class="nav-icon"><AppIcon name="square" /></span><span>{{ t("square") }}</span>
+          </button>
+          <button type="button" class="space-tab" data-space="skills-square" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'square'" :class="{active:contentKind === 'skills' && skillsMode === 'square'}" @click="openSkills('square')"><span class="nav-icon"><AppIcon name="square"/></span><span>{{ tr('Skill 广场') }}</span></button>
         </div>
         <div v-show="contentKind === 'prompts'" class="sidebar-toolbar">
           <span>{{ space === "local" ? t("myCategories") : t("exploreCategories") }}</span>
@@ -128,6 +127,8 @@
         </nav>
 
         <div class="sidebar-bottom">
+          <button v-if="appLock" type="button" @click="appLock.openSettings()"><AppIcon name="lock"/><span>{{ tr('应用锁') }}</span><span class="sidebar-bottom-action">›</span></button>
+          <button v-if="appLock?.enabled.value" type="button" @click="appLock.lock(Boolean(clipsPage?.editing))"><AppIcon name="lock"/><span>{{ tr('立即锁定') }}</span></button>
           <button v-if="session.loggedIn" type="button" data-testid="open-publications" @click="publicationsOpen = true"><AppIcon name="file" /><span>{{ tr('我的发布') }}</span><span class="sidebar-bottom-action">›</span></button>
           <button type="button" data-testid="open-settings" @click="settingsOpen = true">
             <AppIcon name="settings" /><span>{{ t("settings") }}</span><span class="sidebar-bottom-action">›</span>
@@ -653,7 +654,7 @@ import { vPageFocus } from "../lib/pageFocus.js";
 import SearchHighlight from './SearchHighlight.vue';
 import ContentState from './ContentState.vue';
 import PublicationPreview from './PublicationPreview.vue';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import CollectionCover from "./CollectionCover.vue";
 import CollectionDetailModal from "./CollectionDetailModal.vue";
 import CreatePromptModal from "./CreatePromptModal.vue";
@@ -855,6 +856,7 @@ const creatingInCollection = ref(null);
 const editing = ref(null);
 const reading = ref(null);
 const contentUpdatesOpen=ref(false),contentUpdatesBusy=ref(false);
+const appLock = inject('appLock', null);
 const nativeDownloads=Boolean(window.__TAURI_INTERNALS__);
 const contentUpdateSelection=ref('');
 const {badges:contentBadges,refresh:refreshContentBadges,skipVersion:skipContentVersion}=useContentUpdateBadges(async()=>nativeDownloads ? await localContentUpdate({action:'list'}) : [],contentChecksActive);

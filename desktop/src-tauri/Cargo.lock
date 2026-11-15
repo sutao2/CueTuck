@@ -586,6 +586,7 @@ name = "cuetuck"
 version = "0.1.0-beta.35"
 dependencies = [
  "base64 0.22.1",
+ "cc",
  "enigo",
  "image",
  "keyring",
@@ -593,6 +594,7 @@ dependencies = [
  "open",
  "regex",
  "reqwest 0.12.28",
+ "ring",
  "rusqlite",
  "semver",
  "serde",
@@ -607,6 +609,8 @@ dependencies = [
  "tokio",
  "url",
  "uuid",
+ "windows 0.61.3",
+ "windows-future",
  "yaml-rust2",
 ]
 
