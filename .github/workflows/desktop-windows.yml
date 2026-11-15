@@ -19,6 +19,7 @@ on:
       - 'scripts/release-check*'
       - 'scripts/windows-chrome-smoke.ps1'
       - 'scripts/windows-app-lock-smoke.ps1'
+      - 'scripts/windows-quick-clips-smoke.mjs'
       - 'scripts/windows-portable.ps1'
       - 'LICENSE'
       - '.github/workflows/desktop-windows.yml'
@@ -133,6 +134,17 @@ jobs:
           } finally { Pop-Location }
       - name: Build production-connected preview NSIS
         run: npx tauri build --bundles nsis --config src-tauri/tauri.preview.conf.json --ci
+      - name: Seed a previous-version clip on the disposable runner
+        shell: python
+        run: |
+          import os, sqlite3
+          from pathlib import Path
+          path = Path(os.environ['APPDATA']) / 'app.promptark.desktop' / 'quick-clips.sqlite'
+          path.parent.mkdir(parents=True, exist_ok=True)
+          assert not path.exists(), 'Expected a fresh runner'
+          with sqlite3.connect(path) as db:
+              db.execute("CREATE TABLE clips(id TEXT PRIMARY KEY, kind TEXT NOT NULL, title TEXT NOT NULL, body TEXT, CHECK ((kind='password')=(body IS NULL)))")
+              db.execute("INSERT INTO clips VALUES ('legacy', 'text', 'Legacy clip', 'Legacy body')")
       - name: Package and smoke-test portable ZIP before installation
         shell: pwsh
         run: ../scripts/windows-portable.ps1
@@ -166,6 +178,8 @@ jobs:
             if (Test-Path '../scripts/windows-app-lock-smoke.ps1') {
               if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
               $app.WaitForExit()
+              node ../scripts/windows-quick-clips-smoke.mjs (Join-Path $installDir 'cuetuck.exe')
+              if ($LASTEXITCODE -ne 0) { throw 'Installed quick clip workflow failed' }
               & ../scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $installDir 'cuetuck.exe')
             }
           } finally {
