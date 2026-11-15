@@ -53,6 +53,10 @@ Mac 预览构建必须复用固定签名身份，禁止 `-` / ad-hoc 回退。`n
 
 发布验收必须先使用公开 releases 列表与现行客户端选择逻辑验证：旧版发现新版、同版不提示、稳定通道不选 beta；再验证选中版本专属清单的签名下载和隔离安装。仅验证静态 latest 入口不代表用户能检查到更新。
 
+## Windows 安装包复验
+
+- Given 已完成的桌面 Windows 推送构建，When 使用 `retest_run`，Then 重新安装该构建的附件并验收应用锁。复验 beta.37 起的片段分类和启动器时同时选中 `quick_clips`，测试将从旧版片段数据开始。
+
 ## Windows 免安装包
 
 - Given 同源 Windows 构建产物 When 发布 Then 安装包和 portable ZIP 都附在发行中，总 SHA256SUMS 覆盖 ZIP，更新清单仍使用 NSIS 签名产物。

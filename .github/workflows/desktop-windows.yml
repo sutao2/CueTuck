@@ -11,6 +11,10 @@ on:
         description: Re-test the installer from a completed Windows push run without rebuilding
         required: false
         type: string
+      quick_clips:
+        description: Include clip categories and launcher capture when retesting a beta.37 or newer installer
+        type: boolean
+        default: false
   push:
     branches: [m1-desktop-skeleton, main]
     paths:
@@ -57,8 +61,11 @@ jobs:
           run-id: ${{ inputs.retest_run }}
           github-token: ${{ github.token }}
           path: candidate
-      - run: python scripts/windows-legacy-clip-fixture.py
-      - name: Exercise installed quick clips and application lock
+      - if: inputs.quick_clips
+        run: python scripts/windows-legacy-clip-fixture.py
+      - name: Exercise installed application
+        env:
+          TEST_QUICK_CLIPS: ${{ inputs.quick_clips }}
         shell: pwsh
         run: |
           $files = @(Get-ChildItem candidate -Recurse -Filter '*-setup.exe')
@@ -68,7 +75,7 @@ jobs:
           if ((Start-Process $files[0].FullName -ArgumentList @('/S',"/D=$dir") -Wait -PassThru).ExitCode -ne 0) { throw 'Installation failed' }
           $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--force-renderer-accessibility'
           try {
-            ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') -WithQuickClips
+            ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') -WithQuickClips:($env:TEST_QUICK_CLIPS -eq 'true')
           }
           finally {
             if ((Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '/S' -Wait -PassThru).ExitCode -ne 0) { throw 'Uninstall failed' }
