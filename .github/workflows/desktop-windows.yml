@@ -7,6 +7,10 @@ on:
         description: Existing source tag or commit to package (blank uses workflow commit)
         required: false
         type: string
+      retest_run:
+        description: Re-test the installer from a completed Windows push run without rebuilding
+        required: false
+        type: string
   push:
     branches: [m1-desktop-skeleton, main]
     paths:
@@ -23,7 +27,49 @@ permissions:
   contents: read
 
 jobs:
+  retest:
+    if: inputs.retest_run != ''
+    runs-on: windows-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Identify the candidate
+        id: candidate
+        shell: pwsh
+        env:
+          RUN_ID: ${{ inputs.retest_run }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:RUN_ID -notmatch '^\d+$') { throw 'Expected a numeric run ID' }
+          $run = gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:RUN_ID" | ConvertFrom-Json
+          if ($run.event -ne 'push' -or $run.path -ne '.github/workflows/desktop-windows.yml' -or $run.status -ne 'completed' -or $run.head_repository.full_name -ne $env:GITHUB_REPOSITORY -or $run.head_branch -notin @('m1-desktop-skeleton','main')) { throw 'Expected a Windows packaging run on a release branch of this repository' }
+          $artifact = if ($run.conclusion -eq 'success') { 'cuetuck-windows-nsis' } else { 'cuetuck-windows-diagnostic' }
+          "name=$artifact" >> $env:GITHUB_OUTPUT
+          Write-Host "Testing installer from $($run.head_sha)"
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.candidate.outputs.name }}
+          run-id: ${{ inputs.retest_run }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - name: Exercise the installed application lock
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem candidate -Recurse -Filter '*-setup.exe')
+          if ($files.Count -ne 1) { throw 'Expected one Windows x64 installer' }
+          Write-Host "Installer SHA256: $((Get-FileHash $files[0].FullName).Hash)"
+          $dir = Join-Path $env:RUNNER_TEMP 'cuetuck-retest'
+          if ((Start-Process $files[0].FullName -ArgumentList @('/S',"/D=$dir") -Wait -PassThru).ExitCode -ne 0) { throw 'Installation failed' }
+          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--force-renderer-accessibility'
+          try { ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') }
+          finally {
+            if ((Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '/S' -Wait -PassThru).ExitCode -ne 0) { throw 'Uninstall failed' }
+          }
   nsis:
+    if: inputs.retest_run == ''
     runs-on: windows-latest
     timeout-minutes: 45
     env:
