@@ -13,3 +13,5 @@ beta.38 将搜索框换成 textarea 以保留粘贴的多行文本，触发了�
 ## 验证记录
 
 52 项启动器回归通过。浏览器以真实 Tab 焦点验证浅深色搜索框无矩形外框、空查询 64px、加号按钮保留焦点标识；真实粘贴的换行、空行、缩进与尾部空格在资料编辑器中逐字保留。截图位于 `output/verification/launcher-focus-light.png` 与 `launcher-focus-dark.png`。
+
+已随 beta.39 发布，双平台安装与公开更新验收见[发布记录](2026-11-16-beta39-release.md)。
