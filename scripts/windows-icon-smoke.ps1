@@ -5,6 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Requires a disposable Windows Actions runner' }
 Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName System.Windows.Forms
 if (-not ('CueTuckIconProbe' -as [type])) {
   Add-Type @'
 using System;
@@ -20,6 +21,7 @@ public static class CueTuckIconProbe {
   public static extern IntPtr SHGetFileInfo(string path,uint attributes,ref FileInfo info,uint size,uint flags);
   [DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern void SHChangeNotify(int change,uint flags,string item,IntPtr other);
   [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr icon);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr window,int mode);
   [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr window,uint message,IntPtr w,IntPtr l);
   [DllImport("user32.dll", EntryPoint="GetClassLongPtrW")] public static extern IntPtr GetClassLongPtr(IntPtr window,int index);
 }
@@ -38,6 +40,19 @@ function Save-ShellIcon([string]$Path,[string]$Name) {
   $info = [CueTuckIconProbe+FileInfo]::new()
   [void][CueTuckIconProbe]::SHGetFileInfo($Path,0,[ref]$info,[Runtime.InteropServices.Marshal]::SizeOf($info),0x100)
   try { Save-Icon $info.Icon $Name } finally { if ($info.Icon -ne [IntPtr]::Zero) { [void][CueTuckIconProbe]::DestroyIcon($info.Icon) } }
+}
+function Save-Desktop {
+  [void][CueTuckIconProbe]::ShowWindow($app.MainWindowHandle,6)
+  [System.Windows.Forms.Application]::DoEvents()
+  Start-Sleep -Seconds 2
+  $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+  $bitmap = [System.Drawing.Bitmap]::new($bounds.Width,$bounds.Height)
+  $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+  try {
+    $graphics.CopyFromScreen($bounds.X,$bounds.Y,0,0,$bitmap.Size)
+    $bitmap.Save((Join-Path $folder 'desktop.png'),[System.Drawing.Imaging.ImageFormat]::Png)
+  } finally { $graphics.Dispose();$bitmap.Dispose() }
+  [void][CueTuckIconProbe]::ShowWindow($app.MainWindowHandle,9)
 }
 $report = @{ executable=$Executable; version=(Get-Item $Executable).VersionInfo.ProductVersion; sha256=(Get-FileHash $Executable -Algorithm SHA256).Hash; shortcuts=@() }
 $app = Start-Process $Executable -PassThru
@@ -69,6 +84,7 @@ try {
     }
   }
   $report | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $folder 'report.json')
+  Save-Desktop
   Write-Host "Recorded $Stage executable, window, shell and shortcut icons."
   if ($Stage -eq 'after') {
     [CueTuckIconProbe]::SHChangeNotify(0x2000,0x1005,$Executable,[IntPtr]::Zero)
@@ -91,6 +107,7 @@ try {
       Save-ShellIcon $link.path "shortcut-$index"
       $index++
     }
+    Save-Desktop
     Write-Host 'Recorded shell icons after icon cache invalidation notification.'
 
   }
