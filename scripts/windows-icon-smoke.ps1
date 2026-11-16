@@ -19,6 +19,7 @@ public static class CueTuckIconProbe {
   }
   [DllImport("shell32.dll", CharSet=CharSet.Unicode)]
   public static extern IntPtr SHGetFileInfo(string path,uint attributes,ref FileInfo info,uint size,uint flags);
+  [DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern void SHUpdateImage(string path,int iconIndex,uint flags,int imageIndex);
   [DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern void SHChangeNotify(int change,uint flags,string item,IntPtr other);
   [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr icon);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr window,int mode);
@@ -109,6 +110,21 @@ try {
     }
     Save-Desktop
     Write-Host 'Recorded shell icons after icon cache invalidation notification.'
+    $info = [CueTuckIconProbe+FileInfo]::new()
+    [void][CueTuckIconProbe]::SHGetFileInfo($Executable,0,[ref]$info,[Runtime.InteropServices.Marshal]::SizeOf($info),0x4000)
+    [CueTuckIconProbe]::SHUpdateImage($Executable,0,0,$info.Index)
+    [System.Windows.Forms.Application]::DoEvents()
+    Start-Sleep -Seconds 1
+    $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/image-refreshed'
+    New-Item -ItemType Directory -Force $folder | Out-Null
+    Save-ShellIcon $Executable 'shell-executable'
+    $index = 0
+    foreach ($link in $report.shortcuts) {
+      Save-ShellIcon $link.path "shortcut-$index"
+      $index++
+    }
+    Write-Host 'Recorded shell icons after updating the executable system image index.'
+
 
   }
 
