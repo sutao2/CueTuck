@@ -69,7 +69,7 @@ if (!$launcher) { throw 'Installed launcher window did not appear' }
 $handle = [IntPtr]$launcher.Current.NativeWindowHandle
 [void](Control $add 'Button')
 [System.Windows.Forms.SendKeys]::SendWait('https://example.invalid/clip-qa')
-Click $add 'ListItem|Button|Text'
+Click $add 'ListItem'
 Type-Text '名称' 'QASite'
 $field = Control '网址' 'Edit'
 if ($field.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value -ne 'https://example.invalid/clip-qa') { throw 'Launcher lost the input URL' }
