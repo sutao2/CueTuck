@@ -99,7 +99,7 @@ SectionEnd
     @'
 param([string]$InputFile)
 $shell = New-Object -ComObject WScript.Shell
-$links = @(Get-Content -Raw $InputFile | ConvertFrom-Json)
+$links = Get-Content -Raw $InputFile | ConvertFrom-Json
 @($links | ForEach-Object {
   $link = $shell.CreateShortcut($_.path)
   @{path=$_.path;icon=$link.IconLocation;target=$link.TargetPath}
