@@ -82,6 +82,17 @@ try {
       $index++
     }
     Write-Host 'Recorded shell icons after targeted executable and shortcut notifications.'
+    [CueTuckIconProbe]::SHChangeNotify(0x08000000,0x1000,$null,[IntPtr]::Zero)
+    $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/cache-refreshed'
+    New-Item -ItemType Directory -Force $folder | Out-Null
+    Save-ShellIcon $Executable 'shell-executable'
+    $index = 0
+    foreach ($link in $report.shortcuts) {
+      Save-ShellIcon $link.path "shortcut-$index"
+      $index++
+    }
+    Write-Host 'Recorded shell icons after icon cache invalidation notification.'
+
   }
 
 } finally {
