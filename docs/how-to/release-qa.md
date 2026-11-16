@@ -61,6 +61,8 @@ Mac 预览构建必须复用固定签名身份，禁止 `-` / ad-hoc 回退。`n
 
 - Given 已完成的桌面 Windows 推送构建，When 使用 `retest_run`，Then 重新安装该构建的附件并验收应用锁。复验 beta.37 起的片段分类和启动器时同时选中 `quick_clips`，测试将从旧版片段数据开始。
 
+使用 `check_icons` 可在临时 Windows 环境中先安装公开 beta.37，再原位升级候选附件，导出升级前后的窗口、系统外壳与快捷方式图标。
+
 ## Windows 免安装包
 
 - Given 同源 Windows 构建产物 When 发布 Then 安装包和 portable ZIP 都附在发行中，总 SHA256SUMS 覆盖 ZIP，更新清单仍使用 NSIS 签名产物。

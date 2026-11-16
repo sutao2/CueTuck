@@ -6,6 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
+| [plans/2026-11-16-windows-icon-upgrade.md](plans/2026-11-16-windows-icon-upgrade.md) | 调查中 | Windows beta.39 仍显示双环 | 旧版原位升级、外壳与窗口图标及快捷方式核对 |
 | [plans/2026-11-16-beta39-release.md](plans/2026-11-16-beta39-release.md) | 已发布 | 发布启动器焦点修复 | 同源双平台安装包、启动器外观、多行录入和公开更新验证 |
 | [plans/2026-11-16-launcher-search-focus.md](plans/2026-11-16-launcher-search-focus.md) | 已随 beta.39 发布 | beta.38 搜索框出现蓝色矩形 | 恢复搜索栏焦点视觉并保留多行录入 |
 | [plans/2026-11-16-saved-items-release.md](plans/2026-11-16-saved-items-release.md) | 已发布 | 常用资料改名与工作台样式 | 双平台界面、旧资料兼容、蓝色卡片图标、beta.38 官网与备用更新源上线，旧版设置页已验证 |

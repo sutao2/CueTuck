@@ -19,6 +19,10 @@ on:
         description: Verify the installed settings button against the public release feed
         type: boolean
         default: false
+      check_icons:
+        description: Inspect the public beta.37 to candidate icon upgrade in a disposable runner
+        type: boolean
+        default: false
   push:
     branches: [m1-desktop-skeleton, main]
     paths:
@@ -71,20 +75,35 @@ jobs:
         env:
           TEST_QUICK_CLIPS: ${{ inputs.quick_clips }}
           TEST_UPDATE_CHECK: ${{ inputs.check_updates }}
+          TEST_ICON_UPGRADE: ${{ inputs.check_icons }}
         shell: pwsh
         run: |
           $files = @(Get-ChildItem candidate -Recurse -Filter '*-setup.exe')
           if ($files.Count -ne 1) { throw 'Expected one Windows x64 installer' }
           Write-Host "Installer SHA256: $((Get-FileHash $files[0].FullName).Hash)"
           $dir = Join-Path $env:RUNNER_TEMP 'cuetuck-retest'
+          if ($env:TEST_ICON_UPGRADE -eq 'true') {
+            $baseline = Join-Path $env:RUNNER_TEMP 'cuetuck-beta37-setup.exe'
+            Invoke-WebRequest 'https://github.com/sutao2/CueTuck/releases/download/v0.1.0-beta.37/CueTuck_0.1.0-beta.37_x64-setup.exe' -OutFile $baseline
+            if ((Get-FileHash $baseline -Algorithm SHA256).Hash -ne 'aed6d040b8d853ab3cf2db589995ba5549891ee2913cc570728474caed6aff83') { throw 'Unexpected baseline installer' }
+            if ((Start-Process $baseline -ArgumentList @('/S',"/D=$dir") -Wait -PassThru).ExitCode -ne 0) { throw 'Baseline installation failed' }
+            ./scripts/windows-icon-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') -Stage before
+          }
           if ((Start-Process $files[0].FullName -ArgumentList @('/S',"/D=$dir") -Wait -PassThru).ExitCode -ne 0) { throw 'Installation failed' }
           $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--force-renderer-accessibility'
           try {
+            if ($env:TEST_ICON_UPGRADE -eq 'true') { ./scripts/windows-icon-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') -Stage after }
             ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') -WithQuickClips:($env:TEST_QUICK_CLIPS -eq 'true') -WithUpdateCheck:($env:TEST_UPDATE_CHECK -eq 'true')
           }
           finally {
             if ((Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '/S' -Wait -PassThru).ExitCode -ne 0) { throw 'Uninstall failed' }
           }
+      - if: always() && inputs.check_icons
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-icon-verification
+          path: ${{ runner.temp }}/cuetuck-icon-verification
+          if-no-files-found: error
   nsis:
     if: inputs.retest_run == ''
     runs-on: windows-latest
