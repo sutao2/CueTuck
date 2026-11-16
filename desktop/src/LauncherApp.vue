@@ -22,11 +22,12 @@
       <template v-if="step === 'search'">
         <div class="launcher-search-wrap">
           <AppIcon class="search-symbol" name="search" />
-          <input
+          <textarea
             ref="inputEl"
             v-model="query"
             class="launcher-search"
-            type="text"
+            rows="1"
+            wrap="off"
             :placeholder="scope==='square' ? tr('广场搜索') : tr('搜索提示词或常用资料…')"
             role="combobox"
             aria-autocomplete="list"
@@ -693,7 +694,12 @@ body.theme-dark .launcher-stage.host-windows {
 }
 .launcher-search {
   width: 100%;
-  height: 42px;
+  height: 1.5em;
+  line-height: 1.5;
+  resize: none;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
   border: 0;
   background: transparent;
   appearance: none;

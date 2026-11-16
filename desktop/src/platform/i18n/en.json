@@ -1180,6 +1180,7 @@
   "更新服务暂时限制访问，请稍后重试": "The update service is limiting requests. Try again later.",
   "更新服务暂时不可用，请稍后重试": "The update service is temporarily unavailable. Try again later.",
   "更新服务返回了无效的版本列表，请稍后重试": "The update service returned an invalid release list. Try again later.",
+  "转换后将删除原密码。请填写要保存为普通资料的内容。": "Converting this item will remove its saved password. Enter the content to save instead.",
   "检查失败，请重试": "Check failed. Please retry.",
   "附件读取失败：{0}": "Unable to read attachments: {0}",
   "确认并使用提示词": "Confirm and use prompt",

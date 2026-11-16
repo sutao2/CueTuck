@@ -93,3 +93,35 @@ Click "筛选${item}类型" 'Button|ComboBox'
 Click '网址' 'ListItem|Button|Text'
 [void](Control 'QASite' 'Text')
 Write-Host 'Installed NSIS passed legacy clip, category, launcher URL capture, live refresh, counts and combined filters.'
+
+if (!$legacy) {
+  # Paste into the installed editor and reclassify in place. The search term keeps the
+  # same row in view as we move between the URL, text and template filters.
+  $sample = "  clip-qa notes`r`n`r`n`tFollow up  `r`n"
+  foreach ($kind in @('文本', '模板')) {
+    Click 'QASite的更多操作' 'Button'
+    Click '编辑' 'Button'
+    # The accessible radio is visually hidden; keyboard activation selects its label.
+    $radio = Control $kind 'RadioButton'
+    $radio.SetFocus()
+    [System.Windows.Forms.SendKeys]::SendWait(' ')
+    $bodyField = Control '内容' 'Edit'
+    if ($kind -eq '文本') {
+      $bodyField.SetFocus()
+      [System.Windows.Forms.SendKeys]::SendWait('^a')
+      Set-Clipboard -Value $sample
+      [System.Windows.Forms.SendKeys]::SendWait('^v')
+    }
+    $body = $bodyField.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+    if ($body.Replace("`r`n","`n") -cne $sample.Replace("`r`n","`n")) { throw "Formatting changed in $kind editor" }
+    Click '保存' 'Button'
+    Click '筛选资料类型' 'Button|ComboBox'
+    Click $kind 'ListItem|Button|Text'
+    [void](Control 'QASite' 'Text')
+    Set-Clipboard -Value 'pending'
+    Click '复制' 'Button'
+    $copied = Get-Clipboard -Raw
+    if ($copied.Replace("`r`n","`n") -cne $sample.Replace("`r`n","`n")) { throw "Formatting changed when copying $kind" }
+  }
+  Write-Host 'Installed text and template both retained blank lines, indentation and trailing whitespace after changing type and copying.'
+}

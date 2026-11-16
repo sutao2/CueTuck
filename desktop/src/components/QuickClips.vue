@@ -41,7 +41,7 @@
             <div class="clip-copy">
               <div class="clip-title"><strong>{{ row.title }}</strong></div>
               <div class="row-preview">
-                <p :class="{'visible-secret':visibleId===row.id}">{{ row.kind==='password' ? (visibleId===row.id ? visibleValue : '••••••••') : row.content }}</p>
+                <p :class="{'visible-secret':visibleId===row.id, 'multiline-preview':row.kind==='text' || row.kind==='template'}">{{ row.kind==='password' ? (visibleId===row.id ? visibleValue : '••••••••') : row.content }}</p>
                 <button v-if="row.kind==='password'" class="row-tool" :aria-pressed="visibleId===row.id" :title="tr(visibleId===row.id ? '隐藏密码' : '显示密码')" :disabled="busy" @click="togglePassword(row)">
                   <AppIcon :name="visibleId===row.id ? 'eye-off' : 'eye'"/><span class="sr-only">{{ tr(visibleId===row.id ? '隐藏密码' : '显示密码') }}</span>
                 </button>
@@ -217,6 +217,7 @@ defineExpose({editing:computed(()=>Boolean(draft.value)),focusSearch:()=>searchI
 .row-category{font-size:11px;color:var(--muted)}
 .clip-copy p{margin:0;color:var(--muted);font-size:12px}
 .clip-copy .visible-secret{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font-code);color:var(--text)}
+.clip-copy .multiline-preview{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4;line-height:1.5}
 .row-category{gap:5px;max-width:110px}.row-category span{overflow:hidden;text-overflow:ellipsis}.row-category svg{width:13px;height:13px;flex:none}
 .clip-actions{gap:2px;flex:none}
 .row-tool{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;background:transparent;border-radius:7px;color:var(--muted);cursor:pointer}

@@ -5,7 +5,7 @@
         <legend>{{ tr('类型') }}</legend>
         <div class="type-list">
           <label v-for="(label,key) in clipTypes" :key="key" :class="{chosen:kind===key}">
-            <input type="radio" name="clip-kind" :value="key" v-model="kind" :disabled="busy || !!initial.id" @change="changeKind">
+            <input type="radio" name="clip-kind" :value="key" v-model="kind" :disabled="busy" @change="changeKind">
             <AppIcon :name="clipIcons[key]"/>{{ tr(label) }}
           </label>
         </div>
@@ -19,10 +19,11 @@
         </div>
       </div>
       <label class="field">{{ tr(valueLabel) }}
-        <input v-if="kind==='password'" v-model="value" type="password" :required="!initial.id" :disabled="busy" autocomplete="new-password">
-        <textarea v-else v-model="value" required :disabled="busy" :rows="kind==='url' || kind==='account' ? 2 : 4" :placeholder="placeholder" />
+        <input v-if="kind==='password'" v-model="value" type="password" :required="!existingPassword" :disabled="busy" autocomplete="new-password">
+        <textarea v-else v-model="value" required :disabled="busy" :class="{'document-body':multiline}" :rows="multiline ? 12 : 2" :placeholder="placeholder" />
       </label>
-      <p v-if="kind==='password'" class="hint">{{ tr(initial.id ? '密码存入系统凭据库，仅按名称搜索。编辑时留空保留原密码。' : '密码存入系统凭据库，仅按名称搜索。') }}</p>
+      <p v-if="kind==='password'" class="hint">{{ tr(existingPassword ? '密码存入系统凭据库，仅按名称搜索。编辑时留空保留原密码。' : '密码存入系统凭据库，仅按名称搜索。') }}</p>
+      <p v-else-if="existingPassword" class="hint">{{ tr('转换后将删除原密码。请填写要保存为普通资料的内容。') }}</p>
       <p v-if="error" role="alert">{{ tr(error) }}</p>
     </div>
     <footer><button type="button" :disabled="busy" @click="emit('cancel')">{{ tr('取消') }}</button>
@@ -41,6 +42,8 @@ const emit=defineEmits(['saved','cancel','busy']);
 const kind=ref(props.initial.kind || 'text'), title=ref(props.initial.title || '');
 const value=ref(props.initial.content ?? ''), category=ref(props.initial.category_id || '');
 const busy=ref(false), error=ref(''), titleInput=ref(null);
+const existingPassword = Boolean(props.initial.id && props.initial.kind === 'password');
+const multiline = computed(() => kind.value === 'text' || kind.value === 'template');
 let lastKind=kind.value;
 const valueLabel=computed(()=>['password','url','account'].includes(kind.value) ? clipTypes[kind.value] : '内容');
 const placeholder=computed(()=>({url:'https://…',account:tr('输入账号'),template:tr('粘贴常用模板'),text:tr('输入或粘贴资料内容')}[kind.value]));
@@ -63,8 +66,18 @@ async function save(){
   busy.value=true;
   emit('busy',true);
   try{
+    const previous = props.initial.content ?? '';
+    // Textareas expose LF even when an existing Windows document uses CRLF.
+    const normalized = previous.replace(/\r\n?/g,'\n');
+    let content = value.value;
+    if (content === normalized) content = previous;
+    else if (multiline.value && previous.includes('\r\n') && previous === normalized.replaceAll('\n','\r\n')) {
+      content = content.replace(/\r\n?/g,'\n').replaceAll('\n','\r\n');
+    }
+    const changedKind = props.initial.id && props.initial.kind !== kind.value;
     const id=await clipRequest({action:'save',id:props.initial.id || null,kind:kind.value,title:title.value.trim(),
-      value:kind.value==='password' && props.initial.id && !value.value ? null : value.value,category_id:category.value});
+      ...(changedKind ? {previous_kind: props.initial.kind} : {}),
+      value:kind.value==='password' ? (existingPassword && !value.value ? null : value.value) : content,category_id:category.value});
     value.value='';
     emit('saved',{id,title:title.value.trim(),kind:kind.value,category_id:category.value});
   }catch(e){error.value=String(e.message || e);}
@@ -73,7 +86,7 @@ async function save(){
 onMounted(()=>titleInput.value?.focus());
 </script>
 <style scoped>
-.clip-editor{display:flex;flex-direction:column;min-height:0;max-width:660px;color:var(--text)}
+.clip-editor{display:flex;flex-direction:column;min-height:0;width:100%;max-width:100%;color:var(--text)}
 .fields{display:grid;gap:19px;min-height:0}
 .type-picker{border:0;margin:0;padding:0;min-width:0}
 .type-picker legend,.field{font-size:12px;font-weight:550}
@@ -89,6 +102,8 @@ onMounted(()=>titleInput.value?.focus());
 .field{display:flex;min-width:0;flex-direction:column;gap:6px}
 .field :is(input,textarea){display:block;width:100%;padding:9px 12px;background:var(--surface);color:var(--text);border:1px solid var(--control-border);border-radius:10px;font-size:14px;font-weight:400;line-height:1.5}
 .field textarea{resize:vertical;min-height:85px}
+.field .document-body{min-height:clamp(240px,38vh,440px);padding:16px 18px;background:var(--surface);font-family:var(--font-code,monospace);font-size:14px;line-height:1.65;tab-size:4;border-radius:12px;white-space:pre-wrap}
+.field textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .field :deep(.searchable-select){height:41px;font-weight:400}
 .fields p{margin:0;color:var(--muted);font-size:12px}
 .fields p[role=alert]{color:var(--danger)}
@@ -100,5 +115,6 @@ footer button:disabled{opacity:.55}
 body.launcher-page .clip-editor{max-width:none;height:100%}
 body.launcher-page .fields{overflow-y:auto;align-content:start;flex:1;padding:12px 18px;gap:10px}
 body.launcher-page .field textarea{min-height:60px}
+body.launcher-page .field .document-body{height:120px;min-height:96px;padding:10px 12px}
 body.launcher-page footer{margin-top:0;padding:8px 16px}
 </style>

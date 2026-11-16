@@ -57,8 +57,8 @@ it('loads the saved language in the independent launcher', async () => {
   await library.setLocalSetting('ui_language','en');
   const w = mountView(Launcher);
   await flushPromises();
-  expect(w.get('input').attributes('placeholder')).toBe('Search prompts or saved items…');
-  await w.get('input').setValue('我的任务');
+  expect(w.get('.launcher-search').attributes('placeholder')).toBe('Search prompts or saved items…');
+  await w.get('.launcher-search').setValue('我的任务');
   expect(w.text()).toContain('Create prompt');
   expect(w.text()).toContain('Refine with AI');
   expect(w.text()).not.toContain('创建提示词');

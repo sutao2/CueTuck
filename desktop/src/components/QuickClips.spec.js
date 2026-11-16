@@ -28,9 +28,9 @@ it('selecting a clip in the launcher copies by ID without updating recent prompt
  await library.setLocalSetting('close_launcher_after_use','0');await library.setLocalSetting('last_rendered_prompt','previous prompt');
  vi.spyOn(clips,'findClips').mockResolvedValue([{id:'c1',kind:'password',title:'Work',content:null}]);
  const copy=vi.spyOn(clips,'copyClip').mockResolvedValue();
- wrapper=mount(Launcher);await flushPromises();await wrapper.get('input').setValue('Work');await vi.advanceTimersByTimeAsync(300);await flushPromises();
+ wrapper=mount(Launcher);await flushPromises();await wrapper.get('.launcher-search').setValue('Work');await vi.advanceTimersByTimeAsync(300);await flushPromises();
  expect(wrapper.text()).toContain('••••••••');expect(copy).not.toHaveBeenCalled();
- await wrapper.get('input').trigger('keydown',{key:'Enter'});await flushPromises();expect(copy).toHaveBeenCalledWith('c1');expect(await library.getLocalSetting('last_rendered_prompt')).toBe('previous prompt');
+ await wrapper.get('.launcher-search').trigger('keydown',{key:'Enter'});await flushPromises();expect(copy).toHaveBeenCalledWith('c1');expect(await library.getLocalSetting('last_rendered_prompt')).toBe('previous prompt');
 });
 it('copies from global clip search and clears that query before switching to an online scope',async()=>{
  const {default:GlobalSearch}=await import('./GlobalSearch.vue');
@@ -113,4 +113,49 @@ it('keeps copy accessible and dismisses secondary actions on Escape or an outsid
  await wrapper.get('[type=search]').trigger('pointerdown');
  expect(wrapper.find('.more-items').exists()).toBe(false);
  expect(request).not.toHaveBeenCalled();
+});
+
+it('edits a multiline text as a template while retaining its body, category and identity',async()=>{
+ const body='  Agenda\r\n\r\n\t{{speaker}}  \r\n';
+ const row={id:'agenda',kind:'text',title:'Meeting',content:body,category_id:'work'};
+ vi.spyOn(clips,'findClips').mockResolvedValue([row]);
+ const request=vi.spyOn(clips,'clipRequest').mockResolvedValue(row.id);
+ wrapper=mount(QuickClips);await flushPromises();
+ expect(wrapper.get('.multiline-preview').element.textContent).toBe(body);
+ await wrapper.get('.row-more > button').trigger('click');
+ await wrapper.get('.more-items button').trigger('click');
+ await wrapper.get('input[value=template]').setValue();
+ expect(wrapper.get('textarea.document-body').element.value).toBe(body.replaceAll('\r\n','\n'));
+ await wrapper.get('form').trigger('submit');await flushPromises();
+ expect(request).toHaveBeenCalledWith({action:'save',id:'agenda',kind:'template',previous_kind:'text',title:'Meeting',value:body,category_id:'work'});
+});
+
+it('preserves a Windows template’s line endings when editing the body',async()=>{
+ const row={id:'one',kind:'template',title:'Note',content:'First\r\n\r\n  Last\r\n'};
+ vi.spyOn(clips,'findClips').mockResolvedValue([row]);
+ const request=vi.spyOn(clips,'clipRequest').mockResolvedValue(row.id);
+ wrapper=mount(QuickClips);await flushPromises();
+ await wrapper.get('.row-more > button').trigger('click');
+ await wrapper.get('.more-items button').trigger('click');
+ await wrapper.get('textarea').setValue('First\n\n\tNew last\n');
+ await wrapper.get('form').trigger('submit');await flushPromises();
+ expect(request).toHaveBeenCalledWith(expect.objectContaining({value:'First\r\n\r\n\tNew last\r\n'}));
+});
+
+it('requires fresh content when converting a stored password and discards a typed password on switching away',async()=>{
+ const row={id:'entry',kind:'password',title:'Work',content:null};
+ vi.spyOn(clips,'findClips').mockResolvedValue([row]);
+ const request=vi.spyOn(clips,'clipRequest').mockResolvedValue(row.id);
+ wrapper=mount(QuickClips);await flushPromises();
+ await wrapper.get('.row-more > button').trigger('click');
+ await wrapper.get('.more-items button').trigger('click');
+ await wrapper.get('input[type=password]').setValue('test-only');
+ await wrapper.get('input[value=text]').setValue();
+ const editor=wrapper.get('textarea');
+ expect(editor.element.value).toBe('');
+ expect(editor.element.required).toBe(true);
+ expect(request).not.toHaveBeenCalled();
+ await editor.setValue('public notes');
+ await wrapper.get('form').trigger('submit');await flushPromises();
+ expect(request).toHaveBeenCalledWith({action:'save',id:'entry',previous_kind:'password',kind:'text',title:'Work',value:'public notes',category_id:''});
 });

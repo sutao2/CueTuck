@@ -15,6 +15,7 @@ pub enum Request {
     },
     Save {
         id: Option<String>,
+        previous_kind: Option<String>,
         kind: String,
         title: String,
         value: Option<String>,
@@ -174,6 +175,7 @@ fn run(
         }
         Request::Save {
             id,
+            previous_kind,
             kind,
             title,
             value,
@@ -191,7 +193,9 @@ fn run(
                 return Err("请检查资料的名称、类型和内容".into());
             }
             let secret = kind == "password";
-            if value.is_none() && !(secret && id.is_some()) {
+            let expected_kind = previous_kind.as_deref().unwrap_or(&kind);
+            let was_password = id.is_some() && expected_kind == "password";
+            if value.is_none() && !(secret && was_password) {
                 return Err("请填写资料内容".into());
             }
             let tx = c
@@ -201,8 +205,8 @@ fn run(
             let id = if let Some(id) = id {
                 if tx
                     .execute(
-                        "UPDATE clips SET title=?1,body=?2 WHERE id=?3 AND kind=?4",
-                        params![title.trim(), body, id, kind],
+                        "UPDATE clips SET title=?1,body=?2,kind=?3 WHERE id=?4 AND kind=?5",
+                        params![title.trim(), body, kind, id, expected_kind],
                     )
                     .map_err(db)?
                     != 1
@@ -237,12 +241,34 @@ fn run(
                     }
                 }
             }
-            if secret {
-                if let Some(value) = value {
-                    entry(&id)?.set_password(&value).map_err(credential_error)?;
+            if (secret && value.is_some()) || (was_password && !secret) {
+                let key = entry(&id)?;
+                let old_password = if was_password {
+                    match key.get_password() {
+                        Ok(old) => Some(old),
+                        Err(keyring::Error::NoEntry) => None,
+                        Err(error) => return Err(credential_error(error)),
+                    }
+                } else {
+                    None
+                };
+                if let Some(password) = value.as_deref().filter(|_| secret) {
+                    key.set_password(password).map_err(credential_error)?;
+                } else if old_password.is_some() {
+                    key.delete_credential().map_err(credential_error)?;
                 }
+                // Keep the write lock until both stores agree, including recovery on a failed commit.
+                if let Err(error) = tx.execute_batch("COMMIT") {
+                    match old_password {
+                        Some(old) => key.set_password(&old).map_err(credential_error)?,
+                        None if secret => key.delete_credential().map_err(credential_error)?,
+                        None => (),
+                    }
+                    return Err(db(error));
+                }
+            } else {
+                tx.commit().map_err(db)?;
             }
-            tx.commit().map_err(db)?;
             Ok(json!(id))
         }
         Request::CopyValue { id } => {
@@ -314,6 +340,7 @@ mod tests {
         let id = run(
             &mut c,
             Request::Save {
+                previous_kind: None,
                 category_id: None,
                 id: None,
                 kind: "template".into(),
@@ -349,6 +376,29 @@ mod tests {
             text
         );
     }
+    #[test]
+    fn type_changes_preserve_category_and_verbatim_body_and_reject_stale_or_failed_saves() {
+        let mut c = Connection::open_in_memory().unwrap();
+        let mut call = |request| {
+            run(&mut c, serde_json::from_value(request).unwrap(), |_| {
+                Err("vault unavailable".into())
+            })
+        };
+        let group = call(json!({"action":"create_category","name":"Office"})).unwrap();
+        let body = "  Agenda\r\n\r\n\t{{speaker}}  \r\n";
+        let id = call(json!({"action":"save","kind":"text","title":"Meeting","value":body,"category_id":group})).unwrap();
+        let convert = |from, to, value| json!({"action":"save","id":id,"previous_kind":from,"kind":to,"title":"Meeting","value":value});
+        assert_eq!(call(convert("text", "template", body)).unwrap(), id);
+        assert!(call(convert("text", "url", "stale")).is_err());
+        assert!(call(convert("template", "password", "test-only")).is_err());
+        let rows =
+            call(json!({"action":"search","kind":"template","query":"","category_id":group}))
+                .unwrap();
+        assert_eq!(rows[0]["id"], id);
+        assert_eq!(rows[0]["content"], body);
+        assert_eq!(call(json!({"action":"copy_value","id":id})).unwrap(), body);
+    }
+
     #[test]
     fn legacy_clips_can_be_organized_without_reading_or_losing_secrets() {
         let dir = tempfile::tempdir().unwrap();
@@ -427,6 +477,7 @@ mod tests {
         let saved = run(
             &mut database,
             Request::Save {
+                previous_kind: None,
                 category_id: None,
                 id: None,
                 kind: "password".into(),
@@ -447,6 +498,40 @@ mod tests {
                 row.get(0)
             })
             .unwrap();
+        let convert = |from, to, content: &str| {
+            serde_json::from_value(json!({
+                "action":"save", "id":id, "previous_kind":from, "kind":to,
+                "title":"QA", "value":content
+            }))
+            .unwrap()
+        };
+        let note = "  Example\n\n\tResult\n";
+        run(&mut database, convert("password", "text", note), credential).unwrap();
+        assert!(matches!(
+            credential(&id).unwrap().get_password(),
+            Err(keyring::Error::NoEntry)
+        ));
+        assert_eq!(
+            run(
+                &mut database,
+                Request::CopyValue { id: id.clone() },
+                credential
+            )
+            .unwrap(),
+            note
+        );
+        run(
+            &mut database,
+            convert("text", "password", &value),
+            credential,
+        )
+        .unwrap();
+        assert_eq!(credential(&id).unwrap().get_password().unwrap(), value);
+        assert!(database
+            .query_row("SELECT body IS NULL FROM clips WHERE id=?1", [&id], |row| {
+                row.get::<_, bool>(0)
+            })
+            .unwrap());
         run(
             &mut database,
             Request::Delete { id: id.clone() },
@@ -464,6 +549,7 @@ mod tests {
     fn credentials_fail_closed_and_search_never_reads_a_secret() {
         let mut c = Connection::open_in_memory().unwrap();
         let save = || Request::Save {
+            previous_kind: None,
             category_id: None,
             id: None,
             kind: "password".into(),

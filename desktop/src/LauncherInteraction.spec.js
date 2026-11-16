@@ -20,9 +20,9 @@ async function open(content = "{{姓名}} / {{任务}} / {{姓名}}") {
   await library.createLocalPrompt({ title: "测试", content });
   const w = mount(LauncherApp, { attachTo: document.body });
   await flushPromises();
-  await w.get("input").setValue("测试");
+  await w.get(".launcher-search").setValue("测试");
   await flushPromises();
-  await w.get("input").trigger("keydown", { key: "Enter" });
+  await w.get(".launcher-search").trigger("keydown", { key: "Enter" });
   await flushPromises();
   return w;
 }
@@ -42,12 +42,12 @@ it('uses saved result limit and text size, refreshing them on explicit show', as
   await library.setLocalSetting('launcher_preferences', JSON.stringify({ fontSize: 16, resultLimit: 10 }));
   for (let i = 0; i < 25; i++) await library.createLocalPrompt({ title: `测试 ${i}`, content: '{{内容}}' });
   const w = mount(LauncherApp); await flushPromises();
-  await w.get('input').setValue('测试'); await flushPromises();
+  await w.get('.launcher-search').setValue('测试'); await flushPromises();
   expect(w.findAll('[role="option"]')).toHaveLength(14);
   expect(w.get('main').element.style.getPropertyValue('--launcher-content-size')).toBe('16px');
   await library.setLocalSetting('launcher_preferences', JSON.stringify({ fontSize: 14, resultLimit: 50 }));
   await shown(); await flushPromises();
-  await w.get('input').setValue('测试'); await flushPromises();
+  await w.get('.launcher-search').setValue('测试'); await flushPromises();
   expect(w.findAll('[role="option"]')).toHaveLength(29);
   expect(w.get('main').element.style.getPropertyValue('--launcher-content-size')).toBe('14px');
 });
@@ -66,12 +66,12 @@ it("does not focus an initially hidden native window, but focuses explicit show 
   await flushPromises();
   expect(focus).not.toHaveBeenCalled();
   await shown();
-  expect(document.activeElement).toBe(w.get("input").element);
+  expect(document.activeElement).toBe(w.get(".launcher-search").element);
   hidden();
-  w.get("input").element.blur();
+  w.get(".launcher-search").element.blur();
   notice({ payload: "没有最近使用的提示词" });
   await flushPromises();
-  expect(document.activeElement).toBe(w.get("input").element);
+  expect(document.activeElement).toBe(w.get(".launcher-search").element);
   expect(w.text()).toContain("没有最近使用的提示词");
 });
 
@@ -90,7 +90,7 @@ it("never refocuses a hidden launcher after copy, Escape or a late focus event",
   expect(command).toHaveBeenCalledExactlyOnceWith("hide_launcher");
   expect(focus).not.toHaveBeenCalled();
   await shown();
-  expect(document.activeElement).toBe(w.get("input").element);
+  expect(document.activeElement).toBe(w.get(".launcher-search").element);
   focus.mockClear();
   await w.get("main").trigger("keydown", { key: "Escape" });
   await flushPromises();
@@ -149,8 +149,8 @@ it("focuses plain-preview copy and restores the search query, selection and focu
   expect(document.activeElement).toBe(button(w, "复制").element);
   await button(w, "返回").trigger("click");
   await flushPromises();
-  expect(w.get("input").element.value).toBe("测试");
-  expect(document.activeElement).toBe(w.get("input").element);
+  expect(w.get(".launcher-search").element.value).toBe("测试");
+  expect(document.activeElement).toBe(w.get(".launcher-search").element);
 });
 
 it("does not erase the active draft or duplicate writes while copying", async () => {
@@ -188,7 +188,7 @@ it("distinguishes loading and search errors from no matches", async () => {
   let reject;
   vi.spyOn(library, "listLocalPrompts").mockImplementation(() => new Promise((_, fail) => { reject = fail; }));
   const w = mount(LauncherApp);
-  await w.get("input").setValue("测试");
+  await w.get(".launcher-search").setValue("测试");
   expect(w.text()).toContain("正在搜索");
   expect(w.text()).not.toContain("没有找到");
   reject(new Error("数据库不可用"));
@@ -212,10 +212,10 @@ it("handles PageUp on a short list without a negative selection and mouse click 
   await library.createLocalPrompt({ title: "测试 A", content: "A" });
   await library.createLocalPrompt({ title: "测试 B", content: "B" });
   const w = mount(LauncherApp);
-  await w.get("input").setValue("测试");
+  await w.get(".launcher-search").setValue("测试");
   await flushPromises();
-  await w.get("input").trigger("keydown", { key: "PageUp" });
-  expect(w.get("input").attributes("aria-activedescendant")).toBe("launcher-result-0");
+  await w.get(".launcher-search").trigger("keydown", { key: "PageUp" });
+  expect(w.get(".launcher-search").attributes("aria-activedescendant")).toBe("launcher-result-0");
   const row = w.get('[role="option"][aria-selected="true"]');
   const content = row.text().includes("测试 A") ? "A" : "B";
   await row.trigger("click");
@@ -243,20 +243,20 @@ it("copies directly, respects auto-close, and rejects empty content", async () =
   writeText.mockClear();
   await button(w, "返回").trigger("click");
   await flushPromises();
-  await w.get("input").trigger("keydown", { key: "Enter", ctrlKey: true });
+  await w.get(".launcher-search").trigger("keydown", { key: "Enter", ctrlKey: true });
   await flushPromises();
   expect(writeText).toHaveBeenCalledExactlyOnceWith("纯文本");
   expect(w.find(".preview").exists()).toBe(true);
   await button(w, "返回").trigger("click");
   await flushPromises();
   await library.setLocalSetting("close_launcher_after_use", "1");
-  await w.get("input").trigger("keydown", { key: "Enter", metaKey: true });
+  await w.get(".launcher-search").trigger("keydown", { key: "Enter", metaKey: true });
   await flushPromises();
-  expect(w.get("input").element.value).toBe("");
+  expect(w.get(".launcher-search").element.value).toBe("");
   vi.spyOn(library, "listLocalPrompts").mockResolvedValue([{ id: "empty", title: "空文本", content: " " }]);
-  await w.get("input").setValue("空");
+  await w.get(".launcher-search").setValue("空");
   await flushPromises();
-  await w.get("input").trigger("keydown", { key: "Enter", ctrlKey: true });
+  await w.get(".launcher-search").trigger("keydown", { key: "Enter", ctrlKey: true });
   await flushPromises();
   expect(w.text()).toContain("内容为空");
   expect(writeText).toHaveBeenCalledTimes(2);
@@ -287,8 +287,8 @@ it("resets on native hide/show, restores focus/theme, and releases event listene
   await library.setLocalSetting("theme", "dark");
   await shown();
   await flushPromises();
-  expect(w.get("input").element.value).toBe("");
-  expect(document.activeElement).toBe(w.get("input").element);
+  expect(w.get(".launcher-search").element.value).toBe("");
+  expect(document.activeElement).toBe(w.get(".launcher-search").element);
   expect(document.body.classList.contains("theme-dark")).toBe(true);
   notice({ payload: "没有最近使用的提示词" });
   await flushPromises();
@@ -314,7 +314,7 @@ it('resumes the same draft, default edits, focused field and scroll across passi
   await fields[1].setValue('外部复制的参数');await fields[1].trigger('keydown',{key:'Enter'});await flushPromises();
   expect(writeText).toHaveBeenCalledWith('已经填写 外部复制的参数');
   await w.get('main').trigger('keydown',{key:'Escape'});await flushPromises();await shown();await flushPromises();
-  expect(w.get('input').element.value).toBe('');
+  expect(w.get('.launcher-search').element.value).toBe('');
 });
 
 it('preserves a no-variable preview and ignores an old blur completion after reactivation',async()=>{
@@ -378,10 +378,10 @@ it("restores the current field when native focus arrives after the shown event",
   expect(document.activeElement).toBe(field.element);
   await button(w, "返回").trigger("click");
   await flushPromises();
-  w.get("input").element.blur();
+  w.get(".launcher-search").element.blur();
   window.dispatchEvent(new Event("focus"));
   await flushPromises();
-  expect(document.activeElement).toBe(w.get("input").element);
+  expect(document.activeElement).toBe(w.get(".launcher-search").element);
 });
 
 it("ignores native hide/blur while copying, and keeps the copied preview when keep-open is enabled", async () => {
@@ -412,9 +412,9 @@ it("fills the focused variable from the original selection and preserves values 
   const command = vi.spyOn(windows, "launcherCommand").mockResolvedValue("原选区");
   window.__TAURI_INTERNALS__ = {};
   const w = mount(LauncherApp, { attachTo: document.body });
-  await w.get("input").setValue("测试");
+  await w.get(".launcher-search").setValue("测试");
   await flushPromises();
-  await w.get("input").trigger("keydown", { key: "Enter" });
+  await w.get(".launcher-search").trigger("keydown", { key: "Enter" });
   await flushPromises();
   const fields = w.findAll("textarea");
   await fields[0].setValue("甲内容");
