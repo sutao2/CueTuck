@@ -18,6 +18,7 @@ public static class CueTuckIconProbe {
   }
   [DllImport("shell32.dll", CharSet=CharSet.Unicode)]
   public static extern IntPtr SHGetFileInfo(string path,uint attributes,ref FileInfo info,uint size,uint flags);
+  [DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern void SHChangeNotify(int change,uint flags,string item,IntPtr other);
   [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr icon);
   [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr window,uint message,IntPtr w,IntPtr l);
   [DllImport("user32.dll", EntryPoint="GetClassLongPtrW")] public static extern IntPtr GetClassLongPtr(IntPtr window,int index);
@@ -69,6 +70,20 @@ try {
   }
   $report | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $folder 'report.json')
   Write-Host "Recorded $Stage executable, window, shell and shortcut icons."
+  if ($Stage -eq 'after') {
+    [CueTuckIconProbe]::SHChangeNotify(0x2000,0x1005,$Executable,[IntPtr]::Zero)
+    foreach ($link in $report.shortcuts) { [CueTuckIconProbe]::SHChangeNotify(0x2000,0x1005,$link.path,[IntPtr]::Zero) }
+    $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/refreshed'
+    New-Item -ItemType Directory -Force $folder | Out-Null
+    Save-ShellIcon $Executable 'shell-executable'
+    $index = 0
+    foreach ($link in $report.shortcuts) {
+      Save-ShellIcon $link.path "shortcut-$index"
+      $index++
+    }
+    Write-Host 'Recorded shell icons after targeted executable and shortcut notifications.'
+  }
+
 } finally {
   if (!$app.HasExited) { $app.Kill(); $app.WaitForExit() }
 }
