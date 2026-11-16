@@ -96,7 +96,10 @@ SectionEnd
     $index = 0
     foreach ($item in $report.shortcuts) {
       $link = $shell.CreateShortcut($item.path)
-      if (!$link.IconLocation.Contains('/icons/') -and !$link.IconLocation.Contains('\icons\')) { throw 'Shortcut did not receive the independent icon' }
+      $iconFile = $link.IconLocation -replace ',0$',''
+      if (!(Test-Path -LiteralPath $iconFile) -or (Get-FileHash -LiteralPath $iconFile).Hash -ne (Get-FileHash (Join-Path (Split-Path $PSScriptRoot) 'desktop/src-tauri/icons/icon.ico')).Hash) {
+        throw "Shortcut did not receive the current icon: $($link.IconLocation)"
+      }
       Save-ShellIcon $item.path "shortcut-$index"
       $index++
     }

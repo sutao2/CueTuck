@@ -10,3 +10,8 @@
   DetailPrint "CueTuck shortcut icon refresh returned $0"
   Pop $0
 !macroend
+
+!macro NSIS_HOOK_PREUNINSTALL
+  Delete "$INSTDIR\CueTuck.icon.ico"
+  Delete "$INSTDIR\CueTuck.RefreshIcons.ps1"
+!macroend
