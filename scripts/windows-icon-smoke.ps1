@@ -98,12 +98,6 @@ SectionEnd
       $link = $shell.CreateShortcut($item.path)
       $iconFile = $link.IconLocation -replace ',0$',''
       if (!(Test-Path -LiteralPath $iconFile) -or (Get-FileHash -LiteralPath $iconFile).Hash -ne (Get-FileHash (Join-Path (Split-Path $PSScriptRoot) 'desktop/src-tauri/icons/icon.ico')).Hash) {
-        $legacyPowerShell = Join-Path $env:SystemRoot 'SysWOW64/WindowsPowerShell/v1.0/powershell.exe'
-        $installedScript = Join-Path (Split-Path $Executable) 'CueTuck.RefreshIcons.ps1'
-        $installedIcon = Join-Path (Split-Path $Executable) 'CueTuck.icon.ico'
-        Write-Host "Installed refresh files: script=$(Test-Path $installedScript), icon=$(Test-Path $installedIcon)"
-        & $legacyPowerShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $installedScript -ApplicationPath $Executable -IconPath $installedIcon
-        Write-Host "Direct Windows PowerShell result: $LASTEXITCODE"
         throw "Shortcut did not receive the current icon: $($link.IconLocation)"
       }
       Save-ShellIcon $item.path "shortcut-$index"
