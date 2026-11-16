@@ -93,12 +93,27 @@ SectionEnd
 
     $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/repaired'
     New-Item -ItemType Directory -Force $folder | Out-Null
+    $shortcutFile = Join-Path $temporary 'shortcuts.json'
+    $report.shortcuts | ConvertTo-Json | Set-Content -Encoding utf8 $shortcutFile
+    $reader = Join-Path $temporary 'read-shortcuts.ps1'
+    @'
+param([string]$InputFile)
+$shell = New-Object -ComObject WScript.Shell
+$links = @(Get-Content -Raw $InputFile | ConvertFrom-Json)
+@($links | ForEach-Object {
+  $link = $shell.CreateShortcut($_.path)
+  @{path=$_.path;icon=$link.IconLocation;target=$link.TargetPath}
+}) | ConvertTo-Json
+'@ | Set-Content -Encoding utf8 $reader
+    $fresh = & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $reader -InputFile $shortcutFile
+    $repaired = @($fresh | ConvertFrom-Json)
+    $fresh | Set-Content -Encoding utf8 (Join-Path $folder 'shortcuts.json')
+    Write-Host "Installed icon links: $fresh"
     $index = 0
-    foreach ($item in $report.shortcuts) {
-      $link = $shell.CreateShortcut($item.path)
-      $iconFile = $link.IconLocation -replace ',0$',''
+    foreach ($item in $repaired) {
+      $iconFile = $item.icon -replace ',0$',''
       if (!(Test-Path -LiteralPath $iconFile) -or (Get-FileHash -LiteralPath $iconFile).Hash -ne (Get-FileHash (Join-Path (Split-Path $PSScriptRoot) 'desktop/src-tauri/icons/icon.ico')).Hash) {
-        throw "Shortcut did not receive the current icon: $($link.IconLocation)"
+        throw "Shortcut did not receive the current icon: $($item.icon)"
       }
       Save-ShellIcon $item.path "shortcut-$index"
       $index++
