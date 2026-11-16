@@ -185,7 +185,7 @@ jobs:
             if (Test-Path '../scripts/windows-app-lock-smoke.ps1') {
               if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
               $app.WaitForExit()
-              & ../scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $installDir 'cuetuck.exe') -WithQuickClips
+              & ../scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $installDir 'cuetuck.exe') -WithQuickClips -WithUpdateCheck
             }
           } finally {
             if ($app -and -not $app.HasExited) { Stop-Process -Id $app.Id -Force }

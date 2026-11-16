@@ -4,6 +4,7 @@ $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Requires a disposable Windows Actions runner' }
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -45,6 +46,19 @@ function Type-Text([string]$Name, [string]$Value) {
   [System.Windows.Forms.SendKeys]::SendWait('^a')
   [System.Windows.Forms.SendKeys]::SendWait($Value)
 }
+function Capture-Launcher([string]$Theme) {
+  $bounds = $launcher.Current.BoundingRectangle
+  $bitmap = [System.Drawing.Bitmap]::new([int]$bounds.Width,[int]$bounds.Height)
+  $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+  try {
+    [System.Windows.Forms.SendKeys]::SendWait('{TAB}+{TAB}')
+    Start-Sleep -Milliseconds 250
+    $graphics.CopyFromScreen([int]$bounds.Left,[int]$bounds.Top,0,0,$bitmap.Size)
+    $folder = Join-Path (Split-Path $PSScriptRoot) 'desktop/windows-artifact'
+    New-Item -ItemType Directory -Force $folder | Out-Null
+    $bitmap.Save((Join-Path $folder "launcher-focus-$Theme.png"),[System.Drawing.Imaging.ImageFormat]::Png)
+  } finally { $graphics.Dispose(); $bitmap.Dispose() }
+}
 # A previously built beta.37 installer retains the original display names.
 $legacy = (Control '常用*' 'TabItem').Current.Name -eq '常用片段'
 $library = if ($legacy) { '常用片段' } else { '常用资料' }
@@ -66,6 +80,20 @@ for ($attempt=0; $attempt -lt 50; $attempt++) {
   Start-Sleep -Milliseconds 200
 }
 if (!$launcher) { throw 'Installed launcher window did not appear' }
+$handle = [IntPtr]$launcher.Current.NativeWindowHandle
+[void](Control $add 'Button')
+Capture-Launcher 'light'
+[System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+$handle = $main
+Click '切换深色主题' 'Button'
+Click '启动器*' 'Button'
+$handle = [IntPtr]$launcher.Current.NativeWindowHandle
+[void](Control $add 'Button')
+Capture-Launcher 'dark'
+[System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+$handle = $main
+Click '切换浅色主题' 'Button'
+Click '启动器*' 'Button'
 $handle = [IntPtr]$launcher.Current.NativeWindowHandle
 [void](Control $add 'Button')
 [System.Windows.Forms.SendKeys]::SendWait('https://example.invalid/clip-qa')
