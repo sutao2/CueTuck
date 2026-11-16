@@ -23,6 +23,8 @@ describe("application icon assets", () => {
     const config = JSON.parse(read("../../src-tauri/tauri.conf.json"));
     expect(config.bundle.icon).toContain("icons/icon.icns");
     expect(config.bundle.icon).toContain("icons/icon.ico");
+    expect(config.bundle.windows.nsis.installerIcon).toBe("icons/icon.ico");
+    expect(config.bundle.windows.nsis.uninstallerIcon).toBe("icons/icon.ico");
     const icns = read("../../src-tauri/icons/icon.icns");
     expect(icns.subarray(0, 4).toString()).toBe("icns");
     expect(icns.readUInt32BE(4)).toBe(icns.length);
