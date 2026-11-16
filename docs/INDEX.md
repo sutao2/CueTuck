@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-11-16-saved-items-release.md](plans/2026-11-16-saved-items-release.md) | 实施中 | 常用资料改名与工作台样式 | 双平台界面、旧资料兼容、蓝色卡片图标、双平台设置页更新检查与 beta.38 候选验收 |
+| [plans/2026-11-16-saved-items-release.md](plans/2026-11-16-saved-items-release.md) | 候选已验收，待发布 | 常用资料改名与工作台样式 | 双平台界面、旧资料兼容、蓝色卡片图标、双平台设置页更新检查与 beta.38 候选验收 |
 | [plans/2026-11-15-beta37-release.md](plans/2026-11-15-beta37-release.md) | 已发布 | 发布常用片段分类与启动器快速添加 | 同源安装包、旧数据、筛选、跨窗口保存和公开更新验证 |
 | [plans/2026-11-15-beta36-release.md](plans/2026-11-15-beta36-release.md) | 已发布 | 发布应用锁与常用片段 | 双平台口令与 Touch ID 已验，Windows Hello 真机待验，官网及更新通道已核验 |
 | [specs/app-lock/spec.md](specs/app-lock/spec.md) | 现行 | 桌面解锁与本机访问 | 设置中的应用锁、顶栏锁定、居中解锁面板与设备优先验证 |
