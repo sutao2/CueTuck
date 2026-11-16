@@ -17,7 +17,10 @@ $application = (Get-Item -LiteralPath $ApplicationPath).FullName
 if ([IO.Path]::GetFileName($application) -ine 'cuetuck.exe') { throw 'Expected the installed CueTuck executable' }
 $source = Get-Item -LiteralPath $IconPath
 # A content-specific icon path avoids reusing the executable's old shell image.
-$hash = (Get-FileHash -LiteralPath $source.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+$sha = [Security.Cryptography.SHA256]::Create()
+try {
+  $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($source.FullName))).Replace('-','').ToLowerInvariant()
+} finally { $sha.Dispose() }
 $icons = Join-Path $env:LOCALAPPDATA 'CueTuck\icons'
 New-Item -ItemType Directory -Force $icons | Out-Null
 $icon = Join-Path $icons "$hash.ico"
