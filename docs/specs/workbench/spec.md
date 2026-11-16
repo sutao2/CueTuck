@@ -119,6 +119,12 @@
 
 应用身份图标 MUST 使用浅蓝色圆角底座上的引号卡片与收纳袋；所有尺寸均从 `desktop/assets/app-icon-master.png` 生成。桌面 PNG、ICO、ICNS 与启动器品牌图不得各自采用不同标记，不替换功能性线性图标。
 
+#### Scenario: Windows 升级刷新应用快捷方式
+
+- GIVEN Windows 上已安装采用旧品牌图标的 CueTuck
+- WHEN 安装新版
+- THEN 指向当前程序的桌面、开始菜单与已固定任务栏快捷方式使用按图标内容生成的 ICO 路径，防止旧可执行文件路径缓存继续显示旧图标。
+
 #### Scenario: 应用图标一致
 
 - GIVEN 应用打包资源与启动器已加载

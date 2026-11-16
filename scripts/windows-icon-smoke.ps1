@@ -5,7 +5,6 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Requires a disposable Windows Actions runner' }
 Add-Type -AssemblyName System.Drawing
-Add-Type -AssemblyName System.Windows.Forms
 if (-not ('CueTuckIconProbe' -as [type])) {
   Add-Type @'
 using System;
@@ -19,10 +18,7 @@ public static class CueTuckIconProbe {
   }
   [DllImport("shell32.dll", CharSet=CharSet.Unicode)]
   public static extern IntPtr SHGetFileInfo(string path,uint attributes,ref FileInfo info,uint size,uint flags);
-  [DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern void SHUpdateImage(string path,int iconIndex,uint flags,int imageIndex);
-  [DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern void SHChangeNotify(int change,uint flags,string item,IntPtr other);
   [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr icon);
-  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr window,int mode);
   [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr window,uint message,IntPtr w,IntPtr l);
   [DllImport("user32.dll", EntryPoint="GetClassLongPtrW")] public static extern IntPtr GetClassLongPtr(IntPtr window,int index);
 }
@@ -41,19 +37,6 @@ function Save-ShellIcon([string]$Path,[string]$Name) {
   $info = [CueTuckIconProbe+FileInfo]::new()
   [void][CueTuckIconProbe]::SHGetFileInfo($Path,0,[ref]$info,[Runtime.InteropServices.Marshal]::SizeOf($info),0x100)
   try { Save-Icon $info.Icon $Name } finally { if ($info.Icon -ne [IntPtr]::Zero) { [void][CueTuckIconProbe]::DestroyIcon($info.Icon) } }
-}
-function Save-Desktop {
-  [void][CueTuckIconProbe]::ShowWindow($app.MainWindowHandle,6)
-  [System.Windows.Forms.Application]::DoEvents()
-  Start-Sleep -Seconds 2
-  $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-  $bitmap = [System.Drawing.Bitmap]::new($bounds.Width,$bounds.Height)
-  $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-  try {
-    $graphics.CopyFromScreen($bounds.X,$bounds.Y,0,0,$bitmap.Size)
-    $bitmap.Save((Join-Path $folder 'desktop.png'),[System.Drawing.Imaging.ImageFormat]::Png)
-  } finally { $graphics.Dispose();$bitmap.Dispose() }
-  [void][CueTuckIconProbe]::ShowWindow($app.MainWindowHandle,9)
 }
 $report = @{ executable=$Executable; version=(Get-Item $Executable).VersionInfo.ProductVersion; sha256=(Get-FileHash $Executable -Algorithm SHA256).Hash; shortcuts=@() }
 $app = Start-Process $Executable -PassThru
@@ -85,60 +68,40 @@ try {
     }
   }
   $report | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $folder 'report.json')
-  Save-Desktop
   Write-Host "Recorded $Stage executable, window, shell and shortcut icons."
   if ($Stage -eq 'after') {
-    [CueTuckIconProbe]::SHChangeNotify(0x2000,0x1005,$Executable,[IntPtr]::Zero)
-    foreach ($link in $report.shortcuts) { [CueTuckIconProbe]::SHChangeNotify(0x2000,0x1005,$link.path,[IntPtr]::Zero) }
-    $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/refreshed'
-    New-Item -ItemType Directory -Force $folder | Out-Null
-    Save-ShellIcon $Executable 'shell-executable'
-    $index = 0
-    foreach ($link in $report.shortcuts) {
-      Save-ShellIcon $link.path "shortcut-$index"
-      $index++
-    }
-    Write-Host 'Recorded shell icons after targeted executable and shortcut notifications.'
-    [CueTuckIconProbe]::SHChangeNotify(0x08000000,0x1000,$null,[IntPtr]::Zero)
-    $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/cache-refreshed'
-    New-Item -ItemType Directory -Force $folder | Out-Null
-    Save-ShellIcon $Executable 'shell-executable'
-    $index = 0
-    foreach ($link in $report.shortcuts) {
-      Save-ShellIcon $link.path "shortcut-$index"
-      $index++
-    }
-    Save-Desktop
-    Write-Host 'Recorded shell icons after icon cache invalidation notification.'
-    $info = [CueTuckIconProbe+FileInfo]::new()
-    [void][CueTuckIconProbe]::SHGetFileInfo($Executable,0,[ref]$info,[Runtime.InteropServices.Marshal]::SizeOf($info),0x4000)
-    [CueTuckIconProbe]::SHUpdateImage($Executable,0,0,$info.Index)
-    [System.Windows.Forms.Application]::DoEvents()
-    Start-Sleep -Seconds 1
-    $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/image-refreshed'
-    New-Item -ItemType Directory -Force $folder | Out-Null
-    Save-ShellIcon $Executable 'shell-executable'
-    $index = 0
-    foreach ($link in $report.shortcuts) {
-      Save-ShellIcon $link.path "shortcut-$index"
-      $index++
-    }
-    Write-Host 'Recorded shell icons after updating the executable system image index.'
-    & "$PSScriptRoot/windows-refresh-icons.ps1" -ApplicationPath $Executable -IconPath (Join-Path (Split-Path $PSScriptRoot) 'desktop/src-tauri/icons/icon.ico')
-    $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/shortcut-refreshed'
+    $compiler = "${env:ProgramFiles(x86)}/NSIS/makensis.exe"
+    $temporary = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-hook'
+    New-Item -ItemType Directory -Force $temporary | Out-Null
+    $installer = Join-Path $temporary 'refresh-icons.exe'
+    $hook = Join-Path (Split-Path $PSScriptRoot) 'desktop/src-tauri/windows/installer-hooks.nsh'
+    $recipe = @'
+Unicode true
+RequestExecutionLevel user
+SilentInstall silent
+OutFile "OUTPUT_PATH"
+InstallDir "INSTALL_DIRECTORY"
+!include "HOOK_PATH"
+Section
+  !insertmacro NSIS_HOOK_POSTINSTALL
+SectionEnd
+'@
+    $recipe.Replace('OUTPUT_PATH',$installer).Replace('INSTALL_DIRECTORY',(Split-Path $Executable)).Replace('HOOK_PATH',$hook) | Set-Content -Encoding utf8 (Join-Path $temporary 'test.nsi')
+    & $compiler (Join-Path $temporary 'test.nsi')
+    if ($LASTEXITCODE -ne 0) { throw 'Icon refresh installer hook compilation failed' }
+    if ((Start-Process $installer -Wait -PassThru).ExitCode -ne 0) { throw 'Icon refresh installer hook failed' }
+
+    $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/repaired'
     New-Item -ItemType Directory -Force $folder | Out-Null
     $index = 0
     foreach ($item in $report.shortcuts) {
+      $link = $shell.CreateShortcut($item.path)
+      if (!$link.IconLocation.Contains('/icons/') -and !$link.IconLocation.Contains('\icons\')) { throw 'Shortcut did not receive the independent icon' }
       Save-ShellIcon $item.path "shortcut-$index"
       $index++
     }
-    Save-Desktop
-    Write-Host 'Recorded shortcut icons after assigning the current content-specific icon.'
-
-
-
+    Write-Host 'Recorded icons repaired with the current content-specific icon resource.'
   }
-
 } finally {
   if (!$app.HasExited) { $app.Kill(); $app.WaitForExit() }
 }

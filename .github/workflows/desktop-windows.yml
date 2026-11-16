@@ -71,6 +71,11 @@ jobs:
           path: candidate
       - if: inputs.quick_clips
         run: python scripts/windows-legacy-clip-fixture.py
+      - if: inputs.check_icons
+        name: Install the NSIS compiler for the icon hook acceptance
+        shell: pwsh
+        run: |
+          if (!(Test-Path "${env:ProgramFiles(x86)}/NSIS/makensis.exe")) { choco install nsis --yes --no-progress }
       - name: Exercise installed application
         env:
           TEST_QUICK_CLIPS: ${{ inputs.quick_clips }}
