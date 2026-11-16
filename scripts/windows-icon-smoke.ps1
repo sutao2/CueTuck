@@ -90,6 +90,7 @@ SectionEnd
     & $compiler (Join-Path $temporary 'test.nsi')
     if ($LASTEXITCODE -ne 0) { throw 'Icon refresh installer hook compilation failed' }
     if ((Start-Process $installer -Wait -PassThru).ExitCode -ne 0) { throw 'Icon refresh installer hook failed' }
+    Get-Content (Join-Path $env:TEMP 'CueTuck-icon-refresh.log') | Write-Host
 
     $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/repaired'
     New-Item -ItemType Directory -Force $folder | Out-Null
