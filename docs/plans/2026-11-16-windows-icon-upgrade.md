@@ -25,4 +25,4 @@
 
 [最终 Windows 验收](https://github.com/sutao2/CueTuck/actions/runs/43804033370)已实际编译并执行同一 NSIS 安装钩子，回读桌面与开始菜单快捷方式后，确认独立 ICO 内容与当前图标一致，实际导出图像恢复蓝色卡片。系统 PowerShell 在安装器环境中可能缺少 Get-FileHash 自动加载，修复脚本直接使用 .NET SHA-256 生成资源路径。安装器卸载前清理自有辅助文件。
 
-自动处理已提交，待后续安装包发布。公开 beta.39 用户可先使用 `output/CueTuck-Windows-Icon-Repair.zip`：退出应用，解压后运行「修复图标.cmd」。如果已有任务栏固定项仍显示旧图，取消固定后从已修复的桌面快捷方式重新固定。独立修复包包含与安装钩子相同的脚本和现行 ICO。
+自动处理已随 beta.40 安装包发布，成品覆盖升级验收与公开下载见 [beta.40 发布记录](2026-11-16-beta40-release.md)。暂不升级的 beta.39 用户仍可使用 `output/CueTuck-Windows-Icon-Repair.zip`：退出应用，解压后运行「修复图标.cmd」。如果已有任务栏固定项仍显示旧图，取消固定后从已修复的桌面快捷方式重新固定。独立修复包包含与安装钩子相同的脚本和现行 ICO。
