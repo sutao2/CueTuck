@@ -107,21 +107,31 @@ if (!$legacy) {
     [System.Windows.Forms.SendKeys]::SendWait(' ')
     $bodyField = Control '内容' 'Edit'
     if ($kind -eq '文本') {
-      $bodyField.SetFocus()
-      [System.Windows.Forms.SendKeys]::SendWait('^a')
       Set-Clipboard -Value $sample
+      if ((Get-Clipboard -Raw) -cne $sample) { throw 'The runner did not stage the exact clipboard fixture' }
+      Click '内容' 'Edit'
+      [System.Windows.Forms.SendKeys]::SendWait('^a')
       [System.Windows.Forms.SendKeys]::SendWait('^v')
     }
-    $body = $bodyField.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
-    if ($body.Replace("`r`n","`n") -cne $sample.Replace("`r`n","`n")) { throw "Formatting changed in $kind editor" }
+    $expected = $sample.Replace("`r`n","`n")
+    for ($poll=0; $poll -lt 25; $poll++) {
+      $body = $bodyField.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+      if ($body.Replace("`r`n","`n") -ceq $expected) { break }
+      Start-Sleep -Milliseconds 100
+    }
+    if ($body.Replace("`r`n","`n") -cne $expected) { throw "Unexpected $kind editor fixture: $(ConvertTo-Json $body -Compress)" }
     Click '保存' 'Button'
     Click '筛选资料类型' 'Button|ComboBox'
     Click $kind 'ListItem|Button|Text'
     [void](Control 'QASite' 'Text')
     Set-Clipboard -Value 'pending'
     Click '复制' 'Button'
-    $copied = Get-Clipboard -Raw
-    if ($copied.Replace("`r`n","`n") -cne $sample.Replace("`r`n","`n")) { throw "Formatting changed when copying $kind" }
+    for ($poll=0; $poll -lt 25; $poll++) {
+      $copied = Get-Clipboard -Raw
+      if ($copied -ne 'pending') { break }
+      Start-Sleep -Milliseconds 100
+    }
+    if ($copied.Replace("`r`n","`n") -cne $expected) { throw "Unexpected $kind clipboard fixture: $(ConvertTo-Json $copied -Compress)" }
   }
   Write-Host 'Installed text and template both retained blank lines, indentation and trailing whitespace after changing type and copying.'
 }
