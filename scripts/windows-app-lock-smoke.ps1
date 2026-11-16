@@ -1,5 +1,5 @@
 # Exercise the signed candidate through WebView2's native accessibility interface.
-param([Parameter(Mandatory=$true)][string]$Executable, [switch]$WithQuickClips)
+param([Parameter(Mandatory=$true)][string]$Executable, [switch]$WithQuickClips, [switch]$WithUpdateCheck)
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Requires a disposable Windows Actions runner' }
 Add-Type -AssemblyName UIAutomationClient
@@ -56,8 +56,8 @@ function Find-Control([string[]]$Names, $Type, [switch]$ScrollIntoView) {
   }
 }
 
-function Wait-Control([string[]]$Names, $Type) {
-  for ($attempt=0; $attempt -lt 80; $attempt++) {
+function Wait-Control([string[]]$Names, $Type, [int]$Attempts=80) {
+  for ($attempt=0; $attempt -lt $Attempts; $attempt++) {
     $control = Find-Control $Names $Type -ScrollIntoView
     if ($control) { return $control }
     Start-Sleep -Milliseconds 250
@@ -114,6 +114,12 @@ try {
     if (Find-Control @('返回应用') $button) { break }
     Start-Sleep -Milliseconds 250
     if ($attempt -eq 5 -and (Find-Control $settings $button)) { Click-Button $settings }
+  }
+  if ($WithUpdateCheck) {
+    Click-Button '更新'
+    Click-Button '检查更新'
+    $result = Wait-Control @('当前已是此通道最新版本','下载更新') $null 160
+    Write-Host "Installed update check reached: $($result.Current.Name)"
   }
   Click-Button '隐私与安全'
   Click-Button '设置应用锁'

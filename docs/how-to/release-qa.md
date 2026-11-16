@@ -57,6 +57,8 @@ Mac 预览构建必须复用固定签名身份，禁止 `-` / ad-hoc 回退。`n
 
 ## Windows 安装包复验
 
+修复版本检查时，在同一安装包的复验中勾选 `check_updates`，由已安装的应用从设置页查询公开发行列表。
+
 - Given 已完成的桌面 Windows 推送构建，When 使用 `retest_run`，Then 重新安装该构建的附件并验收应用锁。复验 beta.37 起的片段分类和启动器时同时选中 `quick_clips`，测试将从旧版片段数据开始。
 
 ## Windows 免安装包

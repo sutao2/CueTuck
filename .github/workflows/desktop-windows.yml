@@ -15,6 +15,10 @@ on:
         description: Include clip categories and launcher capture when retesting a beta.37 or newer installer
         type: boolean
         default: false
+      check_updates:
+        description: Verify the installed settings button against the public release feed
+        type: boolean
+        default: false
   push:
     branches: [m1-desktop-skeleton, main]
     paths:
@@ -66,6 +70,7 @@ jobs:
       - name: Exercise installed application
         env:
           TEST_QUICK_CLIPS: ${{ inputs.quick_clips }}
+          TEST_UPDATE_CHECK: ${{ inputs.check_updates }}
         shell: pwsh
         run: |
           $files = @(Get-ChildItem candidate -Recurse -Filter '*-setup.exe')
@@ -75,7 +80,7 @@ jobs:
           if ((Start-Process $files[0].FullName -ArgumentList @('/S',"/D=$dir") -Wait -PassThru).ExitCode -ne 0) { throw 'Installation failed' }
           $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--force-renderer-accessibility'
           try {
-            ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') -WithQuickClips:($env:TEST_QUICK_CLIPS -eq 'true')
+            ./scripts/windows-app-lock-smoke.ps1 -Executable (Join-Path $dir 'cuetuck.exe') -WithQuickClips:($env:TEST_QUICK_CLIPS -eq 'true') -WithUpdateCheck:($env:TEST_UPDATE_CHECK -eq 'true')
           }
           finally {
             if ((Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '/S' -Wait -PassThru).ExitCode -ne 0) { throw 'Uninstall failed' }
