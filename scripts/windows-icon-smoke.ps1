@@ -70,7 +70,8 @@ try {
   $report | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $folder 'report.json')
   Write-Host "Recorded $Stage executable, window, shell and shortcut icons."
   if ($Stage -eq 'after') {
-    $compiler = "${env:ProgramFiles(x86)}/NSIS/makensis.exe"
+    $compiler = @("${env:ProgramFiles(x86)}/NSIS/makensis.exe","$env:ProgramFiles/NSIS/makensis.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (!$compiler) { throw 'NSIS compiler not found on the runner' }
     $temporary = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-hook'
     New-Item -ItemType Directory -Force $temporary | Out-Null
     $installer = Join-Path $temporary 'refresh-icons.exe'

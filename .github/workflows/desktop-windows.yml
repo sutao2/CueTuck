@@ -75,7 +75,7 @@ jobs:
         name: Install the NSIS compiler for the icon hook acceptance
         shell: pwsh
         run: |
-          if (!(Test-Path "${env:ProgramFiles(x86)}/NSIS/makensis.exe")) { choco install nsis --yes --no-progress }
+          if (!(Test-Path "${env:ProgramFiles(x86)}/NSIS/makensis.exe") -and !(Test-Path "$env:ProgramFiles/NSIS/makensis.exe")) { choco install nsis --yes --no-progress }
       - name: Exercise installed application
         env:
           TEST_QUICK_CLIPS: ${{ inputs.quick_clips }}
