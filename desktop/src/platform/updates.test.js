@@ -44,8 +44,25 @@ describe("updates", () => {
       json: async () => ({}),
     }));
     vi.stubGlobal("fetch", fetchSpy);
-    await expect(checkForUpdates()).rejects.toThrow(/检查失败/);
+    await expect(checkForUpdates()).rejects.toThrow(/服务暂时不可用/);
     expect(fetchSpy.mock.calls[0][0]).toMatch(/api\.github\.com\/repos\/.+\/releases/);
+    expect(fetchSpy.mock.calls[1][0]).toBe("https://prompt.likh.cn/data/desktop-releases.json");
+  });
+
+  it.each([
+    async () => { throw new TypeError("offline"); },
+    async () => ({ok:false, status:429}),
+    async () => ({ok:true, json:async () => ({message:"invalid"})}),
+  ])("uses the published fallback list when direct discovery fails", async primary => {
+    const fetchSpy = vi.fn().mockImplementationOnce(primary).mockResolvedValueOnce({
+      ok: true, json: async () => [
+        { tag_name: "v1.0.0", prerelease: false },
+        { tag_name: "v2.0.0-beta.1", prerelease: true },
+      ],
+    });
+    vi.stubGlobal("fetch",fetchSpy);
+    expect(await checkForUpdates({channel:"preview"})).toMatchObject({available:true,version:"2.0.0-beta.1"});
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it("does not claim a store listing when a transport reports no release", async () => {

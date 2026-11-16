@@ -461,7 +461,7 @@ AI 与模型页 MUST 展示：默认目标模型、已启用模型库、显示�
 
 ### Requirement: 更新
 
-更新页 MUST 展示：当前版本、检查更新、自动下载更新、更新通道、发行说明。当前版本 MUST 为真实应用版本。检查更新 MUST 请求 GitHub Releases；稳定通道只用正式发行，预览通道只用预发行。无对应发行物或已是最新时 MUST 说明没有可用更新。读取失败时 MUST 说明检查失败，不得写成没有可用更新。自动下载是本机开关；打开且当前通道有包时 MUST 下载并验证签名，安装仍由用户显式确认，MUST NOT 走 Mac App Store 或 Microsoft Store。发行说明 MUST 来自 GitHub Releases 正文。
+更新页 MUST 展示：当前版本、检查更新、自动下载更新、更新通道、发行说明。当前版本 MUST 为真实应用版本。检查更新 MUST 读取 GitHub Releases；直连失败时可通过官网短时缓存的同一公开列表重试。两个来源均失败时只显示一次失败原因；稳定通道只用正式发行，预览通道只用预发行。无对应发行物或已是最新时 MUST 说明没有可用更新。读取失败时 MUST 说明检查失败，不得写成没有可用更新。自动下载是本机开关；打开且当前通道有包时 MUST 下载并验证签名，安装仍由用户显式确认，MUST NOT 走 Mac App Store 或 Microsoft Store。发行说明 MUST 来自 GitHub Releases 正文。
 
 #### Scenario: 版本真实、检查不假装
 

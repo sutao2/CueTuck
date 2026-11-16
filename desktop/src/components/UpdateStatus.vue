@@ -1,11 +1,11 @@
 <template>
   <div class="update-status" aria-live="polite">
-    <p data-testid="update-note">{{ tr(label) }}</p>
+    <p data-testid="update-note" :role="state.phase === 'error' ? 'alert' : undefined">{{ tr(state.phase === 'error' ? state.error : label) }}</p>
     <template v-if="['downloading','verifying','ready'].includes(state.phase)">
       <progress :value="state.total ? state.downloaded : undefined" :max="state.total || 1" :aria-label="tr('更新下载进度')" />
       <small>{{ bytes(state.downloaded) }}<template v-if="state.total"> / {{ bytes(state.total) }}</template></small>
     </template>
-    <p v-if="state.error" role="alert">{{ tr(state.error) }}</p>
+    <p v-if="state.error && state.phase !== 'error'" role="alert">{{ tr(state.error) }}</p>
     <button v-if="state.phase === 'available'" class="button" @click="downloadUpdate(channel)">{{ state.error ? tr('重试下载') : tr('下载更新') }}</button>
     <template v-if="state.phase === 'ready'">
       <p>{{ tr('更新已下载并通过签名验证。安装将关闭并重新启动应用，请先保存正在编辑的内容。') }}</p>
@@ -28,7 +28,7 @@ const confirming = ref(false), cancel = ref(null), install = ref(null);
 let returnFocus;
 watch(confirming, async value => { if(value) { returnFocus = document.activeElement; await nextTick(); cancel.value?.focus(); } else returnFocus?.focus(); });
 function focusOther() { (document.activeElement === cancel.value ? install.value : cancel.value)?.focus(); }
-const label = computed(() => ({ idle: '可手动检查新版本', checking: '正在检查更新…', current: '当前已是此通道最新版本', available: `发现新版本 ${state.version}`, downloading: `正在下载 ${state.version}`, verifying: '正在验证更新签名…', ready: `更新 ${state.version} 已就绪`, installing: '正在安装，即将重新启动…', error: '检查失败，请重试' }[state.phase]));
+const label = computed(() => ({ idle: '可手动检查新版本', checking: '正在检查更新…', current: '当前已是此通道最新版本', available: `发现新版本 ${state.version}`, downloading: `正在下载 ${state.version}`, verifying: '正在验证更新签名…', ready: `更新 ${state.version} 已就绪`, installing: '正在安装，即将重新启动…' }[state.phase]));
 const bytes = value => `${((value || 0) / 1048576).toFixed(1)} MB`;
 </script>
 <style scoped>

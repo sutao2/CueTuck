@@ -1149,14 +1149,15 @@ describe("WorkbenchShell", () => {
 
   it("does not treat a failed update check as no updates", async () => {
     setUpdateTransport(async () => {
-      throw new Error("检查失败");
+      throw "检查失败，请检查网络或代理设置后重试";
     });
     const w = mount(WorkbenchShell);
     await w.get('[data-testid="open-settings"]').trigger("click");
     await w.get('[data-settings-page="updates"]').trigger("click");
     await w.get('[data-testid="check-updates"]').trigger("click");
     await flushPromises();
-    expect(w.get('[data-testid="update-note"]').text()).toContain("检查失败");
+    expect(w.get('[data-testid="update-note"]').text()).toBe("检查失败，请检查网络或代理设置后重试");
+    expect(w.findAll('.update-status [role="alert"]')).toHaveLength(1);
     expect(w.get('[data-testid="update-note"]').text()).not.toContain("最新版本");
     expect(w.get('[data-testid="settings-updates"]').text()).not.toMatch(/已从商店|已经连上更新服务器/);
   });

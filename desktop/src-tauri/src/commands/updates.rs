@@ -11,7 +11,9 @@ pub struct UpdateState(pub Mutex<Option<(Update, Vec<u8>)>>, pub tokio::sync::Mu
 use tauri_plugin_updater::UpdaterExt;
 use url::Url;
 
-const RELEASES_URL: &str = "https://api.github.com/repos/sutao2/CueTuck/releases";
+const RELEASES_URL: &str = "https://api.github.com/repos/sutao2/CueTuck/releases?per_page=100";
+const RELEASES_MIRROR: &str = "https://prompt.likh.cn/data/desktop-releases.json";
+const NETWORK_ERROR: &str = "检查失败，请检查网络或代理设置后重试";
 
 fn http_client() -> Result<reqwest::Client, String> {
     let mut headers = HeaderMap::new();
@@ -21,11 +23,12 @@ fn http_client() -> Result<reqwest::Client, String> {
     );
     crate::http::apply_runtime_proxy(
         reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(15))
             .default_headers(headers),
     )?
     .build()
-    .map_err(|_| "检查失败".to_string())
+    .map_err(|_| NETWORK_ERROR.to_string())
 }
 
 fn want_preview(channel: Option<&str>) -> bool {
@@ -66,18 +69,35 @@ fn release_payload(latest: &Value) -> Value {
     })
 }
 
-async fn list_releases() -> Result<Vec<Value>, String> {
-    let response = http_client()?
-        .get(RELEASES_URL)
-        .query(&[("per_page", "100")])
+async fn read_releases(client: &reqwest::Client, url: &str) -> Result<Vec<Value>, &'static str> {
+    let response = client.get(url)
         .header("accept", "application/vnd.github+json")
         .send()
         .await
-        .map_err(|_| "检查失败".to_string())?;
-    if !response.status().is_success() {
-        return Err("检查失败".to_string());
+        .map_err(|e| if e.is_timeout() { "检查更新超时，请检查网络或代理设置后重试" } else { NETWORK_ERROR })?;
+    if response.status() == 429 || response.status() == 403 {
+        return Err("更新服务暂时限制访问，请稍后重试");
     }
-    response.json().await.map_err(|_| "检查失败".to_string())
+    if !response.status().is_success() {
+        return Err("更新服务暂时不可用，请稍后重试");
+    }
+    let invalid = "更新服务返回了无效的版本列表，请稍后重试";
+    let rows: Vec<Value> = response.json().await.map_err(|_| invalid)?;
+    if rows.iter().any(|row| !row["tag_name"].is_string()) {
+        return Err(invalid);
+    }
+    Ok(rows)
+}
+
+async fn releases_with_fallback(client: &reqwest::Client, primary: &str, mirror: &str) -> Result<Vec<Value>, String> {
+    match read_releases(client, primary).await {
+        Ok(rows) => Ok(rows),
+        Err(primary_error) => read_releases(client, mirror).await.map_err(|_| primary_error.to_owned()),
+    }
+}
+
+async fn list_releases() -> Result<Vec<Value>, String> {
+    releases_with_fallback(&http_client()?, RELEASES_URL, RELEASES_MIRROR).await
 }
 
 #[tauri::command]
@@ -131,6 +151,29 @@ pub async fn install_downloaded_update(app: AppHandle, version: String, state: S
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn fixture(status: u16, body: &'static str) -> String {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream.read(&mut [0; 2048]).unwrap();
+            write!(stream, "HTTP/1.1 {status} Test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+        });
+        format!("http://{address}")
+    }
+
+    #[tokio::test]
+    async fn discovery_recovers_from_rate_limits_and_keeps_total_failure_distinct_from_current() {
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let published = fixture(200, r#"[{"tag_name":"v0.1.0-beta.37","prerelease":true}]"#);
+        let rows = releases_with_fallback(&client, &fixture(429, "{}"), &published).await.unwrap();
+        assert_eq!(pick_release(&rows, true).unwrap()["tag_name"], "v0.1.0-beta.37");
+        assert!(pick_release(&rows, false).is_none());
+        let error = releases_with_fallback(&client, &fixture(200, "<html>"), &fixture(502, "{}")).await.unwrap_err();
+        assert_eq!(error, "更新服务返回了无效的版本列表，请稍后重试");
+    }
 
     #[test]
     fn rejects_older_equivalent_and_invalid_versions_before_install() {

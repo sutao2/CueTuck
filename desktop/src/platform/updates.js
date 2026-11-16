@@ -1,7 +1,8 @@
 import pkg from "../../package.json";
 import parseVersion from "semver/functions/parse.js";
 
-const RELEASES_URL = "https://api.github.com/repos/sutao2/CueTuck/releases";
+const RELEASES_URL = "https://api.github.com/repos/sutao2/CueTuck/releases?per_page=100";
+const RELEASES_MIRROR = "https://prompt.likh.cn/data/desktop-releases.json";
 
 let testTransport = null;
 let installTransport = null;
@@ -54,19 +55,40 @@ function fromReleases(releases, channel = "stable") {
   };
 }
 
+async function readReleases(url) {
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: { Accept: "application/vnd.github+json" },
+      signal: AbortSignal.timeout(15000),
+      credentials: "omit",
+    });
+  } catch (error) {
+    throw new Error(error?.name === "TimeoutError" ? "检查更新超时，请检查网络或代理设置后重试" : "检查失败，请检查网络或代理设置后重试");
+  }
+  if ([403, 429].includes(response.status)) throw new Error("更新服务暂时限制访问，请稍后重试");
+  if (!response.ok) throw new Error("更新服务暂时不可用，请稍后重试");
+  const rows = await response.json().catch(() => null);
+  if (!Array.isArray(rows) || rows.some(row => typeof row?.tag_name !== "string")) {
+    throw new Error("更新服务返回了无效的版本列表，请稍后重试");
+  }
+  return rows;
+}
+
 export async function checkForUpdates({ channel } = {}) {
   const selected = normalizeUpdateChannel(channel);
   if (testTransport) return testTransport({ channel: selected });
   if (isTauri()) {
     return tauriInvoke("check_for_updates", { channel: selected });
   }
-  const response = await fetch(`${RELEASES_URL}?per_page=100`, {
-    headers: { Accept: "application/vnd.github+json" },
-  });
-  if (!response.ok) {
-    throw new Error("检查失败");
+  let rows;
+  try {
+    rows = await readReleases(RELEASES_URL);
+  } catch (primaryError) {
+    try { rows = await readReleases(RELEASES_MIRROR); }
+    catch { throw primaryError; }
   }
-  return fromReleases(await response.json(), selected);
+  return fromReleases(rows, selected);
 }
 
 export async function queueUpdateInstall({ autoDownload, channel, version } = {}) {
@@ -96,7 +118,7 @@ export async function refreshUpdate({ channel, autoDownload = false } = {}) {
     const result = await checkForUpdates({ channel: channel || await selectedUpdateChannel() });
     Object.assign(updateState, { phase: result.available ? 'available' : 'current', version: result.version || '', notes: result.notes || '', checkedAt: new Date().toLocaleString() });
     if (result.available && autoDownload) await downloadUpdate(channel);
-  } catch (error) { Object.assign(updateState, { phase: 'error', error: error.message || '检查失败' }); }
+  } catch (error) { Object.assign(updateState, { phase: 'error', error: String(error?.message || error || '检查失败，请检查网络或代理设置后重试') }); }
 }
 export async function downloadUpdate(channel) {
   if (busy() || !updateState.version) return;

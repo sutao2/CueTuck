@@ -52,6 +52,8 @@ Mac 预览构建必须复用固定签名身份，禁止 `-` / ad-hoc 回退。`n
 预览版必须同时满足语义版本带预发行后缀和 GitHub `prerelease=true`；正式版必须同时为稳定版本和 `prerelease=false`。不得为了让 GitHub `/releases/latest/` 可用而修改预览版标记：客户端从公开 releases 列表按通道筛选，安装使用 `/releases/download/{tag}/latest.json`。
 
 发布验收必须先使用公开 releases 列表与现行客户端选择逻辑验证：旧版发现新版、同版不提示、稳定通道不选 beta；再验证选中版本专属清单的签名下载和隔离安装。仅验证静态 latest 入口不代表用户能检查到更新。
+官网更新时使用候选提交的 `deploy/website-preview/nginx.conf`。访问 `/data/desktop-releases.json` 并检查其返回 GitHub 已公开版本；该入口仅代理版本列表，安装包仍走所选版本的签名清单。
+
 
 ## Windows 安装包复验
 
