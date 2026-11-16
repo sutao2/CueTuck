@@ -124,6 +124,17 @@ try {
       $index++
     }
     Write-Host 'Recorded shell icons after updating the executable system image index.'
+    & "$PSScriptRoot/windows-refresh-icons.ps1" -ApplicationPath $Executable -IconPath (Join-Path (Split-Path $PSScriptRoot) 'desktop/src-tauri/icons/icon.ico')
+    $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/shortcut-refreshed'
+    New-Item -ItemType Directory -Force $folder | Out-Null
+    $index = 0
+    foreach ($item in $report.shortcuts) {
+      Save-ShellIcon $item.path "shortcut-$index"
+      $index++
+    }
+    Save-Desktop
+    Write-Host 'Recorded shortcut icons after assigning the current content-specific icon.'
+
 
 
   }
