@@ -6,7 +6,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 
 | 路径 | 状态 | 何时读 | 一句话 |
 |---|---|---|---|
-| [plans/2026-11-16-saved-items-release.md](plans/2026-11-16-saved-items-release.md) | 实施中 | 常用资料改名与工作台样式 | 双平台界面、旧资料兼容与 beta.38 发行验收 |
+| [plans/2026-11-16-saved-items-release.md](plans/2026-11-16-saved-items-release.md) | 实施中 | 常用资料改名与工作台样式 | 双平台界面、旧资料兼容、蓝色卡片图标与 beta.38 候选验收 |
 | [plans/2026-11-15-beta37-release.md](plans/2026-11-15-beta37-release.md) | 已发布 | 发布常用片段分类与启动器快速添加 | 同源安装包、旧数据、筛选、跨窗口保存和公开更新验证 |
 | [plans/2026-11-15-beta36-release.md](plans/2026-11-15-beta36-release.md) | 已发布 | 发布应用锁与常用片段 | 双平台口令与 Touch ID 已验，Windows Hello 真机待验，官网及更新通道已核验 |
 | [specs/app-lock/spec.md](specs/app-lock/spec.md) | 现行 | 桌面解锁与本机访问 | 设置中的应用锁、顶栏锁定、居中解锁面板与设备优先验证 |
@@ -284,7 +284,7 @@ Agent 只读本表，再打开需要的文件。没出现在本表的文档视�
 | [plans/status.md](plans/status.md) | 现行 | 问现在做到哪 | beta.20 交付与部署入口；专项验证边界 |
 | [plans/2026-09-05-functional-repair.md](plans/2026-09-05-functional-repair.md) | 现行 | 修复分类与跨端功能缺口 | 功能复审队首；旧计划关闭不等于验收完成 |
 | [plans/2026-09-07-launcher-audit.md](plans/2026-09-07-launcher-audit.md) | 现行 | 修复或复验启动器 | 核心修复与逐项验收；辅助功能成功路径待授权复验 |
-| [plans/2026-09-07-app-icon.md](plans/2026-09-07-app-icon.md) | 现行 | 更换应用图标 | 方舟品牌源图、桌面打包资源与小尺寸验收 |
+| [plans/2026-09-07-app-icon.md](plans/2026-09-07-app-icon.md) | 历史 | 初版应用图标 | 方舟品牌源图、桌面打包资源与小尺寸验收 |
 | [plans/2026-09-07-anonymous-placeholders.md](plans/2026-09-07-anonymous-placeholders.md) | 现行 | 修复空花括号无法填写 | 截图回归、匿名空位逐项填写与代码边界 |
 | [plans/2026-09-07-launcher-compact-dismiss.md](plans/2026-09-07-launcher-compact-dismiss.md) | 现行 | 调整启动器密度、位置及复制后抢焦点 | 填写与结果等高、稳定上方锚点与完成后退场 |
 | [plans/2026-09-07-shortcut-recorder.md](plans/2026-09-07-shortcut-recorder.md) | 现行 | 修复快捷键无法按键录入 | 三项组合录制、取消导航与全局回调保护 |
