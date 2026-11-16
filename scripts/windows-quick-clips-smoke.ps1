@@ -45,7 +45,12 @@ function Type-Text([string]$Name, [string]$Value) {
   [System.Windows.Forms.SendKeys]::SendWait('^a')
   [System.Windows.Forms.SendKeys]::SendWait($Value)
 }
-Click '常用片段' 'TabItem|Button'
+# A previously built beta.37 installer retains the original display names.
+$legacy = (Control '常用*' 'TabItem').Current.Name -eq '常用片段'
+$library = if ($legacy) { '常用片段' } else { '常用资料' }
+$add = if ($legacy) { '创建常用片段' } else { '添加资料' }
+$item = if ($legacy) { '片段' } else { '资料' }
+Click $library 'TabItem|Button'
 [void](Control 'Legacy clip' 'Text')
 Write-Host 'Existing beta.36 row is visible'
 Click '新建分类' 'Button'
@@ -62,13 +67,13 @@ for ($attempt=0; $attempt -lt 50; $attempt++) {
 }
 if (!$launcher) { throw 'Installed launcher window did not appear' }
 $handle = [IntPtr]$launcher.Current.NativeWindowHandle
-[void](Control '创建常用片段' 'Button')
+[void](Control $add 'Button')
 [System.Windows.Forms.SendKeys]::SendWait('https://example.invalid/clip-qa')
-Click '创建常用片段' 'ListItem|Button|Text'
+Click $add 'ListItem|Button|Text'
 Type-Text '名称' 'QASite'
 $field = Control '网址' 'Edit'
 if ($field.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value -ne 'https://example.invalid/clip-qa') { throw 'Launcher lost the input URL' }
-Click '片段分类' 'Button|ComboBox'
+Click "${item}分类" 'Button|ComboBox'
 Click 'QAgroup' 'ListItem|Button|Text'
 Click '保存' 'Button'
 [void](Control 'QASite*' 'ListItem|Text')
@@ -77,14 +82,14 @@ $handle = $main
 [void][ClipUi]::SetForegroundWindow($main)
 [void](Control 'QASite' 'Text')
 # WebView2 groups the count in the accessible name of each full-width row.
-$ends = @('全部片段*2','未分类*1','QAgroup*1') | ForEach-Object { (Control $_ 'Button').Current.BoundingRectangle.Right }
+$ends = @("全部${item}*2",'未分类*1','QAgroup*1') | ForEach-Object { (Control $_ 'Button').Current.BoundingRectangle.Right }
 $extent = $ends | Measure-Object -Minimum -Maximum
 if ($extent.Maximum - $extent.Minimum -gt 1) { throw 'Sidebar category rows are misaligned' }
-Type-Text '搜索常用片段' 'clip-qa'
-Click '筛选片段类型' 'Button|ComboBox'
+Type-Text "搜索${library}" 'clip-qa'
+Click "筛选${item}类型" 'Button|ComboBox'
 Click '文本' 'ListItem|Button|Text'
-[void](Control '没有匹配的片段' 'Text')
-Click '筛选片段类型' 'Button|ComboBox'
+[void](Control "没有匹配的${item}" 'Text')
+Click "筛选${item}类型" 'Button|ComboBox'
 Click '网址' 'ListItem|Button|Text'
 [void](Control 'QASite' 'Text')
 Write-Host 'Installed NSIS passed legacy clip, category, launcher URL capture, live refresh, counts and combined filters.'

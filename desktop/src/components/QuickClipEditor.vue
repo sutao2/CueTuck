@@ -12,10 +12,10 @@
       </fieldset>
       <div class="identity">
         <label class="field">{{ tr('名称') }}
-          <input ref="titleInput" v-model="title" required maxlength="120" :disabled="busy" :placeholder="tr('为片段起个名字')" autocomplete="off">
+          <input ref="titleInput" v-model="title" required maxlength="120" :disabled="busy" :placeholder="tr('为资料起个名字')" autocomplete="off">
         </label>
         <div class="field"><span>{{ tr('分类') }}</span>
-          <SearchableSelect v-model="category" :options="categoryOptions" :aria-label="tr('片段分类')" :disabled="busy" :searchable="groups.length>6" />
+          <SearchableSelect v-model="category" :options="categoryOptions" :aria-label="tr('资料分类')" :disabled="busy" :searchable="groups.length>6" />
         </div>
       </div>
       <label class="field">{{ tr(valueLabel) }}
@@ -43,7 +43,7 @@ const value=ref(props.initial.content ?? ''), category=ref(props.initial.categor
 const busy=ref(false), error=ref(''), titleInput=ref(null);
 let lastKind=kind.value;
 const valueLabel=computed(()=>['password','url','account'].includes(kind.value) ? clipTypes[kind.value] : '内容');
-const placeholder=computed(()=>({url:'https://…',account:tr('输入账号'),template:tr('粘贴常用模板'),text:tr('输入或粘贴片段内容')}[kind.value]));
+const placeholder=computed(()=>({url:'https://…',account:tr('输入账号'),template:tr('粘贴常用模板'),text:tr('输入或粘贴资料内容')}[kind.value]));
 const categoryOptions=computed(()=>[{value:'',label:tr('未分类')},...props.groups.map(g=>({value:g.id,label:g.name}))]);
 function changeKind(){
   if(lastKind==='password' || kind.value==='password') value.value='';
@@ -59,7 +59,7 @@ function onShortcut(event){
 async function save(){
   if(busy.value) return;
   error.value='';
-  if(!title.value.trim()){error.value='请填写片段名称';titleInput.value?.focus();return;}
+  if(!title.value.trim()){error.value='请填写资料名称';titleInput.value?.focus();return;}
   busy.value=true;
   emit('busy',true);
   try{

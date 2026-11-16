@@ -1,8 +1,8 @@
 <template>
-  <div class="sidebar-toolbar"><span>{{ tr('片段分类') }}</span>
+  <div class="sidebar-toolbar"><span>{{ tr('资料分类') }}</span>
     <button type="button" class="mini-button" :disabled="disabled || busy" :title="tr('新建分类')" :aria-label="tr('新建分类')" @click="open()"><AppIcon name="plus"/></button>
   </div>
-  <nav class="category-tree" :aria-label="tr('片段分类')">
+  <nav class="category-tree" :aria-label="tr('资料分类')">
     <div v-for="group in entries" :key="group.id ?? 'all'" class="tree-child-row">
       <button type="button" class="tree-row" :class="{active:selected===group.id}" :aria-current="selected===group.id ? 'true' : undefined" :disabled="disabled || busy" @click="choose(group.id)">
         <span class="tree-icon"><AppIcon :name="group.id===null ? 'square' : 'folder'"/></span>
@@ -12,7 +12,7 @@
     </div>
     <form v-if="editing" class="group-form" @submit.prevent="submit" @keydown.esc.stop.prevent="close">
       <label v-if="!deleting">{{ tr(editing.id ? '重命名分类' : '新建分类') }}<input ref="nameInput" v-model="name" required maxlength="60" :disabled="busy"></label>
-      <p v-else>{{ tr('删除「{0}」？其中的片段将移至未分类。',[editing.name]) }}</p>
+      <p v-else>{{ tr('删除「{0}」？其中的资料将移至未分类。',[editing.name]) }}</p>
       <p v-if="error" role="alert">{{ tr(error) }}</p>
       <div><button v-if="editing.id && !deleting" type="button" class="remove" :disabled="busy" @click="deleting=true">{{ tr('删除') }}</button>
         <button type="button" :disabled="busy" @click="close">{{ tr('取消') }}</button>
@@ -28,7 +28,7 @@ import {tr} from '../platform/interfaceLanguage.js';
 const props=defineProps({summary:{type:Object,required:true},selected:{default:null},disabled:Boolean});
 const emit=defineEmits(['select','changed']);
 const editing=ref(null),name=ref(''),nameInput=ref(null),deleting=ref(false),busy=ref(false),error=ref('');
-const entries=computed(()=>[{id:null,name:tr('全部片段'),count:props.summary.total},{id:'',name:tr('未分类'),count:props.summary.uncategorized},...props.summary.categories]);
+const entries=computed(()=>[{id:null,name:tr('全部资料'),count:props.summary.total},{id:'',name:tr('未分类'),count:props.summary.uncategorized},...props.summary.categories]);
 function close(){if(!busy.value){editing.value=null;error.value='';deleting.value=false;}}
 function choose(id){close();emit('select',id);}
 async function open(group={}){close();editing.value=group;name.value=group.name || '';await nextTick();nameInput.value?.focus();}

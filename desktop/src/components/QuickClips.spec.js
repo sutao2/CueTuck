@@ -71,12 +71,13 @@ it('combines the active sidebar group with type and keyword and presets new clip
  vi.spyOn(clips,'clipCategories').mockResolvedValue(summary);
  const save=vi.spyOn(clips,'clipRequest').mockResolvedValue('new');
  wrapper=mount(QuickClips,{props:{category:'work'}});await flushPromises();
- expect(wrapper.get('h1').text()).toBe('工作');
+ expect(wrapper.get('.content-header h1').text()).toBe('工作');
+ expect(wrapper.get('.browse-summary [role=status]').text()).toBe('共 0 个结果');
  await wrapper.getComponent(SearchableSelect).vm.$emit('update:modelValue','url');
  await wrapper.get('[type=search]').setValue('alpha');await flushPromises();
  expect(find).toHaveBeenLastCalledWith('alpha',null,{kind:'url',category_id:'work'});
- expect(wrapper.text()).toContain('没有匹配的片段');
- await wrapper.findAll('button').find(b=>b.text()==='添加片段').trigger('click');
+ expect(wrapper.text()).toContain('没有匹配的资料');
+ await wrapper.findAll('button').find(b=>b.text()==='添加资料').trigger('click');
  expect(wrapper.get('input[value=url]').element.checked).toBe(true);
  await wrapper.get('input[autocomplete=off]').setValue('Site');
  await wrapper.get('textarea').setValue('https://example.test');

@@ -42,7 +42,7 @@
           >
             <span class="nav-icon"><AppIcon name="library" /></span><span>{{ t("local") }}</span>
           </button>
-          <button v-if="nativeDownloads" type="button" role="tab" data-space="clips" :aria-selected="contentKind==='clips'" class="space-tab" :class="{active:contentKind==='clips'}" @click="contentKind='clips'"><span class="nav-icon"><AppIcon name="copy"/></span><span>{{ tr('常用片段') }}</span></button>
+          <button v-if="nativeDownloads" type="button" role="tab" data-space="clips" :aria-selected="contentKind==='clips'" class="space-tab" :class="{active:contentKind==='clips'}" @click="contentKind='clips'"><span class="nav-icon"><AppIcon name="copy"/></span><span>{{ tr('常用资料') }}</span></button>
           <button type="button" class="space-tab" data-space="skills-local" role="tab" :aria-selected="contentKind === 'skills' && skillsMode === 'local'" :class="{active:contentKind === 'skills' && skillsMode === 'local'}" @click="openSkills('local')"><span class="nav-icon"><AppIcon name="skills"/></span><span>{{ tr('本机 Skills') }}</span></button>
         </div>
         <p class="nav-group-label">{{ tr('发现') }}</p>
@@ -370,7 +370,7 @@
           </template>
         </section>
       </main>
-      <QuickClips v-if="contentKind==='clips' && !hasTaskPage" ref="clipsPage" :category="clipCategory" :compact-nav="sidebarCollapsed" @categories="clipSummary=$event" @select-category="clipCategory=$event"/>
+      <QuickClips v-if="contentKind==='clips' && !hasTaskPage" ref="clipsPage" :search-shortcut="searchShortcutLabel" :category="clipCategory" :compact-nav="sidebarCollapsed" @categories="clipSummary=$event" @select-category="clipCategory=$event"/>
       <SkillsPage v-if="skillsVisited" v-show="contentKind === 'skills' && !hasTaskPage" ref="skillsPage" :active="contentKind==='skills' && !settingsOpen && !hasTaskPage" :mode="skillsMode" :category="skillsCategories[skillsMode]" @categories="skillsCategorySummary[$event.mode] = $event" @busy="skillsBusy = $event"/>
       <div v-show="hasTaskPage" class="task-host" data-testid="task-host">
     <section v-if="addingCategory" v-page-focus="closeCategoryDialog" class="workspace-page category-page" role="region" aria-labelledby="category-page-title">
@@ -1171,7 +1171,7 @@ const emptyCopy = computed(() => {
   if (sortTab.value === '收藏') return space.value === 'local' ? tr('点击提示词的「···」选择收藏，在这里快速找到常用内容。') : tr('收藏喜欢的社区提示词后，可在这里再次找到。');
   return space.value === 'square' ? t('emptySquareHint') : t('emptyLocalHint');
 });
-const locationLabel = computed(() => contentKind.value === 'clips' ? tr('常用片段') : contentKind.value === "skills" ? (skillsMode.value === "local" ? tr("本机 Skills") : tr("Skill 广场")) : (space.value === "square" ? t("square") : t("local")));
+const locationLabel = computed(() => contentKind.value === 'clips' ? tr('常用资料') : contentKind.value === "skills" ? (skillsMode.value === "local" ? tr("本机 Skills") : tr("Skill 广场")) : (space.value === "square" ? t("square") : t("local")));
 const hasTaskPage = computed(() => Boolean(globalSkillResult.value || contentUpdatesOpen.value || publicationsOpen.value || reading.value || creating.value || editing.value || using.value || openedCollection.value || squareDetail.value || loginReason.value || publishResume.value || addingCategory.value));
 const taskTitle = computed(() => contentUpdatesOpen.value ? '下载内容更新' : globalSkillResult.value ? globalSkillResult.value.item.title : publicationsOpen.value ? tr('我的发布') : reading.value && !editing.value && !using.value ? reading.value.title : loginReason.value ? tr('登录账号') : creating.value ? tr('新建') : editing.value ? tr('编辑') : using.value ? tr('使用提示词') : openedCollection.value ? openedCollection.value.title : squareDetail.value ? squareDetail.value.title : publishResume.value ? tr('发布到广场') : addingCategory.value ? tr('新建分类') : '');
 

@@ -26,7 +26,7 @@
   <dialog v-if="manage && status && !status.locked" ref="dialog" class="lock-dialog" aria-labelledby="lock-title" @keydown.stop @cancel="cancelSettings">
     <div class="lock-heading"><h2 id="lock-title">{{ tr('应用锁') }}</h2><button class="button" :disabled="busy" @click="closeSettings">{{ tr('关闭') }}</button></div>
     <template v-if="manage==='discard'">
-      <p>{{ tr('片段尚未保存。锁定将丢弃本次编辑。') }}</p>
+      <p>{{ tr('资料尚未保存。锁定将丢弃本次编辑。') }}</p>
       <button class="button" @click="closeSettings">{{ tr('继续编辑') }}</button>
       <button class="button primary-button" :disabled="busy" @click="perform({action:'lock'})">{{ tr('丢弃并锁定') }}</button>
       <p v-if="error" role="alert">{{ tr(error) }}</p>

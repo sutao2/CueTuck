@@ -12,7 +12,7 @@
       </div>
       <div class="global-search-field">
         <AppIcon name="search" />
-        <input v-model="query" data-testid="global-search-input" data-dialog-autofocus type="search" role="combobox" :aria-label="tr('全局搜索关键词')" aria-autocomplete="list" aria-controls="global-search-results" :aria-expanded="results.length > 0" :aria-activedescendant="results.length ? `global-result-${active}` : undefined" :placeholder="scope === 'clips' ? tr('搜索名称或片段内容') : scope === 'local' ? tr('搜索全部本地提示词和合集…') : scope.includes('skills') ? tr('搜索 Skill 名称或描述…') : tr('搜索广场标题、标签或作者…')" @keydown="onKeydown" @compositionstart="composing = true; schedule()" @compositionend="composing = false; schedule()" />
+        <input v-model="query" data-testid="global-search-input" data-dialog-autofocus type="search" role="combobox" :aria-label="tr('全局搜索关键词')" aria-autocomplete="list" aria-controls="global-search-results" :aria-expanded="results.length > 0" :aria-activedescendant="results.length ? `global-result-${active}` : undefined" :placeholder="scope === 'clips' ? tr('搜索名称或内容') : scope === 'local' ? tr('搜索全部本地提示词和合集…') : scope.includes('skills') ? tr('搜索 Skill 名称或描述…') : tr('搜索广场标题、标签或作者…')" @keydown="onKeydown" @compositionstart="composing = true; schedule()" @compositionend="composing = false; schedule()" />
       </div>
       <p class="global-search-summary" role="status" aria-live="polite">{{ tr(statusText) }}</p>
       <div v-if="error" class="global-search-empty" role="alert">
@@ -49,7 +49,7 @@ import { listSquarePage } from '../platform/square.js';
 import { applyQueuedFavorites } from '../platform/syncQueue.js';
 
 const emit = defineEmits(['close', 'select','copied']);
-const scopes = [{ id: 'local', label: '本地库' }, ...(window.__TAURI_INTERNALS__ ? [{id:'clips',label:'常用片段'}] : []), { id: 'square', label: '提示词广场' }, ...(skillsSupported() ? [{ id: 'skills-local', label: '本机 Skills' }, { id: 'skills-square', label: '社区 Skills' }] : [])];
+const scopes = [{ id: 'local', label: '本地库' }, ...(window.__TAURI_INTERNALS__ ? [{id:'clips',label:'常用资料'}] : []), { id: 'square', label: '提示词广场' }, ...(skillsSupported() ? [{ id: 'skills-local', label: '本机 Skills' }, { id: 'skills-square', label: '社区 Skills' }] : [])];
 const props=defineProps({initialScope:{type:String,default:'local'}});
 const scope = ref(props.initialScope), query = ref(''), composing = ref(false);
 const results = ref([]), active = ref(0), total = ref(0), loading = ref(false), error = ref(''), blocked = ref(false);

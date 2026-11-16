@@ -27,7 +27,7 @@
             v-model="query"
             class="launcher-search"
             type="text"
-            :placeholder="scope==='square' ? tr('广场搜索') : tr('搜索提示词或常用片段…')"
+            :placeholder="scope==='square' ? tr('广场搜索') : tr('搜索提示词或常用资料…')"
             role="combobox"
             aria-autocomplete="list"
             :aria-expanded="!isEmptySearch"
@@ -39,7 +39,7 @@
           />
           <span class="launcher-window-tools">
             <button v-if="scope === 'square'" class="pill" type="button" @click="scope = 'local'">{{ tr('返回本地') }}</button><span v-else class="pill">{{ tr('本地') }}</span>
-            <button v-if="scope==='local' && !query.trim()" class="launcher-close-btn clip-add" type="button" :aria-label="tr('创建常用片段')" :title="tr('创建常用片段')" :disabled="busy" @click="openClip"><AppIcon name="plus"/></button>
+            <button v-if="scope==='local' && !query.trim()" class="launcher-close-btn clip-add" type="button" :aria-label="tr('添加资料')" :title="tr('添加资料')" :disabled="busy" @click="openClip"><AppIcon name="plus"/></button>
             <button class="launcher-close-btn" type="button" :title="tr('关闭 (Esc)')" :disabled="busy" @click="resetAndHide">
               Esc
             </button>
@@ -97,7 +97,7 @@
       </template>
 
       <template v-else-if="step === 'clip'">
-        <header class="launcher-search-wrap"><AppIcon name="copy" class="search-symbol"/><span class="row-title">{{ tr('创建常用片段') }}</span></header>
+        <header class="launcher-search-wrap"><AppIcon name="copy" class="search-symbol"/><span class="row-title">{{ tr('添加资料') }}</span></header>
         <QuickClipEditor :initial="clipDraft" :groups="clipGroups" @busy="actionBusy=$event" @cancel="cancelClip" @saved="clipSaved"/>
         <p v-if="clipGroupError" class="clip-warning" role="alert">{{ tr(clipGroupError) }}</p>
       </template>
@@ -214,7 +214,7 @@ const quickActions = computed(() => query.value.trim() ? [
   {action:'create',title:'创建提示词',icon:'plus'},
   {action:'optimize',title:'AI 优化提示词',icon:'sparkles'},
   {action:'square',title:'搜索提示词广场',icon:'search'},
-  ...(scope.value==='local' ? [{action:'clip',title:'创建常用片段',icon:'copy'}] : []),
+  ...(scope.value==='local' ? [{action:'clip',title:'添加资料',icon:'copy'}] : []),
 ] : []);
 const searchRows = computed(() => [...results.value, ...quickActions.value]);
 let searchTimer, squareController;
@@ -246,7 +246,7 @@ async function searchCurrent(request) {
       rows = page.items.slice(0,20).map(row=>({...row,remote:true}));
     } else {
       const [local, favorites, clips] = await Promise.all([listLocalPrompts({ query: needle }), listLocalFavoriteIds(),
-        findClips(needle,launcherPreferences.value.resultLimit).catch(()=>{if(request===searchRequest)feedback.value='常用片段暂时无法读取';return [];})]);
+        findClips(needle,launcherPreferences.value.resultLimit).catch(()=>{if(request===searchRequest)feedback.value='常用资料暂时无法读取';return [];})]);
       if (request !== searchRequest) return;
       rows = rankLauncherResults([...local,...clips.map(row=>({...row,clip:true}))], needle, favorites);
     }
@@ -290,7 +290,7 @@ async function clipSaved(item){
   query.value=item.title;
   await nextTick();
   if(!changed)await searchCurrent(++searchRequest);
-  feedback.value='片段已保存';
+  feedback.value='资料已保存';
   if(window.__TAURI_INTERNALS__){
     try{const {emit}=await import('@tauri-apps/api/event');await emit('quick-clips-changed');}
     catch{feedback.value='已保存到本地；主窗口请刷新查看。';}

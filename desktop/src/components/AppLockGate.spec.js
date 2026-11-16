@@ -117,7 +117,7 @@ it('lets the user keep editing an unsaved clip before locking',async()=>{
   state.locked=false;
   wrapper=mount(Gate,{slots:{default:workspace}});await flushPromises();
   await wrapper.get('[data-private] button:nth-child(2)').trigger('click');await flushPromises();
-  expect(wrapper.get('dialog').text()).toContain('片段尚未保存');
+  expect(wrapper.get('dialog').text()).toContain('资料尚未保存');
   const button=text=>wrapper.findAll('button').find(b=>b.text()===text);
   await button('继续编辑').trigger('click');
   expect(wrapper.get('[data-private]').exists()).toBe(true);

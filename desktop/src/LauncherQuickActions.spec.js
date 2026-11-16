@@ -103,7 +103,7 @@ it('opens from an empty launcher and cancels without saving or exposing a passwo
  const clips=await import('./platform/quickClips.js');
  const req=vi.spyOn(clips,'clipRequest');
  const w=mount(Launcher);await flushPromises();
- await w.get('[aria-label="创建常用片段"]').trigger('click');await flushPromises();
+ await w.get('[aria-label="添加资料"]').trigger('click');await flushPromises();
  await w.get('input[value=password]').setValue();
  await w.get('input[type=password]').setValue('fixture only');
  await w.get('input[type=password]').trigger('keydown',{key:'Escape'});await flushPromises();
@@ -117,7 +117,7 @@ it('creates a categorized URL in the launcher without writing a prompt or copyin
  const clipboard=vi.fn();Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:clipboard}});
  const w=mount(Launcher);await flushPromises();
  await w.get('[role=combobox]').setValue('https://example.test');await flushPromises();
- await action(w,'创建常用片段').trigger('click');await flushPromises();
+ await action(w,'添加资料').trigger('click');await flushPromises();
  expect(w.get('input[value=url]').element.checked).toBe(true);expect(w.get('textarea').element.value).toBe('https://example.test');
  await w.get('input[autocomplete=off]').setValue('Work site');
  await w.get('.searchable-select').trigger('click');

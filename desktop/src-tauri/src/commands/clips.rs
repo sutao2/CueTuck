@@ -65,7 +65,7 @@ fn credential_error(error: keyring::Error) -> String {
     }
     match error {
         keyring::Error::TooLong(_, _) => "密码超过系统凭据库的长度限制".into(),
-        keyring::Error::NoEntry => "系统凭据库中找不到此密码，请编辑片段重新保存。".into(),
+        keyring::Error::NoEntry => "系统凭据库中找不到此密码，请编辑资料重新保存。".into(),
         keyring::Error::NoStorageAccess(_) => {
             "当前登录会话无法访问系统凭据库，请解锁系统后重试。".into()
         }
@@ -74,7 +74,7 @@ fn credential_error(error: keyring::Error) -> String {
 }
 
 fn db(_: rusqlite::Error) -> String {
-    "无法读写本机片段库".into()
+    "无法读写本机资料库".into()
 }
 
 fn category_name(name: &str) -> Result<&str, String> {
@@ -188,11 +188,11 @@ fn run(
                     .as_ref()
                     .is_some_and(|s| s.is_empty() || s.len() > 262144)
             {
-                return Err("请检查片段的名称、类型和内容".into());
+                return Err("请检查资料的名称、类型和内容".into());
             }
             let secret = kind == "password";
             if value.is_none() && !(secret && id.is_some()) {
-                return Err("请填写片段内容".into());
+                return Err("请填写资料内容".into());
             }
             let tx = c
                 .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -207,7 +207,7 @@ fn run(
                     .map_err(db)?
                     != 1
                 {
-                    return Err("片段已删除或类型已改变".into());
+                    return Err("资料已删除或类型已改变".into());
                 }
                 id
             } else {
@@ -280,14 +280,14 @@ pub async fn quick_clip(app: AppHandle, request: Request) -> Result<Value, Strin
     let dir = app
         .path()
         .app_data_dir()
-        .map_err(|_| "无法读取本机片段目录")?;
+        .map_err(|_| "无法读取本机资料目录")?;
     tauri::async_runtime::spawn_blocking(move || {
-        std::fs::create_dir_all(&dir).map_err(|_| "无法创建本机片段目录")?;
+        std::fs::create_dir_all(&dir).map_err(|_| "无法创建本机资料目录")?;
         let mut c = Connection::open(dir.join("quick-clips.sqlite")).map_err(db)?;
         run(&mut c, request, credential)
     })
     .await
-    .map_err(|_| "片段操作未完成".to_string())?
+    .map_err(|_| "资料操作未完成".to_string())?
 }
 
 #[cfg(test)]
