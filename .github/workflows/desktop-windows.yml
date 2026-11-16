@@ -20,7 +20,7 @@ on:
         type: boolean
         default: false
       check_icons:
-        description: Inspect the public beta.37 to candidate icon upgrade in a disposable runner
+        description: Verify packaged shortcut icon repair when upgrading the public beta.37 installer
         type: boolean
         default: false
   push:
@@ -32,6 +32,8 @@ on:
       - 'scripts/windows-chrome-smoke.ps1'
       - 'scripts/windows-app-lock-smoke.ps1'
       - 'scripts/windows-quick-clips-smoke.ps1'
+      - 'scripts/windows-icon-smoke.ps1'
+      - 'scripts/windows-refresh-icons.ps1'
       - 'scripts/windows-legacy-clip-fixture.py'
       - 'scripts/windows-portable.ps1'
       - 'LICENSE'
@@ -71,11 +73,6 @@ jobs:
           path: candidate
       - if: inputs.quick_clips
         run: python scripts/windows-legacy-clip-fixture.py
-      - if: inputs.check_icons
-        name: Install the NSIS compiler for the icon hook acceptance
-        shell: pwsh
-        run: |
-          if (!(Test-Path "${env:ProgramFiles(x86)}/NSIS/makensis.exe") -and !(Test-Path "$env:ProgramFiles/NSIS/makensis.exe")) { choco install nsis --yes --no-progress }
       - name: Exercise installed application
         env:
           TEST_QUICK_CLIPS: ${{ inputs.quick_clips }}

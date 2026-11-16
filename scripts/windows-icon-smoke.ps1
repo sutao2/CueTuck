@@ -38,6 +38,12 @@ function Save-ShellIcon([string]$Path,[string]$Name) {
   [void][CueTuckIconProbe]::SHGetFileInfo($Path,0,[ref]$info,[Runtime.InteropServices.Marshal]::SizeOf($info),0x100)
   try { Save-Icon $info.Icon $Name } finally { if ($info.Icon -ne [IntPtr]::Zero) { [void][CueTuckIconProbe]::DestroyIcon($info.Icon) } }
 }
+if ($Stage -eq 'before') {
+  $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'CueTuck.lnk'
+  $pinned = Join-Path $env:APPDATA 'Microsoft/Internet Explorer/Quick Launch/User Pinned/TaskBar'
+  New-Item -ItemType Directory -Force $pinned | Out-Null
+  Copy-Item $desktop (Join-Path $pinned 'CueTuck.lnk')
+}
 $report = @{ executable=$Executable; version=(Get-Item $Executable).VersionInfo.ProductVersion; sha256=(Get-FileHash $Executable -Algorithm SHA256).Hash; shortcuts=@() }
 $app = Start-Process $Executable -PassThru
 try {
@@ -70,28 +76,12 @@ try {
   $report | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $folder 'report.json')
   Write-Host "Recorded $Stage executable, window, shell and shortcut icons."
   if ($Stage -eq 'after') {
-    $compiler = @("${env:ProgramFiles(x86)}/NSIS/makensis.exe","$env:ProgramFiles/NSIS/makensis.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
-    if (!$compiler) { throw 'NSIS compiler not found on the runner' }
-    $temporary = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-hook'
+    if (!($report.shortcuts | Where-Object { $_.path -like '*User Pinned*TaskBar*' })) { throw 'The previous pinned shortcut was not retained through upgrade' }
+    $temporary = Join-Path $env:RUNNER_TEMP 'cuetuck-installed-icon-check'
     New-Item -ItemType Directory -Force $temporary | Out-Null
-    $installer = Join-Path $temporary 'refresh-icons.exe'
-    $hook = Join-Path (Split-Path $PSScriptRoot) 'desktop/src-tauri/windows/installer-hooks.nsh'
-    $recipe = @'
-Unicode true
-RequestExecutionLevel user
-SilentInstall silent
-OutFile "OUTPUT_PATH"
-InstallDir "INSTALL_DIRECTORY"
-!include "HOOK_PATH"
-Section
-  !insertmacro NSIS_HOOK_POSTINSTALL
-SectionEnd
-'@
-    $recipe.Replace('OUTPUT_PATH',$installer).Replace('INSTALL_DIRECTORY',(Split-Path $Executable)).Replace('HOOK_PATH',$hook) | Set-Content -Encoding utf8 (Join-Path $temporary 'test.nsi')
-    & $compiler (Join-Path $temporary 'test.nsi')
-    if ($LASTEXITCODE -ne 0) { throw 'Icon refresh installer hook compilation failed' }
-    if ((Start-Process $installer -Wait -PassThru).ExitCode -ne 0) { throw 'Icon refresh installer hook failed' }
-
+    foreach ($name in @('CueTuck.icon.ico','CueTuck.RefreshIcons.ps1')) {
+      if (!(Test-Path (Join-Path (Split-Path $Executable) $name))) { throw "Installed icon refresh file missing: $name" }
+    }
     $folder = Join-Path $env:RUNNER_TEMP 'cuetuck-icon-verification/repaired'
     New-Item -ItemType Directory -Force $folder | Out-Null
     $shortcutFile = Join-Path $temporary 'shortcuts.json'
