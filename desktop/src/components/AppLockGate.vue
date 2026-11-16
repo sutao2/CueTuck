@@ -74,7 +74,7 @@ const actions = computed(()=>[
 ]);
 const unlockInput = ref(null), dialog = ref(null);
 const pendingDevice = ref(false), passwordFirst = ref(false);
-let stop, revision = 0, disposed = false;
+let stop, subscribing = false, revision = 0, disposed = false;
 function clearForm() { current.value=''; password.value=''; confirmation.value=''; error.value=''; }
 function closeSettings() { dialog.value?.close(); manage.value=false; clearForm(); }
 function cancelSettings(event) { if (busy.value) event.preventDefault(); else closeSettings(); }
@@ -123,14 +123,22 @@ async function refresh() {
 async function initialize() {
   if (!native) return;
   if (!stop) {
+    if (subscribing) return;
+    subscribing=true;
     try {
       const off = await listen('app-lock-changed', refresh);
       if (disposed) { off(); return; }
       stop = off;
     } catch { error.value='无法读取应用锁状态'; return; }
+    finally { subscribing=false; }
   }
   await refresh();
 }
+watch(() => status.value === null && error.value === '无法读取应用锁状态', (unavailable, _, onCleanup) => {
+  if (!unavailable) return;
+  const timer = setTimeout(initialize, 400);
+  onCleanup(() => clearTimeout(timer));
+});
 async function openSettings(view='settings') {
   clearForm(); mode.value='change'; enableDevice.value=false; manage.value=view;
   await nextTick(); dialog.value?.showModal(); void probeDevice();

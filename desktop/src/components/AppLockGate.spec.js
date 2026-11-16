@@ -13,6 +13,31 @@ const workspace=defineComponent({
   setup:()=>({lock:inject('appLock',null)}),
   template:'<section data-private><button v-if="lock" @click="lock.openSettings">settings</button><button v-if="lock" @click="lock.lock(true)">dirty</button><button v-if="lock" @click="lock.lock()">lock</button></section>',
 });
+it.each(['subscription','status'])('recovers from a temporary %s error while keeping the workspace hidden',async failure=>{
+  vi.useFakeTimers();
+  try {
+    (failure==='subscription' ? listen : invoke).mockRejectedValueOnce(new Error('not ready'));
+    state.device=false;
+    wrapper=mount(Gate,{slots:{default:workspace}});await flushPromises();
+    expect(wrapper.get('[role=alert]').text()).toContain('无法读取应用锁状态');
+    expect(wrapper.find('[data-private]').exists()).toBe(false);
+    await vi.advanceTimersByTimeAsync(1000);await flushPromises();
+    expect(wrapper.get('input[type=password]').exists()).toBe(true);
+    expect(wrapper.find('[data-private]').exists()).toBe(false);
+  } finally { vi.useRealTimers(); }
+});
+it('keeps manual retry available when the lock status stays unreadable',async()=>{
+  vi.useFakeTimers();
+  try {
+    listen.mockRejectedValue(new Error('unavailable'));
+    wrapper=mount(Gate,{slots:{default:workspace}});await flushPromises();
+    await vi.advanceTimersByTimeAsync(2000);await flushPromises();
+    expect(listen).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-private]').exists()).toBe(false);
+    await wrapper.get('section button').trigger('click');await flushPromises();
+    expect(listen).toHaveBeenCalledTimes(3);
+  } finally { vi.useRealTimers(); }
+});
 beforeEach(()=>{
   HTMLDialogElement.prototype.showModal ??= function(){ this.open=true; };
   HTMLDialogElement.prototype.close ??= function(){ this.open=false; };
