@@ -959,6 +959,7 @@ h3 {
   transition: background-color 120ms, color 120ms;
 }
 button:focus-visible, textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.launcher-search:focus-visible { outline: none; }
 .field textarea:focus-visible { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 14%, transparent); }
 button:disabled { opacity: .5; cursor: wait; }
 .primary {
